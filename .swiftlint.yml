@@ -1,0 +1,33 @@
+disabled_rules:
+  - todo
+  - line_length
+  - trailing_comma
+
+opt_in_rules:
+  - sorted_imports
+  - file_header
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - redundant_nil_coalescing
+
+included:
+  - Apps
+  - Packages
+
+excluded:
+  - "**/.build"
+  - "**/DerivedData"
+  - "**/Derived"
+  - "**/Tests"
+
+custom_rules:
+  no_string_literals_in_swiftui_text:
+    name: "SwiftUI Text with raw string literal"
+    regex: 'Text\("[^"]+"\)'
+    message: "Wrap user-facing strings in String(localized:) before passing to Text."
+    severity: warning
+    match_kinds:
+      - identifier
+      - typeidentifier

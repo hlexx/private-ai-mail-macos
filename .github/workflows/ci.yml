@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TUIST_VERSION: "4.193.1"
+
+jobs:
+  lint:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint --strict --reporter github-actions-logging
+
+  build:
+    runs-on: macos-15
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tuist
+        run: |
+          brew install tuist
+          tuist version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Tuist generate
+        run: tuist generate --no-open
+
+      - name: Build MacApp
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace PrivateAIMail.xcworkspace \
+            -scheme MacApp \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO | xcpretty || true
+
+  test-packages:
+    runs-on: macos-15
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - Packages/Core/AppFoundation
+          - Packages/Core/DesignSystem
+          - Packages/Core/Persistence
+          - Packages/Mail/MailDomain
+          - Packages/Mail/MailProviders
+          - Packages/Mail/MailIndex
+          - Packages/Mail/MailSync
+          - Packages/AI/AIPrompts
+          - Packages/AI/AIEmbeddings
+          - Packages/AI/AIRuntime
+          - Packages/AI/AIKit
+          - Packages/AI/AIEvals
+          - Packages/Attachments/AttachmentKit
+          - Packages/Attachments/AttachmentRAG
+          - Packages/Auth/AuthKit
+          - Packages/Integrations/IntegrationDomain
+          - Packages/Integrations/IntegrationBroker
+          - Packages/Integrations/IntegrationConnectors
+          - Packages/Features/InboxFeature
+          - Packages/Features/ThreadFeature
+          - Packages/Features/ComposeFeature
+          - Packages/Features/BriefFeature
+          - Packages/Features/ActionsFeature
+          - Packages/Features/SettingsFeature
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test ${{ matrix.package }}
+        working-directory: ${{ matrix.package }}
+        run: swift test
