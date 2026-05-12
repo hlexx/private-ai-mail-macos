@@ -22,6 +22,14 @@
 # --verbose: enable detailed logging
 # claude_args = --dangerously-skip-permissions --output-format stream-json --verbose
 
+# Enable permission bypass for autonomous execution.
+# Without this flag, Claude Code prompts for permission on every Write/Edit/Bash;
+# ralphex runs non-interactively and cannot answer, so Claude loops forever
+# saying "I need write permissions".
+# REQUIRED: always run ralphex with `--worktree` for git isolation. Files are
+# written into .ralphex/worktrees/<branch> instead of the main working tree.
+claude_args = --dangerously-skip-permissions --output-format stream-json --verbose
+
 # task_model: model to use for task execution
 # syntax: model[:effort] where model is opus/sonnet/haiku (or a full model ID like
 # claude-sonnet-4-5-20250929) and effort is low/medium/high/xhigh/max.
