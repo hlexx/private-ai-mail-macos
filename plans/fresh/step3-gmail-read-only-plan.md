@@ -188,15 +188,15 @@ Bootstrap pulls 30 days of threads; incremental sync applies diffs via
 `users.history.list`. State machine: `idle → bootstrapping → live ↔ paused →
 degraded`.
 
-- [ ] Add `actor MailSyncEngine` in `Packages/Mail/MailSync/Sources/MailSync/MailSyncEngine.swift` with one instance per `accountId`
-- [ ] Implement `Bootstrap.run()`: page through `users.messages.list?q=newer_than:30d`, fetch threads in batches of 50 via `users.threads.get?format=metadata` with max 5 concurrent requests, upsert into `thread` + `message` via `DatabaseActor`, capture initial `historyId` into `sync_state`
-- [ ] Implement `IncrementalSync.run()`: page through `users.history.list?startHistoryId=<stored>` until exhausted, apply each `History` record's `messagesAdded`/`messagesDeleted`/`labelsAdded`/`labelsRemoved` to the DB, bump `sync_state.history_id`
-- [ ] Add `SyncSupervisor` in `SyncSupervisor.swift` holding the dictionary of per-account engines and exposing `start(accountId:)`, `refresh(accountId:)`, `stop(accountId:)`
-- [ ] Add `enum SyncEvent { case progress(Double), threadUpserted(ThreadID), error(SyncError), state(SyncState) }` and expose `AsyncStream<SyncEvent>` per account with buffer 64 dropOldest
-- [ ] Handle 429: move state to `paused`, schedule retry honoring `Retry-After` header up to 5 minutes, then resume
-- [ ] Idempotency: re-running bootstrap on populated DB produces the same row counts (no duplicates)
-- [ ] Add tests: bootstrap inserts N threads / M messages from fixture, incremental `messageAdded` extends an existing thread, incremental `messageDeleted` decrements `thread.message_count`, 429 triggers `paused` and retry, re-bootstrap is idempotent
-- [ ] Run `cd Packages/Mail/MailSync && swift test`
+- [x] Add `actor MailSyncEngine` in `Packages/Mail/MailSync/Sources/MailSync/MailSyncEngine.swift` with one instance per `accountId`
+- [x] Implement `Bootstrap.run()`: page through `users.messages.list?q=newer_than:30d`, fetch threads in batches of 50 via `users.threads.get?format=metadata` with max 5 concurrent requests, upsert into `thread` + `message` via `DatabaseActor`, capture initial `historyId` into `sync_state`
+- [x] Implement `IncrementalSync.run()`: page through `users.history.list?startHistoryId=<stored>` until exhausted, apply each `History` record's `messagesAdded`/`messagesDeleted`/`labelsAdded`/`labelsRemoved` to the DB, bump `sync_state.history_id`
+- [x] Add `SyncSupervisor` in `SyncSupervisor.swift` holding the dictionary of per-account engines and exposing `start(accountId:)`, `refresh(accountId:)`, `stop(accountId:)`
+- [x] Add `enum SyncEvent { case progress(Double), threadUpserted(ThreadID), error(SyncError), state(SyncState) }` and expose `AsyncStream<SyncEvent>` per account with buffer 64 dropOldest
+- [x] Handle 429: move state to `paused`, schedule retry honoring `Retry-After` header up to 5 minutes, then resume
+- [x] Idempotency: re-running bootstrap on populated DB produces the same row counts (no duplicates)
+- [x] Add tests: bootstrap inserts N threads / M messages from fixture, incremental `messageAdded` extends an existing thread, incremental `messageDeleted` decrements `thread.message_count`, 429 triggers `paused` and retry, re-bootstrap is idempotent
+- [x] Run `cd Packages/Mail/MailSync && swift test`
 
 ### Task 5: Wire InboxFeature and ThreadFeature into MainScene
 

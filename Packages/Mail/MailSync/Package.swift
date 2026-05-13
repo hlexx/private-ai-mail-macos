@@ -9,16 +9,20 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../MailProviders"),
+        .package(path: "../MailDomain"),
         .package(path: "../MailIndex"),
         .package(path: "../../Core/Persistence"),
+        .package(path: "../../Auth/AuthKit"),
     ],
     targets: [
         .target(
             name: "MailSync",
             dependencies: [
                 "MailProviders",
+                "MailDomain",
                 "MailIndex",
                 "Persistence",
+                "AuthKit",
             ],
             resources: [.process("Resources")]
         ),
