@@ -13,8 +13,6 @@ struct RBToolbar: View {
     let onOpenActionSheet: () -> Void
 
     @AppStorage("rb-theme") private var themeRaw: String = RBTheme.system.rawValue
-    @State private var searchText = ""
-
     private var theme: RBTheme {
         RBTheme(rawValue: themeRaw) ?? .system
     }
@@ -61,7 +59,7 @@ struct RBToolbar: View {
 
     private var trailingSection: some View {
         HStack(spacing: RBSpace.s2) {
-            SearchField(text: $searchText, onCommit: onOpenActionSheet)
+            SearchField(text: .constant(""), onCommit: {})
                 .frame(maxWidth: 480)
 
             Spacer(minLength: RBSpace.s2)
@@ -73,11 +71,8 @@ struct RBToolbar: View {
                 ) {}
 
                 RBIconButton(
-                    systemName: theme == .light ? "moon" : "sun.max",
-                    accessibilityLabel: String(
-                        localized: "toolbar.theme",
-                        defaultValue: theme == .light ? "Switch to dark" : "Switch to light"
-                    ),
+                    systemName: themeIconName,
+                    accessibilityLabel: themeAccessibilityLabel,
                     action: onToggleTheme
                 )
 
@@ -94,6 +89,22 @@ struct RBToolbar: View {
                     action: onCompose
                 )
             }
+        }
+    }
+
+    private var themeIconName: String {
+        switch theme {
+        case .light: return "moon"
+        case .dark: return "sun.max"
+        case .system: return "circle.lefthalf.filled"
+        }
+    }
+
+    private var themeAccessibilityLabel: String {
+        switch theme {
+        case .light: return "Switch to dark"
+        case .dark: return "Switch to light"
+        case .system: return "Switch to dark"
         }
     }
 

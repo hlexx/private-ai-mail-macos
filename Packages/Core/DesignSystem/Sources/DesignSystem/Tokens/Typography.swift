@@ -156,6 +156,7 @@ public struct RBTextStyleModifier: ViewModifier {
             .font(style.font)
             .lineSpacing(style.lineSpacing)
             .tracking(style.tracking)
+            .textCase(style.isUppercased ? .uppercase : nil)
     }
 }
 

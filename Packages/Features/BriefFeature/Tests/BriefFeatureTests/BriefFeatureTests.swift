@@ -78,10 +78,11 @@ struct BriefFeatureTests {
     }
 
     @MainActor
-    @Test func storeReturnsNilForSuffixMatch() {
+    @Test func storeReturnsBriefForSuffixMatch() {
         let store = BriefStore()
         store.loadBrief(forThreadID: "prefix-t1")
-        #expect(store.brief == nil)
+        #expect(store.brief != nil)
+        #expect(store.brief?.confidence == 0.88)
     }
 
     @MainActor

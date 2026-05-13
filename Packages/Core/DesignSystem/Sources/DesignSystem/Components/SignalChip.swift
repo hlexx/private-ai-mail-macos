@@ -25,8 +25,8 @@ public struct SignalChip: View {
             Image(systemName: iconName)
                 .font(.system(size: 8, weight: .semibold))
             Text(displayLabel)
+                .rbTextStyle(.eyebrow)
         }
-        .rbTextStyle(.eyebrow)
         .foregroundStyle(foregroundColor)
         .padding(.horizontal, 7)
         .padding(.vertical, 2)
