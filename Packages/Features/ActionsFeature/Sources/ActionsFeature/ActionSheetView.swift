@@ -182,7 +182,7 @@ public struct ActionSheetView: View {
                     .padding(.top, RBSpace.s3)
                 }
                 .padding(RBSpace.s4)
-                .background(.ultraThickMaterial)
+                .background(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: RBRadius.xl)
                         .strokeBorder(Color.rbGlassStroke, lineWidth: 1)
@@ -194,7 +194,13 @@ public struct ActionSheetView: View {
                 Spacer()
             }
         }
-        .onExitCommand { onAction(nil) }
+        .background(
+            Button("") { onAction(nil) }
+                .keyboardShortcut(.escape, modifiers: [])
+                .frame(width: 0, height: 0)
+                .opacity(0)
+                .accessibilityHidden(true)
+        )
     }
 }
 

@@ -15,7 +15,7 @@ public struct InboxView: View {
             threadList
         }
         .background(Color.rbBgCanvas)
-        .task {
+        .onAppear {
             store.startObserving()
         }
         .onDisappear {

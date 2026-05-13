@@ -110,13 +110,14 @@ public final class InboxStore {
                 let senderRows = try Row.fetchAll(
                     db,
                     sql: """
-                        SELECT thread_id, from_addr
-                        FROM message
-                        WHERE rowid IN (
-                            SELECT rowid FROM message m2
-                            WHERE m2.thread_id = message.thread_id
-                            ORDER BY sent_at DESC LIMIT 1
-                        )
+                        SELECT m.thread_id, m.from_addr
+                        FROM message m
+                        INNER JOIN (
+                            SELECT thread_id, MAX(sent_at) AS max_sent
+                            FROM message
+                            GROUP BY thread_id
+                        ) latest ON m.thread_id = latest.thread_id
+                            AND m.sent_at = latest.max_sent
                         """
                 )
                 var senderByThread: [String: String] = [:]
