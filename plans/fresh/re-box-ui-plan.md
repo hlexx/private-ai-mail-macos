@@ -232,13 +232,13 @@ Reskin `ThreadFeature/ThreadView` to match the upper portion of the Re:Box
 reading pane (subject head + meta + Archive/Snooze/Send-to + message stack +
 attachment block). Inline composer and brief rail are separate tasks.
 
-- [ ] Update `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift` to wrap content in a `VStack` with: head section, scrollable thread column, optional attachment block, slot for inline composer (Task 9), all left of a `BriefRail` slot (Task 8b will glue them in MainScene)
-- [ ] Head section: subject (`RBTextStyle.h2`), meta line (mono, `rbFg3`) showing `from`, `to alex@studio.eu` (use the active account email), `N messages`, optional `1 attachment`. Three ghost buttons on the right: Archive (archivebox SF Symbol), Snooze (clock), Send to ↗ (paperplane)
-- [ ] Message stack: each message rendered as a card with `rbBgElev1` background, `rbStroke1` border, `RBRadius.md` corner. Header row: 28 px gradient avatar + name (bold) + time on the right (mono)
-- [ ] Attachment block: a horizontal card with thumbnail placeholder (8 px radius square, `rbBgElev2`), name + meta line ("N pages · KB · summarized locally"), and ghost Preview + secondary Summarize buttons
-- [ ] Color the attachment block visible only if `thread.hasAttachment` (driven by existing GRDB query; if not yet exposed, add `hasAttachment: Bool` to `ThreadRow`)
-- [ ] Snapshot tests in `ThreadFeatureTests` covering: no-thread empty state, single-message thread, multi-message thread, thread with attachment
-- [ ] Run `cd Packages/Features/ThreadFeature && swift test`
+- [x] Update `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift` to wrap content in a `VStack` with: head section, scrollable thread column, optional attachment block, slot for inline composer (Task 9), all left of a `BriefRail` slot (Task 8b will glue them in MainScene)
+- [x] Head section: subject (`RBTextStyle.h2`), meta line (mono, `rbFg3`) showing `from`, `to alex@studio.eu` (use the active account email), `N messages`, optional `1 attachment`. Three ghost buttons on the right: Archive (archivebox SF Symbol), Snooze (clock), Send to ↗ (paperplane)
+- [x] Message stack: each message rendered as a card with `rbBgElev1` background, `rbStroke1` border, `RBRadius.md` corner. Header row: 28 px gradient avatar + name (bold) + time on the right (mono)
+- [x] Attachment block: a horizontal card with thumbnail placeholder (8 px radius square, `rbBgElev2`), name + meta line ("N pages · KB · summarized locally"), and ghost Preview + secondary Summarize buttons
+- [x] Color the attachment block visible only if `thread.hasAttachment` (driven by existing GRDB query; if not yet exposed, add `hasAttachment: Bool` to `ThreadRow`)
+- [x] Snapshot tests in `ThreadFeatureTests` covering: no-thread empty state, single-message thread, multi-message thread, thread with attachment
+- [x] Run `cd Packages/Features/ThreadFeature && swift test`
 
 ### Task 9: AI Brief Rail (BriefFeature) with hardcoded stubs
 

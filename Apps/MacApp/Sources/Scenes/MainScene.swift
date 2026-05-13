@@ -55,6 +55,8 @@ struct MainScene: View {
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             if let threadId = newValue,
                let thread = inboxStore.threads.first(where: { $0.id == threadId }) {
+                let accountEmail = accounts.first(where: { $0.id == thread.accountId })?.email ?? ""
+                threadStore.accountEmail = accountEmail
                 threadStore.observe(threadId: threadId, accountId: thread.accountId)
             } else {
                 threadStore.stopObserving()
