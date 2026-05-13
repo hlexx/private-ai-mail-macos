@@ -10,6 +10,7 @@ let package = Package(
     dependencies: [
         .package(path: "../MailDomain"),
         .package(path: "../../Core/AppFoundation"),
+        .package(path: "../../Auth/AuthKit"),
     ],
     targets: [
         .target(
@@ -17,9 +18,14 @@ let package = Package(
             dependencies: [
                 "MailDomain",
                 "AppFoundation",
+                "AuthKit",
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "MailProvidersTests", dependencies: ["MailProviders"]),
+        .testTarget(
+            name: "MailProvidersTests",
+            dependencies: ["MailProviders"],
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )

@@ -94,17 +94,17 @@ Build a `URLSession`-based client for the Gmail REST API with retry and
 backoff. Token injection and refresh-on-401 are handled internally so feature
 code consumes a clean `GmailAPI` protocol. No third-party HTTP libraries.
 
-- [ ] Add `GmailAPI` protocol in `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/GmailAPI.swift` with methods `listHistory`, `listMessages`, `getThread`, `getMessage`
-- [ ] Add `GmailEndpoint` enum building URLs for `users.history.list`, `users.messages.list`, `users.threads.get`, `users.messages.get`
-- [ ] Add `GmailDTO.swift` with `Codable` structs mirroring Gmail API JSON: `MessageList`, `Message`, `Thread`, `History`, `HistoryRecord`, `MessagePart`, `MessagePartBody`, `MessagePartHeader`
-- [ ] Add `GmailMapper.swift` converting `GmailDTO.Message` to `MailDomain.Message` and introduce `MailDomain.Message`, `Thread`, `Address`, `Attachment` value types in `MailDomain` if missing
-- [ ] Implement `GmailAPIClient` with `URLSession.shared` configured with `httpCookieStorage = nil` and `urlCache = nil`
-- [ ] Implement token refresh: on 401, call `OAuthClient.refresh(_:)`, retry the original request exactly once
-- [ ] Implement backoff: on 429 or 5xx, exponential backoff with jitter (base 500 ms, factor 2, max 5 retries, max total 30 s)
-- [ ] Add `RateLimiter` (sliding-window, 250 quota units per second; reference Gmail's per-method quota table)
-- [ ] Add `URLProtocol`-based mock in `Tests/MailProvidersTests/Mocks/MockURLProtocol.swift` and JSON fixtures under `Tests/MailProvidersTests/Fixtures/gmail/`
-- [ ] Add tests: `listMessages` happy path, 401 → refresh → retry → 200, 429 → backoff → success within budget, `GmailMapper` against a `messages.get?format=metadata` fixture and a `?format=full` fixture
-- [ ] Run `cd Packages/Mail/MailProviders && swift test`
+- [x] Add `GmailAPI` protocol in `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/GmailAPI.swift` with methods `listHistory`, `listMessages`, `getThread`, `getMessage`
+- [x] Add `GmailEndpoint` enum building URLs for `users.history.list`, `users.messages.list`, `users.threads.get`, `users.messages.get`
+- [x] Add `GmailDTO.swift` with `Codable` structs mirroring Gmail API JSON: `MessageList`, `Message`, `Thread`, `History`, `HistoryRecord`, `MessagePart`, `MessagePartBody`, `MessagePartHeader`
+- [x] Add `GmailMapper.swift` converting `GmailDTO.Message` to `MailDomain.Message` and introduce `MailDomain.Message`, `Thread`, `Address`, `Attachment` value types in `MailDomain` if missing
+- [x] Implement `GmailAPIClient` with `URLSession.shared` configured with `httpCookieStorage = nil` and `urlCache = nil`
+- [x] Implement token refresh: on 401, call `OAuthClient.refresh(_:)`, retry the original request exactly once
+- [x] Implement backoff: on 429 or 5xx, exponential backoff with jitter (base 500 ms, factor 2, max 5 retries, max total 30 s)
+- [x] Add `RateLimiter` (sliding-window, 250 quota units per second; reference Gmail's per-method quota table)
+- [x] Add `URLProtocol`-based mock in `Tests/MailProvidersTests/Mocks/MockURLProtocol.swift` and JSON fixtures under `Tests/MailProvidersTests/Fixtures/gmail/`
+- [x] Add tests: `listMessages` happy path, 401 → refresh → retry → 200, 429 → backoff → success within budget, `GmailMapper` against a `messages.get?format=metadata` fixture and a `?format=full` fixture
+- [x] Run `cd Packages/Mail/MailProviders && swift test`
 
 ### Task 3: Schema, migrator, and DatabaseActor in Persistence
 

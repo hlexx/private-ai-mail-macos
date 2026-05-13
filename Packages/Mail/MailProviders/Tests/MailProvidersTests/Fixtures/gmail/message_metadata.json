@@ -1,0 +1,20 @@
+{
+  "id": "msg001",
+  "threadId": "thread001",
+  "labelIds": ["INBOX", "UNREAD"],
+  "snippet": "Hey, just checking in...",
+  "historyId": "12345",
+  "internalDate": "1700000000000",
+  "sizeEstimate": 5000,
+  "payload": {
+    "partId": "",
+    "mimeType": "multipart/alternative",
+    "headers": [
+      { "name": "From", "value": "Alice Smith <alice@example.com>" },
+      { "name": "To", "value": "bob@example.com, Charlie <charlie@example.com>" },
+      { "name": "Cc", "value": "dave@example.com" },
+      { "name": "Subject", "value": "Quick check-in" },
+      { "name": "Message-ID", "value": "<abc123@mail.example.com>" }
+    ]
+  }
+}
