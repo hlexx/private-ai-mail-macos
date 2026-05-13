@@ -214,17 +214,17 @@ Keep the existing account observation; swap the visual layout.
 
 Reskin `InboxFeature/InboxView` to match the design's threadlist column.
 
-- [ ] Update `Packages/Features/InboxFeature/Sources/InboxFeature/InboxView.swift` to render: header (`Inbox` title + meta "N threads · M need reply"), horizontal scroll of `RBFilterChip` (All / Needs reply / Has deadline / Attachments / AI handled), then the list rows
-- [ ] Add `RBFilterChip.swift` in DesignSystem (a smaller cousin of SignalChip — pill that toggles between off/on with `rbBgElev1` vs `rbAccentSoft` background)
-- [ ] Add filter state on `InboxStore`: `filter: ThreadFilter` (`.all` / `.needsReply` / `.hasDeadline` / `.hasAttachment` / `.aiHandled`)
-- [ ] Reskin row rendering: replace current row layout with a `Grid` (avatar 32 px / body / meta) matching `.rb-row` CSS in `app.css` lines 101–115. Active row gets a 3 px citron bar on left via overlay
-- [ ] Row body: from line (unread dot + name + account label colored by account), subject line, preview line, optional signals row (chips from `SignalChip`)
-- [ ] Time on right (mono, 10.5 px, `rbFg3`)
-- [ ] Avatar: extract initials from `from` name, gradient background from a stable `from`-hash to `[rbCobalt500, rbViolet500]` or similar
-- [ ] Since real Gmail data does not include chip metadata (deadline / has-attachment / etc.), derive chips from `ThreadRow` fields when possible (`attachmentCount > 0 → .att`), and add a `// TODO(§15-step-4): drive chips from AIKit brief` for the others. Hardcoded stubs allowed for the first two thread fixtures during dev
-- [ ] Set threadlist column width 360 px in `MainScene.swift`
-- [ ] Snapshot tests for `InboxView` in dark+light, with and without active selection
-- [ ] Run `cd Packages/Features/InboxFeature && swift test`
+- [x] Update `Packages/Features/InboxFeature/Sources/InboxFeature/InboxView.swift` to render: header (`Inbox` title + meta "N threads · M need reply"), horizontal scroll of `RBFilterChip` (All / Needs reply / Has deadline / Attachments / AI handled), then the list rows
+- [x] Add `RBFilterChip.swift` in DesignSystem (a smaller cousin of SignalChip — pill that toggles between off/on with `rbBgElev1` vs `rbAccentSoft` background)
+- [x] Add filter state on `InboxStore`: `filter: ThreadFilter` (`.all` / `.needsReply` / `.hasDeadline` / `.hasAttachment` / `.aiHandled`)
+- [x] Reskin row rendering: replace current row layout with a `Grid` (avatar 32 px / body / meta) matching `.rb-row` CSS in `app.css` lines 101–115. Active row gets a 3 px citron bar on left via overlay
+- [x] Row body: from line (unread dot + name + account label colored by account), subject line, preview line, optional signals row (chips from `SignalChip`)
+- [x] Time on right (mono, 10.5 px, `rbFg3`)
+- [x] Avatar: extract initials from `from` name, gradient background from a stable `from`-hash to `[rbCobalt500, rbViolet500]` or similar
+- [x] Since real Gmail data does not include chip metadata (deadline / has-attachment / etc.), derive chips from `ThreadRow` fields when possible (`attachmentCount > 0 → .att`), and add a `// TODO(§15-step-4): drive chips from AIKit brief` for the others. Hardcoded stubs allowed for the first two thread fixtures during dev
+- [x] Set threadlist column width 360 px in `MainScene.swift`
+- [x] Snapshot tests for `InboxView` in dark+light, with and without active selection
+- [x] Run `cd Packages/Features/InboxFeature && swift test`
 
 ### Task 8: ReadingPane redesign (head + thread + attachment)
 
