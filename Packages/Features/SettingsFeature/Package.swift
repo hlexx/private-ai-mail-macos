@@ -10,6 +10,9 @@ let package = Package(
     dependencies: [
         .package(path: "../../Auth/AuthKit"),
         .package(path: "../../Core/DesignSystem"),
+        .package(path: "../../Core/Persistence"),
+        .package(path: "../../Mail/MailSync"),
+        .package(path: "../../Mail/MailProviders"),
     ],
     targets: [
         .target(
@@ -17,6 +20,9 @@ let package = Package(
             dependencies: [
                 "AuthKit",
                 "DesignSystem",
+                "Persistence",
+                "MailSync",
+                "MailProviders",
             ],
             resources: [.process("Resources")]
         ),

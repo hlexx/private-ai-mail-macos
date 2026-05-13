@@ -8,16 +8,13 @@ struct SettingsScene: View {
 
     var body: some View {
         TabView {
-            placeholder(
-                title: String(localized: "settings.tab.accounts", defaultValue: "Accounts"),
-                systemImage: "person.crop.circle"
-            )
-            .tabItem {
-                Label(
-                    String(localized: "settings.tab.accounts", defaultValue: "Accounts"),
-                    systemImage: "person.crop.circle"
-                )
-            }
+            AccountsTab(store: composition.accountsTabStore)
+                .tabItem {
+                    Label(
+                        String(localized: "settings.tab.accounts", defaultValue: "Accounts"),
+                        systemImage: "person.crop.circle"
+                    )
+                }
 
             placeholder(
                 title: String(localized: "settings.tab.privacy", defaultValue: "Privacy"),

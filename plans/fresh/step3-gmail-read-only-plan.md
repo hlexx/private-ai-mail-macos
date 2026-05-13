@@ -221,16 +221,16 @@ Replace the "Coming soon" placeholder on the Accounts tab of the Settings
 window. The Add Gmail button kicks off OAuth, persists the account row,
 starts `MailSyncEngine.bootstrap()`, and surfaces sync progress.
 
-- [ ] Add `AccountsTab` view in `Packages/Features/SettingsFeature/Sources/SettingsFeature/AccountsTab.swift` rendering a list of connected accounts and an "Add Gmail account" button
-- [ ] Add `AddGmailFlow` view handling the OAuth lifecycle: idle → authorizing → fetching-profile → bootstrapping → done/error
-- [ ] On successful authorize, call `users.getProfile` to get the user's email, insert an `account` row, store refresh token via `KeychainTokenStore`, call `SyncSupervisor.start(accountId:)`
-- [ ] On error or user-cancel, surface inline error message and do not insert any row
-- [ ] Update `Apps/MacApp/Sources/Scenes/SettingsScene.swift` to use `AccountsTab` in place of the placeholder
-- [ ] Show a per-account `ProgressView` next to the row while `SyncState == .bootstrapping`
-- [ ] Add a "Remove account" affordance that calls `SyncSupervisor.stop(accountId:)`, deletes the row (cascade clears threads/messages), and removes the Keychain entry
-- [ ] Add a manual smoke note in `NOTES.md` describing the end-to-end flow: delete `~/Library/Containers/com.hlexx.privateaimail/`, run MacApp, add account, observe sidebar + thread list populating within 60 s
-- [ ] Add a unit test for the `AccountsTab` view model covering add-success, add-error, and remove paths
-- [ ] Run all validation commands listed above and confirm none fail
+- [x] Add `AccountsTab` view in `Packages/Features/SettingsFeature/Sources/SettingsFeature/AccountsTab.swift` rendering a list of connected accounts and an "Add Gmail account" button
+- [x] Add `AddGmailFlow` view handling the OAuth lifecycle: idle → authorizing → fetching-profile → bootstrapping → done/error
+- [x] On successful authorize, call `users.getProfile` to get the user's email, insert an `account` row, store refresh token via `KeychainTokenStore`, call `SyncSupervisor.start(accountId:)`
+- [x] On error or user-cancel, surface inline error message and do not insert any row
+- [x] Update `Apps/MacApp/Sources/Scenes/SettingsScene.swift` to use `AccountsTab` in place of the placeholder
+- [x] Show a per-account `ProgressView` next to the row while `SyncState == .bootstrapping`
+- [x] Add a "Remove account" affordance that calls `SyncSupervisor.stop(accountId:)`, deletes the row (cascade clears threads/messages), and removes the Keychain entry
+- [x] Add a manual smoke note in `NOTES.md` describing the end-to-end flow: delete `~/Library/Containers/com.hlexx.privateaimail/`, run MacApp, add account, observe sidebar + thread list populating within 60 s
+- [x] Add a unit test for the `AccountsTab` view model covering add-success, add-error, and remove paths
+- [x] Run all validation commands listed above and confirm none fail
 
 ### Task 7: Verify no raw email content leaks anywhere
 

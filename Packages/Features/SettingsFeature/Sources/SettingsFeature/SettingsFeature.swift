@@ -1,12 +1,10 @@
 import Foundation
 import AuthKit
 import DesignSystem
+import Persistence
+import MailSync
+import MailProviders
 
-// MARK: - Public API
-
-/// Namespace for SettingsFeature module.
-///
-/// Stub. Real surface area lands in subsequent iterations.
 public enum SettingsFeature {
     public static let moduleName = "SettingsFeature"
 }
