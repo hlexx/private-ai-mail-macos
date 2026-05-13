@@ -31,7 +31,7 @@ public struct InboxView: View {
                 .font(.rbGeist(18, weight: .semibold))
                 .foregroundStyle(Color.rbFg1)
             Spacer()
-            Text(String(localized: "inbox.header.meta \(store.filteredThreads.count) \(store.needsReplyCount)", defaultValue: "\(store.filteredThreads.count) threads · \(store.needsReplyCount) need reply"))
+            Text("\(store.filteredThreads.count) threads \u{00B7} \(store.needsReplyCount) need reply")
                 .font(.rbMono(11))
                 .foregroundStyle(Color.rbFg3)
         }
@@ -158,7 +158,7 @@ private struct ThreadRowView: View {
                 .foregroundStyle(Color.rbFg1)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            Text(thread.senderAddr.contains("@") ? String(thread.senderAddr.split(separator: "@").last ?? "") : "")
+            Text(Self.extractDomain(from: thread.senderAddr))
                 .font(.rbMono(10.5))
                 .foregroundStyle(Color.rbFg3)
                 .lineLimit(1)
@@ -204,6 +204,16 @@ private struct ThreadRowView: View {
             // Show message count as a subtle indicator
         }
         return chips
+    }
+
+    private static func extractDomain(from addr: String) -> String {
+        let bare: String
+        if let lt = addr.firstIndex(of: "<"), let gt = addr.firstIndex(of: ">") {
+            bare = String(addr[addr.index(after: lt)..<gt])
+        } else {
+            bare = addr
+        }
+        return bare.split(separator: "@").last.map(String.init) ?? ""
     }
 
     private var rowBackground: Color {

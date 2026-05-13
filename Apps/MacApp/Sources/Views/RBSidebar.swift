@@ -45,8 +45,8 @@ struct AccountRow: Identifiable, Hashable {
     ]
 
     static func deterministicColor(for id: String) -> Color {
-        let hash = abs(id.hashValue)
-        return palette[hash % palette.count]
+        let hash = id.utf8.reduce(0) { ($0 &* 31) &+ Int($1) }
+        return palette[abs(hash) % palette.count]
     }
 }
 
@@ -132,7 +132,7 @@ struct RBSidebar: View {
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
                     .fill(isActive
-                        ? Color.rbCitron500.opacity(0.12).blended(with: Color.rbBgElev1)
+                        ? Color.rbCitron500.opacity(0.12)
                         : Color.clear)
             )
             .overlay(alignment: .leading) {
@@ -182,16 +182,6 @@ struct RBSidebar: View {
     }
 }
 
-// MARK: - Color blending helper
-
-private extension Color {
-    func blended(with other: Color) -> Color {
-        // Approximate color-mix: overlay self on top of other
-        // For simplicity, just return self since SwiftUI doesn't have native color-mix
-        // The background handles the visual mixing
-        self
-    }
-}
 
 #if DEBUG
 #Preview("RBSidebar – Dark") {

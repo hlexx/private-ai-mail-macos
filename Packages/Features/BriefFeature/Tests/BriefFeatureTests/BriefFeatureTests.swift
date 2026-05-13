@@ -78,11 +78,19 @@ struct BriefFeatureTests {
     }
 
     @MainActor
-    @Test func storeMatchesSuffix() {
+    @Test func storeReturnsNilForSuffixMatch() {
         let store = BriefStore()
         store.loadBrief(forThreadID: "prefix-t1")
+        #expect(store.brief == nil)
+    }
+
+    @MainActor
+    @Test func storeResetsWhenSwitchingThreads() {
+        let store = BriefStore()
+        store.loadBrief(forThreadID: "t1")
         #expect(store.brief != nil)
-        #expect(store.brief?.confidence == 0.88)
+        store.loadBrief(forThreadID: "unknown")
+        #expect(store.brief == nil)
     }
 
     // MARK: - BriefRail snapshot (dark)

@@ -29,14 +29,6 @@ public struct BriefRail: View {
     @ViewBuilder
     private func briefContent(_ brief: ThreadBriefViewData) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Citron accent bar on the left via overlay
-            briefCard(brief)
-        }
-    }
-
-    @ViewBuilder
-    private func briefCard(_ brief: ThreadBriefViewData) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
             // Head: eyebrow + confidence
             HStack {
                 Text(String(localized: "brief.eyebrow", defaultValue: "\u{25C6} RE:BOX BRIEF \u{00B7} LOCAL"))
@@ -46,7 +38,7 @@ public struct BriefRail: View {
 
                 Spacer()
 
-                Text(String(localized: "brief.confidence \(Int(brief.confidence * 100))", defaultValue: "confidence \(Int(brief.confidence * 100))%"))
+                Text("confidence \(Int(brief.confidence * 100))%")
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
             }
@@ -65,7 +57,7 @@ public struct BriefRail: View {
 
             // Evidence
             if !brief.evidence.isEmpty {
-                Text(String(localized: "brief.evidence \(brief.evidence.joined(separator: " \u{00B7} "))", defaultValue: "Evidence: \(brief.evidence.joined(separator: " \u{00B7} "))"))
+                Text("Evidence: \(brief.evidence.joined(separator: " \u{00B7} "))")
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
                     .padding(.bottom, 12)

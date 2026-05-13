@@ -65,7 +65,7 @@ public struct SignalChip: View {
     private var foregroundColor: Color {
         switch kind {
         case .due(_, let urgent):
-            return urgent ? .rbSignalDeadline : .rbSignalDeadline
+            return urgent ? .rbToneCoral600 : .rbSignalDeadline
         case .reply: return .rbSignalReply
         case .att: return .rbSignalAttach
         case .ai: return .rbSignalLocalAi

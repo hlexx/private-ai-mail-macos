@@ -32,9 +32,9 @@ Thread IDs ending in `t1` or `t2` get populated briefs; all other threads
 show the empty state. Each stub site is marked with a
 `// TODO(§15-step-4): remove stub when AIKit lands` comment.
 
-Covered thread IDs:
-- `*t1` — "Client approved pricing…" brief (confidence 88%)
-- `*t2` — "Jonas wants seat count…" brief (confidence 92%)
+Covered thread IDs (exact match):
+- `t1` — "Client approved pricing…" brief (confidence 88%)
+- `t2` — "Jonas wants seat count…" brief (confidence 92%)
 
 ### Key architectural decisions
 
@@ -48,8 +48,6 @@ Covered thread IDs:
   rich-text editing, per §14 design decision 4.
 - All user-facing strings use `String(localized:defaultValue:)` for
   i18n readiness.
-
-## Skeleton notes
 
 ## Why MLX is not yet linked
 
@@ -81,15 +79,11 @@ See [§14 of the macOS design doc](../EMAIL_ALF/14_macos_app_design.md#142-че�
 `Tuist/Config.swift` works but generates a deprecation warning. Migrate to
 `Tuist.swift` at repo root in a follow-up cleanup.
 
-## What "build green" means in this skeleton
+## What "build green" means
 
 - `tuist generate` succeeds.
 - `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp` succeeds.
-- Each `Packages/*/*/` has a green `swift test` running one placeholder test.
-
-There is **no functional behavior** yet — opening `MacApp` shows a 3-pane
-`NavigationSplitView` with `ContentUnavailableView` placeholders in two of
-the three columns and a static "No accounts connected" list in the sidebar.
+- Each `Packages/*/*/` has a green `swift test`.
 
 ## Manual smoke test: end-to-end Gmail account flow
 

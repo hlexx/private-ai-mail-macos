@@ -101,16 +101,16 @@ public struct ThreadView<ComposerContent: View>: View {
                 .foregroundStyle(Color.rbFg2)
             Text("\u{00B7}")
                 .foregroundStyle(Color.rbFg3)
-            Text(String(localized: "thread.meta.to \(store.accountEmail)", defaultValue: "to \(store.accountEmail)"))
+            Text("to \(store.accountEmail)")
                 .foregroundStyle(Color.rbFg2)
             Text("\u{00B7}")
                 .foregroundStyle(Color.rbFg3)
-            Text(String(localized: "thread.meta.messages \(store.messageCount)", defaultValue: "\(store.messageCount) messages"))
+            Text("\(store.messageCount) messages")
                 .foregroundStyle(Color.rbFg2)
             if store.hasAttachment {
                 Text("\u{00B7}")
                     .foregroundStyle(Color.rbFg3)
-                Text(String(localized: "thread.meta.attachments \(store.attachments.count)", defaultValue: "\(store.attachments.count) attachment\(store.attachments.count == 1 ? "" : "s")"))
+                Text("\(store.attachments.count) attachment\(store.attachments.count == 1 ? "" : "s")")
                     .foregroundStyle(Color.rbFg2)
             }
         }
@@ -154,7 +154,7 @@ public struct ThreadView<ComposerContent: View>: View {
                     Text(att.filename)
                         .font(.rbGeist(13, weight: .medium))
                         .foregroundStyle(Color.rbFg1)
-                    Text(String(localized: "thread.attachment.meta \(att.formattedSize)", defaultValue: "\(att.formattedSize) \u{00B7} summarized locally"))
+                    Text("\(att.formattedSize) \u{00B7} summarized locally")
                         .font(.rbMono(11))
                         .foregroundStyle(Color.rbFg3)
                 }

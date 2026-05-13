@@ -45,9 +45,7 @@ struct PrivateAIMailApp: App {
         }
 
         WindowGroup(id: "compose") {
-            ComposeWindowView {
-                NSApplication.shared.keyWindow?.close()
-            }
+            ComposeWindowView()
             .frame(minWidth: 600, minHeight: 480)
             .rbTheme()
         }
@@ -56,6 +54,7 @@ struct PrivateAIMailApp: App {
 
         Settings {
             SettingsScene(composition: composition)
+                .rbTheme()
         }
     }
 
@@ -74,7 +73,6 @@ struct PrivateAIMailApp: App {
             guard let window = NSApplication.shared.windows.first(where: {
                 $0.identifier?.rawValue.contains("main") == true
                 || $0.title.contains("Private AI Mail")
-                || $0.contentView?.subviews.isEmpty == false
             }) else { return }
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden

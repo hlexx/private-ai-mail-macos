@@ -53,6 +53,7 @@ struct ThreadFeatureTests {
 // MARK: - Snapshot Tests
 
 @Suite("ThreadView Snapshots")
+@MainActor
 struct ThreadViewSnapshotTests {
 
     @MainActor

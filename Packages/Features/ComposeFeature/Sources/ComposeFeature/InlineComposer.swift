@@ -117,7 +117,7 @@ public struct InlineComposer: View {
         HStack(spacing: 6) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 11))
-            Text(String(localized: "composer.citations \(evidence.count) \(evidence.joined(separator: " \u{00B7} "))", defaultValue: "\(evidence.count) citations \u{00B7} \(evidence.joined(separator: " \u{00B7} "))"))
+            Text("\(evidence.count) citations \u{00B7} \(evidence.joined(separator: " \u{00B7} "))")
         }
         .font(.rbMono(10.5))
         .foregroundStyle(Color.rbFg3)

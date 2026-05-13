@@ -67,7 +67,8 @@ public struct RichTextEditor: NSViewRepresentable {
         ]
     }
 
-    public final class Coordinator: NSObject, NSTextViewDelegate, @unchecked Sendable {
+    @MainActor
+    public final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: RichTextEditor
         var isEditing = false
 

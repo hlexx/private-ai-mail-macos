@@ -1,5 +1,12 @@
 import SwiftUI
 
+extension RBTextStyle: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(String(describing: self))
+    }
+}
+
+#if DEBUG
 /// A development-only view that renders all design tokens for visual verification.
 /// Used by snapshot tests and Xcode previews to audit the design system.
 public struct TokensCheatsheet: View {
@@ -85,13 +92,6 @@ public struct TokensCheatsheet: View {
     }
 }
 
-extension RBTextStyle: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(String(describing: self))
-    }
-}
-
-#if DEBUG
 #Preview("Tokens Cheatsheet — Dark") {
     TokensCheatsheet()
         .preferredColorScheme(.dark)

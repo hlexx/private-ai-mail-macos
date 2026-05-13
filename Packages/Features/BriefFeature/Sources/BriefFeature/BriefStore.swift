@@ -21,7 +21,7 @@ public final class BriefStore {
             return
         }
 
-        if threadID.hasSuffix("t1") {
+        if threadID == "t1" {
             brief = ThreadBriefViewData(
                 summary: "Client approved pricing and asks for the contract draft by Friday.",
                 request: "Send contract draft",
@@ -31,7 +31,7 @@ public final class BriefStore {
                 confidence: 0.88,
                 evidence: ["msg_1", "msg_3", "contract.pdf p.2"]
             )
-        } else if threadID.hasSuffix("t2") {
+        } else if threadID == "t2" {
             brief = ThreadBriefViewData(
                 summary: "Jonas wants seat count for Q3 renewal confirmed by Wednesday.",
                 request: "Confirm seat count",

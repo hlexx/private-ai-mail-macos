@@ -98,9 +98,7 @@ struct RBToolbar: View {
     }
 
     private func dotColor(for account: AccountRecord) -> Color {
-        let hash = abs(account.id.hashValue)
-        let colors: [Color] = [.rbCobalt500, .rbViolet500, .rbCitron500, .rbToneJade400, .rbToneCoral400, .rbToneIce400]
-        return colors[hash % colors.count]
+        AccountRow.deterministicColor(for: account.id)
     }
 }
 

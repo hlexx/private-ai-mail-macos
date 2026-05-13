@@ -10,14 +10,12 @@ public struct ComposeWindowView: View {
     @State private var ccField: String = ""
     @State private var subjectField: String = "Re: Contract approval \u{2014} Acme GmbH"
     @State private var richBody: NSAttributedString
-
-    let onClose: () -> Void
+    @Environment(\.dismiss) private var dismiss
 
     // TODO(§15-step-4): replace stub with AIKit.draftReply(tone:)
     private static let defaultBody = "Hi Marta \u{2014} yes, I\u{2019}ll send a clean draft by Friday EOD. I\u{2019}ll match the pricing we agreed and flag the two clauses we discussed for your legal team.\n\nIf there\u{2019}s anything else you\u{2019}d like me to include \u{2014} SLA terms, payment schedule \u{2014} let me know.\n\n\u{2014} Alex"
 
-    public init(onClose: @escaping () -> Void = {}) {
-        self.onClose = onClose
+    public init() {
         let font = NSFont(name: "Geist-Regular", size: 14) ?? .systemFont(ofSize: 14)
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4
@@ -52,7 +50,7 @@ public struct ComposeWindowView: View {
                 .lineLimit(1)
             Spacer()
             RBIconButton(systemName: "xmark", accessibilityLabel: String(localized: "compose.close", defaultValue: "Close")) {
-                onClose()
+                dismiss()
             }
         }
         .padding(.horizontal, RBSpace.s5)
