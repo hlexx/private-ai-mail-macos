@@ -8,16 +8,24 @@ public struct AppDatabase: Sendable {
         self.dbQueue = dbQueue
     }
 
+    private static func makeConfiguration() -> Configuration {
+        var config = Configuration()
+        config.prepareDatabase { db in
+            try db.execute(sql: "PRAGMA foreign_keys = ON")
+        }
+        return config
+    }
+
     public static func openSync(at path: String) throws -> AppDatabase {
         let dir = (path as NSString).deletingLastPathComponent
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        let dbQueue = try DatabaseQueue(path: path)
+        let dbQueue = try DatabaseQueue(path: path, configuration: makeConfiguration())
         try Migrator.migrate(dbQueue)
         return AppDatabase(dbQueue: dbQueue)
     }
 
     public static func openInMemorySync() throws -> AppDatabase {
-        let dbQueue = try DatabaseQueue(configuration: .init())
+        let dbQueue = try DatabaseQueue(configuration: makeConfiguration())
         try Migrator.migrate(dbQueue)
         return AppDatabase(dbQueue: dbQueue)
     }
@@ -26,14 +34,14 @@ public struct AppDatabase: Sendable {
     public static func open(at path: String) throws -> AppDatabase {
         let dir = (path as NSString).deletingLastPathComponent
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        let dbQueue = try DatabaseQueue(path: path)
+        let dbQueue = try DatabaseQueue(path: path, configuration: makeConfiguration())
         try Migrator.migrate(dbQueue)
         return AppDatabase(dbQueue: dbQueue)
     }
 
     @DatabaseActor
     public static func openInMemory() throws -> AppDatabase {
-        let dbQueue = try DatabaseQueue(configuration: .init())
+        let dbQueue = try DatabaseQueue(configuration: makeConfiguration())
         try Migrator.migrate(dbQueue)
         return AppDatabase(dbQueue: dbQueue)
     }

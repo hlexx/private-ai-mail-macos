@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import MailProviders
 import Persistence
 
@@ -25,7 +26,18 @@ public actor SyncSupervisor {
         let api = apiFactory(accountId)
         let engine = MailSyncEngine(accountId: accountId, api: api, db: db)
         engines[accountId] = engine
-        await engine.refresh()
+
+        let hasHistoryId = (try? db.read { db in
+            try SyncStateRecord
+                .filter(Column("account_id") == accountId)
+                .fetchOne(db)?.historyId
+        }) != nil
+
+        if hasHistoryId {
+            await engine.refresh()
+        } else {
+            await engine.bootstrap()
+        }
     }
 
     public func refresh(accountId: String) async {

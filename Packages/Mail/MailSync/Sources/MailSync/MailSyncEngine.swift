@@ -46,7 +46,9 @@ public actor MailSyncEngine {
             transition(to: .live)
         } catch let error as GmailAPIError {
             if case .rateLimited(let retryAfter) = error {
-                handleRateLimited(retryAfter: retryAfter ?? 60)
+                handleRateLimited(retryAfter: retryAfter ?? 60) { engine in
+                    await engine.bootstrap()
+                }
             } else {
                 continuation.yield(.error(.bootstrapFailed(error)))
                 transition(to: .degraded)
@@ -71,7 +73,9 @@ public actor MailSyncEngine {
             )
         } catch let error as GmailAPIError {
             if case .rateLimited(let retryAfter) = error {
-                handleRateLimited(retryAfter: retryAfter ?? 60)
+                handleRateLimited(retryAfter: retryAfter ?? 60) { engine in
+                    await engine.refresh()
+                }
             } else {
                 continuation.yield(.error(.incrementalFailed(error)))
             }
@@ -93,15 +97,15 @@ public actor MailSyncEngine {
         eventContinuation.yield(.state(newState))
     }
 
-    private func handleRateLimited(retryAfter: TimeInterval) {
+    private func handleRateLimited(retryAfter: TimeInterval, resumeWith operation: @Sendable @escaping (isolated MailSyncEngine) async -> Void) {
         let capped = min(retryAfter, 300)
         eventContinuation.yield(.error(.rateLimited(retryAfter: capped)))
         transition(to: .paused)
         retryTask?.cancel()
         retryTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(capped))
-            guard !Task.isCancelled else { return }
-            await self?.transition(to: .live)
+            guard !Task.isCancelled, let self else { return }
+            await operation(self)
         }
     }
 }

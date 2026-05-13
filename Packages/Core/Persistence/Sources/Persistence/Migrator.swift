@@ -10,8 +10,6 @@ enum Migrator {
 
 enum M001_InitialSchema {
     static func migrate(_ db: Database) throws {
-        try db.execute(sql: "PRAGMA foreign_keys = ON")
-
         try db.create(table: "account") { t in
             t.primaryKey("id", .text)
             t.column("provider", .text).notNull().check { $0 == "gmail" }

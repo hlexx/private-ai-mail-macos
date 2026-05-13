@@ -36,7 +36,6 @@ struct PersistenceTests {
 
         try await DatabaseActor.shared.run {
             try db.write { db in
-                try db.execute(sql: "PRAGMA foreign_keys = ON")
                 try AccountRecord(id: "a1", email: "test@gmail.com", createdAt: 1000).insert(db)
                 try SyncStateRecord(accountId: "a1").insert(db)
                 try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 2000, messageCount: 1).insert(db)
@@ -57,7 +56,6 @@ struct PersistenceTests {
 
         try await DatabaseActor.shared.run {
             try db.write { db in
-                try db.execute(sql: "PRAGMA foreign_keys = ON")
                 _ = try AccountRecord.deleteAll(db)
             }
         }

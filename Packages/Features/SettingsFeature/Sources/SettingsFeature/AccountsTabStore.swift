@@ -82,13 +82,18 @@ public final class AccountsTabStore {
                     email: email,
                     createdAt: Int(Date().timeIntervalSince1970)
                 )
-                try await DatabaseActor.shared.run {
-                    try self.db.dbQueue.write { db in
-                        try account.insert(db)
-                    }
-                }
-
                 try self.tokenStore.save(credential, for: accountId)
+
+                do {
+                    try await DatabaseActor.shared.run {
+                        try self.db.dbQueue.write { db in
+                            try account.insert(db)
+                        }
+                    }
+                } catch {
+                    try? self.tokenStore.delete(for: accountId)
+                    throw error
+                }
 
                 self.addPhase = .bootstrapping(0)
                 await self.syncSupervisor.start(accountId: accountId)

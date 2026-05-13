@@ -21,7 +21,7 @@ struct MailSyncEngineTests {
                     id: id,
                     provider: "gmail",
                     email: "test@gmail.com",
-                    createdAt: Int(Date().timeIntervalSince1970 * 1000)
+                    createdAt: Int(Date().timeIntervalSince1970)
                 )
                 try account.insert(dbConn)
                 let syncState = SyncStateRecord(accountId: id, status: "idle")
