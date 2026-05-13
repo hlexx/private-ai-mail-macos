@@ -76,17 +76,17 @@ must round-trip through `KeychainTokenStore` and never appear in logs or
 plain files. Register the custom URL scheme `com.hlexx.privateaimail` in
 `Apps/MacApp/Info.plist` `CFBundleURLTypes`.
 
-- [ ] Add `OAuthClient` protocol and `GmailOAuthClient` struct in `Packages/Auth/AuthKit/Sources/AuthKit/OAuthClient.swift`
-- [ ] Add `GmailOAuthConfig` with client id placeholder and scopes `gmail.readonly`, `gmail.metadata`, `userinfo.email`
-- [ ] Implement `PKCE.generate()` returning `(verifier, challenge)` per RFC 7636 with `S256` challenge method
-- [ ] Implement `KeychainTokenStore` in `KeychainTokenStore.swift` wrapping `SecItemAdd/Copy/Delete` with `kSecAttrAccessibleAfterFirstUnlock` and service `com.hlexx.privateaimail.oauth`
-- [ ] Wire `GmailOAuthClient.authorize()` to launch `ASWebAuthenticationSession` with the prefersEphemeralWebBrowserSession option off so existing Google sessions can be reused
-- [ ] Implement `GmailOAuthClient.refresh(_:)` calling `https://oauth2.googleapis.com/token` with `grant_type=refresh_token`
-- [ ] Define `AuthError` enum: `cancelled`, `denied`, `network(Error)`, `decode(Error)`, `keychain(OSStatus)`
-- [ ] Register URL scheme `com.hlexx.privateaimail` in `Apps/MacApp/Info.plist` under `CFBundleURLTypes`
-- [ ] Add unit tests in `Packages/Auth/AuthKit/Tests/AuthKitTests/` covering PKCE verifier/challenge derivation against RFC 7636 test vectors, Keychain round-trip via in-memory mock, refresh request body matches Google docs (table-driven)
-- [ ] Ensure no code path logs `accessToken`, `refreshToken`, or the `Authorization` header value
-- [ ] Run `cd Packages/Auth/AuthKit && swift test`
+- [x] Add `OAuthClient` protocol and `GmailOAuthClient` struct in `Packages/Auth/AuthKit/Sources/AuthKit/OAuthClient.swift`
+- [x] Add `GmailOAuthConfig` with client id placeholder and scopes `gmail.readonly`, `gmail.metadata`, `userinfo.email`
+- [x] Implement `PKCE.generate()` returning `(verifier, challenge)` per RFC 7636 with `S256` challenge method
+- [x] Implement `KeychainTokenStore` in `KeychainTokenStore.swift` wrapping `SecItemAdd/Copy/Delete` with `kSecAttrAccessibleAfterFirstUnlock` and service `com.hlexx.privateaimail.oauth`
+- [x] Wire `GmailOAuthClient.authorize()` to launch `ASWebAuthenticationSession` with the prefersEphemeralWebBrowserSession option off so existing Google sessions can be reused
+- [x] Implement `GmailOAuthClient.refresh(_:)` calling `https://oauth2.googleapis.com/token` with `grant_type=refresh_token`
+- [x] Define `AuthError` enum: `cancelled`, `denied`, `network(Error)`, `decode(Error)`, `keychain(OSStatus)`
+- [x] Register URL scheme `com.hlexx.privateaimail` in `Apps/MacApp/Info.plist` under `CFBundleURLTypes`
+- [x] Add unit tests in `Packages/Auth/AuthKit/Tests/AuthKitTests/` covering PKCE verifier/challenge derivation against RFC 7636 test vectors, Keychain round-trip via in-memory mock, refresh request body matches Google docs (table-driven)
+- [x] Ensure no code path logs `accessToken`, `refreshToken`, or the `Authorization` header value
+- [x] Run `cd Packages/Auth/AuthKit && swift test`
 
 ### Task 2: Implement Gmail REST API client in MailProviders
 
