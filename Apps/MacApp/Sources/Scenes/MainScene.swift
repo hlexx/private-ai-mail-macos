@@ -16,6 +16,7 @@ struct MainScene: View {
 
     private var inboxStore: InboxStore { composition.inboxStore }
     private var threadStore: ThreadStore { composition.threadStore }
+    private var briefStore: BriefStore { composition.briefStore }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,6 +42,12 @@ struct MainScene: View {
 
                 ThreadView(store: threadStore)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                Divider()
+                    .overlay(Color.rbStroke1)
+
+                BriefRail(store: briefStore)
+                    .frame(width: 340)
             }
         }
         .background(Color.rbBgDeep)
@@ -58,8 +65,10 @@ struct MainScene: View {
                 let accountEmail = accounts.first(where: { $0.id == thread.accountId })?.email ?? ""
                 threadStore.accountEmail = accountEmail
                 threadStore.observe(threadId: threadId, accountId: thread.accountId)
+                briefStore.loadBrief(forThreadID: threadId)
             } else {
                 threadStore.stopObserving()
+                briefStore.loadBrief(forThreadID: nil)
             }
         }
         .task {

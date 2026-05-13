@@ -246,14 +246,14 @@ Build the `BriefRail` view that lives to the right of the thread column.
 Use hardcoded stubs for the first two thread fixtures from the design's
 `data.js`; everything else shows the "Nothing to summarize" empty state.
 
-- [ ] Create `Packages/Features/BriefFeature/Sources/BriefFeature/ThreadBriefViewData.swift` matching the design data shape: `summary`, `request`, `deadline`, `risk`, `nextStep`, `confidence: Double`, `evidence: [String]`. All `String?` except confidence
-- [ ] Create `Packages/Features/BriefFeature/Sources/BriefFeature/BriefStore.swift` `@Observable` exposing `brief: ThreadBriefViewData?` and `loadBrief(forThreadID:)`. Stub implementation matches the design data: returns a brief for thread IDs ending in `t1` or `t2`, returns nil otherwise. Each function gets a `// TODO(§15-step-4): replace stub with AIKit.threadBrief()` comment
-- [ ] Create `BriefRail.swift` rendering: eyebrow "◆ Re:Box brief · local" + confidence pill on right, summary text (`RBTextStyle.bodyLG`), grid of 4 fields with mono uppercase keys ("Request", "Deadline", "Risk", "Next step") + value (deadline gets `rbSignalDeadline` color), evidence mono line, three CTAs (primary "Draft reply", secondary "Snooze to Fri AM", ghost "Log to CRM")
-- [ ] Empty state: when `brief == nil`, render `rbBgElev1`-backed card with "Nothing to summarize — informational thread."
-- [ ] Wire `BriefRail` into `MainScene.swift` to the right of `ThreadView` with `.frame(width: 340)`. Use `HSplitView` or a `HStack` — pixel-perfect 340 px right rail
-- [ ] Background gradient on rail: top citron 4 % mix → canvas (matches `.rb-brief-rail` CSS)
-- [ ] Snapshot tests for `BriefRail` in dark+light, with and without brief data
-- [ ] Run `cd Packages/Features/BriefFeature && swift test`
+- [x] Create `Packages/Features/BriefFeature/Sources/BriefFeature/ThreadBriefViewData.swift` matching the design data shape: `summary`, `request`, `deadline`, `risk`, `nextStep`, `confidence: Double`, `evidence: [String]`. All `String?` except confidence
+- [x] Create `Packages/Features/BriefFeature/Sources/BriefFeature/BriefStore.swift` `@Observable` exposing `brief: ThreadBriefViewData?` and `loadBrief(forThreadID:)`. Stub implementation matches the design data: returns a brief for thread IDs ending in `t1` or `t2`, returns nil otherwise. Each function gets a `// TODO(§15-step-4): replace stub with AIKit.threadBrief()` comment
+- [x] Create `BriefRail.swift` rendering: eyebrow "◆ Re:Box brief · local" + confidence pill on right, summary text (`RBTextStyle.bodyLG`), grid of 4 fields with mono uppercase keys ("Request", "Deadline", "Risk", "Next step") + value (deadline gets `rbSignalDeadline` color), evidence mono line, three CTAs (primary "Draft reply", secondary "Snooze to Fri AM", ghost "Log to CRM")
+- [x] Empty state: when `brief == nil`, render `rbBgElev1`-backed card with "Nothing to summarize — informational thread."
+- [x] Wire `BriefRail` into `MainScene.swift` to the right of `ThreadView` with `.frame(width: 340)`. Use `HSplitView` or a `HStack` — pixel-perfect 340 px right rail
+- [x] Background gradient on rail: top citron 4 % mix → canvas (matches `.rb-brief-rail` CSS)
+- [x] Snapshot tests for `BriefRail` in dark+light, with and without brief data
+- [x] Run `cd Packages/Features/BriefFeature && swift test`
 
 ### Task 10: Inline composer inside ReadingPane
 

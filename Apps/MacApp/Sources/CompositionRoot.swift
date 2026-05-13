@@ -1,4 +1,5 @@
 import AuthKit
+import BriefFeature
 import InboxFeature
 import MailProviders
 import MailSync
@@ -12,6 +13,7 @@ final class CompositionRoot {
     let db: AppDatabase
     let inboxStore: InboxStore
     let threadStore: ThreadStore
+    let briefStore: BriefStore
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
 
@@ -28,6 +30,7 @@ final class CompositionRoot {
         self.db = try! AppDatabase.openSync(at: path)
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
+        self.briefStore = BriefStore()
 
         let tokenStore: any TokenStore = KeychainTokenStore()
         self.tokenStore = tokenStore
