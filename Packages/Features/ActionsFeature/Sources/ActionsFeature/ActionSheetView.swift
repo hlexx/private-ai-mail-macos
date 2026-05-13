@@ -88,13 +88,13 @@ struct ActionTile: View {
 
 public struct ActionSheetView: View {
     let threadSubject: String
-    let onClose: () -> Void
+    let onAction: (ActionID?) -> Void
 
     @State private var picked: ActionID = .snooze
 
-    public init(threadSubject: String, onClose: @escaping () -> Void) {
+    public init(threadSubject: String, onAction: @escaping (ActionID?) -> Void) {
         self.threadSubject = threadSubject
-        self.onClose = onClose
+        self.onAction = onAction
     }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: RBSpace.s2), count: 4)
@@ -104,7 +104,7 @@ public struct ActionSheetView: View {
             // Backdrop mask
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
-                .onTapGesture { onClose() }
+                .onTapGesture { onAction(nil) }
 
             VStack {
                 Spacer()
@@ -122,7 +122,7 @@ public struct ActionSheetView: View {
                         }
                         Spacer()
                         RBIconButton(systemName: "xmark", accessibilityLabel: String(localized: "action.sheet.close", defaultValue: "Close")) {
-                            onClose()
+                            onAction(nil)
                         }
                     }
                     .padding(.bottom, RBSpace.s3)
@@ -174,9 +174,9 @@ public struct ActionSheetView: View {
                     // CTA row
                     HStack {
                         Spacer()
-                        Button(String(localized: "action.cta.cancel", defaultValue: "Cancel")) { onClose() }
+                        Button(String(localized: "action.cta.cancel", defaultValue: "Cancel")) { onAction(nil) }
                             .buttonStyle(.rbGhost)
-                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) { onClose() }
+                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) { onAction(picked) }
                             .buttonStyle(.rbPrimary)
                     }
                     .padding(.top, RBSpace.s3)
@@ -194,18 +194,18 @@ public struct ActionSheetView: View {
                 Spacer()
             }
         }
-        .onExitCommand { onClose() }
+        .onExitCommand { onAction(nil) }
     }
 }
 
 #if DEBUG
 #Preview("Action Sheet - Dark") {
-    ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") {}
+    ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") { _ in }
         .preferredColorScheme(.dark)
 }
 
 #Preview("Action Sheet - Light") {
-    ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") {}
+    ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") { _ in }
         .preferredColorScheme(.light)
 }
 #endif

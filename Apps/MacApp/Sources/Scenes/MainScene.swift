@@ -65,7 +65,10 @@ struct MainScene: View {
             if composition.showActionSheet {
                 ActionSheetView(
                     threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
-                    onClose: { composition.showActionSheet = false }
+                    onAction: { _ in
+                        // TODO(§15-step-4): handle selected action
+                        composition.showActionSheet = false
+                    }
                 )
             }
         }

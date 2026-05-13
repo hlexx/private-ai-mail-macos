@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A 3-button segmented pill for tone selection (Concise / Warm / Direct).
-/// Selected state has `rbBgElev2` background with shadow; each segment shows
+/// Selected state has `rbAccentSoft` background with shadow; each segment shows
 /// label + smaller word count.
 public struct RBToneSegment<ID: Hashable>: View {
     public struct Segment: Identifiable {
@@ -43,7 +43,7 @@ public struct RBToneSegment<ID: Hashable>: View {
                     .padding(.vertical, 4)
                     .background(
                         isSelected
-                            ? AnyShapeStyle(Color.rbBgElev2)
+                            ? AnyShapeStyle(Color.rbAccentSoft)
                             : AnyShapeStyle(Color.clear)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: RBRadius.xs))

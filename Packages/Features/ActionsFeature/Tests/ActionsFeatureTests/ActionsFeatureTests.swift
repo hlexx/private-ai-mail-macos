@@ -31,7 +31,7 @@ struct ActionsFeatureTests {
 
     @MainActor
     @Test func actionSheetDark() {
-        let view = ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") {}
+        let view = ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") { _ in }
             .frame(width: 720, height: 480)
             .preferredColorScheme(.dark)
         let host = NSHostingView(rootView: view)
@@ -41,7 +41,7 @@ struct ActionsFeatureTests {
 
     @MainActor
     @Test func actionSheetLight() {
-        let view = ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") {}
+        let view = ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") { _ in }
             .frame(width: 720, height: 480)
             .preferredColorScheme(.light)
         let host = NSHostingView(rootView: view)
@@ -51,7 +51,7 @@ struct ActionsFeatureTests {
 
     @MainActor
     @Test func actionSheetEmptySubjectDark() {
-        let view = ActionSheetView(threadSubject: "") {}
+        let view = ActionSheetView(threadSubject: "") { _ in }
             .frame(width: 720, height: 480)
             .preferredColorScheme(.dark)
         let host = NSHostingView(rootView: view)
@@ -61,7 +61,7 @@ struct ActionsFeatureTests {
 
     @MainActor
     @Test func actionSheetEmptySubjectLight() {
-        let view = ActionSheetView(threadSubject: "") {}
+        let view = ActionSheetView(threadSubject: "") { _ in }
             .frame(width: 720, height: 480)
             .preferredColorScheme(.light)
         let host = NSHostingView(rootView: view)

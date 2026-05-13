@@ -106,27 +106,45 @@ public final class InboxStore {
                     .order(Column("last_message_at").desc)
                     .fetchAll(db)
 
-                return try threads.map { thread -> (ThreadRecord, String?, Int) in
-                    let latestFrom = try String.fetchOne(
-                        db,
-                        sql: """
-                            SELECT from_addr FROM message
-                            WHERE thread_id = ?
+                // Batch query: latest from_addr per thread
+                let senderRows = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT thread_id, from_addr
+                        FROM message
+                        WHERE rowid IN (
+                            SELECT rowid FROM message m2
+                            WHERE m2.thread_id = message.thread_id
                             ORDER BY sent_at DESC LIMIT 1
-                            """,
-                        arguments: [thread.id]
-                    )
-                    let attCount = try Int.fetchOne(
-                        db,
-                        sql: """
-                            SELECT COUNT(*) FROM attachment
-                            WHERE message_id IN (
-                                SELECT id FROM message WHERE thread_id = ?
-                            )
-                            """,
-                        arguments: [thread.id]
-                    ) ?? 0
-                    return (thread, latestFrom, attCount)
+                        )
+                        """
+                )
+                var senderByThread: [String: String] = [:]
+                for row in senderRows {
+                    let tid: String = row["thread_id"]
+                    let from: String = row["from_addr"]
+                    senderByThread[tid] = from
+                }
+
+                // Batch query: attachment count per thread
+                let attRows = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT m.thread_id, COUNT(*) AS cnt
+                        FROM attachment a
+                        JOIN message m ON m.id = a.message_id
+                        GROUP BY m.thread_id
+                        """
+                )
+                var attByThread: [String: Int] = [:]
+                for row in attRows {
+                    let tid: String = row["thread_id"]
+                    let cnt: Int = row["cnt"]
+                    attByThread[tid] = cnt
+                }
+
+                return threads.map { thread -> (ThreadRecord, String?, Int) in
+                    (thread, senderByThread[thread.id], attByThread[thread.id] ?? 0)
                 }
             }
             do {

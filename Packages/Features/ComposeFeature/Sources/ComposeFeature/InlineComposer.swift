@@ -90,8 +90,7 @@ public struct InlineComposer: View {
             .scrollContentBackground(.hidden)
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
-            .frame(minHeight: 130)
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(minHeight: 130, maxHeight: 260)
             .background(Color.rbBgElev1)
     }
 

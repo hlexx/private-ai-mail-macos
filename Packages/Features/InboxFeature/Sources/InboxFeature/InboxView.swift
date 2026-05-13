@@ -90,20 +90,18 @@ public struct InboxView: View {
                     )
                 }
             } else {
-                ScrollViewReader { _ in
-                    List(store.filteredThreads, selection: $store.selectedThreadID) { thread in
-                        ThreadRowView(
-                            thread: thread,
-                            isActive: thread.id == store.selectedThreadID
-                        )
-                        .tag(thread.id)
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
+                List(store.filteredThreads, selection: $store.selectedThreadID) { thread in
+                    ThreadRowView(
+                        thread: thread,
+                        isActive: thread.id == store.selectedThreadID
+                    )
+                    .tag(thread.id)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
     }
