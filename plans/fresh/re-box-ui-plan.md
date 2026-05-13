@@ -184,16 +184,16 @@ Replace the default macOS title bar with a transparent unified bar; build
 the Re:Box top toolbar (56 px high, blurred glass background, traffic-light
 overlap, account switcher, search, action icons).
 
-- [ ] Update `Apps/MacApp/Sources/PrivateAIMailApp.swift` to apply `.windowStyle(.hiddenTitleBar)`, `.windowToolbarStyle(.unifiedCompact(showsTitle: false))`, and a transparent background using `NSWindow` introspection (window.titlebarAppearsTransparent = true, window.titleVisibility = .hidden, window.styleMask insert .fullSizeContentView)
-- [ ] Create `Apps/MacApp/Sources/Views/RBToolbar.swift` rendering the 56 px bar: an `HStack` with leading 240 px region containing the `AccountSwitcher`, trailing region with `SearchField` (max width 480 px) and four `RBIconButton`s (filter, theme toggle sun/moon, settings gearshape, compose pencil)
-- [ ] Background: `.background(.regularMaterial)` (NSVisualEffectView equivalent) with `rbStroke1` bottom border to match the CSS `backdrop-filter: blur(24px)`
-- [ ] Wire account cycling: tapping the `AccountSwitcher` rotates through accounts from `AppDatabase` via `CompositionRoot.activeAccountID` (new property)
-- [ ] Wire theme toggle: changes `@AppStorage("rb-theme")` between dark/light/system; the root view watches it and applies `.preferredColorScheme(...)`
-- [ ] Wire compose button + `⌘N` shortcut → opens Composer window (Task 11 will fill behavior; stub for now)
-- [ ] Wire `⌘K` shortcut to toggle a state binding `showActionSheet` (Task 10 fills behavior)
-- [ ] Hide the system `Edit` / `Format` / `Window` menu items not relevant to email — leave the `App` `View` `Window` menus default
-- [ ] Add snapshot tests for `RBToolbar` in dark+light, with and without accounts loaded
-- [ ] Run all validation commands
+- [x] Update `Apps/MacApp/Sources/PrivateAIMailApp.swift` to apply `.windowStyle(.hiddenTitleBar)`, `.windowToolbarStyle(.unifiedCompact(showsTitle: false))`, and a transparent background using `NSWindow` introspection (window.titlebarAppearsTransparent = true, window.titleVisibility = .hidden, window.styleMask insert .fullSizeContentView)
+- [x] Create `Apps/MacApp/Sources/Views/RBToolbar.swift` rendering the 56 px bar: an `HStack` with leading 240 px region containing the `AccountSwitcher`, trailing region with `SearchField` (max width 480 px) and four `RBIconButton`s (filter, theme toggle sun/moon, settings gearshape, compose pencil)
+- [x] Background: `.background(.regularMaterial)` (NSVisualEffectView equivalent) with `rbStroke1` bottom border to match the CSS `backdrop-filter: blur(24px)`
+- [x] Wire account cycling: tapping the `AccountSwitcher` rotates through accounts from `AppDatabase` via `CompositionRoot.activeAccountID` (new property)
+- [x] Wire theme toggle: changes `@AppStorage("rb-theme")` between dark/light/system; the root view watches it and applies `.preferredColorScheme(...)`
+- [x] Wire compose button + `⌘N` shortcut → opens Composer window (Task 11 will fill behavior; stub for now)
+- [x] Wire `⌘K` shortcut to toggle a state binding `showActionSheet` (Task 10 fills behavior)
+- [x] Hide the system `Edit` / `Format` / `Window` menu items not relevant to email — leave the `App` `View` `Window` menus default
+- [x] Add snapshot tests for `RBToolbar` in dark+light, with and without accounts loaded
+- [x] Run all validation commands
 
 ### Task 6: Sidebar redesign (Mail / Accounts / Privacy)
 

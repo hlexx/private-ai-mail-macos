@@ -1,10 +1,10 @@
-import SwiftUI
-import InboxFeature
-import ThreadFeature
 import BriefFeature
 import DesignSystem
-import Persistence
 import GRDB
+import InboxFeature
+import Persistence
+import SwiftUI
+import ThreadFeature
 
 struct MainScene: View {
 
@@ -12,19 +12,40 @@ struct MainScene: View {
 
     @State private var sidebarSelection: AccountFolderID? = .inbox
     @State private var accounts: [AccountRecord] = []
+    @Environment(\.openSettings) private var openSettings
 
     private var inboxStore: InboxStore { composition.inboxStore }
     private var threadStore: ThreadStore { composition.threadStore }
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
-        } content: {
-            InboxView(store: inboxStore)
-        } detail: {
-            ThreadView(store: threadStore)
+        VStack(spacing: 0) {
+            RBToolbar(
+                accounts: accounts,
+                activeAccountID: composition.activeAccountID,
+                onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
+                onToggleTheme: { toggleTheme() },
+                onOpenSettings: { openSettings() },
+                onCompose: { composition.showCompose = true },
+                onOpenActionSheet: { composition.showActionSheet = true }
+            )
+
+            NavigationSplitView {
+                sidebar
+            } content: {
+                InboxView(store: inboxStore)
+            } detail: {
+                ThreadView(store: threadStore)
+            }
         }
-        .navigationTitle(String(localized: "app.title", defaultValue: "Private AI Mail"))
+        .background(Color.rbBgDeep)
+        .overlay {
+            if composition.showActionSheet {
+                // Task 11 will fill in the ActionSheetView
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture { composition.showActionSheet = false }
+            }
+        }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             if let threadId = newValue,
                let thread = inboxStore.threads.first(where: { $0.id == threadId }) {
@@ -35,6 +56,9 @@ struct MainScene: View {
         }
         .task {
             await observeAccounts()
+        }
+        .keyboardShortcut(key: "k", modifiers: .command) {
+            composition.showActionSheet.toggle()
         }
     }
 
@@ -71,12 +95,26 @@ struct MainScene: View {
         do {
             for try await records in observation.values(in: composition.db.dbQueue) {
                 self.accounts = records
+                if composition.activeAccountID == nil, let first = records.first {
+                    composition.activeAccountID = first.id
+                }
             }
         } catch {
             // Observation ended
         }
     }
 
+    private func toggleTheme() {
+        let raw = UserDefaults.standard.string(forKey: "rb-theme") ?? RBTheme.system.rawValue
+        let current = RBTheme(rawValue: raw) ?? .system
+        let next: RBTheme
+        switch current {
+        case .system: next = .dark
+        case .dark: next = .light
+        case .light: next = .system
+        }
+        UserDefaults.standard.set(next.rawValue, forKey: "rb-theme")
+    }
 }
 
 // MARK: - Local identifiers
@@ -84,4 +122,17 @@ struct MainScene: View {
 enum AccountFolderID: Hashable {
     case inbox, starred, sent
     case account(String, String)
+}
+
+// MARK: - Keyboard shortcut helper
+
+private extension View {
+    func keyboardShortcut(key: KeyEquivalent, modifiers: EventModifiers, action: @escaping () -> Void) -> some View {
+        self.background(
+            Button("") { action() }
+                .keyboardShortcut(key, modifiers: modifiers)
+                .frame(width: 0, height: 0)
+                .opacity(0)
+        )
+    }
 }

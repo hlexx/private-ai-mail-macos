@@ -1,3 +1,4 @@
+import DesignSystem
 import SwiftUI
 
 @main
@@ -12,13 +13,16 @@ struct PrivateAIMailApp: App {
             MainScene(composition: composition)
                 .frame(minWidth: 1000, minHeight: 640)
                 .task { composition.resumeExistingAccounts() }
+                .rbTheme()
+                .onAppear { configureMainWindow() }
         }
-        .windowStyle(.titleBar)
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(String(localized: "menu.compose.new", defaultValue: "New Message")) {
-                    // Compose window — wired in later iteration.
+                    composition.showCompose = true
                 }
                 .keyboardShortcut("n", modifiers: [.command])
             }
@@ -28,6 +32,8 @@ struct PrivateAIMailApp: App {
                 }
                 .keyboardShortcut("r", modifiers: [.command])
             }
+            CommandGroup(replacing: .textEditing) {}
+            CommandGroup(replacing: .textFormatting) {}
         }
 
         Settings {
@@ -42,6 +48,21 @@ struct PrivateAIMailApp: App {
             composition.refreshAccount(thread.accountId)
         } else {
             composition.refreshAllAccounts()
+        }
+    }
+
+    private func configureMainWindow() {
+        DispatchQueue.main.async {
+            guard let window = NSApplication.shared.windows.first(where: {
+                $0.identifier?.rawValue.contains("main") == true
+                || $0.title.contains("Private AI Mail")
+                || $0.contentView?.subviews.isEmpty == false
+            }) else { return }
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.styleMask.insert(.fullSizeContentView)
+            window.isMovableByWindowBackground = true
+            window.backgroundColor = .clear
         }
     }
 }

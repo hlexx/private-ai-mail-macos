@@ -1,19 +1,23 @@
-import Foundation
-import Persistence
-import MailSync
-import MailProviders
 import AuthKit
 import InboxFeature
-import ThreadFeature
+import MailProviders
+import MailSync
+import Persistence
 import SettingsFeature
+import SwiftUI
+import ThreadFeature
 
-@MainActor
+@MainActor @Observable
 final class CompositionRoot {
     let db: AppDatabase
     let inboxStore: InboxStore
     let threadStore: ThreadStore
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
+
+    var activeAccountID: String?
+    var showActionSheet = false
+    var showCompose = false
 
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
@@ -87,6 +91,16 @@ final class CompositionRoot {
             for account in accounts ?? [] {
                 await syncSupervisor.refresh(accountId: account.id)
             }
+        }
+    }
+
+    func cycleActiveAccount(accounts: [AccountRecord]) {
+        guard !accounts.isEmpty else { return }
+        if let current = activeAccountID,
+           let idx = accounts.firstIndex(where: { $0.id == current }) {
+            activeAccountID = accounts[(idx + 1) % accounts.count].id
+        } else {
+            activeAccountID = accounts.first?.id
         }
     }
 }
