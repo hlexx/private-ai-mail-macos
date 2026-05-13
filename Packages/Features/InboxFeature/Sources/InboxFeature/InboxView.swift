@@ -208,7 +208,7 @@ private struct ThreadRowView: View {
 
     private static func extractDomain(from addr: String) -> String {
         let bare: String
-        if let lt = addr.firstIndex(of: "<"), let gt = addr.firstIndex(of: ">") {
+        if let lt = addr.firstIndex(of: "<"), let gt = addr.firstIndex(of: ">"), lt < gt {
             bare = String(addr[addr.index(after: lt)..<gt])
         } else {
             bare = addr

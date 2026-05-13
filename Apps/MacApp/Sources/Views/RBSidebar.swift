@@ -182,7 +182,6 @@ struct RBSidebar: View {
     }
 }
 
-
 #if DEBUG
 #Preview("RBSidebar – Dark") {
     RBSidebar(
