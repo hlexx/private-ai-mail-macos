@@ -16,7 +16,8 @@ public enum PKCE: Sendable {
 
     static func generateVerifier(length: Int = 43) -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        precondition(status == errSecSuccess, "Failed to generate random bytes for PKCE verifier")
         return String(Data(bytes)
             .base64URLEncodedString()
             .prefix(length))

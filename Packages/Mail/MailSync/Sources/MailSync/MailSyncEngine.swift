@@ -25,6 +25,7 @@ public actor MailSyncEngine {
     }
 
     deinit {
+        retryTask?.cancel()
         eventContinuation.finish()
     }
 

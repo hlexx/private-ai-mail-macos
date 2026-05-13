@@ -1,16 +1,23 @@
 import AuthenticationServices
 import Foundation
 
-public final class GmailOAuthClient: OAuthClient, @unchecked Sendable {
+public final class GmailOAuthClient: OAuthClient, Sendable {
     private let config: GmailOAuthConfig
     private let urlSession: URLSession
 
     public init(
         config: GmailOAuthConfig = .default,
-        urlSession: URLSession = .shared
+        urlSession: URLSession? = nil
     ) {
         self.config = config
-        self.urlSession = urlSession
+        if let urlSession {
+            self.urlSession = urlSession
+        } else {
+            let sessionConfig = URLSessionConfiguration.ephemeral
+            sessionConfig.httpCookieStorage = nil
+            sessionConfig.urlCache = nil
+            self.urlSession = URLSession(configuration: sessionConfig)
+        }
     }
 
     @MainActor

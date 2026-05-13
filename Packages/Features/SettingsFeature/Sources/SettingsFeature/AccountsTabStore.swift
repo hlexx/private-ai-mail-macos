@@ -143,6 +143,7 @@ public final class AccountsTabStore {
         config.httpCookieStorage = nil
         config.urlCache = nil
         let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse,
