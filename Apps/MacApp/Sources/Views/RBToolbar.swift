@@ -12,6 +12,8 @@ struct RBToolbar: View {
     let onCompose: () -> Void
     let onOpenActionSheet: () -> Void
 
+    @State private var searchText: String = ""
+
     @AppStorage("rb-theme") private var themeRaw: String = RBTheme.system.rawValue
     private var theme: RBTheme {
         RBTheme(rawValue: themeRaw) ?? .system
@@ -59,7 +61,7 @@ struct RBToolbar: View {
 
     private var trailingSection: some View {
         HStack(spacing: RBSpace.s2) {
-            SearchField(text: .constant(""), onCommit: {})
+            SearchField(text: $searchText, onCommit: { onOpenActionSheet() })
                 .frame(maxWidth: 480)
 
             Spacer(minLength: RBSpace.s2)
