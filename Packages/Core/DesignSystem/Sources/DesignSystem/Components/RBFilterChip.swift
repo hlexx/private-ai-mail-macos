@@ -18,7 +18,7 @@ public struct RBFilterChip: View {
         Button(action: action) {
             Text(label)
                 .font(.rbGeist(12))
-                .foregroundStyle(isOn ? Color.rbCitron300 : Color.rbFg2)
+                .foregroundStyle(isOn ? Color.rbCitron600 : Color.rbFg2)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(isOn ? Color.rbCitron500.opacity(0.18) : Color.rbBgElev1)

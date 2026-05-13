@@ -123,8 +123,8 @@ public final class InboxStore {
                 var senderByThread: [String: String] = [:]
                 for row in senderRows {
                     let tid: String = row["thread_id"]
-                    let from: String = row["from_addr"]
-                    senderByThread[tid] = from
+                    let from: String? = row["from_addr"]
+                    senderByThread[tid] = from ?? ""
                 }
 
                 // Batch query: attachment count per thread
