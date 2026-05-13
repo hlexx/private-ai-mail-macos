@@ -239,13 +239,13 @@ patterns and reviews logging touch-points. Anything that handles `Subject`,
 `From`, `To`, `Body`, or `Snippet` must do so without writing it to a logger,
 telemetry, or the broker payload.
 
-- [ ] Run `grep -rE '(os_log|Logger|print|debugPrint).*\b(subject|from|to|cc|body|snippet)\b' Apps Packages --include='*.swift'` and confirm no real matches (variable names that don't hit a log call are OK)
-- [ ] Run `grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build` and confirm zero output
-- [ ] Audit `URLSession` configuration: confirm `httpCookieStorage = nil`, `urlCache = nil`, `httpAdditionalHeaders` empty
-- [ ] Confirm `KeychainTokenStore` does not include token values in any thrown `AuthError.keychain(OSStatus)` description
-- [ ] Confirm `SyncEvent` enum's associated values carry only ids, counts, and timestamps — no content strings
-- [ ] Run all validation commands listed above; all must exit 0
-- [ ] Run `swiftlint --strict` and confirm 0 violations
-- [ ] Confirm `xcodebuild build -scheme MacApp` ends with `** BUILD SUCCEEDED **`
-- [ ] Confirm `xcodebuild test -scheme MacApp` ends with `** TEST SUCCEEDED **`
-- [ ] Tag the commit `step3-complete` and update `EMAIL_ALF/14_macos_app_design.md` §15 step 3 status from `pending` to `done`
+- [x] Run `grep -rE '(os_log|Logger|print|debugPrint).*\b(subject|from|to|cc|body|snippet)\b' Apps Packages --include='*.swift'` and confirm no real matches (variable names that don't hit a log call are OK)
+- [x] Run `grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build` and confirm zero output
+- [x] Audit `URLSession` configuration: confirm `httpCookieStorage = nil`, `urlCache = nil`, `httpAdditionalHeaders` empty
+- [x] Confirm `KeychainTokenStore` does not include token values in any thrown `AuthError.keychain(OSStatus)` description
+- [x] Confirm `SyncEvent` enum's associated values carry only ids, counts, and timestamps — no content strings
+- [x] Run all validation commands listed above; all must exit 0
+- [x] Run `swiftlint --strict` and confirm 0 violations
+- [x] Confirm `xcodebuild build -scheme MacApp` ends with `** BUILD SUCCEEDED **`
+- [x] Confirm `xcodebuild test -scheme MacApp` ends with `** TEST SUCCEEDED **`
+- [x] Tag the commit `step3-complete` and update `EMAIL_ALF/14_macos_app_design.md` §15 step 3 status from `pending` to `done`
