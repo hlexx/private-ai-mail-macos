@@ -11,9 +11,9 @@ public final class BriefStore {
 
     public init() {}
 
+    // TODO(§15-step-4): replace stub with AIKit.threadBrief()
     /// Load a brief for the given thread ID.
     /// Stub implementation returns hardcoded briefs for fixture threads t1/t2.
-    // TODO(§15-step-4): replace stub with AIKit.threadBrief()
     public func loadBrief(forThreadID threadID: String?) {
         activeThreadID = threadID
         guard let threadID else {

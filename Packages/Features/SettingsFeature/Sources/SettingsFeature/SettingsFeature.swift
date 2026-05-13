@@ -1,9 +1,9 @@
-import Foundation
 import AuthKit
 import DesignSystem
-import Persistence
-import MailSync
+import Foundation
 import MailProviders
+import MailSync
+import Persistence
 
 public enum SettingsFeature {
     public static let moduleName = "SettingsFeature"

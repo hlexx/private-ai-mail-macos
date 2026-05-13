@@ -55,7 +55,7 @@ public struct InlineComposer: View {
 
     private var headerRow: some View {
         HStack {
-            EyebrowLabel("Draft reply \u{00B7} local")
+            EyebrowLabel(String(localized: "composer.inline.eyebrow", defaultValue: "Draft reply \u{00B7} local"))
             Spacer()
             RBToneSegment(
                 segments: ComposeTone.allCases.map { t in
@@ -117,7 +117,7 @@ public struct InlineComposer: View {
         HStack(spacing: 6) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 11))
-            Text("\(evidence.count) citations \u{00B7} \(evidence.joined(separator: " \u{00B7} "))")
+            Text(String(localized: "composer.citations \(evidence.count) \(evidence.joined(separator: " \u{00B7} "))", defaultValue: "\(evidence.count) citations \u{00B7} \(evidence.joined(separator: " \u{00B7} "))"))
         }
         .font(.rbMono(10.5))
         .foregroundStyle(Color.rbFg3)
@@ -129,17 +129,17 @@ public struct InlineComposer: View {
                 // TODO(§15-step-4): replace with AIKit.draftReply(tone:)
                 draftText = Self.draftBodies[tone] ?? ""
             } label: {
-                Label("Regenerate", systemImage: "sparkle")
+                Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
             }
             .buttonStyle(.rbGhost)
 
             Button(action: onEditInFull) {
-                Text("Edit in full")
+                Text(String(localized: "composer.cta.editInFull", defaultValue: "Edit in full"))
             }
             .buttonStyle(.rbSecondary)
 
             Button(action: onSend) {
-                Label("Send", systemImage: "paperplane.fill")
+                Label(String(localized: "composer.cta.send", defaultValue: "Send"), systemImage: "paperplane.fill")
             }
             .buttonStyle(.rbPrimary)
         }

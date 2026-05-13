@@ -11,14 +11,14 @@ struct FolderItem: Identifiable, Hashable {
     var count: Int?
 
     static let defaultFolders: [FolderItem] = [
-        FolderItem(id: "inbox", name: "Inbox", icon: "tray"),
-        FolderItem(id: "reply", name: "Needs reply", icon: "arrowshape.turn.up.left"),
-        FolderItem(id: "due", name: "Has deadline", icon: "clock"),
-        FolderItem(id: "att", name: "Attachments", icon: "paperclip"),
-        FolderItem(id: "logged", name: "Logged", icon: "checkmark.circle"),
-        FolderItem(id: "starred", name: "Starred", icon: "star"),
-        FolderItem(id: "sent", name: "Sent", icon: "paperplane"),
-        FolderItem(id: "arch", name: "Archive", icon: "archivebox"),
+        FolderItem(id: "inbox", name: String(localized: "sidebar.folder.inbox", defaultValue: "Inbox"), icon: "tray"),
+        FolderItem(id: "reply", name: String(localized: "sidebar.folder.needsReply", defaultValue: "Needs reply"), icon: "arrowshape.turn.up.left"),
+        FolderItem(id: "due", name: String(localized: "sidebar.folder.hasDeadline", defaultValue: "Has deadline"), icon: "clock"),
+        FolderItem(id: "att", name: String(localized: "sidebar.folder.attachments", defaultValue: "Attachments"), icon: "paperclip"),
+        FolderItem(id: "logged", name: String(localized: "sidebar.folder.logged", defaultValue: "Logged"), icon: "checkmark.circle"),
+        FolderItem(id: "starred", name: String(localized: "sidebar.folder.starred", defaultValue: "Starred"), icon: "star"),
+        FolderItem(id: "sent", name: String(localized: "sidebar.folder.sent", defaultValue: "Sent"), icon: "paperplane"),
+        FolderItem(id: "arch", name: String(localized: "sidebar.folder.archive", defaultValue: "Archive"), icon: "archivebox"),
     ]
 }
 
@@ -61,20 +61,20 @@ struct RBSidebar: View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    sectionHeader("Mail")
+                    sectionHeader(String(localized: "sidebar.section.mail", defaultValue: "Mail"))
 
                     ForEach(folders) { folder in
                         folderRow(folder)
                     }
 
-                    sectionHeader("Accounts")
+                    sectionHeader(String(localized: "sidebar.section.accounts", defaultValue: "Accounts"))
                         .padding(.top, RBSpace.s2)
 
                     ForEach(accounts) { account in
                         accountRow(account)
                     }
 
-                    sectionHeader("Privacy")
+                    sectionHeader(String(localized: "sidebar.section.privacy", defaultValue: "Privacy"))
                         .padding(.top, RBSpace.s2)
                 }
                 .padding(.horizontal, RBSpace.s2)

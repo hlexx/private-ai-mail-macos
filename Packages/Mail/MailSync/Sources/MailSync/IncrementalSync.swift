@@ -1,8 +1,8 @@
 import Foundation
-import MailProviders
-import MailDomain
-import Persistence
 import GRDB
+import MailDomain
+import MailProviders
+import Persistence
 
 enum IncrementalSync {
     static func run(
@@ -21,7 +21,7 @@ enum IncrementalSync {
         }
 
         var currentHistoryId = historyId
-        var pageToken: String? = nil
+        var pageToken: String?
         var affectedThreadIds = Set<String>()
 
         repeat {

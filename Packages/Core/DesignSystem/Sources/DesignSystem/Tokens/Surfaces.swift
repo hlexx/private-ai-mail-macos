@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 // MARK: - Semantic Surface Tokens
 // Resolve to different values for dark vs light, matching colors_and_type.css §3–4.

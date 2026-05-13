@@ -1,7 +1,7 @@
-import Foundation
-import MailSync
 import AIKit
 import DesignSystem
+import Foundation
+import MailSync
 
 // MARK: - Public API
 

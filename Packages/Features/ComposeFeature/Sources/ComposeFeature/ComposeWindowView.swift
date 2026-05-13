@@ -51,7 +51,7 @@ public struct ComposeWindowView: View {
                 .foregroundStyle(Color.rbFg1)
                 .lineLimit(1)
             Spacer()
-            RBIconButton(systemName: "xmark", accessibilityLabel: "Close") {
+            RBIconButton(systemName: "xmark", accessibilityLabel: String(localized: "compose.close", defaultValue: "Close")) {
                 onClose()
             }
         }
@@ -63,11 +63,11 @@ public struct ComposeWindowView: View {
 
     private var fieldRows: some View {
         VStack(spacing: 0) {
-            fieldRow(label: "to", text: $toField)
+            fieldRow(label: String(localized: "compose.field.to", defaultValue: "to"), text: $toField)
             Divider().overlay(Color.rbStroke1)
-            fieldRow(label: "cc", text: $ccField, placeholder: "add recipient\u{2026}")
+            fieldRow(label: String(localized: "compose.field.cc", defaultValue: "cc"), text: $ccField, placeholder: String(localized: "compose.field.ccPlaceholder", defaultValue: "add recipient\u{2026}"))
             Divider().overlay(Color.rbStroke1)
-            fieldRow(label: "subj", text: $subjectField)
+            fieldRow(label: String(localized: "compose.field.subject", defaultValue: "subj"), text: $subjectField)
         }
     }
 
@@ -97,23 +97,23 @@ public struct ComposeWindowView: View {
 
     private var footerSection: some View {
         HStack {
-            EyebrowLabel("\u{25C6} drafted locally \u{00B7} attached contract.pdf \u{00B7} tone: concise")
+            EyebrowLabel(String(localized: "compose.footer.meta", defaultValue: "\u{25C6} drafted locally \u{00B7} attached contract.pdf \u{00B7} tone: concise"))
             Spacer()
             HStack(spacing: RBSpace.s2) {
-                Button("Save draft") {}
+                Button(String(localized: "compose.cta.saveDraft", defaultValue: "Save draft")) {}
                     .buttonStyle(.rbGhost)
 
                 Button {
                     // TODO(§15-step-4): replace with AIKit.rewrite()
                 } label: {
-                    Label("Rewrite", systemImage: "sparkle")
+                    Label(String(localized: "compose.cta.rewrite", defaultValue: "Rewrite"), systemImage: "sparkle")
                 }
                 .buttonStyle(.rbSecondary)
 
                 Button {
                     // TODO(§15-step-7): wire real send
                 } label: {
-                    Label("Send", systemImage: "arrow.up")
+                    Label(String(localized: "compose.cta.send", defaultValue: "Send"), systemImage: "arrow.up")
                 }
                 .buttonStyle(.rbPrimary)
             }

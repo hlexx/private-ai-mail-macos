@@ -1,4 +1,55 @@
-# Skeleton notes
+# Project notes
+
+## Re:Box UI iteration
+
+This iteration implements the pixel-perfect Re:Box design handoff in the
+existing SwiftUI macOS app, redressing every screen component to match the
+Claude Design HTML/CSS/JSX prototype.
+
+### Bundled fonts (OFL-licensed)
+
+Three web font families are bundled in `Apps/MacApp/Resources/Fonts/`:
+
+- **Geist** (400/500/600/700) — primary UI font. SIL Open Font License.
+- **Instrument Serif** (regular + italic) — decorative serif for the
+  reading-pane empty state and display headings.
+- **JetBrains Mono** (400/500/600) — monospace for timestamps, metadata,
+  eyebrow labels.
+
+License file: `Apps/MacApp/Resources/Fonts/LICENSES.txt`
+
+### Design source
+
+The design handoff lives at `design/re-box/`. The primary file is
+`design/re-box/project/Re:Box macOS.html` which imports JSX components
+and CSS stylesheets defining every color, type scale, spacing token,
+and component.
+
+### Hardcoded stubs
+
+Brief rail and inline composer use hardcoded stub data for demonstration.
+Thread IDs ending in `t1` or `t2` get populated briefs; all other threads
+show the empty state. Each stub site is marked with a
+`// TODO(§15-step-4): remove stub when AIKit lands` comment.
+
+Covered thread IDs:
+- `*t1` — "Client approved pricing…" brief (confidence 88%)
+- `*t2` — "Jonas wants seat count…" brief (confidence 92%)
+
+### Key architectural decisions
+
+- Design tokens live in `Packages/Core/DesignSystem/` — all color, type,
+  spacing, radii, and motion tokens. Feature packages consume these and
+  do not define their own.
+- Theme switching uses `@AppStorage("rb-theme")` cycling system → dark →
+  light. The `rbTheme()` modifier applies the preferred color scheme to
+  the root view.
+- The Compose window uses `NSTextView` via `NSViewRepresentable` for
+  rich-text editing, per §14 design decision 4.
+- All user-facing strings use `String(localized:defaultValue:)` for
+  i18n readiness.
+
+## Skeleton notes
 
 ## Why MLX is not yet linked
 

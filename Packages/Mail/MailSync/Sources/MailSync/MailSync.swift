@@ -1,6 +1,6 @@
 import Foundation
-import MailProviders
 import MailIndex
+import MailProviders
 import Persistence
 
 // MARK: - Public API

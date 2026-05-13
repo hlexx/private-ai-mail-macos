@@ -1,6 +1,6 @@
 import Foundation
-import Persistence
 import MailDomain
+import Persistence
 
 // MARK: - Public API
 

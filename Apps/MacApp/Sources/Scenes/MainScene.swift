@@ -64,7 +64,7 @@ struct MainScene: View {
         .overlay {
             if composition.showActionSheet {
                 ActionSheetView(
-                    threadSubject: threadStore.subject.isEmpty ? "Selected thread" : threadStore.subject,
+                    threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
                     onClose: { composition.showActionSheet = false }
                 )
             }

@@ -1,5 +1,5 @@
-import Foundation
 import AppFoundation
+import Foundation
 
 // MARK: - Public API
 

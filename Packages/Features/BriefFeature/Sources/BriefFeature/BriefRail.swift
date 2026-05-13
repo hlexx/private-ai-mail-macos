@@ -39,14 +39,14 @@ public struct BriefRail: View {
         VStack(alignment: .leading, spacing: 0) {
             // Head: eyebrow + confidence
             HStack {
-                Text("\u{25C6} RE:BOX BRIEF \u{00B7} LOCAL")
+                Text(String(localized: "brief.eyebrow", defaultValue: "\u{25C6} RE:BOX BRIEF \u{00B7} LOCAL"))
                     .font(.rbMono(10.5))
                     .tracking(1.47)
                     .foregroundStyle(Color.rbCitron500)
 
                 Spacer()
 
-                Text("confidence \(Int(brief.confidence * 100))%")
+                Text(String(localized: "brief.confidence \(Int(brief.confidence * 100))", defaultValue: "confidence \(Int(brief.confidence * 100))%"))
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
             }
@@ -65,7 +65,7 @@ public struct BriefRail: View {
 
             // Evidence
             if !brief.evidence.isEmpty {
-                Text("Evidence: \(brief.evidence.joined(separator: " \u{00B7} "))")
+                Text(String(localized: "brief.evidence \(brief.evidence.joined(separator: " \u{00B7} "))", defaultValue: "Evidence: \(brief.evidence.joined(separator: " \u{00B7} "))"))
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
                     .padding(.bottom, 12)
@@ -82,16 +82,16 @@ public struct BriefRail: View {
             Divider().overlay(Color.rbStroke1)
 
             if let request = brief.request {
-                fieldRow(key: "REQUEST", value: request)
+                fieldRow(key: String(localized: "brief.field.request", defaultValue: "REQUEST"), value: request)
             }
             if let deadline = brief.deadline {
-                fieldRow(key: "DEADLINE", value: deadline, valueColor: .rbSignalDeadline)
+                fieldRow(key: String(localized: "brief.field.deadline", defaultValue: "DEADLINE"), value: deadline, valueColor: .rbSignalDeadline)
             }
             if let risk = brief.risk {
-                fieldRow(key: "RISK", value: risk)
+                fieldRow(key: String(localized: "brief.field.risk", defaultValue: "RISK"), value: risk)
             }
             if let nextStep = brief.nextStep {
-                fieldRow(key: "NEXT STEP", value: nextStep)
+                fieldRow(key: String(localized: "brief.field.nextStep", defaultValue: "NEXT STEP"), value: nextStep)
             }
 
             Divider().overlay(Color.rbStroke1)
@@ -119,21 +119,21 @@ public struct BriefRail: View {
             Button {
                 // TODO(§15-step-4): wire to AIKit.draftReply()
             } label: {
-                Label("Draft reply", systemImage: "sparkles")
+                Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
             }
             .buttonStyle(.rbPrimary)
 
             Button {
                 // TODO(§15-step-4): wire to snooze action
             } label: {
-                Label("Snooze to Fri AM", systemImage: "clock")
+                Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
             }
             .buttonStyle(.rbSecondary)
 
             Button {
                 // TODO(§15-step-4): wire to CRM logging
             } label: {
-                Text("Log to CRM")
+                Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
             }
             .buttonStyle(.rbGhost)
 
@@ -146,14 +146,14 @@ public struct BriefRail: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                EyebrowLabel("Re:Box brief")
+                EyebrowLabel(String(localized: "brief.empty.eyebrow", defaultValue: "Re:Box brief"))
                 Spacer()
-                Text("no action found")
+                Text(String(localized: "brief.empty.status", defaultValue: "no action found"))
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
             }
 
-            Text("Nothing to summarize here \u{2014} informational thread.")
+            Text(String(localized: "brief.empty.message", defaultValue: "Nothing to summarize here \u{2014} informational thread."))
                 .font(.rbGeist(15, weight: .medium))
                 .foregroundStyle(Color.rbFg3)
                 .lineSpacing(3)

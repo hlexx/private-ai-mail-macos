@@ -1,8 +1,8 @@
 import Foundation
-import MailProviders
-import MailDomain
-import Persistence
 import GRDB
+import MailDomain
+import MailProviders
+import Persistence
 
 enum Bootstrap {
     static func run(
@@ -14,7 +14,7 @@ enum Bootstrap {
     ) async throws {
         // Step 1: Page through messages.list to collect unique thread IDs
         var threadIds = Set<String>()
-        var pageToken: String? = nil
+        var pageToken: String?
         let query = "newer_than:30d"
 
         repeat {
@@ -36,7 +36,7 @@ enum Bootstrap {
         let sortedIds = Array(threadIds)
         let batchSize = 50
         var processedCount = 0
-        var latestHistoryId: String? = nil
+        var latestHistoryId: String?
 
         for batchStart in stride(from: 0, to: sortedIds.count, by: batchSize) {
             let batchEnd = min(batchStart + batchSize, sortedIds.count)

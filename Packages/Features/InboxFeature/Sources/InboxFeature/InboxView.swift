@@ -1,5 +1,5 @@
-import SwiftUI
 import DesignSystem
+import SwiftUI
 
 public struct InboxView: View {
     @Bindable var store: InboxStore
@@ -27,11 +27,11 @@ public struct InboxView: View {
 
     private var threadListHeader: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Inbox")
+            Text(String(localized: "inbox.header.title", defaultValue: "Inbox"))
                 .font(.rbGeist(18, weight: .semibold))
                 .foregroundStyle(Color.rbFg1)
             Spacer()
-            Text("\(store.filteredThreads.count) threads · \(store.needsReplyCount) need reply")
+            Text(String(localized: "inbox.header.meta \(store.filteredThreads.count) \(store.needsReplyCount)", defaultValue: "\(store.filteredThreads.count) threads · \(store.needsReplyCount) need reply"))
                 .font(.rbMono(11))
                 .foregroundStyle(Color.rbFg3)
         }
@@ -79,7 +79,7 @@ public struct InboxView: View {
                     ))
                 )
             } else {
-                ScrollViewReader { proxy in
+                ScrollViewReader { _ in
                     List(store.filteredThreads, selection: $store.selectedThreadID) { thread in
                         ThreadRowView(
                             thread: thread,

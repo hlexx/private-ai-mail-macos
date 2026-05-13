@@ -14,14 +14,14 @@ struct ActionItem: Identifiable {
     let systemName: String
 
     static let all: [ActionItem] = [
-        ActionItem(id: .reply, label: "Draft reply", color: .rbAccent, systemName: "arrowshape.turn.up.left.fill"),
-        ActionItem(id: .snooze, label: "Snooze to Fri", color: .rbAccentSecondary, systemName: "clock.fill"),
-        ActionItem(id: .log, label: "Log to CRM", color: .rbAccentTertiary, systemName: "arrow.up.forward.square.fill"),
-        ActionItem(id: .task, label: "Make a task", color: .rbBurntOrange500, systemName: "diamond.fill"),
-        ActionItem(id: .archive, label: "Archive", color: .rbGraphite500, systemName: "archivebox.fill"),
-        ActionItem(id: .unsub, label: "Unsubscribe", color: .rbGraphite500, systemName: "xmark.circle.fill"),
-        ActionItem(id: .rule, label: "Make a rule", color: .rbGraphite500, systemName: "line.3.horizontal.decrease.circle.fill"),
-        ActionItem(id: .share, label: "Share thread", color: .rbGraphite500, systemName: "arrow.up.forward.circle.fill"),
+        ActionItem(id: .reply, label: String(localized: "action.draftReply", defaultValue: "Draft reply"), color: .rbAccent, systemName: "arrowshape.turn.up.left.fill"),
+        ActionItem(id: .snooze, label: String(localized: "action.snoozeToFri", defaultValue: "Snooze to Fri"), color: .rbAccentSecondary, systemName: "clock.fill"),
+        ActionItem(id: .log, label: String(localized: "action.logCRM", defaultValue: "Log to CRM"), color: .rbAccentTertiary, systemName: "arrow.up.forward.square.fill"),
+        ActionItem(id: .task, label: String(localized: "action.makeTask", defaultValue: "Make a task"), color: .rbBurntOrange500, systemName: "diamond.fill"),
+        ActionItem(id: .archive, label: String(localized: "action.archive", defaultValue: "Archive"), color: .rbGraphite500, systemName: "archivebox.fill"),
+        ActionItem(id: .unsub, label: String(localized: "action.unsubscribe", defaultValue: "Unsubscribe"), color: .rbGraphite500, systemName: "xmark.circle.fill"),
+        ActionItem(id: .rule, label: String(localized: "action.makeRule", defaultValue: "Make a rule"), color: .rbGraphite500, systemName: "line.3.horizontal.decrease.circle.fill"),
+        ActionItem(id: .share, label: String(localized: "action.shareThread", defaultValue: "Share thread"), color: .rbGraphite500, systemName: "arrow.up.forward.circle.fill"),
     ]
 }
 
@@ -114,14 +114,14 @@ public struct ActionSheetView: View {
                     // Header
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
-                            EyebrowLabel("What should I do with this thread?")
-                            Text(threadSubject.isEmpty ? "Selected thread" : threadSubject)
+                            EyebrowLabel(String(localized: "action.sheet.eyebrow", defaultValue: "What should I do with this thread?"))
+                            Text(threadSubject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadSubject)
                                 .rbTextStyle(.body)
                                 .fontWeight(.medium)
                                 .foregroundStyle(Color.rbFg1)
                         }
                         Spacer()
-                        RBIconButton(systemName: "xmark", accessibilityLabel: "Close") {
+                        RBIconButton(systemName: "xmark", accessibilityLabel: String(localized: "action.sheet.close", defaultValue: "Close")) {
                             onClose()
                         }
                     }
@@ -140,14 +140,14 @@ public struct ActionSheetView: View {
                     // Preview block
                     VStack(alignment: .leading, spacing: RBSpace.s2) {
                         HStack {
-                            Text("◆ Re:Box will".uppercased())
+                            Text(String(localized: "action.preview.eyebrow", defaultValue: "◆ RE:BOX WILL"))
                                 .font(.rbMono(10, weight: .medium))
                                 .tracking(0.14 * 10)
                                 .foregroundStyle(Color.rbSignalSuccess)
 
                             Spacer()
 
-                            Text("undo in 5s".uppercased())
+                            Text(String(localized: "action.preview.undo", defaultValue: "UNDO IN 5S"))
                                 .font(.rbMono(10, weight: .medium))
                                 .tracking(0.14 * 10)
                                 .foregroundStyle(Color.rbFg3)
@@ -158,7 +158,7 @@ public struct ActionSheetView: View {
                             .foregroundStyle(Color.rbFg2)
                             .lineSpacing(4)
 
-                        Text("on-device · 0 bytes uploaded")
+                        Text(String(localized: "action.preview.privacy", defaultValue: "on-device · 0 bytes uploaded"))
                             .font(.rbMono(10.5))
                             .foregroundStyle(Color.rbFg3)
                             .padding(.top, RBSpace.s1)
@@ -174,9 +174,9 @@ public struct ActionSheetView: View {
                     // CTA row
                     HStack {
                         Spacer()
-                        Button("Cancel") { onClose() }
+                        Button(String(localized: "action.cta.cancel", defaultValue: "Cancel")) { onClose() }
                             .buttonStyle(.rbGhost)
-                        Button("Do it") { onClose() }
+                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) { onClose() }
                             .buttonStyle(.rbPrimary)
                     }
                     .padding(.top, RBSpace.s3)

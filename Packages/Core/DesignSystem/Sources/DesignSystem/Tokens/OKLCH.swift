@@ -11,13 +11,13 @@ public enum OKLCH {
         let b = c * sin(hRad)
 
         // OKLab → linear sRGB via the intermediate LMS cube-root space.
-        let l_ = l + 0.3963377774 * a + 0.2158037573 * b
-        let m_ = l - 0.1055613458 * a - 0.0638541728 * b
-        let s_ = l - 0.0894841775 * a - 1.2914855480 * b
+        let lms0 = l + 0.3963377774 * a + 0.2158037573 * b
+        let lms1 = l - 0.1055613458 * a - 0.0638541728 * b
+        let lms2 = l - 0.0894841775 * a - 1.2914855480 * b
 
-        let lc = l_ * l_ * l_
-        let mc = m_ * m_ * m_
-        let sc = s_ * s_ * s_
+        let lc = lms0 * lms0 * lms0
+        let mc = lms1 * lms1 * lms1
+        let sc = lms2 * lms2 * lms2
 
         let rLin =  4.0767416621 * lc - 3.3077115913 * mc + 0.2309699292 * sc
         let gLin = -1.2684380046 * lc + 2.6097574011 * mc - 0.3413193965 * sc

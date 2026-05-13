@@ -17,7 +17,7 @@ public struct SearchField: View {
                 .foregroundStyle(Color.rbFg3)
 
             TextField(
-                "Search or ask Re:Box (last week, contracts, due Friday\u{2026})",
+                String(localized: "search.placeholder", defaultValue: "Search or ask Re:Box (last week, contracts, due Friday\u{2026})"),
                 text: $text
             )
             .textFieldStyle(.plain)

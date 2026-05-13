@@ -1,5 +1,5 @@
-import Foundation
 import AuthKit
+import Foundation
 
 public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
     private let session: URLSession

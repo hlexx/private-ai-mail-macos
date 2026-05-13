@@ -1,7 +1,7 @@
 import Foundation
+import GRDB
 import Observation
 import Persistence
-import GRDB
 
 public enum ThreadFilter: String, CaseIterable, Sendable {
     case all
@@ -12,11 +12,11 @@ public enum ThreadFilter: String, CaseIterable, Sendable {
 
     public var label: String {
         switch self {
-        case .all: return "All"
-        case .needsReply: return "Needs reply"
-        case .hasDeadline: return "Has deadline"
-        case .hasAttachment: return "Attachments"
-        case .aiHandled: return "AI handled"
+        case .all: return String(localized: "filter.all", defaultValue: "All")
+        case .needsReply: return String(localized: "filter.needsReply", defaultValue: "Needs reply")
+        case .hasDeadline: return String(localized: "filter.hasDeadline", defaultValue: "Has deadline")
+        case .hasAttachment: return String(localized: "filter.attachments", defaultValue: "Attachments")
+        case .aiHandled: return String(localized: "filter.aiHandled", defaultValue: "AI handled")
         }
     }
 }

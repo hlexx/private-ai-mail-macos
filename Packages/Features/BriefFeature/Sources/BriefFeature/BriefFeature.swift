@@ -1,7 +1,7 @@
-import Foundation
 import AIKit
-import MailDomain
 import DesignSystem
+import Foundation
+import MailDomain
 
 // MARK: - Public API
 

@@ -10,7 +10,7 @@ public struct LocalAIPill: View {
                 .fill(Color.rbCitron500)
                 .frame(width: 6, height: 6)
                 .shadow(color: Color.rbCitron500.opacity(0.3), radius: 3, x: 0, y: 0)
-            Text("LOCAL AI · M-SERIES")
+            Text(String(localized: "pill.localAI", defaultValue: "LOCAL AI · M-SERIES"))
                 .font(.rbMono(10.5, weight: .semibold))
                 .tracking(0.06 * 10.5)
         }

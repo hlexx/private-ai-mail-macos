@@ -1,8 +1,8 @@
 import Foundation
-import MailProviders
-import MailDomain
-import Persistence
 import GRDB
+import MailDomain
+import MailProviders
+import Persistence
 
 public actor MailSyncEngine {
     public let accountId: String

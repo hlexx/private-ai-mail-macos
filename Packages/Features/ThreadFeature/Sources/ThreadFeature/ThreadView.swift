@@ -66,18 +66,18 @@ public struct ThreadView<ComposerContent: View>: View {
             HStack(spacing: RBSpace.s2) {
                 Spacer()
                 Button { /* Archive stub */ } label: {
-                    Label("Archive", systemImage: "archivebox")
+                    Label(String(localized: "thread.action.archive", defaultValue: "Archive"), systemImage: "archivebox")
                 }
                 .buttonStyle(.rbGhost)
 
                 Button { /* Snooze stub */ } label: {
-                    Label("Snooze", systemImage: "clock")
+                    Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
                 }
                 .buttonStyle(.rbGhost)
 
                 Button { /* Send-to stub */ } label: {
                     Label {
-                        Text("Send to \u{2197}")
+                        Text(String(localized: "thread.action.sendTo", defaultValue: "Send to \u{2197}"))
                     } icon: {
                         Image(systemName: "paperplane")
                     }
@@ -101,16 +101,16 @@ public struct ThreadView<ComposerContent: View>: View {
                 .foregroundStyle(Color.rbFg2)
             Text("\u{00B7}")
                 .foregroundStyle(Color.rbFg3)
-            Text("to \(store.accountEmail)")
+            Text(String(localized: "thread.meta.to \(store.accountEmail)", defaultValue: "to \(store.accountEmail)"))
                 .foregroundStyle(Color.rbFg2)
             Text("\u{00B7}")
                 .foregroundStyle(Color.rbFg3)
-            Text("\(store.messageCount) messages")
+            Text(String(localized: "thread.meta.messages \(store.messageCount)", defaultValue: "\(store.messageCount) messages"))
                 .foregroundStyle(Color.rbFg2)
             if store.hasAttachment {
                 Text("\u{00B7}")
                     .foregroundStyle(Color.rbFg3)
-                Text("\(store.attachments.count) attachment\(store.attachments.count == 1 ? "" : "s")")
+                Text(String(localized: "thread.meta.attachments \(store.attachments.count)", defaultValue: "\(store.attachments.count) attachment\(store.attachments.count == 1 ? "" : "s")"))
                     .foregroundStyle(Color.rbFg2)
             }
         }
@@ -154,7 +154,7 @@ public struct ThreadView<ComposerContent: View>: View {
                     Text(att.filename)
                         .font(.rbGeist(13, weight: .medium))
                         .foregroundStyle(Color.rbFg1)
-                    Text("\(att.formattedSize) \u{00B7} summarized locally")
+                    Text(String(localized: "thread.attachment.meta \(att.formattedSize)", defaultValue: "\(att.formattedSize) \u{00B7} summarized locally"))
                         .font(.rbMono(11))
                         .foregroundStyle(Color.rbFg3)
                 }
@@ -162,12 +162,12 @@ public struct ThreadView<ComposerContent: View>: View {
                 Spacer()
 
                 Button { /* Preview stub */ } label: {
-                    Label("Preview", systemImage: "eye")
+                    Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
                 }
                 .buttonStyle(.rbGhost)
 
                 Button { /* Summarize stub */ } label: {
-                    Label("Summarize", systemImage: "sparkle")
+                    Label(String(localized: "thread.attachment.summarize", defaultValue: "Summarize"), systemImage: "sparkle")
                 }
                 .buttonStyle(.rbSecondary)
             }

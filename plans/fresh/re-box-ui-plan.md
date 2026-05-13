@@ -300,16 +300,16 @@ Implement the standalone Compose window (⌘N opens it) with an
 Ensure every component renders correctly under both themes; tighten loose
 ends; run the full validation gate.
 
-- [ ] Toggle the app theme via the toolbar button and verify visually (sample each major view in light)
-- [ ] Add or extend snapshot tests in `DesignSystemTests`, `InboxFeatureTests`, `ThreadFeatureTests`, `BriefFeatureTests`, `ComposeFeatureTests`, `ActionsFeatureTests` for every major view in both color schemes; commit baseline snapshots
-- [ ] Replace any leftover placeholder/hardcoded copy strings with `String(localized:)` and add entries to the relevant `Localizable.xcstrings` catalog
-- [ ] Run `swiftlint --strict` and fix anything it flags
-- [ ] Run `grep -rE '(os_log|Logger|print|debugPrint)\(' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build` and confirm zero new logging calls in feature code (DesignSystem may have a debug pretty-print, but only inside `#if DEBUG`)
-- [ ] Run `! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build` (same privacy gate as step 3)
-- [ ] Run `tuist generate --no-open && xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — expect `** BUILD SUCCEEDED **`
-- [ ] Run `xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — expect `** TEST SUCCEEDED **`
-- [ ] Add a `NOTES.md` entry "Re:Box UI iteration" documenting: bundled fonts and their OFL license file location, hardcoded brief/composer stubs and which thread IDs they cover, where to find the design source (`design/re-box/`)
-- [ ] Tag the merge commit `re-box-ui` after the worktree branch is squashed/merged
+- [x] Toggle the app theme via the toolbar button and verify visually (sample each major view in light)
+- [x] Add or extend snapshot tests in `DesignSystemTests`, `InboxFeatureTests`, `ThreadFeatureTests`, `BriefFeatureTests`, `ComposeFeatureTests`, `ActionsFeatureTests` for every major view in both color schemes; commit baseline snapshots
+- [x] Replace any leftover placeholder/hardcoded copy strings with `String(localized:)` and add entries to the relevant `Localizable.xcstrings` catalog
+- [x] Run `swiftlint --strict` and fix anything it flags
+- [x] Run `grep -rE '(os_log|Logger|print|debugPrint)\(' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build` and confirm zero new logging calls in feature code (DesignSystem may have a debug pretty-print, but only inside `#if DEBUG`)
+- [x] Run `! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build` (same privacy gate as step 3)
+- [x] Run `tuist generate --no-open && xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — expect `** BUILD SUCCEEDED **`
+- [x] Run `xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` — expect `** TEST SUCCEEDED **`
+- [x] Add a `NOTES.md` entry "Re:Box UI iteration" documenting: bundled fonts and their OFL license file location, hardcoded brief/composer stubs and which thread IDs they cover, where to find the design source (`design/re-box/`)
+- [x] Tag the merge commit `re-box-ui` after the worktree branch is squashed/merged
 
 ## Critical files to read or modify
 

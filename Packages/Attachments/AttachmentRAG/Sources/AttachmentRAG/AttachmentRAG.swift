@@ -1,6 +1,6 @@
-import Foundation
-import AttachmentKit
 import AIEmbeddings
+import AttachmentKit
+import Foundation
 import Persistence
 
 // MARK: - Public API

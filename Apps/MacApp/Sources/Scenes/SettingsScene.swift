@@ -1,6 +1,6 @@
-import SwiftUI
-import SettingsFeature
 import DesignSystem
+import SettingsFeature
+import SwiftUI
 
 struct SettingsScene: View {
 

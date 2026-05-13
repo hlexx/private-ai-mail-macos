@@ -1,6 +1,6 @@
-import SwiftUI
-import Persistence
 import MailSync
+import Persistence
+import SwiftUI
 
 public struct AccountsTab: View {
     @Bindable var store: AccountsTabStore

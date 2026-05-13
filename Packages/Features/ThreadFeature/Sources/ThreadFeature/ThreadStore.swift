@@ -1,7 +1,7 @@
 import Foundation
+import GRDB
 import Observation
 import Persistence
-import GRDB
 
 public struct MessageRow: Identifiable, Sendable {
     public let id: String
