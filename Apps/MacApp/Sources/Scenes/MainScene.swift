@@ -1,4 +1,5 @@
 import BriefFeature
+import ComposeFeature
 import DesignSystem
 import GRDB
 import InboxFeature
@@ -40,8 +41,16 @@ struct MainScene: View {
                 InboxView(store: inboxStore)
                     .frame(width: 360)
 
-                ThreadView(store: threadStore)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ThreadView(store: threadStore) {
+                    if briefStore.brief != nil {
+                        InlineComposer(
+                            evidence: briefStore.brief?.evidence ?? [],
+                            onEditInFull: { composition.showCompose = true },
+                            onSend: { /* TODO(§15-step-7): wire real send */ }
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 Divider()
                     .overlay(Color.rbStroke1)

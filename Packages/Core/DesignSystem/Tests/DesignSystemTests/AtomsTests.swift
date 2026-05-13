@@ -269,4 +269,77 @@ struct AtomsTests {
         #expect(AvatarView.extractInitials(from: "Maria Garcia Lopez") == "ML")
         #expect(AvatarView.extractInitials(from: "") == "?")
     }
+
+    // MARK: - RBToneSegment
+
+    @MainActor
+    @Test func toneSegmentDark() {
+        let view = toneSegmentView()
+            .preferredColorScheme(.dark)
+            .frame(width: 400, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 400, height: 60)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func toneSegmentLight() {
+        let view = toneSegmentView()
+            .preferredColorScheme(.light)
+            .frame(width: 400, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 400, height: 60)
+        host.layout()
+    }
+
+    private func toneSegmentView() -> some View {
+        struct Wrapper: View {
+            @State var selection = "warm"
+            var body: some View {
+                RBToneSegment(
+                    segments: [
+                        .init(id: "concise", label: "Concise", detail: "42w"),
+                        .init(id: "warm", label: "Warm", detail: "61w"),
+                        .init(id: "direct", label: "Direct", detail: "28w"),
+                    ],
+                    selection: $selection
+                )
+                .padding()
+                .background(Color.rbBgCanvas)
+            }
+        }
+        return Wrapper()
+    }
+
+    // MARK: - RBFilterChip
+
+    @MainActor
+    @Test func filterChipDark() {
+        let view = HStack(spacing: 6) {
+            RBFilterChip(label: "All", isOn: true) {}
+            RBFilterChip(label: "Needs reply", isOn: false) {}
+        }
+        .padding()
+        .background(Color.rbBgCanvas)
+        .preferredColorScheme(.dark)
+        .frame(width: 300, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 300, height: 60)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func filterChipLight() {
+        let view = HStack(spacing: 6) {
+            RBFilterChip(label: "All", isOn: true) {}
+            RBFilterChip(label: "Needs reply", isOn: false) {}
+        }
+        .padding()
+        .background(Color.rbBgCanvas)
+        .preferredColorScheme(.light)
+        .frame(width: 300, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 300, height: 60)
+        host.layout()
+    }
 }

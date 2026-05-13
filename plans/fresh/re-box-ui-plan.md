@@ -260,14 +260,14 @@ Use hardcoded stubs for the first two thread fixtures from the design's
 Add the tone-selector composer that lives between the thread column and the
 brief rail. Uses hardcoded tone-rewrites until AIKit lands.
 
-- [ ] Create `Packages/Features/ComposeFeature/Sources/ComposeFeature/InlineComposer.swift` rendering: header row with eyebrow "Drafted locally · tone:" + a 3-segment `RBToneSegment` (Concise / Warm / Direct) showing word counts, a `TextEditor` styled with `rbBgElev1` background, footer with citations line (lock SF Symbol + "3 citations · msg_1 · msg_3 · contract.pdf p.2"), and CTAs (ghost "Regenerate" with sparkle, secondary "Edit in full", primary "Send" with paperplane)
-- [ ] `RBToneSegment.swift` in DesignSystem — a 3-button segmented pill, selected state has `rbAccentSoft` background, each segment shows label + smaller word-count
-- [ ] Hardcoded `draftBodies` dictionary mirroring `ReadingPane.jsx` (concise/warm/direct). Each tone change replaces the textarea contents. Add `// TODO(§15-step-4): replace with AIKit.draftReply(tone:)` comment
-- [ ] "Edit in full" CTA opens the full-screen Composer window from Task 11
-- [ ] "Send" is a stub that closes the composer and shows a transient toast (or no-op — the §15 step 7 implements real send)
-- [ ] Wire `InlineComposer` into `ThreadView` so it appears below the thread column, above the bottom edge. Show only when `thread.brief != nil` (matches the design's behavior — composer only appears when there is something to reply to)
-- [ ] Snapshot tests for `InlineComposer` in all three tone states, dark+light
-- [ ] Run `cd Packages/Features/ComposeFeature && swift test`
+- [x] Create `Packages/Features/ComposeFeature/Sources/ComposeFeature/InlineComposer.swift` rendering: header row with eyebrow "Drafted locally · tone:" + a 3-segment `RBToneSegment` (Concise / Warm / Direct) showing word counts, a `TextEditor` styled with `rbBgElev1` background, footer with citations line (lock SF Symbol + "3 citations · msg_1 · msg_3 · contract.pdf p.2"), and CTAs (ghost "Regenerate" with sparkle, secondary "Edit in full", primary "Send" with paperplane)
+- [x] `RBToneSegment.swift` in DesignSystem — a 3-button segmented pill, selected state has `rbAccentSoft` background, each segment shows label + smaller word-count
+- [x] Hardcoded `draftBodies` dictionary mirroring `ReadingPane.jsx` (concise/warm/direct). Each tone change replaces the textarea contents. Add `// TODO(§15-step-4): replace with AIKit.draftReply(tone:)` comment
+- [x] "Edit in full" CTA opens the full-screen Composer window from Task 11
+- [x] "Send" is a stub that closes the composer and shows a transient toast (or no-op — the §15 step 7 implements real send)
+- [x] Wire `InlineComposer` into `ThreadView` so it appears below the thread column, above the bottom edge. Show only when `thread.brief != nil` (matches the design's behavior — composer only appears when there is something to reply to)
+- [x] Snapshot tests for `InlineComposer` in all three tone states, dark+light
+- [x] Run `cd Packages/Features/ComposeFeature && swift test`
 
 ### Task 11: Action Sheet overlay (⌘K)
 
@@ -293,7 +293,7 @@ Implement the standalone Compose window (⌘N opens it) with an
 - [ ] Create `RichTextEditor.swift` (NSViewRepresentable wrapping `NSTextView`) supporting bold/italic/links/quote-citation via standard NSAttributedString. Implement minimum surface: bind to a `NSAttributedString` binding, sensible default font (Geist 14 px / RBSpace line height), respond to standard editing shortcuts. Real rich-text features (attachments, signatures, quote-collapse) are out of scope for this iteration
 - [ ] Hook ⌘N in `PrivateAIMailApp.swift` to open the `ComposeWindow` (use `@Environment(\.openWindow)` with a registered window group)
 - [ ] Snapshot test for ComposeWindow in dark+light at a few sizes
-- [ ] Run `cd Packages/Features/ComposeFeature && swift test`
+- [x] Run `cd Packages/Features/ComposeFeature && swift test`
 
 ### Task 13: Theme parity sweep, lint, and final verification
 

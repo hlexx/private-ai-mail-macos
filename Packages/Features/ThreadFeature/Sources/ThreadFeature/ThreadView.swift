@@ -1,11 +1,13 @@
 import DesignSystem
 import SwiftUI
 
-public struct ThreadView: View {
+public struct ThreadView<ComposerContent: View>: View {
     let store: ThreadStore
+    let composerContent: ComposerContent
 
-    public init(store: ThreadStore) {
+    public init(store: ThreadStore, @ViewBuilder composer: () -> ComposerContent) {
         self.store = store
+        self.composerContent = composer()
     }
 
     public var body: some View {
@@ -21,7 +23,7 @@ public struct ThreadView: View {
                             if store.hasAttachment {
                                 attachmentBlock
                             }
-                            // Task 10 will add InlineComposer here
+                            composerContent
                         }
                         .padding(.horizontal, 28)
                         .padding(.top, 20)
@@ -179,6 +181,13 @@ public struct ThreadView: View {
             )
             .padding(.top, 14)
         }
+    }
+}
+
+extension ThreadView where ComposerContent == EmptyView {
+    public init(store: ThreadStore) {
+        self.store = store
+        self.composerContent = EmptyView()
     }
 }
 
