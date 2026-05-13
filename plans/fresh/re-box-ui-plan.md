@@ -154,13 +154,13 @@ translate every OKLCH variable into a sRGB `Color` value with the same name.
 Translate sections 5–6 of `colors_and_type.css` into Swift `Font` + constant
 helpers usable from any feature package.
 
-- [ ] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Typography.swift` with `extension Font`: `rbGeist(_ size: CGFloat, weight: Font.Weight = .regular)`, `rbSerifItalic(_ size: CGFloat)`, `rbMono(_ size: CGFloat, weight: Font.Weight = .regular)`. Each registers and returns the bundled font with a system fallback chain (`-apple-system, "SF Pro Text"` for Geist, etc.)
-- [ ] Add `enum RBTextStyle { case displayXL, displayLG, displayMD, h1, h2, h3, h4, bodyLG, body, bodySM, label, eyebrow, mono, editorial }` plus a `View.rbTextStyle(_:)` modifier applying font + line spacing + tracking from the CSS
-- [ ] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Spacing.swift` with `enum RBSpace { static let s1: CGFloat = 4; s2 = 8; … s20 = 80 }`
-- [ ] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Radii.swift` with `enum RBRadius { static let xs: CGFloat = 4; sm = 6; md = 10; lg = 14; xl = 20; xl2 = 28; pill = 999 }`
-- [ ] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Motion.swift` with `enum RBDuration` (`d1 = 0.12; d2 = 0.20; d3 = 0.32; d4 = 0.48`) and `enum RBEase` providing matching `Animation.timingCurve` values
-- [ ] Add snapshot tests in `DesignSystemTests` that render a "Tokens Cheatsheet" view (color swatches + every text style + spacing grid) in dark and light; commit the baseline snapshots
-- [ ] Run `cd Packages/Core/DesignSystem && swift test`
+- [x] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Typography.swift` with `extension Font`: `rbGeist(_ size: CGFloat, weight: Font.Weight = .regular)`, `rbSerifItalic(_ size: CGFloat)`, `rbMono(_ size: CGFloat, weight: Font.Weight = .regular)`. Each registers and returns the bundled font with a system fallback chain (`-apple-system, "SF Pro Text"` for Geist, etc.)
+- [x] Add `enum RBTextStyle { case displayXL, displayLG, displayMD, h1, h2, h3, h4, bodyLG, body, bodySM, label, eyebrow, mono, editorial }` plus a `View.rbTextStyle(_:)` modifier applying font + line spacing + tracking from the CSS
+- [x] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Spacing.swift` with `enum RBSpace { static let s1: CGFloat = 4; s2 = 8; … s20 = 80 }`
+- [x] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Radii.swift` with `enum RBRadius { static let xs: CGFloat = 4; sm = 6; md = 10; lg = 14; xl = 20; xl2 = 28; pill = 999 }`
+- [x] Create `Packages/Core/DesignSystem/Sources/DesignSystem/Tokens/Motion.swift` with `enum RBDuration` (`d1 = 0.12; d2 = 0.20; d3 = 0.32; d4 = 0.48`) and `enum RBEase` providing matching `Animation.timingCurve` values
+- [x] Add snapshot tests in `DesignSystemTests` that render a "Tokens Cheatsheet" view (color swatches + every text style + spacing grid) in dark and light; commit the baseline snapshots
+- [x] Run `cd Packages/Core/DesignSystem && swift test`
 
 ### Task 4: DesignSystem atoms (chips, buttons, pills, fields)
 
