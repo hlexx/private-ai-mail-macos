@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Re:Box · ReadingPane v2 (light) — 7 concepts</title>
+<link rel="stylesheet" href="app/colors_and_type.css" />
+<link rel="stylesheet" href="app/app.css" />
+<link rel="stylesheet" href="app/cards-v2.css" />
+<style>
+  /* Canvas chrome — light theme */
+  html, body, #root { height: 100%; }
+  body { background: oklch(95% 0.005 90); }
+  .dc-section-title { color: oklch(20% 0.01 260) !important; }
+  .dc-section-subtitle { color: oklch(45% 0.01 254) !important; }
+  .dc-artboard-label { color: oklch(38% 0.011 254) !important; font-family: "JetBrains Mono", monospace !important; font-size: 11px !important; letter-spacing: .06em; }
+  .rb2-artboard-shell {
+    width: 100%; height: 100%;
+    background: var(--bg-canvas);
+    color: var(--fg-1);
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgb(20 24 30 / .06), 0 0 0 1px rgb(20 24 30 / .04);
+  }
+  /* Light-theme tweaks for cards that need extra contrast */
+  [data-theme="light"] .rb2-pri {
+    box-shadow: 0 1px 0 0 color-mix(in oklch, #fff 50%, transparent) inset,
+                0 6px 18px -6px color-mix(in oklch, var(--citron-700) 35%, transparent);
+  }
+  [data-theme="light"] .rb2-rephrase {
+    box-shadow: 0 8px 24px -8px rgb(20 24 30 / .18);
+  }
+  [data-theme="light"] .rb2-composer {
+    box-shadow: 0 1px 2px rgb(20 24 30 / .04), 0 8px 24px -12px rgb(20 24 30 / .08);
+  }
+  [data-theme="light"] .rb2-pri-menu {
+    box-shadow: 0 16px 40px -12px rgb(20 24 30 / .18);
+  }
+  [data-theme="light"] .rb2-datepop {
+    box-shadow: 0 16px 40px -12px rgb(20 24 30 / .18);
+  }
+  [data-theme="light"] .rb2-mb-bucket {
+    box-shadow: 0 1px 2px rgb(20 24 30 / .04);
+  }
+  [data-theme="light"] .rb2-fyi-card,
+  [data-theme="light"] .rb2-done-card {
+    box-shadow: 0 1px 2px rgb(20 24 30 / .04);
+  }
+  /* AI prev diamond — the dark variable is too pale on warm-white */
+  [data-theme="light"] .rb2-row .ai-prev .diamond { color: var(--citron-700); }
+  [data-theme="light"] .rb2-composer-eyebrow,
+  [data-theme="light"] .rb2-brief-eyebrow,
+  [data-theme="light"] .rb2-mb-eyebrow,
+  [data-theme="light"] .rb2-eyebrow,
+  [data-theme="light"] .rb2-rail-mini .eb,
+  [data-theme="light"] .rb2-composer .head .eb { color: var(--citron-700); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body data-theme="light">
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="app/cards-v2.jsx"></script>
+
+<script type="text/babel">
+const { Card1, Card2, Card3, Card4, Card5, Card6, Card7 } = window.RB2;
+
+function Shell({ children }) {
+  return <div className="rb2-artboard-shell">{children}</div>;
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection
+        id="readingpane-v2"
+        title="ReadingPane v2 · light · «AI работает на тебя»"
+        subtitle="Семь концептов, как углубить принцип: AI подтверждает, выбирает за тебя, схлопывает choices в один primary action."
+      >
+        <DCArtboard id="c1" label="01 · One primary action per thread" width={760} height={460}>
+          <Shell><Card1 /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="c2" label="02 · Living brief — every field is interactive" width={400} height={560}>
+          <Shell><Card2 /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="c3" label="03 · Progressive composer + hover rephrase" width={680} height={720}>
+          <Shell><Card3 /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="c4" label="04 · AI summaries in thread-list preview" width={420} height={620}>
+          <Shell><Card4 /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="c5" label="05 · «Done» — terminal state after Send" width={760} height={500}>
+          <Shell><Card5 /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="c6" label="06 · Ambient FYI — AI confirms «nothing to do»" width={400} height={400}>
+          <Shell><Card6 /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="c7" label="07 · Morning briefing — Inbox click → grouped summary" width={840} height={680}>
+          <Shell><Card7 /></Shell>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

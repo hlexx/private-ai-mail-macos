@@ -124,17 +124,17 @@ Re:Box without breaking that data flow.
 Get the design handoff and required fonts into the repo so subsequent tasks
 have stable paths to read and so the app can load fonts from its bundle.
 
-- [ ] If `/tmp/re-box-inspect/re-box/` is missing, recreate it via `mkdir -p /tmp/re-box-inspect && cd /tmp/re-box-inspect && unzip -q '/Users/alexeykhaynovsky/Downloads/Re_BOX-handoff (2).zip'`
-- [ ] Copy `/tmp/re-box-inspect/re-box/` → `design/re-box/` at repo root (excluding `project/uploads/PRIVATE_AI_MAIL_FULL_DOCUMENTATION.md`, which duplicates `EMAIL_ALF/`)
-- [ ] Add `design/README.md` linking back to `EMAIL_ALF/14_macos_app_design.md` and explaining that `design/re-box/` is the source of truth for this iteration
-- [ ] Download these OFL font files into `Apps/MacApp/Resources/Fonts/`:
+- [x] If `/tmp/re-box-inspect/re-box/` is missing, recreate it via `mkdir -p /tmp/re-box-inspect && cd /tmp/re-box-inspect && unzip -q '/Users/alexeykhaynovsky/Downloads/Re_BOX-handoff (2).zip'`
+- [x] Copy `/tmp/re-box-inspect/re-box/` → `design/re-box/` at repo root (excluding `project/uploads/PRIVATE_AI_MAIL_FULL_DOCUMENTATION.md`, which duplicates `EMAIL_ALF/`)
+- [x] Add `design/README.md` linking back to `EMAIL_ALF/14_macos_app_design.md` and explaining that `design/re-box/` is the source of truth for this iteration
+- [x] Download these OFL font files into `Apps/MacApp/Resources/Fonts/`:
   - Geist Variable (or static 400/500/600/700) — `https://github.com/vercel/geist-font/raw/main/packages/next/dist/fonts/geist-sans/` or Google Fonts download
   - Instrument Serif Regular + Italic — `https://fonts.google.com/specimen/Instrument+Serif`
   - JetBrains Mono 400/500/600 — `https://www.jetbrains.com/lp/mono/`
-- [ ] Register fonts in `Apps/MacApp/Info.plist` via `ATSApplicationFontsPath` set to `Fonts`
-- [ ] Update `Apps/MacApp/Resources/Assets.xcassets/` is unchanged; do NOT add the fonts there
-- [ ] Add `Apps/MacApp/Resources/Fonts/LICENSES.txt` consolidating the three OFL license files
-- [ ] Run `tuist generate --no-open && xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` and confirm the app bundle contains all three font families: `ls /Users/alexeykhaynovsky/Library/Developer/Xcode/DerivedData/PrivateAIMail-*/Build/Products/Debug/PrivateAIMail.app/Contents/Resources/Fonts/ | head -20` shows the .otf/.ttf files
+- [x] Register fonts in `Apps/MacApp/Info.plist` via `ATSApplicationFontsPath` set to `Fonts`
+- [x] Update `Apps/MacApp/Resources/Assets.xcassets/` is unchanged; do NOT add the fonts there
+- [x] Add `Apps/MacApp/Resources/Fonts/LICENSES.txt` consolidating the three OFL license files
+- [x] Run `tuist generate --no-open && xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` and confirm the app bundle contains all three font families: `ls /Users/alexeykhaynovsky/Library/Developer/Xcode/DerivedData/PrivateAIMail-*/Build/Products/Debug/PrivateAIMail.app/Contents/Resources/Fonts/ | head -20` shows the .otf/.ttf files
 
 ### Task 2: DesignSystem color tokens, surfaces, and theme switching
 

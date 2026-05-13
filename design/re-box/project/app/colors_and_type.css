@@ -1,0 +1,303 @@
+/* ============================================================
+   Re:Box — Colors & Type
+   Editorial Neo-Utility + restrained Liquid Glass
+   ============================================================ */
+
+/* ---------- 1. Webfonts ----------
+   Display sans (utility / UI):        Geist
+   Editorial serif (display accents):  Instrument Serif
+   Monospace (metadata, evidence):     JetBrains Mono
+   These ship from Google Fonts. If self-hosting, copy WOFF2s
+   to fonts/ and replace the @import below with @font-face. */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* ---------- 2. Foundations (raw tokens) ---------- */
+:root {
+  /* Graphite scale — dark base */
+  --graphite-50:  oklch(98% 0.005 95);   /* warm off-white */
+  --graphite-100: oklch(93% 0.006 92);
+  --graphite-200: oklch(82% 0.007 90);
+  --graphite-300: oklch(68% 0.008 250);  /* cool gray */
+  --graphite-400: oklch(55% 0.010 252);
+  --graphite-500: oklch(42% 0.011 254);
+  --graphite-600: oklch(30% 0.011 256);
+  --graphite-700: oklch(22% 0.010 258);
+  --graphite-800: oklch(17% 0.009 260);
+  --graphite-900: oklch(13% 0.008 262);
+  --graphite-950: oklch(9%  0.006 264);
+
+  /* Accent — Citron (signature electric lime) */
+  --citron-300: oklch(94% 0.18 112);
+  --citron-400: oklch(90% 0.21 113);
+  --citron-500: oklch(86% 0.22 114);   /* primary */
+  --citron-600: oklch(74% 0.20 116);
+  --citron-700: oklch(60% 0.17 118);
+
+  /* Accent — Cobalt */
+  --cobalt-300: oklch(78% 0.15 258);
+  --cobalt-400: oklch(66% 0.20 260);
+  --cobalt-500: oklch(56% 0.23 262);
+  --cobalt-600: oklch(46% 0.22 264);
+
+  /* Accent — Violet */
+  --violet-400: oklch(70% 0.20 295);
+  --violet-500: oklch(60% 0.22 295);
+  --violet-600: oklch(50% 0.21 297);
+
+  /* Material — Soft Chrome */
+  --chrome-200: oklch(86% 0.008 240);
+  --chrome-300: oklch(74% 0.010 240);
+  --chrome-400: oklch(60% 0.012 240);
+
+  /* State tones (low-chroma, editorial) */
+  --tone-amber-300:  oklch(82% 0.14 75);   /* needs reply */
+  --tone-amber-500:  oklch(72% 0.16 70);
+  --tone-coral-400:  oklch(72% 0.18 28);   /* deadline / risk */
+  --tone-coral-600:  oklch(54% 0.22 28);
+  --tone-jade-400:   oklch(74% 0.14 162);  /* success / logged */
+  --tone-jade-600:   oklch(58% 0.16 164);
+  --tone-ice-400:    oklch(78% 0.07 230);  /* attachment / info */
+  --tone-ice-600:    oklch(60% 0.09 232);
+}
+
+/* ---------- 3. Semantic tokens — DARK (default) ---------- */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-deep:      var(--graphite-950);
+  --bg-canvas:    var(--graphite-900);
+  --bg-elev-1:    var(--graphite-800);
+  --bg-elev-2:    var(--graphite-700);
+  --bg-elev-3:    var(--graphite-600);
+  --bg-inverse:   var(--graphite-50);
+
+  /* Foreground */
+  --fg-1:         var(--graphite-50);      /* primary, warm off-white */
+  --fg-2:         var(--graphite-200);     /* secondary */
+  --fg-3:         var(--graphite-300);     /* tertiary, cool */
+  --fg-4:         var(--graphite-400);     /* quaternary / placeholder */
+  --fg-inverse:   var(--graphite-900);
+  --fg-on-accent: var(--graphite-950);     /* text on citron */
+
+  /* Strokes & dividers */
+  --stroke-1:     color-mix(in oklch, var(--graphite-50) 8%, transparent);
+  --stroke-2:     color-mix(in oklch, var(--graphite-50) 14%, transparent);
+  --stroke-focus: var(--citron-500);
+
+  /* Accents (semantic) */
+  --accent:           var(--citron-500);
+  --accent-hover:     var(--citron-400);
+  --accent-press:     var(--citron-600);
+  --accent-soft:      color-mix(in oklch, var(--citron-500) 18%, transparent);
+  --accent-secondary: var(--cobalt-500);
+  --accent-tertiary:  var(--violet-500);
+
+  /* State tones */
+  --signal-reply:      var(--tone-amber-300);
+  --signal-reply-bg:   color-mix(in oklch, var(--tone-amber-500) 16%, transparent);
+  --signal-deadline:   var(--tone-coral-400);
+  --signal-deadline-bg:color-mix(in oklch, var(--tone-coral-600) 22%, transparent);
+  --signal-attach:     var(--tone-ice-400);
+  --signal-attach-bg:  color-mix(in oklch, var(--tone-ice-600) 22%, transparent);
+  --signal-success:    var(--tone-jade-400);
+  --signal-success-bg: color-mix(in oklch, var(--tone-jade-600) 22%, transparent);
+  --signal-local-ai:   var(--citron-500);
+  --signal-local-ai-bg:color-mix(in oklch, var(--citron-500) 14%, transparent);
+
+  /* Glass materials (restrained Liquid Glass) */
+  --glass-thin:   color-mix(in oklch, var(--graphite-800) 60%, transparent);
+  --glass-thick:  color-mix(in oklch, var(--graphite-800) 80%, transparent);
+  --glass-stroke: color-mix(in oklch, var(--graphite-50) 10%, transparent);
+  --glass-highlight: color-mix(in oklch, var(--graphite-50) 6%, transparent);
+
+  /* Shadows — minimal in editorial dark */
+  --shadow-1: 0 1px 0 0 var(--glass-highlight) inset, 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-2: 0 1px 0 0 var(--glass-highlight) inset, 0 8px 24px -8px rgb(0 0 0 / 0.45);
+  --shadow-3: 0 1px 0 0 var(--glass-highlight) inset, 0 24px 60px -16px rgb(0 0 0 / 0.55);
+  --shadow-focus: 0 0 0 2px var(--bg-deep), 0 0 0 4px var(--citron-500);
+}
+
+/* ---------- 4. Semantic tokens — LIGHT (off-white companion) ---------- */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-deep:      var(--graphite-50);
+  --bg-canvas:    oklch(97% 0.004 90);
+  --bg-elev-1:    oklch(95% 0.004 90);
+  --bg-elev-2:    oklch(92% 0.005 90);
+  --bg-elev-3:    oklch(88% 0.005 90);
+  --bg-inverse:   var(--graphite-900);
+
+  --fg-1:         var(--graphite-900);
+  --fg-2:         var(--graphite-700);
+  --fg-3:         var(--graphite-500);
+  --fg-4:         var(--graphite-400);
+  --fg-inverse:   var(--graphite-50);
+  --fg-on-accent: var(--graphite-950);
+
+  --stroke-1:     color-mix(in oklch, var(--graphite-900) 8%, transparent);
+  --stroke-2:     color-mix(in oklch, var(--graphite-900) 14%, transparent);
+
+  --glass-thin:   color-mix(in oklch, var(--graphite-50) 60%, transparent);
+  --glass-thick:  color-mix(in oklch, var(--graphite-50) 80%, transparent);
+  --glass-stroke: color-mix(in oklch, var(--graphite-900) 10%, transparent);
+  --glass-highlight: color-mix(in oklch, var(--graphite-50) 60%, transparent);
+
+  --shadow-1: 0 1px 2px rgb(20 24 30 / 0.06);
+  --shadow-2: 0 8px 24px -8px rgb(20 24 30 / 0.10);
+  --shadow-3: 0 24px 60px -16px rgb(20 24 30 / 0.16);
+}
+
+/* ---------- 5. Type — family + scale tokens ---------- */
+:root {
+  --font-sans:    "Geist", ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, "SF Pro Display", sans-serif;
+  --font-serif:   "Instrument Serif", ui-serif, "Iowan Old Style", Georgia, serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Scale (display-friendly; macOS app uses the lower half) */
+  --type-2xs:  11px;
+  --type-xs:   12px;
+  --type-sm:   13px;
+  --type-base: 14px;
+  --type-md:   15px;
+  --type-lg:   17px;
+  --type-xl:   20px;
+  --type-2xl:  24px;
+  --type-3xl:  32px;
+  --type-4xl:  44px;
+  --type-5xl:  60px;
+  --type-6xl:  84px;
+
+  --leading-tight:  1.1;
+  --leading-snug:   1.25;
+  --leading-normal: 1.45;
+  --leading-relaxed:1.6;
+
+  --tracking-tight:   -0.02em;
+  --tracking-snug:    -0.01em;
+  --tracking-normal:  0;
+  --tracking-label:   0.06em;   /* product-state labels */
+  --tracking-eyebrow: 0.14em;   /* editorial eyebrows */
+}
+
+/* ---------- 6. Spacing / radii / motion ---------- */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10:40px;
+  --space-12:48px;
+  --space-16:64px;
+  --space-20:80px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl:28px;
+  --radius-pill: 999px;
+
+  /* Motion — short, editorial; no bounces */
+  --ease-out:   cubic-bezier(.22, .61, .36, 1);
+  --ease-in-out:cubic-bezier(.4, 0, .2, 1);
+  --ease-snap:  cubic-bezier(.2, .9, .1, 1);
+  --dur-1: 120ms;   /* hover / press */
+  --dur-2: 200ms;   /* sheet, popover */
+  --dur-3: 320ms;   /* brief expand, route */
+  --dur-4: 480ms;   /* attachment highlights */
+}
+
+/* ---------- 7. Semantic typography classes ---------- */
+.t-display-xl,
+.t-display-lg,
+.t-display-md,
+.t-h1, .t-h2, .t-h3, .t-h4,
+.t-body-lg, .t-body, .t-body-sm,
+.t-label, .t-eyebrow, .t-mono, .t-editorial { font-family: var(--font-sans); }
+
+/* Display — marketing / pitch / large empty states */
+.t-display-xl {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--type-6xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+.t-display-lg {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--type-5xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+.t-display-md {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--type-4xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* App headings */
+.t-h1 { font-weight: 600; font-size: var(--type-3xl); line-height: var(--leading-snug); letter-spacing: var(--tracking-snug); }
+.t-h2 { font-weight: 600; font-size: var(--type-2xl); line-height: var(--leading-snug); letter-spacing: var(--tracking-snug); }
+.t-h3 { font-weight: 600; font-size: var(--type-xl);  line-height: var(--leading-snug); }
+.t-h4 { font-weight: 600; font-size: var(--type-lg);  line-height: var(--leading-snug); }
+
+/* Body */
+.t-body-lg { font-weight: 400; font-size: var(--type-md);   line-height: var(--leading-normal); }
+.t-body    { font-weight: 400; font-size: var(--type-base); line-height: var(--leading-normal); }
+.t-body-sm { font-weight: 400; font-size: var(--type-sm);   line-height: var(--leading-normal); }
+
+/* Labels — product-state copy (the loudest character in the system) */
+.t-label {
+  font-weight: 600;
+  font-size: var(--type-xs);
+  line-height: 1;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.t-eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--type-2xs);
+  line-height: 1;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+/* Mono — evidence, metadata, AI internals */
+.t-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--type-xs);
+  line-height: var(--leading-normal);
+}
+
+/* Editorial italic — used very sparingly: the "Re:" mark, hero pull-quotes */
+.t-editorial {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+
+/* ---------- 8. Base resets used by previews ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--type-base);
+  color: var(--fg-1);
+  background: var(--bg-deep);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
