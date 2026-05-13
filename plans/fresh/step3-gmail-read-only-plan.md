@@ -113,14 +113,14 @@ sync state. Enforce the single-writer pattern via a `@globalActor`
 `DatabaseActor`. All writes are isolated to that actor; reads use GRDB
 `ValueObservation`.
 
-- [ ] Add `@globalActor public actor DatabaseActor` in `Packages/Core/Persistence/Sources/Persistence/DatabaseActor.swift`
-- [ ] Add `AppDatabase` struct in `AppDatabase.swift` exposing `dbQueue: DatabaseQueue`, factory `open(at:)`, and helpers `read`/`write` that route writes through `DatabaseActor`
-- [ ] Add `Migrator.swift` building a `DatabaseMigrator` and registering `M001_InitialSchema`
-- [ ] Implement `M001_InitialSchema` creating tables `account`, `sync_state`, `thread`, `message`, `attachment` with indexes per the schema below
-- [ ] Add GRDB record types `AccountRecord`, `ThreadRecord`, `MessageRecord`, `AttachmentRecord`, `SyncStateRecord` conforming to `FetchableRecord & PersistableRecord & Codable`
-- [ ] Default DB path: `Application Support/PrivateAIMail/db.sqlite` inside the sandbox container; expose `open(inMemory:)` for tests
-- [ ] Add tests: migrator applies M001 to empty DB and all expected tables exist, re-running migrator is a no-op, foreign-key cascade verified (delete account → child rows removed), `@DatabaseActor` isolation prevents off-actor writes (compile-time check via a `@Test` that imports the module)
-- [ ] Run `cd Packages/Core/Persistence && swift test`
+- [x] Add `@globalActor public actor DatabaseActor` in `Packages/Core/Persistence/Sources/Persistence/DatabaseActor.swift`
+- [x] Add `AppDatabase` struct in `AppDatabase.swift` exposing `dbQueue: DatabaseQueue`, factory `open(at:)`, and helpers `read`/`write` that route writes through `DatabaseActor`
+- [x] Add `Migrator.swift` building a `DatabaseMigrator` and registering `M001_InitialSchema`
+- [x] Implement `M001_InitialSchema` creating tables `account`, `sync_state`, `thread`, `message`, `attachment` with indexes per the schema below
+- [x] Add GRDB record types `AccountRecord`, `ThreadRecord`, `MessageRecord`, `AttachmentRecord`, `SyncStateRecord` conforming to `FetchableRecord & PersistableRecord & Codable`
+- [x] Default DB path: `Application Support/PrivateAIMail/db.sqlite` inside the sandbox container; expose `open(inMemory:)` for tests
+- [x] Add tests: migrator applies M001 to empty DB and all expected tables exist, re-running migrator is a no-op, foreign-key cascade verified (delete account → child rows removed), `@DatabaseActor` isolation prevents off-actor writes (compile-time check via a `@Test` that imports the module)
+- [x] Run `cd Packages/Core/Persistence && swift test`
 
 Schema reference for this task:
 
