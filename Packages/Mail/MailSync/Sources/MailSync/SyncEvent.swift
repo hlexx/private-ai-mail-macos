@@ -8,8 +8,8 @@ public enum SyncEvent: Sendable {
 }
 
 public enum SyncError: Error, Sendable {
-    case bootstrapFailed(any Error)
-    case incrementalFailed(any Error)
+    case bootstrapFailed(any Error & Sendable)
+    case incrementalFailed(any Error & Sendable)
     case rateLimited(retryAfter: TimeInterval)
     case historyExpired
 }

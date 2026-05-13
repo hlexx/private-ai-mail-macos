@@ -44,11 +44,13 @@ public final class AccountsTabStore {
         observationTask?.cancel()
         observationTask = Task { [weak self] in
             guard let self else { return }
+            let dbQueue = self.db.dbQueue
             let observation = ValueObservation.tracking { db in
                 try AccountRecord.fetchAll(db)
             }
             do {
-                for try await records in observation.values(in: self.db.dbQueue) {
+                for try await records in observation.values(in: dbQueue) {
+                    guard !Task.isCancelled else { return }
                     self.accounts = records
                     await self.refreshSyncStates(for: records)
                 }
@@ -96,8 +98,8 @@ public final class AccountsTabStore {
                 }
 
                 self.addPhase = .bootstrapping(0)
-                await self.syncSupervisor.start(accountId: accountId)
                 self.observeSyncEvents(for: accountId)
+                await self.syncSupervisor.start(accountId: accountId)
             } catch let error as AuthError where error.isCancelled {
                 self.addPhase = .idle
             } catch {

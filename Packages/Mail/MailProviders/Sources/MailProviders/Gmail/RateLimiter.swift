@@ -14,6 +14,7 @@ actor RateLimiter {
         timestamps.removeAll { $0 < windowStart }
 
         while timestamps.count + units > maxUnitsPerSecond {
+            guard !Task.isCancelled else { return }
             try? await Task.sleep(for: .milliseconds(50))
             let refreshed = ContinuousClock.now
             let refreshedStart = refreshed - .seconds(1)
