@@ -16,7 +16,7 @@ func makeThreadRecord(from mapped: MailDomain.Thread, accountId: String) -> Thre
         accountId: accountId,
         subject: mapped.subject,
         snippet: mapped.snippet,
-        lastMessageAt: Int(mapped.lastMessageAt.timeIntervalSince1970 * 1000),
+        lastMessageAt: Int(mapped.lastMessageAt.timeIntervalSince1970),
         messageCount: mapped.messageCount,
         hasUnread: mapped.hasUnread ? 1 : 0
     )
@@ -31,8 +31,9 @@ func makeMessageRecord(from msg: MailDomain.Message, accountId: String) -> Messa
         fromAddr: msg.from.map(formatAddress),
         toAddr: msg.to.map(formatAddress).joined(separator: ", "),
         ccAddr: msg.cc.map(formatAddress).joined(separator: ", "),
-        sentAt: Int(msg.sentAt.timeIntervalSince1970 * 1000),
+        sentAt: Int(msg.sentAt.timeIntervalSince1970),
         snippet: msg.snippet,
+        bodyTextPath: msg.bodyText,
         flags: msg.isUnread ? 1 : 0
     )
 }

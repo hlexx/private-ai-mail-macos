@@ -68,7 +68,7 @@ private func insertAccount(id: String, email: String, into db: AppDatabase) thro
         id: id,
         provider: "gmail",
         email: email,
-        createdAt: Int(Date().timeIntervalSince1970 * 1000)
+        createdAt: Int(Date().timeIntervalSince1970)
     )
     try db.dbQueue.write { dbConn in
         try account.insert(dbConn)
@@ -93,8 +93,7 @@ struct AccountsTabStoreTests {
             db: database,
             oauthClient: oauth,
             tokenStore: tokens,
-            syncSupervisor: supervisor,
-            apiFactory: { _ in MockGmailAPI() }
+            syncSupervisor: supervisor
         )
         return (store, database, oauth, tokens)
     }

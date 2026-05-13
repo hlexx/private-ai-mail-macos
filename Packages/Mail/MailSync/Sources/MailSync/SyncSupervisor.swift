@@ -20,6 +20,14 @@ public actor SyncSupervisor {
         await engine.bootstrap()
     }
 
+    public func startIncremental(accountId: String) async {
+        if engines[accountId] != nil { return }
+        let api = apiFactory(accountId)
+        let engine = MailSyncEngine(accountId: accountId, api: api, db: db)
+        engines[accountId] = engine
+        await engine.refresh()
+    }
+
     public func refresh(accountId: String) async {
         guard let engine = engines[accountId] else { return }
         await engine.refresh()

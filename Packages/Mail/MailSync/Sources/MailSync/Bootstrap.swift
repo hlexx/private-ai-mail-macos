@@ -54,7 +54,7 @@ enum Bootstrap {
 
             for thread in threads {
                 if let hid = thread.historyId, let current = latestHistoryId {
-                    if hid > current { latestHistoryId = hid }
+                    if (UInt64(hid) ?? 0) > (UInt64(current) ?? 0) { latestHistoryId = hid }
                 } else if let hid = thread.historyId {
                     latestHistoryId = hid
                 }
@@ -140,7 +140,7 @@ enum Bootstrap {
             if let hid = historyId {
                 syncState.historyId = hid
             }
-            syncState.lastBootstrapAt = Int(Date().timeIntervalSince1970 * 1000)
+            syncState.lastBootstrapAt = Int(Date().timeIntervalSince1970)
             syncState.status = SyncState.live.rawValue
             try syncState.save(dbConn, onConflict: .replace)
         }

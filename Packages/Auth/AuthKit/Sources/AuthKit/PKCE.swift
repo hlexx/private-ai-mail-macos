@@ -17,10 +17,9 @@ public enum PKCE: Sendable {
     static func generateVerifier(length: Int = 43) -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        return Data(bytes)
+        return String(Data(bytes)
             .base64URLEncodedString()
-            .prefix(length)
-            .description
+            .prefix(length))
     }
 
     static func computeChallenge(from verifier: String) -> String {

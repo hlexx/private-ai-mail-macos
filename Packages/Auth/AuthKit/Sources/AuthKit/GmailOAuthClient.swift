@@ -98,8 +98,13 @@ public final class GmailOAuthClient: OAuthClient, @unchecked Sendable {
                 }
                 continuation.resume(returning: callbackURL)
             }
+            session.presentationContextProvider = WebAuthContextProvider.shared
             session.prefersEphemeralWebBrowserSession = false
-            session.start()
+            if !session.start() {
+                continuation.resume(throwing: AuthError.network(
+                    NSError(domain: "AuthKit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to start web auth session"])
+                ))
+            }
         }
     }
 
@@ -158,6 +163,17 @@ public final class GmailOAuthClient: OAuthClient, @unchecked Sendable {
     }
 }
 
+#if canImport(AppKit)
+import AppKit
+
+private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = WebAuthContextProvider()
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        NSApp.keyWindow ?? NSApp.windows.first ?? ASPresentationAnchor()
+    }
+}
+#endif
+
 private struct TokenResponse: Decodable {
     let accessToken: String
     let expiresIn: Int
@@ -173,13 +189,19 @@ private struct TokenResponse: Decodable {
 }
 
 extension Dictionary where Key == String, Value == String {
+    private static var formURLEncodedAllowed: CharacterSet {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return allowed
+    }
+
     var urlEncodedData: Data {
         let str = map { key, value in
             let k = key.addingPercentEncoding(
-                withAllowedCharacters: .urlQueryAllowed
+                withAllowedCharacters: Self.formURLEncodedAllowed
             ) ?? key
             let v = value.addingPercentEncoding(
-                withAllowedCharacters: .urlQueryAllowed
+                withAllowedCharacters: Self.formURLEncodedAllowed
             ) ?? value
             return "\(k)=\(v)"
         }.joined(separator: "&")

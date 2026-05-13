@@ -51,8 +51,7 @@ final class CompositionRoot {
             db: db,
             oauthClient: oauthClient,
             tokenStore: tokenStore,
-            syncSupervisor: syncSupervisor,
-            apiFactory: apiFactory
+            syncSupervisor: syncSupervisor
         )
     }
 
@@ -67,9 +66,27 @@ final class CompositionRoot {
             .path
     }
 
+    func resumeExistingAccounts() {
+        Task {
+            let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
+            for account in accounts ?? [] {
+                await syncSupervisor.startIncremental(accountId: account.id)
+            }
+        }
+    }
+
     func refreshAccount(_ accountId: String) {
         Task {
             await syncSupervisor.refresh(accountId: accountId)
+        }
+    }
+
+    func refreshAllAccounts() {
+        Task {
+            let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
+            for account in accounts ?? [] {
+                await syncSupervisor.refresh(accountId: account.id)
+            }
         }
     }
 }

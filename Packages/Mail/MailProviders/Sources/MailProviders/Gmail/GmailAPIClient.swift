@@ -170,6 +170,9 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         totalWaited: TimeInterval
     ) async throws -> T {
         guard attempt < Self.maxRetries else {
+            if statusCode == 429 {
+                throw GmailAPIError.rateLimited(retryAfter: retryAfter)
+            }
             throw GmailAPIError.exhaustedRetries
         }
 
@@ -183,6 +186,9 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         }
 
         guard delay > 0, totalWaited + delay <= Self.maxTotalBackoff else {
+            if statusCode == 429 {
+                throw GmailAPIError.rateLimited(retryAfter: retryAfter)
+            }
             throw GmailAPIError.exhaustedRetries
         }
 

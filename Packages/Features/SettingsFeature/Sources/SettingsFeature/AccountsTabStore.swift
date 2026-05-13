@@ -26,21 +26,18 @@ public final class AccountsTabStore {
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
     private let syncSupervisor: SyncSupervisor
-    private let apiFactory: @Sendable (String) -> any GmailAPI
     private var observationTask: Task<Void, Never>?
 
     public init(
         db: AppDatabase,
         oauthClient: any OAuthClient,
         tokenStore: any TokenStore,
-        syncSupervisor: SyncSupervisor,
-        apiFactory: @escaping @Sendable (String) -> any GmailAPI
+        syncSupervisor: SyncSupervisor
     ) {
         self.db = db
         self.oauthClient = oauthClient
         self.tokenStore = tokenStore
         self.syncSupervisor = syncSupervisor
-        self.apiFactory = apiFactory
     }
 
     public func startObserving() {
@@ -79,19 +76,19 @@ public final class AccountsTabStore {
                 let email = try await self.fetchUserEmail(credential: credential)
                 let accountId = UUID().uuidString
 
-                try self.tokenStore.save(credential, for: accountId)
-
                 let account = AccountRecord(
                     id: accountId,
                     provider: "gmail",
                     email: email,
-                    createdAt: Int(Date().timeIntervalSince1970 * 1000)
+                    createdAt: Int(Date().timeIntervalSince1970)
                 )
                 try await DatabaseActor.shared.run {
                     try self.db.dbQueue.write { db in
                         try account.insert(db)
                     }
                 }
+
+                try self.tokenStore.save(credential, for: accountId)
 
                 self.addPhase = .bootstrapping(0)
                 await self.syncSupervisor.start(accountId: accountId)

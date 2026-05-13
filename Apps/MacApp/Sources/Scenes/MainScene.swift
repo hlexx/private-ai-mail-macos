@@ -34,7 +34,7 @@ struct MainScene: View {
             }
         }
         .task {
-            observeAccounts()
+            await observeAccounts()
         }
     }
 
@@ -64,18 +64,16 @@ struct MainScene: View {
         .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
     }
 
-    private func observeAccounts() {
-        Task {
-            let observation = ValueObservation.tracking { db in
-                try AccountRecord.fetchAll(db)
+    private func observeAccounts() async {
+        let observation = ValueObservation.tracking { db in
+            try AccountRecord.fetchAll(db)
+        }
+        do {
+            for try await records in observation.values(in: composition.db.dbQueue) {
+                self.accounts = records
             }
-            do {
-                for try await records in observation.values(in: composition.db.dbQueue) {
-                    self.accounts = records
-                }
-            } catch {
-                // Observation ended
-            }
+        } catch {
+            // Observation ended
         }
     }
 
