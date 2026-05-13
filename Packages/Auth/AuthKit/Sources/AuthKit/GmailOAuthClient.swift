@@ -85,11 +85,18 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
 
     @MainActor
     private func startWebAuthSession(url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
+        // Retain the session outside the continuation closure so ARC does not
+        // deallocate it before the callback fires.
+        var retainedSession: ASWebAuthenticationSession?
+
+        return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
                 url: url,
                 callbackURLScheme: "com.hlexx.privateaimail"
             ) { callbackURL, error in
+                // Break the intentional retain cycle now that the callback fired.
+                retainedSession = nil
+
                 if let error {
                     if (error as NSError).code
                         == ASWebAuthenticationSessionError.canceledLogin.rawValue {
@@ -105,9 +112,11 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
                 }
                 continuation.resume(returning: callbackURL)
             }
+            retainedSession = session
             session.presentationContextProvider = WebAuthContextProvider.shared
             session.prefersEphemeralWebBrowserSession = false
             if !session.start() {
+                retainedSession = nil
                 continuation.resume(throwing: AuthError.network(
                     NSError(domain: "AuthKit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to start web auth session"])
                 ))

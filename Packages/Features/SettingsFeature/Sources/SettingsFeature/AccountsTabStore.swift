@@ -119,7 +119,7 @@ public final class AccountsTabStore {
                 try? self.tokenStore.delete(for: accountId)
                 self.syncStates.removeValue(forKey: accountId)
             } catch {
-                // Deletion failed — account will reappear on next observation cycle
+                self.addPhase = .error(error.localizedDescription)
             }
         }
     }

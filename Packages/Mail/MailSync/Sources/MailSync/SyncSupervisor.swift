@@ -14,7 +14,13 @@ public actor SyncSupervisor {
     }
 
     public func start(accountId: String) async {
-        if engines[accountId] != nil { return }
+        if let existing = engines[accountId] {
+            let state = await existing.state
+            guard state == .degraded else { return }
+            // Remove the stuck engine so we can retry bootstrap
+            await existing.stop()
+            engines.removeValue(forKey: accountId)
+        }
         let api = apiFactory(accountId)
         let engine = MailSyncEngine(accountId: accountId, api: api, db: db)
         engines[accountId] = engine

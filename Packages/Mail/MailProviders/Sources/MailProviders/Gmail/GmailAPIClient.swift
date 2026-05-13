@@ -45,35 +45,37 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
 
     public func listMessages(query: String?, pageToken: String?, maxResults: Int) async throws -> GmailDTO.MessageList {
         let endpoint = GmailEndpoint.listMessages(query: query, pageToken: pageToken, maxResults: maxResults)
-        return try await perform(endpoint.url)
+        return try await perform(endpoint)
     }
 
     public func getMessage(id: String, format: GmailMessageFormat) async throws -> GmailDTO.Message {
         let endpoint = GmailEndpoint.getMessage(id: id, format: format)
-        return try await perform(endpoint.url)
+        return try await perform(endpoint)
     }
 
     public func getThread(id: String, format: GmailMessageFormat) async throws -> GmailDTO.Thread {
         let endpoint = GmailEndpoint.getThread(id: id, format: format)
-        return try await perform(endpoint.url)
+        return try await perform(endpoint)
     }
 
     public func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse {
         let endpoint = GmailEndpoint.listHistory(startHistoryId: startHistoryId, pageToken: pageToken)
-        return try await perform(endpoint.url)
+        return try await perform(endpoint)
     }
 
     // MARK: - Request execution
 
-    private func perform<T: Decodable & Sendable>(_ url: URL) async throws -> T {
-        await rateLimiter.acquire()
-        return try await executeWithRetry(url, attempt: 0, totalWaited: 0)
+    private func perform<T: Decodable & Sendable>(_ endpoint: GmailEndpoint) async throws -> T {
+        await rateLimiter.acquire(units: endpoint.quotaCost)
+        return try await executeWithRetry(endpoint.url, quotaCost: endpoint.quotaCost, attempt: 0, totalWaited: 0)
     }
 
     private func executeWithRetry<T: Decodable & Sendable>(
         _ url: URL,
+        quotaCost: Int,
         attempt: Int,
-        totalWaited: TimeInterval
+        totalWaited: TimeInterval,
+        didRefresh: Bool = false
     ) async throws -> T {
         var request = URLRequest(url: url)
         if let cred = credential {
@@ -101,13 +103,17 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
             }
 
         case 401:
-            return try await handleUnauthorized(url: url)
+            guard !didRefresh else {
+                throw GmailAPIError.unauthorized
+            }
+            return try await handleUnauthorized(url: url, quotaCost: quotaCost)
 
         case 429:
             let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
                 .flatMap(TimeInterval.init)
             return try await handleRetryable(
                 url: url,
+                quotaCost: quotaCost,
                 statusCode: 429,
                 retryAfter: retryAfter,
                 attempt: attempt,
@@ -117,6 +123,7 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         case 500...599:
             return try await handleRetryable(
                 url: url,
+                quotaCost: quotaCost,
                 statusCode: httpResponse.statusCode,
                 retryAfter: nil,
                 attempt: attempt,
@@ -128,7 +135,7 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         }
     }
 
-    private func handleUnauthorized<T: Decodable & Sendable>(url: URL) async throws -> T {
+    private func handleUnauthorized<T: Decodable & Sendable>(url: URL, quotaCost: Int) async throws -> T {
         guard let cred = credential else {
             throw GmailAPIError.unauthorized
         }
@@ -137,33 +144,13 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         credential = newCredential
         try tokenStore.save(newCredential, for: accountId)
 
-        var request = URLRequest(url: url)
-        request.setValue("\(newCredential.tokenType) \(newCredential.accessToken)", forHTTPHeaderField: "Authorization")
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw GmailAPIError.networkError(error)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw GmailAPIError.invalidResponse
-        }
-
-        guard (200..<300).contains(httpResponse.statusCode) else {
-            throw GmailAPIError.unauthorized
-        }
-
-        do {
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            throw GmailAPIError.decodingError(error)
-        }
+        await rateLimiter.acquire(units: quotaCost)
+        return try await executeWithRetry(url, quotaCost: quotaCost, attempt: 0, totalWaited: 0, didRefresh: true)
     }
 
     private func handleRetryable<T: Decodable & Sendable>(
         url: URL,
+        quotaCost: Int,
         statusCode: Int,
         retryAfter: TimeInterval?,
         attempt: Int,
@@ -194,6 +181,7 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
 
         try await Task.sleep(for: .milliseconds(Int(delay * 1000)))
 
-        return try await executeWithRetry(url, attempt: attempt + 1, totalWaited: totalWaited + delay)
+        await rateLimiter.acquire(units: quotaCost)
+        return try await executeWithRetry(url, quotaCost: quotaCost, attempt: attempt + 1, totalWaited: totalWaited + delay)
     }
 }

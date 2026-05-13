@@ -27,6 +27,16 @@ enum GmailEndpoint {
         }
     }
 
+    /// Gmail API quota cost per method (units per request).
+    var quotaCost: Int {
+        switch self {
+        case .listMessages: return 5
+        case .getMessage: return 5
+        case .getThread: return 10
+        case .listHistory: return 2
+        }
+    }
+
     private var queryItems: [URLQueryItem] {
         switch self {
         case .listMessages(let query, let pageToken, let maxResults):
