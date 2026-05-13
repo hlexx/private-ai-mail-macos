@@ -40,8 +40,6 @@ struct PrivateAIMailApp: App {
                 }
                 .keyboardShortcut("r", modifiers: [.command])
             }
-            CommandGroup(replacing: .textEditing) {}
-            CommandGroup(replacing: .textFormatting) {}
         }
 
         WindowGroup(id: "compose") {

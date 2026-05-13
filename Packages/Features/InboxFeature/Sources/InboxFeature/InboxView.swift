@@ -70,14 +70,25 @@ public struct InboxView: View {
     private var threadList: some View {
         Group {
             if store.filteredThreads.isEmpty {
-                ContentUnavailableView(
-                    String(localized: "threads.empty.title", defaultValue: "No threads yet"),
-                    systemImage: "envelope.open",
-                    description: Text(String(
-                        localized: "threads.empty.description",
-                        defaultValue: "Connect a Gmail account to get started."
-                    ))
-                )
+                if store.filter != .all && !store.threads.isEmpty {
+                    ContentUnavailableView(
+                        String(localized: "threads.filter.empty.title", defaultValue: "No matching threads"),
+                        systemImage: "line.3.horizontal.decrease.circle",
+                        description: Text(String(
+                            localized: "threads.filter.empty.description",
+                            defaultValue: "No threads match the selected filter."
+                        ))
+                    )
+                } else {
+                    ContentUnavailableView(
+                        String(localized: "threads.empty.title", defaultValue: "No threads yet"),
+                        systemImage: "envelope.open",
+                        description: Text(String(
+                            localized: "threads.empty.description",
+                            defaultValue: "Connect a Gmail account to get started."
+                        ))
+                    )
+                }
             } else {
                 ScrollViewReader { _ in
                     List(store.filteredThreads, selection: $store.selectedThreadID) { thread in

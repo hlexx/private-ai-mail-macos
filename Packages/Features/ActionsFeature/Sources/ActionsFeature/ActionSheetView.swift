@@ -190,7 +190,8 @@ public struct ActionSheetView: View {
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.xl))
                 .frame(maxWidth: 720)
                 .padding(.horizontal, RBSpace.s6)
-                .padding(.bottom, RBSpace.s6)
+
+                Spacer()
             }
         }
         .onExitCommand { onClose() }
