@@ -37,16 +37,10 @@ enum IncrementalSync {
                     affectedThreadIds.insert(msg.threadId)
                 }
 
-                // Process deleted messages
+                // Process deleted messages — just track affected threads;
+                // the re-fetch below will reconcile the correct state.
                 for deleted in record.messagesDeleted ?? [] {
-                    let msg = deleted.message
-                    try await deleteMessage(
-                        messageId: msg.id,
-                        threadId: msg.threadId,
-                        accountId: accountId,
-                        db: db
-                    )
-                    affectedThreadIds.insert(msg.threadId)
+                    affectedThreadIds.insert(deleted.message.threadId)
                 }
 
                 // Process label changes
@@ -67,7 +61,7 @@ enum IncrementalSync {
         // Re-fetch affected threads to get current state
         for threadId in affectedThreadIds {
             do {
-                let dto = try await api.getThread(id: threadId, format: .metadata)
+                let dto = try await api.getThread(id: threadId, format: .full)
                 try await upsertThread(dto, accountId: accountId, db: db)
                 await onThreadUpserted(threadId)
             } catch let error as GmailAPIError {
@@ -86,31 +80,6 @@ enum IncrementalSync {
             historyId: currentHistoryId,
             db: db
         )
-    }
-
-    @DatabaseActor
-    private static func deleteMessage(
-        messageId: String,
-        threadId: String,
-        accountId: String,
-        db: AppDatabase
-    ) throws {
-        try db.write { dbConn in
-            try MessageRecord.deleteOne(dbConn, key: ["account_id": accountId, "id": messageId])
-
-            // Update thread message count
-            let count = try MessageRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == threadId)
-                .fetchCount(dbConn)
-            if count == 0 {
-                try ThreadRecord.deleteOne(dbConn, key: ["account_id": accountId, "id": threadId])
-            } else {
-                if var thread = try ThreadRecord.fetchOne(dbConn, key: ["account_id": accountId, "id": threadId]) {
-                    thread.messageCount = count
-                    try thread.update(dbConn)
-                }
-            }
-        }
     }
 
     @DatabaseActor

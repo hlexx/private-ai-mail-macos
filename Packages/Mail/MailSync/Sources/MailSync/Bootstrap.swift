@@ -82,7 +82,7 @@ enum Bootstrap {
                 let id = ids[index]
                 index += 1
                 group.addTask {
-                    try await api.getThread(id: id, format: .metadata)
+                    try await api.getThread(id: id, format: .full)
                 }
             }
 
@@ -92,7 +92,7 @@ enum Bootstrap {
                     let id = ids[index]
                     index += 1
                     group.addTask {
-                        try await api.getThread(id: id, format: .metadata)
+                        try await api.getThread(id: id, format: .full)
                     }
                 }
             }

@@ -38,10 +38,10 @@ public enum GmailMapper {
     public static func mapThread(_ dto: GmailDTO.Thread, accountId: String) -> MailDomain.Thread {
         let messages = (dto.messages ?? []).map { mapMessage($0, accountId: accountId) }
         let lastMessageAt = messages.map(\.sentAt).max() ?? Date.distantPast
-        let subject = messages.first.flatMap { msg in
+        let subject: String? = {
             let headers = dto.messages?.first?.payload?.headers ?? []
             return header("Subject", in: headers)
-        }
+        }()
         let snippet = dto.messages?.last?.snippet
         let hasUnread = messages.contains { $0.isUnread }
 

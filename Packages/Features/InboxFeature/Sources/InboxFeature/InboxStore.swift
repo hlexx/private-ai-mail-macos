@@ -38,7 +38,7 @@ public final class InboxStore {
 
     public func startObserving() {
         observationTask?.cancel()
-        observationTask = Task { [db] in
+        observationTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db in
                 try ThreadRecord
                     .order(Column("last_message_at").desc)
@@ -46,7 +46,7 @@ public final class InboxStore {
             }
             do {
                 for try await records in observation.values(in: db.dbQueue) {
-                    guard !Task.isCancelled else { return }
+                    guard !Task.isCancelled, let self else { return }
                     self.threads = records.map(ThreadRow.init)
                 }
             } catch {

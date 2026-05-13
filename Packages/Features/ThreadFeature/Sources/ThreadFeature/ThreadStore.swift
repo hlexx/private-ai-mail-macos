@@ -35,7 +35,7 @@ public final class ThreadStore {
 
     public func observe(threadId: String, accountId: String) {
         observationTask?.cancel()
-        observationTask = Task { [db] in
+        observationTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db in
                 try MessageRecord
                     .filter(Column("account_id") == accountId && Column("thread_id") == threadId)
@@ -44,7 +44,7 @@ public final class ThreadStore {
             }
             do {
                 for try await records in observation.values(in: db.dbQueue) {
-                    guard !Task.isCancelled else { return }
+                    guard !Task.isCancelled, let self else { return }
                     self.messages = records.map(MessageRow.init)
                 }
             } catch {
