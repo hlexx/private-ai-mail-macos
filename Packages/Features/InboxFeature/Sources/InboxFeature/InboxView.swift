@@ -30,6 +30,9 @@ public struct InboxView: View {
         .task {
             store.startObserving()
         }
+        .onDisappear {
+            store.stopObserving()
+        }
     }
 }
 

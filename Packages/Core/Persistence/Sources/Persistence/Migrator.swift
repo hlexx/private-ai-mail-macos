@@ -75,6 +75,7 @@ enum M001_InitialSchema {
             t.column("mime", .text)
             t.column("size_bytes", .integer)
             t.primaryKey(["account_id", "message_id", "id"])
+            t.foreignKey(["account_id", "message_id"], references: "message", columns: ["account_id", "id"], onDelete: .cascade)
         }
     }
 }

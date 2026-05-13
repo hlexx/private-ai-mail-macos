@@ -27,11 +27,12 @@ public actor SyncSupervisor {
         let engine = MailSyncEngine(accountId: accountId, api: api, db: db)
         engines[accountId] = engine
 
-        let hasHistoryId = (try? db.read { db in
+        let historyId: String? = try? db.read { db in
             try SyncStateRecord
                 .filter(Column("account_id") == accountId)
                 .fetchOne(db)?.historyId
-        }) != nil
+        }.flatMap { $0 }
+        let hasHistoryId = historyId != nil
 
         if hasHistoryId {
             await engine.refresh()

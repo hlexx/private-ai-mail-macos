@@ -71,11 +71,20 @@ public actor MailSyncEngine {
                     continuation.yield(.threadUpserted(threadId))
                 }
             )
+        } catch let syncError as SyncError {
+            if case .historyExpired = syncError {
+                await bootstrap()
+            } else {
+                continuation.yield(.error(syncError))
+            }
         } catch let error as GmailAPIError {
             if case .rateLimited(let retryAfter) = error {
                 handleRateLimited(retryAfter: retryAfter ?? 60) { engine in
                     await engine.refresh()
                 }
+            } else if case .serverError(statusCode: 404) = error {
+                // Gmail history expired (too old) — fall back to full bootstrap
+                await bootstrap()
             } else {
                 continuation.yield(.error(.incrementalFailed(error)))
             }

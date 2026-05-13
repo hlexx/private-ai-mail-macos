@@ -124,7 +124,7 @@ enum IncrementalSync {
             try makeThreadRecord(from: mapped, accountId: accountId)
                 .save(dbConn, onConflict: .replace)
 
-            // Delete existing messages for this thread and re-insert
+            // Delete existing messages (FK cascade removes their attachments), then re-insert
             try MessageRecord
                 .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
                 .deleteAll(dbConn)
@@ -132,6 +132,11 @@ enum IncrementalSync {
             for msg in mapped.messages {
                 try makeMessageRecord(from: msg, accountId: accountId)
                     .save(dbConn, onConflict: .replace)
+
+                for att in msg.attachments {
+                    try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
+                        .save(dbConn, onConflict: .replace)
+                }
             }
         }
     }
@@ -143,6 +148,7 @@ enum IncrementalSync {
         db: AppDatabase
     ) throws {
         try db.write { dbConn in
+            // FK cascade: deleting messages also removes their attachments
             try MessageRecord
                 .filter(Column("account_id") == accountId && Column("thread_id") == threadId)
                 .deleteAll(dbConn)
