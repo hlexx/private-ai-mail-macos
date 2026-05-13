@@ -200,15 +200,15 @@ overlap, account switcher, search, action icons).
 Replace the current `NavigationSplitView` sidebar with the Re:Box sidebar.
 Keep the existing account observation; swap the visual layout.
 
-- [ ] Create `Apps/MacApp/Sources/Views/RBSidebar.swift` taking a `SidebarStore` view-model exposing `folders: [FolderItem]` and `accounts: [AccountRow]`
-- [ ] Add `FolderItem` and `AccountRow` types in `Packages/Features/InboxFeature/` (or a new `Packages/Features/SidebarFeature/` if cleaner — choose one and stay consistent)
-- [ ] Hard-code folder list to match the design data: Inbox, Needs reply, Has deadline, Attachments, Logged, Starred, Sent, Archive. Counts pull from real DB queries where applicable (Inbox = unread count; others may be 0/nil at this stage)
-- [ ] Render folder rows: SF Symbol leading icon + name + optional count badge (right-aligned, `rbBgElev2` rounded background)
-- [ ] Render accounts list using existing observation of `AccountRecord`; each row has a colored dot derived deterministically from `account.id` hash + email text
-- [ ] Add `LocalAIPill` to footer
-- [ ] Replace sidebar invocation in `MainScene.swift` to use `RBSidebar` with width 240 (explicit `.frame(width: 240)`)
-- [ ] Snapshot tests for `RBSidebar` in dark+light
-- [ ] Run all validation commands
+- [x] Create `Apps/MacApp/Sources/Views/RBSidebar.swift` taking a `SidebarStore` view-model exposing `folders: [FolderItem]` and `accounts: [AccountRow]`
+- [x] Add `FolderItem` and `AccountRow` types in `Packages/Features/InboxFeature/` (or a new `Packages/Features/SidebarFeature/` if cleaner — choose one and stay consistent)
+- [x] Hard-code folder list to match the design data: Inbox, Needs reply, Has deadline, Attachments, Logged, Starred, Sent, Archive. Counts pull from real DB queries where applicable (Inbox = unread count; others may be 0/nil at this stage)
+- [x] Render folder rows: SF Symbol leading icon + name + optional count badge (right-aligned, `rbBgElev2` rounded background)
+- [x] Render accounts list using existing observation of `AccountRecord`; each row has a colored dot derived deterministically from `account.id` hash + email text
+- [x] Add `LocalAIPill` to footer
+- [x] Replace sidebar invocation in `MainScene.swift` to use `RBSidebar` with width 240 (explicit `.frame(width: 240)`)
+- [x] Snapshot tests for `RBSidebar` in dark+light
+- [x] Run all validation commands
 
 ### Task 7: ThreadList redesign + filter chips
 

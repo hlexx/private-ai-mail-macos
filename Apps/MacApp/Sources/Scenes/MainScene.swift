@@ -10,7 +10,7 @@ struct MainScene: View {
 
     let composition: CompositionRoot
 
-    @State private var sidebarSelection: AccountFolderID? = .inbox
+    @State private var activeFolder: String = "inbox"
     @State private var accounts: [AccountRecord] = []
     @Environment(\.openSettings) private var openSettings
 
@@ -29,12 +29,18 @@ struct MainScene: View {
                 onOpenActionSheet: { composition.showActionSheet = true }
             )
 
-            NavigationSplitView {
-                sidebar
-            } content: {
+            HStack(spacing: 0) {
+                RBSidebar(
+                    folders: sidebarFolders,
+                    accounts: accounts.map { AccountRow(account: $0) },
+                    activeFolder: $activeFolder
+                )
+
                 InboxView(store: inboxStore)
-            } detail: {
+                    .frame(width: 360)
+
                 ThreadView(store: threadStore)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .background(Color.rbBgDeep)
@@ -62,30 +68,13 @@ struct MainScene: View {
         }
     }
 
-    private var sidebar: some View {
-        List(selection: $sidebarSelection) {
-            Section(String(localized: "sidebar.section.unified", defaultValue: "Unified")) {
-                Label(String(localized: "sidebar.inbox", defaultValue: "Inbox"), systemImage: "tray")
-                    .tag(AccountFolderID.inbox)
-                Label(String(localized: "sidebar.starred", defaultValue: "Starred"), systemImage: "star")
-                    .tag(AccountFolderID.starred)
-                Label(String(localized: "sidebar.sent", defaultValue: "Sent"), systemImage: "paperplane")
-                    .tag(AccountFolderID.sent)
-            }
-            Section(String(localized: "sidebar.section.accounts", defaultValue: "Accounts")) {
-                if accounts.isEmpty {
-                    Text(String(localized: "sidebar.no_accounts", defaultValue: "No accounts connected"))
-                        .foregroundStyle(.secondary)
-                        .font(.callout)
-                } else {
-                    ForEach(accounts, id: \.id) { account in
-                        Label(account.email, systemImage: "person.crop.circle")
-                            .tag(AccountFolderID.account(account.id, account.email))
-                    }
-                }
-            }
+    private var sidebarFolders: [FolderItem] {
+        var folders = FolderItem.defaultFolders
+        let unreadCount = inboxStore.threads.filter(\.hasUnread).count
+        if let idx = folders.firstIndex(where: { $0.id == "inbox" }) {
+            folders[idx].count = unreadCount > 0 ? unreadCount : nil
         }
-        .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
+        return folders
     }
 
     private func observeAccounts() async {
@@ -115,13 +104,6 @@ struct MainScene: View {
         }
         UserDefaults.standard.set(next.rawValue, forKey: "rb-theme")
     }
-}
-
-// MARK: - Local identifiers
-
-enum AccountFolderID: Hashable {
-    case inbox, starred, sent
-    case account(String, String)
 }
 
 // MARK: - Keyboard shortcut helper
