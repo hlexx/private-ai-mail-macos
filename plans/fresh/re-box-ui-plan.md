@@ -167,16 +167,16 @@ helpers usable from any feature package.
 Build the reusable components that show up in many places. All atoms live in
 `DesignSystem` so feature packages stay thin.
 
-- [ ] `SignalChip.swift` exposing `SignalChip(kind:)` with cases `.due(label, urgent)`, `.reply(label)`, `.att(pages)`, `.ai(label)`, `.logged(target)`, `.cc(label)`, `.cal(label)`, `.paid(label)`. Each variant maps to the corresponding `rbSignal*` color/background pair, includes an SF Symbol leading icon, and uses `RBTextStyle.eyebrow` for the trailing label
-- [ ] `RBButtonStyle.swift` with `.primary`, `.secondary`, `.ghost` `ButtonStyle`s; primary uses `rbAccent` background + `rbFgOnAccent` text; ghost is transparent with `rbFg2` text + hover background
-- [ ] `RBIconButton.swift` — square button hosting an SF Symbol, 28×28, `rbBgElev1` hover background, accessibility label parameter
-- [ ] `LocalAIPill.swift` — pill with a 6 px citron dot + "Local AI · M-series" text, `rbSignalLocalAiBg` background
-- [ ] `AccountSwitcher.swift` — pill with a color-dot + label + chevron, tappable; takes `Account` + `onCycle` closure
-- [ ] `SearchField.swift` — pill containing a magnifying-glass SF Symbol, a `TextField` with placeholder "Search or ask Re:Box (last week, contracts, due Friday…)", and a trailing ⌘K keyboard-shortcut hint label
-- [ ] `EyebrowLabel.swift` — mono uppercase tracking-eyebrow label, used for "Re:Box brief · local", "Drafted locally · tone:", etc.
-- [ ] `AvatarView.swift` — circle avatar with optional linear-gradient background (matches `t.fromColor` lin-gradient pattern) and 2-letter initials
-- [ ] Snapshot tests in `DesignSystemTests` for every atom × dark+light
-- [ ] Run `cd Packages/Core/DesignSystem && swift test`
+- [x] `SignalChip.swift` exposing `SignalChip(kind:)` with cases `.due(label, urgent)`, `.reply(label)`, `.att(pages)`, `.ai(label)`, `.logged(target)`, `.cc(label)`, `.cal(label)`, `.paid(label)`. Each variant maps to the corresponding `rbSignal*` color/background pair, includes an SF Symbol leading icon, and uses `RBTextStyle.eyebrow` for the trailing label
+- [x] `RBButtonStyle.swift` with `.primary`, `.secondary`, `.ghost` `ButtonStyle`s; primary uses `rbAccent` background + `rbFgOnAccent` text; ghost is transparent with `rbFg2` text + hover background
+- [x] `RBIconButton.swift` — square button hosting an SF Symbol, 28×28, `rbBgElev1` hover background, accessibility label parameter
+- [x] `LocalAIPill.swift` — pill with a 6 px citron dot + "Local AI · M-series" text, `rbSignalLocalAiBg` background
+- [x] `AccountSwitcher.swift` — pill with a color-dot + label + chevron, tappable; takes `Account` + `onCycle` closure
+- [x] `SearchField.swift` — pill containing a magnifying-glass SF Symbol, a `TextField` with placeholder "Search or ask Re:Box (last week, contracts, due Friday…)", and a trailing ⌘K keyboard-shortcut hint label
+- [x] `EyebrowLabel.swift` — mono uppercase tracking-eyebrow label, used for "Re:Box brief · local", "Drafted locally · tone:", etc.
+- [x] `AvatarView.swift` — circle avatar with optional linear-gradient background (matches `t.fromColor` lin-gradient pattern) and 2-letter initials
+- [x] Snapshot tests in `DesignSystemTests` for every atom × dark+light
+- [x] Run `cd Packages/Core/DesignSystem && swift test`
 
 ### Task 5: Custom window chrome and top Toolbar
 
