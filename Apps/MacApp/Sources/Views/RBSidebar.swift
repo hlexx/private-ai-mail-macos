@@ -46,7 +46,7 @@ struct AccountRow: Identifiable, Hashable {
 
     static func deterministicColor(for id: String) -> Color {
         let hash = id.utf8.reduce(0) { ($0 &* 31) &+ Int($1) }
-        return palette[abs(hash) % palette.count]
+        return palette[Int(hash.magnitude) % palette.count]
     }
 }
 

@@ -35,13 +35,27 @@ public struct RBGhostButtonStyle: ButtonStyle {
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
+        RBGhostButtonBody(configuration: configuration)
+    }
+}
+
+private struct RBGhostButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @State private var isHovered = false
+
+    var body: some View {
         configuration.label
             .rbTextStyle(.bodySM)
             .foregroundStyle(Color.rbFg2)
             .padding(.horizontal, RBSpace.s3)
             .padding(.vertical, RBSpace.s2)
-            .background(configuration.isPressed ? Color.rbBgElev1 : Color.clear)
+            .background(
+                configuration.isPressed
+                    ? Color.rbBgElev2
+                    : (isHovered ? Color.rbBgElev1 : Color.clear)
+            )
             .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
+            .onHover { isHovered = $0 }
     }
 }
 

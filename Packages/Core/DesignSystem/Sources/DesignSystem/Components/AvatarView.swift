@@ -50,7 +50,7 @@ public struct AvatarView: View {
     }
 
     static func defaultGradient(for name: String) -> [Color] {
-        let hash = abs(name.utf8.reduce(0) { ($0 &* 31) &+ Int($1) })
+        let hash = name.utf8.reduce(0) { ($0 &* 31) &+ Int($1) }
         let palettes: [[Color]] = [
             [.rbCobalt500, .rbViolet500],
             [.rbViolet400, .rbCobalt400],
@@ -59,7 +59,7 @@ public struct AvatarView: View {
             [.rbCobalt400, .rbCitron600],
             [.rbViolet500, .rbToneCoral400],
         ]
-        return palettes[hash % palettes.count]
+        return palettes[Int(hash.magnitude) % palettes.count]
     }
 }
 
