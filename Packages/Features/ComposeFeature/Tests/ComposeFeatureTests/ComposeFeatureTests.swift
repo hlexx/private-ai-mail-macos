@@ -56,3 +56,66 @@ struct InlineComposerSnapshotTests {
         host.layout()
     }
 }
+
+// MARK: - ComposeWindowView Snapshot Tests
+
+@Suite("ComposeWindowView Snapshots")
+struct ComposeWindowViewSnapshotTests {
+
+    @MainActor
+    @Test func composeWindowDark() {
+        let view = ComposeWindowView()
+            .preferredColorScheme(.dark)
+            .frame(width: 720, height: 560)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 720, height: 560)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func composeWindowLight() {
+        let view = ComposeWindowView()
+            .preferredColorScheme(.light)
+            .frame(width: 720, height: 560)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 720, height: 560)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func composeWindowCompactSize() {
+        let view = ComposeWindowView()
+            .preferredColorScheme(.dark)
+            .frame(width: 600, height: 480)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 480)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func composeWindowWideSize() {
+        let view = ComposeWindowView()
+            .preferredColorScheme(.light)
+            .frame(width: 900, height: 700)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 900, height: 700)
+        host.layout()
+    }
+}
+
+// MARK: - RichTextEditor Tests
+
+@Suite("RichTextEditor")
+struct RichTextEditorTests {
+
+    @MainActor
+    @Test func richTextEditorRendersWithContent() {
+        let text = NSAttributedString(string: "Hello, world!")
+        let binding = Binding.constant(text)
+        let view = RichTextEditor(attributedText: binding)
+            .frame(width: 400, height: 200)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 400, height: 200)
+        host.layout()
+    }
+}

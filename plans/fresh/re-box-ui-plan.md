@@ -289,10 +289,10 @@ Task 5).
 Implement the standalone Compose window (⌘N opens it) with an
 `NSTextView`-backed rich-text body, per §14 design decision 4.
 
-- [ ] Create `Packages/Features/ComposeFeature/Sources/ComposeFeature/ComposeWindow.swift` — a `Scene` (or a `WindowGroup`-presented view) rendering header (subject + close button), 3 field rows (to / cc / subj), a `RichTextEditor` view, footer with metadata eyebrow ("◆ drafted locally · attached contract.pdf · tone: concise") and CTAs (ghost "Save draft", secondary "Rewrite" with sparkle, primary "Send" with arrow.up)
-- [ ] Create `RichTextEditor.swift` (NSViewRepresentable wrapping `NSTextView`) supporting bold/italic/links/quote-citation via standard NSAttributedString. Implement minimum surface: bind to a `NSAttributedString` binding, sensible default font (Geist 14 px / RBSpace line height), respond to standard editing shortcuts. Real rich-text features (attachments, signatures, quote-collapse) are out of scope for this iteration
-- [ ] Hook ⌘N in `PrivateAIMailApp.swift` to open the `ComposeWindow` (use `@Environment(\.openWindow)` with a registered window group)
-- [ ] Snapshot test for ComposeWindow in dark+light at a few sizes
+- [x] Create `Packages/Features/ComposeFeature/Sources/ComposeFeature/ComposeWindow.swift` — a `Scene` (or a `WindowGroup`-presented view) rendering header (subject + close button), 3 field rows (to / cc / subj), a `RichTextEditor` view, footer with metadata eyebrow ("◆ drafted locally · attached contract.pdf · tone: concise") and CTAs (ghost "Save draft", secondary "Rewrite" with sparkle, primary "Send" with arrow.up)
+- [x] Create `RichTextEditor.swift` (NSViewRepresentable wrapping `NSTextView`) supporting bold/italic/links/quote-citation via standard NSAttributedString. Implement minimum surface: bind to a `NSAttributedString` binding, sensible default font (Geist 14 px / RBSpace line height), respond to standard editing shortcuts. Real rich-text features (attachments, signatures, quote-collapse) are out of scope for this iteration
+- [x] Hook ⌘N in `PrivateAIMailApp.swift` to open the `ComposeWindow` (use `@Environment(\.openWindow)` with a registered window group)
+- [x] Snapshot test for ComposeWindow in dark+light at a few sizes
 - [x] Run `cd Packages/Features/ComposeFeature && swift test`
 
 ### Task 13: Theme parity sweep, lint, and final verification

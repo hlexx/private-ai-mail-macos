@@ -1,3 +1,4 @@
+import ComposeFeature
 import DesignSystem
 import SwiftUI
 
@@ -5,6 +6,7 @@ import SwiftUI
 struct PrivateAIMailApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
 
     private let composition = CompositionRoot()
 
@@ -15,6 +17,12 @@ struct PrivateAIMailApp: App {
                 .task { composition.resumeExistingAccounts() }
                 .rbTheme()
                 .onAppear { configureMainWindow() }
+                .onChange(of: composition.showCompose) { _, show in
+                    if show {
+                        openWindow(id: "compose")
+                        composition.showCompose = false
+                    }
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
@@ -22,7 +30,7 @@ struct PrivateAIMailApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(String(localized: "menu.compose.new", defaultValue: "New Message")) {
-                    composition.showCompose = true
+                    openWindow(id: "compose")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
             }
@@ -35,6 +43,16 @@ struct PrivateAIMailApp: App {
             CommandGroup(replacing: .textEditing) {}
             CommandGroup(replacing: .textFormatting) {}
         }
+
+        WindowGroup(id: "compose") {
+            ComposeWindowView {
+                NSApplication.shared.keyWindow?.close()
+            }
+            .frame(minWidth: 600, minHeight: 480)
+            .rbTheme()
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 720, height: 560)
 
         Settings {
             SettingsScene(composition: composition)
