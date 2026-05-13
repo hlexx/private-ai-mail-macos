@@ -95,8 +95,8 @@ public struct BriefRail: View {
     private func fieldRow(key: String, value: String, valueColor: Color = .rbFg1) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(key)
-                .font(.rbGeist(10, weight: .semibold))
-                .tracking(1)
+                .font(.rbMono(10, weight: .medium))
+                .tracking(0.14 * 10)
                 .foregroundStyle(Color.rbFg3)
                 .frame(width: 80, alignment: .leading)
 
