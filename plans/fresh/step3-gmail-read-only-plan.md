@@ -204,16 +204,16 @@ Replace the placeholder columns in `Apps/MacApp/Sources/Scenes/MainScene.swift`
 with real bindings to the database. Use GRDB `ValueObservation` bridged to
 `AsyncSequence` so SwiftUI views observe changes without polling.
 
-- [ ] Add `@Observable final class InboxStore` in `Packages/Features/InboxFeature/Sources/InboxFeature/InboxStore.swift` exposing `threads: [ThreadRow]` and `selectedThreadID: ThreadID?`
-- [ ] Add `InboxView` rendering a `List(selection:)` of `ThreadRow` (subject + snippet + relative date via `RelativeDateTimeFormatter`)
-- [ ] Bridge `ValueObservation.tracking { db in try ThreadRow.fetchAll(db, ...) }.values` to `InboxStore` via `.task { for await rows in stream { ... } }`
-- [ ] Add `@Observable final class ThreadStore` in `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadStore.swift` exposing `messages: [MessageRow]` for the selected thread
-- [ ] Add `ThreadView` rendering messages stacked vertically with header (from/date) and plain-text body
-- [ ] Update `Apps/MacApp/Sources/Scenes/MainScene.swift`: middle column hosts `InboxView`, right column hosts `ThreadView`, sidebar shows account list bound to the `account` table
-- [ ] Keep the `ContentUnavailableView` placeholders for the empty-state (zero accounts) — show real columns only when at least one account exists
-- [ ] Add a `Cmd+R` `.keyboardShortcut` triggering `SyncSupervisor.refresh(...)` on the currently-selected account
-- [ ] Add an XCTest UI test in `Apps/MacApp/Tests/InboxUITests.swift` that launches the app with a seeded in-memory DB containing one account + two threads + three messages, then asserts: sidebar contains the account row, thread list contains both threads with non-empty subjects, selecting the first thread shows its messages
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/private-ai-mail-macos && tuist generate --no-open && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
+- [x] Add `@Observable final class InboxStore` in `Packages/Features/InboxFeature/Sources/InboxFeature/InboxStore.swift` exposing `threads: [ThreadRow]` and `selectedThreadID: ThreadID?`
+- [x] Add `InboxView` rendering a `List(selection:)` of `ThreadRow` (subject + snippet + relative date via `RelativeDateTimeFormatter`)
+- [x] Bridge `ValueObservation.tracking { db in try ThreadRow.fetchAll(db, ...) }.values` to `InboxStore` via `.task { for await rows in stream { ... } }`
+- [x] Add `@Observable final class ThreadStore` in `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadStore.swift` exposing `messages: [MessageRow]` for the selected thread
+- [x] Add `ThreadView` rendering messages stacked vertically with header (from/date) and plain-text body
+- [x] Update `Apps/MacApp/Sources/Scenes/MainScene.swift`: middle column hosts `InboxView`, right column hosts `ThreadView`, sidebar shows account list bound to the `account` table
+- [x] Keep the `ContentUnavailableView` placeholders for the empty-state (zero accounts) — show real columns only when at least one account exists
+- [x] Add a `Cmd+R` `.keyboardShortcut` triggering `SyncSupervisor.refresh(...)` on the currently-selected account
+- [x] Add an XCTest UI test in `Apps/MacApp/Tests/InboxUITests.swift` that launches the app with a seeded in-memory DB containing one account + two threads + three messages, then asserts: sidebar contains the account row, thread list contains both threads with non-empty subjects, selecting the first thread shows its messages
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/private-ai-mail-macos && tuist generate --no-open && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 
 ### Task 6: Add Gmail account flow in Settings
 
