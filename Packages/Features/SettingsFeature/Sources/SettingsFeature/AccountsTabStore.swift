@@ -76,6 +76,15 @@ public final class AccountsTabStore {
                 self.addPhase = .fetchingProfile
 
                 let email = try await self.fetchUserEmail(credential: credential)
+
+                let existingAccount = try self.db.read { db in
+                    try AccountRecord.filter(Column("provider") == "gmail" && Column("email") == email).fetchOne(db)
+                }
+                if existingAccount != nil {
+                    self.addPhase = .error("This Gmail account is already connected.")
+                    return
+                }
+
                 let accountId = UUID().uuidString
 
                 let account = AccountRecord(

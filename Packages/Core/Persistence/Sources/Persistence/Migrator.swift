@@ -17,6 +17,7 @@ enum M001_InitialSchema {
             t.column("display_name", .text)
             t.column("created_at", .integer).notNull()
             t.column("last_synced_at", .integer)
+            t.uniqueKey(["provider", "email"])
         }
 
         try db.create(table: "sync_state") { t in
