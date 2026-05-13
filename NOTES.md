@@ -39,3 +39,28 @@ See [§14 of the macOS design doc](../EMAIL_ALF/14_macos_app_design.md#142-че�
 There is **no functional behavior** yet — opening `MacApp` shows a 3-pane
 `NavigationSplitView` with `ContentUnavailableView` placeholders in two of
 the three columns and a static "No accounts connected" list in the sidebar.
+
+## Manual smoke test: end-to-end Gmail account flow
+
+1. Delete the sandbox container to start fresh:
+   ```bash
+   rm -rf ~/Library/Containers/com.hlexx.privateaimail/
+   ```
+2. Build and run `MacApp` via Xcode (Cmd+R) or:
+   ```bash
+   tuist generate --no-open
+   xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS'
+   open DerivedData/PrivateAIMail/Build/Products/Debug/PrivateAIMail.app
+   ```
+3. Open Settings (Cmd+,) → Accounts tab.
+4. Click "Add Gmail account". The system browser opens the Google OAuth
+   consent screen.
+5. Sign in with a Gmail account and grant the requested scopes
+   (`gmail.readonly`, `gmail.metadata`, `userinfo.email`).
+6. The Settings tab shows a progress bar while bootstrap sync runs.
+7. Within ~60 seconds the sidebar in the main window shows the new
+   account, and the thread list populates with the last 30 days of
+   Gmail threads sorted by most recent.
+8. Select a thread to see its messages in the right pane.
+9. Press Cmd+R to trigger incremental sync — new messages should
+   appear without restarting the app.

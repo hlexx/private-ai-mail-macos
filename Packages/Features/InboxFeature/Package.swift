@@ -11,6 +11,7 @@ let package = Package(
         .package(path: "../../Mail/MailSync"),
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Core/DesignSystem"),
+        .package(path: "../../Core/Persistence"),
     ],
     targets: [
         .target(
@@ -19,6 +20,7 @@ let package = Package(
                 "MailSync",
                 "AIKit",
                 "DesignSystem",
+                "Persistence",
             ],
             resources: [.process("Resources")]
         ),

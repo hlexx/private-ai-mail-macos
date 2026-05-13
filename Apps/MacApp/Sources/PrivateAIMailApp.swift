@@ -11,6 +11,7 @@ struct PrivateAIMailApp: App {
         WindowGroup(id: "main") {
             MainScene(composition: composition)
                 .frame(minWidth: 1000, minHeight: 640)
+                .task { composition.resumeExistingAccounts() }
         }
         .windowStyle(.titleBar)
         .windowResizability(.contentMinSize)
@@ -21,10 +22,26 @@ struct PrivateAIMailApp: App {
                 }
                 .keyboardShortcut("n", modifiers: [.command])
             }
+            CommandGroup(after: .toolbar) {
+                Button(String(localized: "menu.refresh", defaultValue: "Refresh")) {
+                    refreshCurrentAccount()
+                }
+                .keyboardShortcut("r", modifiers: [.command])
+            }
         }
 
         Settings {
             SettingsScene(composition: composition)
+        }
+    }
+
+    private func refreshCurrentAccount() {
+        let store = composition.inboxStore
+        if let selected = store.selectedThreadID,
+           let thread = store.threads.first(where: { $0.id == selected }) {
+            composition.refreshAccount(thread.accountId)
+        } else {
+            composition.refreshAllAccounts()
         }
     }
 }

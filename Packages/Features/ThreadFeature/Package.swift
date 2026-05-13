@@ -12,6 +12,7 @@ let package = Package(
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Attachments/AttachmentKit"),
         .package(path: "../../Core/DesignSystem"),
+        .package(path: "../../Core/Persistence"),
     ],
     targets: [
         .target(
@@ -21,6 +22,7 @@ let package = Package(
                 "AIKit",
                 "AttachmentKit",
                 "DesignSystem",
+                "Persistence",
             ],
             resources: [.process("Resources")]
         ),

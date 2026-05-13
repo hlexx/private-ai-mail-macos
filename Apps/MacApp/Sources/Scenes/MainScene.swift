@@ -3,23 +3,39 @@ import InboxFeature
 import ThreadFeature
 import BriefFeature
 import DesignSystem
+import Persistence
+import GRDB
 
 struct MainScene: View {
 
     let composition: CompositionRoot
 
     @State private var sidebarSelection: AccountFolderID? = .inbox
-    @State private var threadSelection: ThreadID?
+    @State private var accounts: [AccountRecord] = []
+
+    private var inboxStore: InboxStore { composition.inboxStore }
+    private var threadStore: ThreadStore { composition.threadStore }
 
     var body: some View {
         NavigationSplitView {
             sidebar
         } content: {
-            threadList
+            InboxView(store: inboxStore)
         } detail: {
-            reading
+            ThreadView(store: threadStore)
         }
         .navigationTitle(String(localized: "app.title", defaultValue: "Private AI Mail"))
+        .onChange(of: inboxStore.selectedThreadID) { _, newValue in
+            if let threadId = newValue,
+               let thread = inboxStore.threads.first(where: { $0.id == threadId }) {
+                threadStore.observe(threadId: threadId, accountId: thread.accountId)
+            } else {
+                threadStore.stopObserving()
+            }
+        }
+        .task {
+            await observeAccounts()
+        }
     }
 
     private var sidebar: some View {
@@ -33,49 +49,39 @@ struct MainScene: View {
                     .tag(AccountFolderID.sent)
             }
             Section(String(localized: "sidebar.section.accounts", defaultValue: "Accounts")) {
-                Text(String(localized: "sidebar.no_accounts", defaultValue: "No accounts connected"))
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
+                if accounts.isEmpty {
+                    Text(String(localized: "sidebar.no_accounts", defaultValue: "No accounts connected"))
+                        .foregroundStyle(.secondary)
+                        .font(.callout)
+                } else {
+                    ForEach(accounts, id: \.id) { account in
+                        Label(account.email, systemImage: "person.crop.circle")
+                            .tag(AccountFolderID.account(account.id, account.email))
+                    }
+                }
             }
         }
         .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
     }
 
-    private var threadList: some View {
-        VStack {
-            ContentUnavailableView(
-                String(localized: "threads.empty.title", defaultValue: "No threads yet"),
-                systemImage: "envelope.open",
-                description: Text(String(
-                    localized: "threads.empty.description",
-                    defaultValue: "Connect a Gmail or Microsoft 365 account to get started."
-                ))
-            )
+    private func observeAccounts() async {
+        let observation = ValueObservation.tracking { db in
+            try AccountRecord.fetchAll(db)
         }
-        .navigationSplitViewColumnWidth(min: 320, ideal: 420, max: 600)
+        do {
+            for try await records in observation.values(in: composition.db.dbQueue) {
+                self.accounts = records
+            }
+        } catch {
+            // Observation ended
+        }
     }
 
-    private var reading: some View {
-        VStack {
-            ContentUnavailableView(
-                String(localized: "reading.empty.title", defaultValue: "Select a thread"),
-                systemImage: "text.alignleft",
-                description: Text(String(
-                    localized: "reading.empty.description",
-                    defaultValue: "Pick a conversation to see the AI brief and reply options."
-                ))
-            )
-        }
-    }
 }
 
-// MARK: - Local stub identifiers
+// MARK: - Local identifiers
 
 enum AccountFolderID: Hashable {
     case inbox, starred, sent
-    case account(UUID, String)
-}
-
-struct ThreadID: Hashable {
-    let raw: String
+    case account(String, String)
 }
