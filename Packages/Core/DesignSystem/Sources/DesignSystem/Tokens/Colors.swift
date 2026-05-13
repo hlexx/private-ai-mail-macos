@@ -63,6 +63,11 @@ extension Color {
     /// oklch(50% 0.21 297)
     public static let rbViolet600 = Color(oklch: (0.50, 0.21, 297))
 
+    // MARK: Burnt Orange (action accent)
+
+    /// oklch(68% 0.18 52) — warm task/action orange
+    public static let rbBurntOrange500 = Color(oklch: (0.68, 0.18, 52))
+
     // MARK: Chrome (soft material)
 
     /// oklch(86% 0.008 240)

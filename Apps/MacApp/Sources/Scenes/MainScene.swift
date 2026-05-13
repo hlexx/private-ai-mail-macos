@@ -1,3 +1,4 @@
+import ActionsFeature
 import BriefFeature
 import ComposeFeature
 import DesignSystem
@@ -62,10 +63,10 @@ struct MainScene: View {
         .background(Color.rbBgDeep)
         .overlay {
             if composition.showActionSheet {
-                // Task 11 will fill in the ActionSheetView
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture { composition.showActionSheet = false }
+                ActionSheetView(
+                    threadSubject: threadStore.subject.isEmpty ? "Selected thread" : threadStore.subject,
+                    onClose: { composition.showActionSheet = false }
+                )
             }
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in

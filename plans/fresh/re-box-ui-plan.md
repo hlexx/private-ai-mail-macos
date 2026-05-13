@@ -274,15 +274,15 @@ brief rail. Uses hardcoded tone-rewrites until AIKit lands.
 Build the modal sheet that opens on ⌘K (already wired to a state binding in
 Task 5).
 
-- [ ] Create `Packages/Features/ActionsFeature/Sources/ActionsFeature/ActionSheetView.swift` rendering: header with eyebrow "What should I do with this thread?" + subject of the active thread + close `RBIconButton`, a 4×2 grid of `ActionTile` cards (each: 36 px colored icon block + label), a preview block at the bottom with eyebrow "◆ Re:Box will" + "undo in 5s" + the picked action's preview text + "on-device · 0 bytes uploaded" mono line, two CTAs at the bottom (ghost Cancel, primary "Do it")
-- [ ] Action set mirrors `ActionSheet.jsx`: Draft reply (citron), Snooze to Fri (cobalt), Log to CRM (violet), Make a task (burnt orange — add this to tokens), Archive (graphite), Unsubscribe (graphite), Make a rule (graphite), Share thread (graphite)
-- [ ] State: `picked: ActionID` (default `.snooze` to match design); tapping a tile sets it and the preview block updates
-- [ ] Add a `burntOrange-500` to color tokens — it's referenced as `var(--burnt-orange-500)` in the design. Derive value from the design's intended palette (orange-ish OKLCH; eyeball or pick a citron-adjacent warm)
-- [ ] Centered modal: `ZStack` overlay on the whole window with `.background(.ultraThinMaterial)` mask + a card sized ~620×480 px with `RBRadius.lg`
-- [ ] Pressing Escape or clicking the backdrop dismisses
-- [ ] Wire it into `MainScene.swift` so the binding from Task 5 controls visibility
-- [ ] Snapshot tests for each picked-state in dark+light
-- [ ] Run `cd Packages/Features/ActionsFeature && swift test`
+- [x] Create `Packages/Features/ActionsFeature/Sources/ActionsFeature/ActionSheetView.swift` rendering: header with eyebrow "What should I do with this thread?" + subject of the active thread + close `RBIconButton`, a 4×2 grid of `ActionTile` cards (each: 36 px colored icon block + label), a preview block at the bottom with eyebrow "◆ Re:Box will" + "undo in 5s" + the picked action's preview text + "on-device · 0 bytes uploaded" mono line, two CTAs at the bottom (ghost Cancel, primary "Do it")
+- [x] Action set mirrors `ActionSheet.jsx`: Draft reply (citron), Snooze to Fri (cobalt), Log to CRM (violet), Make a task (burnt orange — add this to tokens), Archive (graphite), Unsubscribe (graphite), Make a rule (graphite), Share thread (graphite)
+- [x] State: `picked: ActionID` (default `.snooze` to match design); tapping a tile sets it and the preview block updates
+- [x] Add a `burntOrange-500` to color tokens — it's referenced as `var(--burnt-orange-500)` in the design. Derive value from the design's intended palette (orange-ish OKLCH; eyeball or pick a citron-adjacent warm)
+- [x] Centered modal: `ZStack` overlay on the whole window with `.background(.ultraThinMaterial)` mask + a card sized ~620×480 px with `RBRadius.lg`
+- [x] Pressing Escape or clicking the backdrop dismisses
+- [x] Wire it into `MainScene.swift` so the binding from Task 5 controls visibility
+- [x] Snapshot tests for each picked-state in dark+light
+- [x] Run `cd Packages/Features/ActionsFeature && swift test`
 
 ### Task 12: Full-screen Compose window
 
