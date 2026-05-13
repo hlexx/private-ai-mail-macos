@@ -13,11 +13,11 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
     public var ccAddr: String?
     public var sentAt: Int
     public var snippet: String?
-    public var bodyHtmlPath: String?
-    public var bodyTextPath: String?
+    public var bodyHtml: String?
+    public var bodyText: String?
     public var flags: Int
 
-    public init(id: String, threadId: String, accountId: String, messageIdHeader: String? = nil, fromAddr: String? = nil, toAddr: String? = nil, ccAddr: String? = nil, sentAt: Int, snippet: String? = nil, bodyHtmlPath: String? = nil, bodyTextPath: String? = nil, flags: Int = 0) {
+    public init(id: String, threadId: String, accountId: String, messageIdHeader: String? = nil, fromAddr: String? = nil, toAddr: String? = nil, ccAddr: String? = nil, sentAt: Int, snippet: String? = nil, bodyHtml: String? = nil, bodyText: String? = nil, flags: Int = 0) {
         self.id = id
         self.threadId = threadId
         self.accountId = accountId
@@ -27,8 +27,8 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
         self.ccAddr = ccAddr
         self.sentAt = sentAt
         self.snippet = snippet
-        self.bodyHtmlPath = bodyHtmlPath
-        self.bodyTextPath = bodyTextPath
+        self.bodyHtml = bodyHtml
+        self.bodyText = bodyText
         self.flags = flags
     }
 
@@ -42,8 +42,8 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
         case ccAddr = "cc_addr"
         case sentAt = "sent_at"
         case snippet
-        case bodyHtmlPath = "body_html_path"
-        case bodyTextPath = "body_text_path"
+        case bodyHtml = "body_html"
+        case bodyText = "body_text"
         case flags
     }
 }

@@ -33,7 +33,7 @@ func makeMessageRecord(from msg: MailDomain.Message, accountId: String) -> Messa
         ccAddr: msg.cc.map(formatAddress).joined(separator: ", "),
         sentAt: Int(msg.sentAt.timeIntervalSince1970),
         snippet: msg.snippet,
-        bodyTextPath: msg.bodyText,
+        bodyText: msg.bodyText,
         flags: msg.isUnread ? 1 : 0
     )
 }

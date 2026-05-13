@@ -55,8 +55,8 @@ enum M001_InitialSchema {
             t.column("cc_addr", .text)
             t.column("sent_at", .integer).notNull()
             t.column("snippet", .text)
-            t.column("body_html_path", .text)
-            t.column("body_text_path", .text)
+            t.column("body_html", .text)
+            t.column("body_text", .text)
             t.column("flags", .integer).notNull().defaults(to: 0)
             t.primaryKey(["account_id", "id"])
         }

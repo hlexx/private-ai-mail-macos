@@ -17,7 +17,7 @@ public struct MessageRow: Identifiable, Sendable {
         self.fromAddr = record.fromAddr ?? "(unknown)"
         self.sentAt = Date(timeIntervalSince1970: TimeInterval(record.sentAt))
         self.snippet = record.snippet ?? ""
-        self.bodyText = record.bodyTextPath ?? record.snippet ?? ""
+        self.bodyText = record.bodyText ?? record.snippet ?? ""
     }
 }
 

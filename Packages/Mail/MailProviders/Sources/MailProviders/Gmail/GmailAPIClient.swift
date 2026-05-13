@@ -9,6 +9,7 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
     private let rateLimiter = RateLimiter()
     private let lock = NSLock()
     private var _credential: TokenCredential?
+    private var _refreshTask: Task<TokenCredential, Error>?
 
     private static let maxRetries = 5
     private static let baseBackoffMs: UInt64 = 500
@@ -136,13 +137,31 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
     }
 
     private func handleUnauthorized<T: Decodable & Sendable>(url: URL, quotaCost: Int) async throws -> T {
-        guard let cred = credential else {
-            throw GmailAPIError.unauthorized
+        // Coalesce concurrent refresh attempts into a single task
+        let task: Task<TokenCredential, Error> = lock.withLock {
+            if let existing = _refreshTask {
+                return existing
+            }
+            let refreshTask = Task<TokenCredential, Error> { [oauthClient, tokenStore, accountId] in
+                guard let cred = self.credential else {
+                    throw GmailAPIError.unauthorized
+                }
+                let newCredential = try await oauthClient.refresh(cred.refreshToken)
+                self.credential = newCredential
+                try tokenStore.save(newCredential, for: accountId)
+                return newCredential
+            }
+            _refreshTask = refreshTask
+            return refreshTask
         }
 
-        let newCredential = try await oauthClient.refresh(cred.refreshToken)
-        credential = newCredential
-        try tokenStore.save(newCredential, for: accountId)
+        do {
+            _ = try await task.value
+            lock.withLock { _refreshTask = nil }
+        } catch {
+            lock.withLock { _refreshTask = nil }
+            throw error
+        }
 
         await rateLimiter.acquire(units: quotaCost)
         return try await executeWithRetry(url, quotaCost: quotaCost, attempt: 0, totalWaited: 0, didRefresh: true)
