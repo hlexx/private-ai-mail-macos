@@ -38,11 +38,11 @@ struct MainScene: View {
                     accounts: accounts.map { AccountRow(account: $0) },
                     activeFolder: $activeFolder
                 )
-                .frame(maxHeight: .infinity)
+                .frame(maxHeight: .infinity, alignment: .top)
 
                 InboxView(store: inboxStore)
                     .frame(width: RBLayout.threadListWidth)
-                    .frame(maxHeight: .infinity)
+                    .frame(maxHeight: .infinity, alignment: .top)
 
                 ThreadView(
                     store: threadStore,
@@ -63,10 +63,10 @@ struct MainScene: View {
                         // top-level pane.
                         BriefRail(store: briefStore)
                             .frame(width: RBLayout.briefRailWidth)
-                            .frame(maxHeight: .infinity)
+                            .frame(maxHeight: .infinity, alignment: .top)
                     }
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .background(Color.rbBgDeep)

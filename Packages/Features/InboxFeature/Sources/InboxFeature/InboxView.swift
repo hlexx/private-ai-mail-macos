@@ -13,7 +13,16 @@ public struct InboxView: View {
             threadListHeader
             filterChipsRow
             threadList
+
+            // Trailing flexible spacer keeps the header pinned directly
+            // under the toolbar when the threadList is in its empty state
+            // (`ContentUnavailableView` is not greedy on macOS 26 / Swift 6).
+            // When real threads land the `List` is naturally greedy so the
+            // spacer collapses to zero. Matches `.rb-list` / `.rb-list-header`
+            // in design/re-box/project/app/app.css.
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.rbBgCanvas)
         .onAppear {
             store.startObserving()
