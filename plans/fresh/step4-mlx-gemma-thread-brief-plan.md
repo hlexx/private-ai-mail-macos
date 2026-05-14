@@ -250,16 +250,16 @@ markdown report with p50 / p95 latency, faithfulness, hallucination
 rate, schema validity. This is the calibration tool we use to tune
 prompts and confirm we haven't regressed.
 
-- [ ] Add `Packages/AI/AIEvals/Sources/AIEvals/EvalCorpus.swift` with 20 synthetic threads covering: short informational, single-action request, multi-message contract negotiation, attachment-heavy, calendar invite, recruiting digest, financial / invoice. Reuse the DevSeeder shapes
-- [ ] Add `Packages/AI/AIEvals/Sources/AIEvals/EvalRunner.swift` exposing `func run(corpus: [AIThreadInput], service: any AIService) async throws -> EvalReport`
-- [ ] Add `Packages/AI/AIEvals/Sources/AIEvals/Metrics.swift`:
+- [x] Add `Packages/AI/AIEvals/Sources/AIEvals/EvalCorpus.swift` with 20 synthetic threads covering: short informational, single-action request, multi-message contract negotiation, attachment-heavy, calendar invite, recruiting digest, financial / invoice. Reuse the DevSeeder shapes
+- [x] Add `Packages/AI/AIEvals/Sources/AIEvals/EvalRunner.swift` exposing `func run(corpus: [AIThreadInput], service: any AIService) async throws -> EvalReport`
+- [x] Add `Packages/AI/AIEvals/Sources/AIEvals/Metrics.swift`:
     - Faithfulness heuristic: every quoted entity (sender / date / dollar amount) appears verbatim in the source thread
     - Hallucination rate: fraction of `evidence` array entries that don't correspond to a real `MessageRecord.id` or attachment filename in the input
     - Schema validity: rate of successful JSON parses
-- [ ] Add a CLI entry point `Tools/EvalRunner/main.swift` (new SPM executable in the existing Tools tree if present; otherwise just a `swift run` target) that prints the markdown report to stdout
-- [ ] Run the eval against the DevSeeder threads after Task 6 lands; commit the resulting report as `docs/eval-reports/step4-baseline.md`
-- [ ] Unit tests for the metrics (no live MLX): `MetricsTests` verifying each metric with hand-crafted inputs
-- [ ] Run `cd Packages/AI/AIEvals && swift test`
+- [x] Add a CLI entry point `Tools/EvalRunner/main.swift` (new SPM executable in the existing Tools tree if present; otherwise just a `swift run` target) that prints the markdown report to stdout
+- [x] Run the eval against the DevSeeder threads after Task 6 lands; commit the resulting report as `docs/eval-reports/step4-baseline.md`
+- [x] Unit tests for the metrics (no live MLX): `MetricsTests` verifying each metric with hand-crafted inputs
+- [x] Run `cd Packages/AI/AIEvals && swift test`
 
 ### Task 10: Performance + privacy verification
 
