@@ -139,13 +139,13 @@ Establish a clean, backend-agnostic API. The Compose feature later in
 §15 step 7 will reuse `AIService` for reply drafting, so design for that
 now (a `Capability` enum is fine).
 
-- [ ] In `Packages/AI/AIKit/Sources/AIKit/`, add `AIService.swift` with `public protocol AIService: Sendable` exposing `func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief`
-- [ ] Add `AIThreadInput.swift` containing a `Sendable` struct with `messages: [AIThreadInput.Message]` and `attachments: [AIThreadInput.Attachment]` (filename + mime + page count only; no bytes). Each `Message` has `from`, `sentAt`, `bodyText` — all `String`/`Date`
-- [ ] Add `AIThreadBrief.swift` matching the existing `BriefFeature.ThreadBriefViewData` shape: `summary: String?`, `request: String?`, `deadline: String?`, `risk: String?`, `nextStep: String?`, `evidence: [String]`, `confidence: Double`
-- [ ] Add `AIError.swift` enum: `.modelNotInstalled`, `.modelLoadFailed(Error)`, `.inferenceFailed(Error)`, `.invalidStructuredOutput(String)`, `.cancelled`
-- [ ] Add a `MockAIService` in `Tests/AIKitTests/Support/` for unit tests of dependent features
-- [ ] Update `Packages/AI/AIKit/Sources/AIKit/AIKit.swift` to re-export the new public types
-- [ ] Run `cd Packages/AI/AIKit && swift test`
+- [x] In `Packages/AI/AIKit/Sources/AIKit/`, add `AIService.swift` with `public protocol AIService: Sendable` exposing `func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief`
+- [x] Add `AIThreadInput.swift` containing a `Sendable` struct with `messages: [AIThreadInput.Message]` and `attachments: [AIThreadInput.Attachment]` (filename + mime + page count only; no bytes). Each `Message` has `from`, `sentAt`, `bodyText` — all `String`/`Date`
+- [x] Add `AIThreadBrief.swift` matching the existing `BriefFeature.ThreadBriefViewData` shape: `summary: String?`, `request: String?`, `deadline: String?`, `risk: String?`, `nextStep: String?`, `evidence: [String]`, `confidence: Double`
+- [x] Add `AIError.swift` enum: `.modelNotInstalled`, `.modelLoadFailed(Error)`, `.inferenceFailed(Error)`, `.invalidStructuredOutput(String)`, `.cancelled`
+- [x] Add a `MockAIService` in `Tests/AIKitTests/Support/` for unit tests of dependent features
+- [x] Update `Packages/AI/AIKit/Sources/AIKit/AIKit.swift` to re-export the new public types
+- [x] Run `cd Packages/AI/AIKit && swift test`
 
 ### Task 3: ModelManager — download, verify, and locate Gemma 4 weights
 
