@@ -85,7 +85,7 @@ struct RBSidebar: View {
 
             footer
         }
-        .frame(width: 240)
+        .frame(width: RBLayout.sidebarWidth)
         .background(Color.clear)
         .overlay(alignment: .trailing) {
             Rectangle()

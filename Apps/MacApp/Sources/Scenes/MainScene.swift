@@ -40,7 +40,7 @@ struct MainScene: View {
                 )
 
                 InboxView(store: inboxStore)
-                    .frame(width: 360)
+                    .frame(width: RBLayout.threadListWidth)
 
                 ThreadView(store: threadStore) {
                     if briefStore.brief != nil {
@@ -57,7 +57,7 @@ struct MainScene: View {
                     .overlay(Color.rbStroke1)
 
                 BriefRail(store: briefStore)
-                    .frame(width: 340)
+                    .frame(width: RBLayout.briefRailWidth)
             }
         }
         .background(Color.rbBgDeep)

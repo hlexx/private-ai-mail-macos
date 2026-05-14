@@ -29,11 +29,11 @@ struct RBToolbar: View {
     var body: some View {
         HStack(spacing: 0) {
             leadingSection
-                .frame(width: 240, alignment: .leading)
+                .frame(width: RBLayout.sidebarWidth, alignment: .leading)
 
             trailingSection
         }
-        .frame(height: 56)
+        .frame(height: RBLayout.toolbarHeight)
         .padding(.leading, RBSpace.s3)
         .padding(.trailing, RBSpace.s4)
         .background(.regularMaterial)

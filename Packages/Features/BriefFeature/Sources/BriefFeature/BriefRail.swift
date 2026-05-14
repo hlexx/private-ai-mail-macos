@@ -180,7 +180,7 @@ public struct BriefRail: View {
 #Preview("Brief Rail — with data") {
     let store = BriefStore()
     return BriefRail(store: store)
-        .frame(width: 340, height: 600)
+        .frame(width: RBLayout.briefRailWidth, height: 600)
         .onAppear { store.loadBrief(forThreadID: "t1") }
         .preferredColorScheme(.dark)
 }
@@ -188,7 +188,7 @@ public struct BriefRail: View {
 #Preview("Brief Rail — empty") {
     let store = BriefStore()
     return BriefRail(store: store)
-        .frame(width: 340, height: 600)
+        .frame(width: RBLayout.briefRailWidth, height: 600)
         .onAppear { store.loadBrief(forThreadID: "t99") }
         .preferredColorScheme(.dark)
 }
