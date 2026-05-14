@@ -267,10 +267,10 @@ The two gates that prevent regressions. Performance via the eval
 runner's measured latency; privacy via grep + a runtime network
 check.
 
-- [ ] Confirm `step4-baseline.md` report shows p50 ≤ 2.5 s and p95 ≤ 5.0 s. If not, profile (Instruments → Time Profiler on `MLXBackend.threadBrief`) and tune: reduce max tokens, shrink context window, switch to a smaller Gemma quant if necessary
-- [ ] Add a network-allowlist test in `Packages/AI/AIRuntime/Tests/AIRuntimeTests/NetworkIsolationTests.swift` that uses a `URLProtocol` registered for `*` and asserts no `URLSession.shared` activity from `MLXBackend.threadBrief()` (`URLProtocol.startLoading` is never called)
-- [ ] Re-run the step-3 privacy grep gate over `Apps` and `Packages` excluding `Tests`/`.build`. Zero `(Subject:|Bearer |refresh_token)` hits
-- [ ] Add a stricter content-leak grep: `! grep -rnE '(os_log|Logger|print|debugPrint)\(.*(subject|body|snippet|fromAddr|toAddr|message_id_header)' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build`. Zero hits
+- [x] Confirm `step4-baseline.md` report shows p50 ≤ 2.5 s and p95 ≤ 5.0 s. If not, profile (Instruments → Time Profiler on `MLXBackend.threadBrief`) and tune: reduce max tokens, shrink context window, switch to a smaller Gemma quant if necessary
+- [x] Add a network-allowlist test in `Packages/AI/AIRuntime/Tests/AIRuntimeTests/NetworkIsolationTests.swift` that uses a `URLProtocol` registered for `*` and asserts no `URLSession.shared` activity from `MLXBackend.threadBrief()` (`URLProtocol.startLoading` is never called)
+- [x] Re-run the step-3 privacy grep gate over `Apps` and `Packages` excluding `Tests`/`.build`. Zero `(Subject:|Bearer |refresh_token)` hits
+- [x] Add a stricter content-leak grep: `! grep -rnE '(os_log|Logger|print|debugPrint)\(.*(subject|body|snippet|fromAddr|toAddr|message_id_header)' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build`. Zero hits
 
 ### Task 11: Documentation and final gate
 
