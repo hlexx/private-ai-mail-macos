@@ -15,7 +15,7 @@ public enum ThreadBriefSchema {
             "evidence":   { "type": "array", "items": { "type": "string" } },
             "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
           },
-          "required": ["summary", "evidence", "confidence"],
+          "required": ["evidence", "confidence"],
           "additionalProperties": false
         }
         """

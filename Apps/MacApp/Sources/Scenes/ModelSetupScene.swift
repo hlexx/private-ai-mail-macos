@@ -75,13 +75,16 @@ struct ModelSetupScene: View {
                 .foregroundStyle(Color.rbToneCoral400)
                 .multilineTextAlignment(.center)
 
-            Button(action: { Task { await startInstall() } }) {
-                Text("Retry")
-                    .rbTextStyle(.bodySM)
-                    .foregroundStyle(Color.rbCitron500)
-                    .padding(.horizontal, RBSpace.s4)
-                    .padding(.vertical, RBSpace.s2)
-            }
+            Button(
+                action: { Task { await startInstall() } },
+                label: {
+                    Text("Retry")
+                        .rbTextStyle(.bodySM)
+                        .foregroundStyle(Color.rbCitron500)
+                        .padding(.horizontal, RBSpace.s4)
+                        .padding(.vertical, RBSpace.s2)
+                }
+            )
             .buttonStyle(.plain)
         }
     }

@@ -68,7 +68,7 @@ jobs:
             -scheme MacApp \
             -configuration Debug \
             -destination 'platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO | xcpretty || true
+            CODE_SIGNING_ALLOWED=NO | xcpretty
 
   test-packages:
     runs-on: macos-15

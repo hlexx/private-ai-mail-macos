@@ -81,8 +81,7 @@ public actor ModelManager {
             if fm.fileExists(atPath: dest.path),
                let attrs = try? fm.attributesOfItem(atPath: dest.path),
                let size = attrs[.size] as? Int64,
-               size == file.byteCount
-            {
+               size == file.byteCount {
                 if let expectedHash = file.sha256 {
                     let actual = try sha256Hash(of: dest)
                     if actual != expectedHash {

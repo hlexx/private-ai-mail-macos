@@ -113,21 +113,21 @@ public struct BriefRail: View {
     private var ctaRow: some View {
         HStack(spacing: 6) {
             Button {
-                // TODO(§15-step-4): wire to AIKit.draftReply()
+                // TODO(§15-step-7): wire to AIKit.draftReply()
             } label: {
                 Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
             }
             .buttonStyle(.rbPrimary)
 
             Button {
-                // TODO(§15-step-4): wire to snooze action
+                // TODO(§15-step-7): wire to snooze action
             } label: {
                 Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
             }
             .buttonStyle(.rbSecondary)
 
             Button {
-                // TODO(§15-step-4): wire to CRM logging
+                // TODO(§15-step-7): wire to CRM logging
             } label: {
                 Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
             }

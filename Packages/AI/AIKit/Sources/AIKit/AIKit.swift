@@ -8,4 +8,3 @@ import MailDomain
 public enum AIKit {
     public static let moduleName = "AIKit"
 }
-
