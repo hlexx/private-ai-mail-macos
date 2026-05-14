@@ -24,6 +24,10 @@ public struct ThreadBriefService: AIService, Sendable {
             try await backend.loadModel()
         } catch let error as MLXBackendError {
             throw error.toAIError()
+        } catch is CancellationError {
+            throw AIError.cancelled
+        } catch {
+            throw AIError.modelLoadFailed(error)
         }
 
         let parsed: ParsedThreadBrief
@@ -33,6 +37,8 @@ public struct ThreadBriefService: AIService, Sendable {
             throw error.toAIError()
         } catch is CancellationError {
             throw AIError.cancelled
+        } catch {
+            throw AIError.inferenceFailed(error)
         }
 
         return AIThreadBrief(

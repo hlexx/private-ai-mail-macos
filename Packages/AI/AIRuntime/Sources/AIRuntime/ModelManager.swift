@@ -166,7 +166,7 @@ public actor ModelManager {
 
         defer { try? handle.close() }
 
-        var written = existingBytes
+        var written: Int64 = shouldAppend ? existingBytes : 0
         let bufferSize = 256 * 1024
         var buffer = Data()
         buffer.reserveCapacity(bufferSize)

@@ -103,12 +103,13 @@ the tests can `@testable import AppFrameFeature` from a package context.
 
 ## On-device AI runtime
 
-Thread briefs are generated on-device via **MLX** running **Gemma 4 IT, 4-bit
-quantised**. Zero network traffic at inference time.
+Thread briefs are generated on-device via **MLX** running **Gemma 3 4B IT, 4-bit
+quantised** (`mlx-community/gemma-3-4b-it-4bit`). Zero network traffic at
+inference time.
 
 ### Model location
 
-`~/Library/Application Support/PrivateAIMail/models/gemma-4-it-4bit/`
+`~/Library/Application Support/PrivateAIMail/models/gemma-3-4b-it-4bit/`
 
 The model is downloaded automatically on first launch (~2.1 GB). A blocking
 "Setting up local AI" screen shows progress. The download is resumable — killing
@@ -118,7 +119,8 @@ the app mid-download and relaunching continues from where it left off.
 
 `Packages/AI/AIRuntime/Sources/AIRuntime/GemmaModelSpec.swift` defines the
 HuggingFace mirror URL, file manifest, and expected SHA-256 digests. The model
-is pinned to a specific revision of `mlx-community/gemma-3-4b-it-4bit`.
+tracks `mlx-community/gemma-3-4b-it-4bit` at the `main` revision. Key files
+(model weights, tokenizer) are verified by SHA-256 digest after download.
 
 ### Wiping and re-downloading
 

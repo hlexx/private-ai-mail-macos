@@ -109,7 +109,7 @@ struct ModelSetupScene: View {
             isDownloading = false
             onComplete()
         } catch is CancellationError {
-            // User cancelled
+            isDownloading = false
         } catch {
             self.error = "Download failed: \(error.localizedDescription)"
             isDownloading = false
