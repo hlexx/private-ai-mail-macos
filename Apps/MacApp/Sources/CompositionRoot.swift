@@ -36,7 +36,7 @@ final class CompositionRoot {
         self.aiService = ThreadBriefService.live(modelManager: modelManager)
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
-        self.briefStore = BriefStore(aiService: aiService)
+        self.briefStore = BriefStore(aiService: aiService, db: db)
 
         let tokenStore: any TokenStore = KeychainTokenStore()
         self.tokenStore = tokenStore

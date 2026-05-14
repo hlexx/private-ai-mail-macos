@@ -1,59 +1,160 @@
 import AIKit
 import Foundation
+import GRDB
 import Observation
-
-// TODO(§15-step-4): replace stub with AIKit.threadBrief()
+import Persistence
 
 @Observable
 @MainActor
 public final class BriefStore {
-    public private(set) var brief: ThreadBriefViewData?
+    public var brief: ThreadBriefViewData?
     public private(set) var activeThreadID: String?
+    public private(set) var isLoading = false
+    public private(set) var error: (any Error)?
 
     private let aiService: (any AIService)?
+    private let db: AppDatabase?
+    private var briefCache: [String: CacheEntry] = [:]
+    private var inflightTask: Task<Void, Never>?
 
-    /// Production init with AI service for real inference.
-    public init(aiService: any AIService) {
+    /// Production init with AI service and database.
+    public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
+        self.db = db
     }
 
     /// Preview / snapshot-test init with stub behaviour.
     public init() {
         self.aiService = nil
+        self.db = nil
     }
 
-    // TODO(§15-step-4): replace stub with AIKit.threadBrief()
-    /// Load a brief for the given thread ID.
-    /// Stub implementation returns hardcoded briefs for fixture threads t1/t2.
     public func loadBrief(forThreadID threadID: String?) {
+        inflightTask?.cancel()
+        inflightTask = nil
         activeThreadID = threadID
+        error = nil
+
         guard let threadID else {
             brief = nil
+            isLoading = false
             return
         }
 
-        if threadID.hasSuffix("t1") {
-            brief = ThreadBriefViewData(
-                summary: "Client approved pricing and asks for the contract draft by Friday.",
-                request: "Send contract draft",
-                deadline: "Fri \u{00B7} May 15",
-                risk: "Tight turnaround",
-                nextStep: "Draft reply with contract attached",
-                confidence: 0.88,
-                evidence: ["msg_1", "msg_3", "contract.pdf p.2"]
-            )
-        } else if threadID.hasSuffix("t2") {
-            brief = ThreadBriefViewData(
-                summary: "Jonas wants seat count for Q3 renewal confirmed by Wednesday.",
-                request: "Confirm seat count",
-                deadline: "Wed \u{00B7} May 14",
-                risk: "Legal team CC\u{2019}d",
-                nextStep: "Reply with current seat count",
-                confidence: 0.92,
-                evidence: ["msg_2"]
-            )
-        } else {
+        guard let aiService, let db else {
             brief = nil
+            isLoading = false
+            return
         }
+
+        // Check cache
+        if let cached = briefCache[threadID] {
+            brief = cached.viewData
+            isLoading = false
+            return
+        }
+
+        isLoading = true
+        brief = nil
+
+        inflightTask = Task {
+            do {
+                let input = try fetchThreadInput(threadID: threadID, db: db)
+                try Task.checkCancellation()
+                let aiBrief = try await aiService.threadBrief(input)
+                try Task.checkCancellation()
+
+                let viewData = ThreadBriefViewData(from: aiBrief)
+                let latestMessageID = input.messages.last.map { "\($0.from)-\($0.sentAt)" } ?? ""
+                briefCache[threadID] = CacheEntry(viewData: viewData, latestMessageKey: latestMessageID)
+                brief = viewData
+                isLoading = false
+                error = nil
+            } catch is CancellationError {
+                // Cancelled — don't update state
+            } catch let err as AIError where err.isCancelled {
+                // AI-level cancellation
+            } catch {
+                if activeThreadID == threadID {
+                    self.error = error
+                    isLoading = false
+                    brief = nil
+                }
+            }
+        }
+    }
+
+    public func retry() {
+        let id = activeThreadID
+        activeThreadID = nil
+        loadBrief(forThreadID: id)
+    }
+
+    // MARK: - Private
+
+    private func fetchThreadInput(threadID: String, db: AppDatabase) throws -> AIThreadInput {
+        let (messages, attachments) = try db.read { database in
+            let msgs = try MessageRecord
+                .filter(Column("thread_id") == threadID)
+                .order(Column("sent_at").asc)
+                .fetchAll(database)
+            let msgIDs = msgs.map(\.id)
+            let atts: [AttachmentRecord]
+            if msgIDs.isEmpty {
+                atts = []
+            } else {
+                atts = try AttachmentRecord
+                    .filter(msgIDs.contains(Column("message_id")))
+                    .fetchAll(database)
+            }
+            return (msgs, atts)
+        }
+
+        let aiMessages = messages.map { msg in
+            AIThreadInput.Message(
+                from: msg.fromAddr ?? "Unknown",
+                sentAt: Date(timeIntervalSince1970: TimeInterval(msg.sentAt)),
+                bodyText: msg.bodyText ?? msg.snippet ?? ""
+            )
+        }
+        let aiAttachments = attachments.map { att in
+            AIThreadInput.Attachment(
+                filename: att.filename ?? "unnamed",
+                mime: att.mime ?? "application/octet-stream"
+            )
+        }
+        return AIThreadInput(messages: aiMessages, attachments: aiAttachments)
+    }
+}
+
+// MARK: - Cache
+
+private struct CacheEntry {
+    let viewData: ThreadBriefViewData
+    let latestMessageKey: String
+}
+
+// MARK: - ThreadBriefViewData convenience
+
+extension ThreadBriefViewData {
+    init(from brief: AIThreadBrief) {
+        self.init(
+            summary: brief.summary ?? "No summary available",
+            request: brief.request,
+            deadline: brief.deadline,
+            risk: brief.risk,
+            nextStep: brief.nextStep,
+            confidence: brief.confidence,
+            evidence: brief.evidence
+        )
+    }
+}
+
+// MARK: - AIError helper
+
+private extension AIError {
+    var isCancelled: Bool {
+        if case .cancelled = self { return true }
+        return false
     }
 }

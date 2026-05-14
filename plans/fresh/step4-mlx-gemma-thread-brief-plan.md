@@ -232,15 +232,15 @@ The actual swap. `BriefStore` now loads real thread content from the DB
 (by `threadID` + the active account's `accountID`), feeds it to
 `AIService.threadBrief(_:)`, and publishes the result.
 
-- [ ] In `Packages/Features/BriefFeature/Sources/BriefFeature/BriefStore.swift`, add `init(aiService: any AIService, db: AppDatabase)` (keep a parameter-less `init` only for previews / snapshot tests)
-- [ ] `loadBrief(forThreadID:)` becomes: fetch `MessageRecord`s + `AttachmentRecord`s from the DB on `@DatabaseActor`, map to `AIThreadInput`, `Task { let brief = try await aiService.threadBrief(input); await MainActor.run { self.brief = ThreadBriefViewData(from: brief) } }`
-- [ ] Cache successful briefs in-memory keyed by `(threadID, latest messageID)` so flipping between threads doesn't re-run inference
-- [ ] Loading state: while inference is in flight, `BriefStore.isLoading == true` so `BriefRail` can show a shimmer / "Thinking…" eyebrow
-- [ ] Error state: `AIError` surfaces as `BriefStore.error` and `BriefRail` shows a small "Brief generation failed · Retry" row
-- [ ] Remove the entire `if threadID.hasSuffix("t1")` / `t2` block. Delete the `// TODO(§15-step-4)` comment(s) in this file
-- [ ] Update `BriefRail.swift` to render the loading state (mono eyebrow "Thinking locally · 1.2s") and the error state. Don't introduce new design tokens — reuse `Color.rbFg3` for muted text and `Color.rbSignalLocalAi` for the eyebrow
-- [ ] Update `Packages/Features/BriefFeature/Tests/BriefFeatureTests/BriefStoreTests.swift` to test against a `MockAIService` that returns canned `AIThreadBrief`s. Add: happy path, AI error → error state, cancellation when user switches threads mid-inference, cache hit on repeat select
-- [ ] Run `cd Packages/Features/BriefFeature && swift test`
+- [x] In `Packages/Features/BriefFeature/Sources/BriefFeature/BriefStore.swift`, add `init(aiService: any AIService, db: AppDatabase)` (keep a parameter-less `init` only for previews / snapshot tests)
+- [x] `loadBrief(forThreadID:)` becomes: fetch `MessageRecord`s + `AttachmentRecord`s from the DB on `@DatabaseActor`, map to `AIThreadInput`, `Task { let brief = try await aiService.threadBrief(input); await MainActor.run { self.brief = ThreadBriefViewData(from: brief) } }`
+- [x] Cache successful briefs in-memory keyed by `(threadID, latest messageID)` so flipping between threads doesn't re-run inference
+- [x] Loading state: while inference is in flight, `BriefStore.isLoading == true` so `BriefRail` can show a shimmer / "Thinking…" eyebrow
+- [x] Error state: `AIError` surfaces as `BriefStore.error` and `BriefRail` shows a small "Brief generation failed · Retry" row
+- [x] Remove the entire `if threadID.hasSuffix("t1")` / `t2` block. Delete the `// TODO(§15-step-4)` comment(s) in this file
+- [x] Update `BriefRail.swift` to render the loading state (mono eyebrow "Thinking locally · 1.2s") and the error state. Don't introduce new design tokens — reuse `Color.rbFg3` for muted text and `Color.rbSignalLocalAi` for the eyebrow
+- [x] Update `Packages/Features/BriefFeature/Tests/BriefFeatureTests/BriefStoreTests.swift` to test against a `MockAIService` that returns canned `AIThreadBrief`s. Add: happy path, AI error → error state, cancellation when user switches threads mid-inference, cache hit on repeat select
+- [x] Run `cd Packages/Features/BriefFeature && swift test`
 
 ### Task 9: AIEvals — offline harness against the demo corpus
 

@@ -12,7 +12,11 @@ public struct BriefRail: View {
 
     public var body: some View {
         ScrollView {
-            if let brief = store.brief {
+            if store.isLoading {
+                loadingState
+            } else if store.error != nil {
+                errorState
+            } else if let brief = store.brief {
                 briefContent(brief)
             } else {
                 emptyState
@@ -133,6 +137,54 @@ public struct BriefRail: View {
         }
     }
 
+    // MARK: - Loading State
+
+    private var loadingState: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(String(localized: "brief.loading.eyebrow", defaultValue: "\u{25C6} THINKING LOCALLY"))
+                    .font(.rbMono(10.5))
+                    .tracking(1.47)
+                    .foregroundStyle(Color.rbSignalLocalAi)
+                Spacer()
+            }
+            .padding(.bottom, 4)
+
+            ProgressView()
+                .controlSize(.small)
+                .tint(Color.rbCitron500)
+        }
+        .padding(16)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.lg))
+    }
+
+    // MARK: - Error State
+
+    private var errorState: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                EyebrowLabel(String(localized: "brief.error.eyebrow", defaultValue: "Re:Box brief"))
+                Spacer()
+            }
+
+            Text(String(localized: "brief.error.message", defaultValue: "Brief generation failed"))
+                .font(.rbGeist(15, weight: .medium))
+                .foregroundStyle(Color.rbFg3)
+                .lineSpacing(3)
+
+            Button {
+                store.retry()
+            } label: {
+                Text(String(localized: "brief.error.retry", defaultValue: "Retry"))
+            }
+            .buttonStyle(.rbGhost)
+        }
+        .padding(16)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.lg))
+    }
+
     // MARK: - Empty State
 
     private var emptyState: some View {
@@ -181,7 +233,17 @@ public struct BriefRail: View {
     let store = BriefStore()
     return BriefRail(store: store)
         .frame(width: RBLayout.briefRailWidth, height: 600)
-        .onAppear { store.loadBrief(forThreadID: "t1") }
+        .onAppear {
+            store.brief = ThreadBriefViewData(
+                summary: "Client approved pricing and asks for the contract draft by Friday.",
+                request: "Send contract draft",
+                deadline: "Fri \u{00B7} May 15",
+                risk: "Tight turnaround",
+                nextStep: "Draft reply with contract attached",
+                confidence: 0.88,
+                evidence: ["msg_1", "msg_3", "contract.pdf p.2"]
+            )
+        }
         .preferredColorScheme(.dark)
 }
 
@@ -189,7 +251,6 @@ public struct BriefRail: View {
     let store = BriefStore()
     return BriefRail(store: store)
         .frame(width: RBLayout.briefRailWidth, height: 600)
-        .onAppear { store.loadBrief(forThreadID: "t99") }
         .preferredColorScheme(.dark)
 }
 #endif

@@ -1,7 +1,73 @@
 import Testing
 import SwiftUI
 import AppKit
+import AIKit
+import Persistence
+import GRDB
 @testable import BriefFeature
+
+// MARK: - Test Support
+
+final class MockAIServiceForBrief: AIService, @unchecked Sendable {
+    var stubbedBrief: AIThreadBrief?
+    var stubbedError: (any Error)?
+    var callCount = 0
+    var lastInput: AIThreadInput?
+    var delay: Duration?
+
+    func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+        callCount += 1
+        lastInput = input
+        if let delay { try await Task.sleep(for: delay) }
+        try Task.checkCancellation()
+        if let error = stubbedError { throw error }
+        guard let brief = stubbedBrief else {
+            throw AIError.inferenceFailed(
+                NSError(domain: "Test", code: 0)
+            )
+        }
+        return brief
+    }
+}
+
+private func makeTestDB() throws -> AppDatabase {
+    let db = try AppDatabase.openInMemorySync()
+    try db.dbQueue.write { database in
+        try database.execute(sql: """
+            INSERT INTO account (id, email, provider, display_name, created_at)
+            VALUES ('acc1', 'test@example.com', 'gmail', 'Test', 1000)
+        """)
+        try database.execute(sql: """
+            INSERT INTO thread (id, account_id, subject, snippet, last_message_at, message_count, has_unread)
+            VALUES ('thread-1', 'acc1', 'Test Thread', 'Hello', 1000, 2, 0)
+        """)
+        try database.execute(sql: """
+            INSERT INTO message (id, thread_id, account_id, from_addr, sent_at, body_text, flags)
+            VALUES ('msg-1', 'thread-1', 'acc1', 'alice@example.com', 1000, 'Hello world', 0)
+        """)
+        try database.execute(sql: """
+            INSERT INTO message (id, thread_id, account_id, from_addr, sent_at, body_text, flags)
+            VALUES ('msg-2', 'thread-1', 'acc1', 'bob@example.com', 2000, 'Reply here', 0)
+        """)
+        try database.execute(sql: """
+            INSERT INTO attachment (id, message_id, account_id, filename, mime)
+            VALUES ('att-1', 'msg-1', 'acc1', 'doc.pdf', 'application/pdf')
+        """)
+    }
+    return db
+}
+
+private let sampleBrief = AIThreadBrief(
+    summary: "Test summary of thread",
+    request: "Do something",
+    deadline: "Friday",
+    risk: "Medium",
+    nextStep: "Reply",
+    evidence: ["msg-1"],
+    confidence: 0.85
+)
+
+// MARK: - Tests
 
 @Suite("BriefFeature")
 struct BriefFeatureTests {
@@ -40,14 +106,80 @@ struct BriefFeatureTests {
         #expect(data.evidence.isEmpty)
     }
 
-    // MARK: - BriefStore
+    // MARK: - BriefStore with MockAIService
 
     @MainActor
-    @Test func storeReturnsNilForUnknownThread() {
-        let store = BriefStore()
-        store.loadBrief(forThreadID: "unknown-thread")
+    @Test func happyPathLoadsBriefFromAI() async throws {
+        let mock = MockAIServiceForBrief()
+        mock.stubbedBrief = sampleBrief
+        let db = try makeTestDB()
+        let store = BriefStore(aiService: mock, db: db)
+
+        store.loadBrief(forThreadID: "thread-1")
+
+        // Wait for async task to complete
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(store.brief != nil)
+        #expect(store.brief?.summary == "Test summary of thread")
+        #expect(store.brief?.request == "Do something")
+        #expect(store.brief?.confidence == 0.85)
+        #expect(store.isLoading == false)
+        #expect(store.error == nil)
+        #expect(mock.callCount == 1)
+        #expect(mock.lastInput?.messages.count == 2)
+    }
+
+    @MainActor
+    @Test func aiErrorSurfacesAsError() async throws {
+        let mock = MockAIServiceForBrief()
+        mock.stubbedError = AIError.inferenceFailed(NSError(domain: "Test", code: 42))
+        let db = try makeTestDB()
+        let store = BriefStore(aiService: mock, db: db)
+
+        store.loadBrief(forThreadID: "thread-1")
+        try await Task.sleep(for: .milliseconds(100))
+
         #expect(store.brief == nil)
-        #expect(store.activeThreadID == "unknown-thread")
+        #expect(store.error != nil)
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
+    @Test func cancellationWhenSwitchingThreads() async throws {
+        let mock = MockAIServiceForBrief()
+        mock.stubbedBrief = sampleBrief
+        mock.delay = .milliseconds(500)
+        let db = try makeTestDB()
+        let store = BriefStore(aiService: mock, db: db)
+
+        // Start loading thread-1
+        store.loadBrief(forThreadID: "thread-1")
+        // Immediately switch to nil (simulates user switching away)
+        store.loadBrief(forThreadID: nil)
+
+        try await Task.sleep(for: .milliseconds(600))
+
+        #expect(store.brief == nil)
+        #expect(store.activeThreadID == nil)
+    }
+
+    @MainActor
+    @Test func cacheHitOnRepeatSelect() async throws {
+        let mock = MockAIServiceForBrief()
+        mock.stubbedBrief = sampleBrief
+        let db = try makeTestDB()
+        let store = BriefStore(aiService: mock, db: db)
+
+        store.loadBrief(forThreadID: "thread-1")
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(mock.callCount == 1)
+
+        // Second load should hit cache
+        store.loadBrief(forThreadID: "thread-1")
+        #expect(store.brief != nil)
+        #expect(store.isLoading == false)
+        #expect(mock.callCount == 1) // Not called again
     }
 
     @MainActor
@@ -59,39 +191,25 @@ struct BriefFeatureTests {
     }
 
     @MainActor
-    @Test func storeReturnsBriefForT1() {
+    @Test func previewStoreDoesNotCrash() {
         let store = BriefStore()
-        store.loadBrief(forThreadID: "t1")
-        #expect(store.brief != nil)
-        #expect(store.brief?.confidence == 0.88)
-        #expect(store.brief?.request == "Send contract draft")
-        #expect(store.brief?.evidence.count == 3)
-    }
-
-    @MainActor
-    @Test func storeReturnsBriefForT2() {
-        let store = BriefStore()
-        store.loadBrief(forThreadID: "t2")
-        #expect(store.brief != nil)
-        #expect(store.brief?.confidence == 0.92)
-        #expect(store.brief?.request == "Confirm seat count")
-    }
-
-    @MainActor
-    @Test func storeReturnsBriefForSuffixMatch() {
-        let store = BriefStore()
-        store.loadBrief(forThreadID: "prefix-t1")
-        #expect(store.brief != nil)
-        #expect(store.brief?.confidence == 0.88)
-    }
-
-    @MainActor
-    @Test func storeResetsWhenSwitchingThreads() {
-        let store = BriefStore()
-        store.loadBrief(forThreadID: "t1")
-        #expect(store.brief != nil)
-        store.loadBrief(forThreadID: "unknown")
+        store.loadBrief(forThreadID: "some-id")
         #expect(store.brief == nil)
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
+    @Test func emptyThreadReturnsEmptyInput() async throws {
+        let mock = MockAIServiceForBrief()
+        mock.stubbedBrief = AIThreadBrief(summary: "Empty", confidence: 0.3)
+        let db = try makeTestDB()
+        let store = BriefStore(aiService: mock, db: db)
+
+        store.loadBrief(forThreadID: "nonexistent-thread")
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(mock.callCount == 1)
+        #expect(mock.lastInput?.messages.isEmpty == true)
     }
 
     // MARK: - BriefRail snapshot (dark)
@@ -99,7 +217,12 @@ struct BriefFeatureTests {
     @MainActor
     @Test func briefRailWithDataDark() {
         let store = BriefStore()
-        store.loadBrief(forThreadID: "t1")
+        store.brief = ThreadBriefViewData(
+            summary: "Test brief",
+            request: "Do something",
+            confidence: 0.88,
+            evidence: ["msg_1"]
+        )
         let view = BriefRail(store: store)
             .frame(width: 340, height: 600)
             .preferredColorScheme(.dark)
@@ -111,7 +234,12 @@ struct BriefFeatureTests {
     @MainActor
     @Test func briefRailWithDataLight() {
         let store = BriefStore()
-        store.loadBrief(forThreadID: "t1")
+        store.brief = ThreadBriefViewData(
+            summary: "Test brief",
+            request: "Do something",
+            confidence: 0.88,
+            evidence: ["msg_1"]
+        )
         let view = BriefRail(store: store)
             .frame(width: 340, height: 600)
             .preferredColorScheme(.light)
@@ -123,7 +251,6 @@ struct BriefFeatureTests {
     @MainActor
     @Test func briefRailEmptyStateDark() {
         let store = BriefStore()
-        store.loadBrief(forThreadID: "no-brief")
         let view = BriefRail(store: store)
             .frame(width: 340, height: 300)
             .preferredColorScheme(.dark)
@@ -135,24 +262,11 @@ struct BriefFeatureTests {
     @MainActor
     @Test func briefRailEmptyStateLight() {
         let store = BriefStore()
-        store.loadBrief(forThreadID: "no-brief")
         let view = BriefRail(store: store)
             .frame(width: 340, height: 300)
             .preferredColorScheme(.light)
         let host = NSHostingView(rootView: view)
         host.frame = NSRect(x: 0, y: 0, width: 340, height: 300)
-        host.layout()
-    }
-
-    @MainActor
-    @Test func briefRailT2Dark() {
-        let store = BriefStore()
-        store.loadBrief(forThreadID: "t2")
-        let view = BriefRail(store: store)
-            .frame(width: 340, height: 600)
-            .preferredColorScheme(.dark)
-        let host = NSHostingView(rootView: view)
-        host.frame = NSRect(x: 0, y: 0, width: 340, height: 600)
         host.layout()
     }
 }
