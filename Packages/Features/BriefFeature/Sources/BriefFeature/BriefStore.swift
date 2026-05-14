@@ -59,7 +59,9 @@ public final class BriefStore {
 
         inflightTask = Task {
             do {
-                let (input, latestMessageID) = try fetchThreadInput(threadID: threadID, db: db)
+                let (input, latestMessageID) = try await Task.detached {
+                    try self.fetchThreadInput(threadID: threadID, db: db)
+                }.value
 
                 // Check cache with message-ID freshness
                 if let cached = briefCache[threadID], cached.latestMessageID == latestMessageID {
@@ -99,7 +101,7 @@ public final class BriefStore {
 
     // MARK: - Private
 
-    private func fetchThreadInput(threadID: String, db: AppDatabase) throws -> (AIThreadInput, String) {
+    private nonisolated func fetchThreadInput(threadID: String, db: AppDatabase) throws -> (AIThreadInput, String) {
         let (messages, attachments) = try db.read { database in
             let msgs = try MessageRecord
                 .filter(Column("thread_id") == threadID)

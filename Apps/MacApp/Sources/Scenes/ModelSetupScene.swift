@@ -114,7 +114,12 @@ struct ModelSetupScene: View {
         } catch is CancellationError {
             isDownloading = false
         } catch {
-            self.error = "Download failed: \(error.localizedDescription)"
+            if let urlError = error as? URLError,
+               [.notConnectedToInternet, .networkConnectionLost, .dataNotAllowed].contains(urlError.code) {
+                self.error = "No internet — required for one-time setup"
+            } else {
+                self.error = "Download failed: \(error.localizedDescription)"
+            }
             isDownloading = false
         }
     }

@@ -11,11 +11,13 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
     func load(from modelDirectory: URL) async throws {
         let alreadyLoaded = lock.withLock { isLoaded }
         guard !alreadyLoaded else { return }
-        self.modelDirectory = modelDirectory
         // TODO: Load model weights and tokeniser from modelDirectory using MLX.
         // This requires mlx-swift-examples LLM utilities or a custom Gemma
         // model implementation. Deferred until integration testing with GPU.
-        lock.withLock { isLoaded = true }
+        lock.withLock {
+            self.modelDirectory = modelDirectory
+            isLoaded = true
+        }
     }
 
     func generate(

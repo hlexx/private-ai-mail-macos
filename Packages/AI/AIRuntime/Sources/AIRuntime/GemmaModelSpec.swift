@@ -2,7 +2,7 @@ import Foundation
 
 public enum GemmaModelSpec {
     public static let modelID = "mlx-community/gemma-3-4b-it-4bit"
-    public static let revision = "main"
+    public static let revision = "d1f58b0e44e0a3586cf1a3c3b5bc8aa48b601cda"
     public static let directoryName = "gemma-3-4b-it-4bit"
 
     public struct FileEntry: Sendable {
