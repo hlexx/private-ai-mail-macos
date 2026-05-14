@@ -32,15 +32,17 @@ struct MainScene: View {
                 onOpenActionSheet: { composition.showActionSheet = true }
             )
 
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
                 RBSidebar(
                     folders: sidebarFolders,
                     accounts: accounts.map { AccountRow(account: $0) },
                     activeFolder: $activeFolder
                 )
+                .frame(maxHeight: .infinity)
 
                 InboxView(store: inboxStore)
                     .frame(width: RBLayout.threadListWidth)
+                    .frame(maxHeight: .infinity)
 
                 ThreadView(
                     store: threadStore,
@@ -61,6 +63,7 @@ struct MainScene: View {
                         // top-level pane.
                         BriefRail(store: briefStore)
                             .frame(width: RBLayout.briefRailWidth)
+                            .frame(maxHeight: .infinity)
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
