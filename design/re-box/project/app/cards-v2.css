@@ -1,0 +1,551 @@
+/* Re:Box ReadingPane v2 — concept-card extensions */
+@import url("./colors_and_type.css");
+
+/* Canvas tone overrides — dark, neutral so artboards look like the app */
+body { background: #14161a; color: var(--fg-1); font-family: var(--font-sans); }
+
+/* Generic artboard inner — matches the macOS pane look */
+.rb2-pane {
+  width: 100%; height: 100%;
+  background: var(--bg-canvas);
+  color: var(--fg-1);
+  display: flex; flex-direction: column;
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+.rb2-mono { font-family: var(--font-mono); }
+
+/* Eyebrow above each artboard — explains the idea */
+.rb2-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--citron-500);
+}
+
+/* ====== Card 1 — One primary action ====== */
+.rb2-head {
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--stroke-1);
+  display: grid; gap: 10px;
+}
+.rb2-head .subj { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.rb2-head .meta {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  color: var(--fg-3); font-family: var(--font-mono); font-size: 11px;
+}
+.rb2-head .meta b { color: var(--fg-2); font-weight: 500; }
+.rb2-actionrow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 24px 18px;
+}
+.rb2-pri {
+  flex: 1; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  padding: 0 14px 0 18px;
+  background: var(--citron-500);
+  color: var(--graphite-950);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 1px 0 0 color-mix(in oklch, #fff 30%, transparent) inset, 0 8px 24px -8px color-mix(in oklch, var(--citron-500) 50%, transparent);
+}
+.rb2-pri .lbl { font-size: 14px; font-weight: 600; letter-spacing: -.005em; }
+.rb2-pri .reason {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: color-mix(in oklch, var(--graphite-950) 65%, transparent);
+  margin-left: 8px;
+}
+.rb2-pri .split {
+  width: 1px; height: 24px;
+  background: color-mix(in oklch, var(--graphite-950) 25%, transparent);
+}
+.rb2-pri .chevron {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: grid; place-items: center;
+  background: transparent;
+}
+.rb2-pri .chevron:hover { background: color-mix(in oklch, var(--graphite-950) 12%, transparent); }
+.rb2-sec {
+  height: 36px; padding: 0 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: 1px solid var(--stroke-1);
+  border-radius: 8px;
+  color: var(--fg-2); font-size: 12.5px; cursor: pointer;
+}
+.rb2-sec:hover { color: var(--fg-1); background: var(--bg-elev-1); }
+.rb2-pri-menu {
+  position: absolute; top: 76px; right: 24px; width: 240px;
+  background: var(--bg-elev-1); border: 1px solid var(--stroke-1);
+  border-radius: 10px; padding: 6px; z-index: 5;
+  box-shadow: 0 24px 60px -16px rgb(0 0 0 / .55);
+  display: none;
+}
+.rb2-pri-menu .it {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 6px; color: var(--fg-2); font-size: 13px;
+  cursor: pointer;
+}
+.rb2-pri-menu .it .kbd {
+  margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--fg-3);
+}
+.rb2-pri-menu .it:hover { background: var(--bg-elev-2); color: var(--fg-1); }
+.rb2-pri-menu .sep { height: 1px; background: var(--stroke-1); margin: 4px 0; }
+.rb2-pri-menu.open { display: block; }
+
+/* Highlighted brief preview in rail */
+.rb2-rail-mini {
+  padding: 16px 18px;
+  border-left: 1px solid var(--stroke-1);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--citron-500) 5%, var(--bg-canvas)) 0%, var(--bg-canvas) 60%);
+  display: grid; gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.rb2-rail-mini .eb {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--citron-500);
+}
+.rb2-rail-mini .sum { font-size: 13.5px; line-height: 1.5; color: var(--fg-1); font-weight: 500; }
+
+/* ====== Card 2 — Living brief (interactive fields) ====== */
+.rb2-brief-rail {
+  width: 100%; height: 100%;
+  padding: 20px 18px 18px;
+  background: linear-gradient(180deg, color-mix(in oklch, var(--citron-500) 5%, var(--bg-canvas)) 0%, var(--bg-canvas) 45%);
+  border-left: 1px solid var(--stroke-1);
+  overflow: hidden;
+  display: grid; grid-template-rows: auto auto 1fr; gap: 0;
+}
+.rb2-brief-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.rb2-brief-eyebrow {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--citron-500);
+}
+.rb2-brief-conf {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-3);
+}
+.rb2-brief-sum {
+  font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--fg-1);
+  margin-bottom: 14px;
+}
+.rb2-brief-fields {
+  display: grid; gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--stroke-1);
+}
+.rb2-fld {
+  display: grid; grid-template-columns: 86px 1fr;
+  align-items: center;
+  padding: 7px 8px 7px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--dur-1);
+}
+.rb2-fld:hover { background: color-mix(in oklch, var(--citron-500) 8%, transparent); }
+.rb2-fld:hover .rb2-fld-act { opacity: 1; transform: translateX(0); }
+.rb2-fld .k {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--fg-3); font-weight: 600;
+}
+.rb2-fld .v { font-size: 12.5px; color: var(--fg-1); display: flex; align-items: center; gap: 8px; }
+.rb2-fld .v.danger { color: var(--tone-coral-400); }
+.rb2-fld-act {
+  position: absolute; right: 6px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--citron-500);
+  opacity: 0; transform: translateX(4px);
+  transition: opacity var(--dur-2), transform var(--dur-2);
+}
+.rb2-fld .citelink {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--cobalt-300); text-decoration: underline; text-decoration-color: color-mix(in oklch, var(--cobalt-300) 40%, transparent);
+}
+.rb2-fld .citelink:hover { text-decoration-color: var(--cobalt-300); }
+
+/* Floating date picker preview inside Card 2 */
+.rb2-datepop {
+  position: absolute; left: 110px; top: 142px;
+  width: 220px; padding: 12px;
+  background: var(--bg-elev-2); border: 1px solid var(--stroke-2);
+  border-radius: 10px;
+  box-shadow: 0 24px 60px -16px rgb(0 0 0 / .55);
+  z-index: 4;
+}
+.rb2-datepop .ttl { font-size: 11px; font-family: var(--font-mono); color: var(--fg-3); margin-bottom: 8px; letter-spacing: .1em; text-transform: uppercase; }
+.rb2-datepop .opts { display: grid; gap: 4px; }
+.rb2-datepop .opt {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 8px; border-radius: 5px;
+  font-size: 12px; color: var(--fg-2); cursor: pointer;
+}
+.rb2-datepop .opt:hover { background: var(--bg-elev-3); color: var(--fg-1); }
+.rb2-datepop .opt.on { background: color-mix(in oklch, var(--citron-500) 14%, var(--bg-elev-3)); color: var(--fg-1); }
+.rb2-datepop .opt .d { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+
+/* ====== Card 3 — Progressive composer ====== */
+.rb2-composer {
+  border: 1px solid var(--stroke-1);
+  border-radius: 14px;
+  background: var(--bg-elev-1);
+  overflow: hidden;
+  box-shadow: 0 1px 0 0 color-mix(in oklch, #fff 6%, transparent) inset, 0 8px 24px -8px rgb(0 0 0 / .45);
+}
+.rb2-composer .head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--stroke-1);
+}
+.rb2-composer .head .eb {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--citron-500);
+}
+.rb2-composer .head .more {
+  width: 22px; height: 22px; border-radius: 5px;
+  display: grid; place-items: center; color: var(--fg-3); cursor: pointer;
+}
+.rb2-composer .head .more:hover { background: var(--bg-elev-2); color: var(--fg-1); }
+.rb2-composer .ta {
+  padding: 14px 16px;
+  font-size: 13.5px; line-height: 1.55; color: var(--fg-1);
+  min-height: 88px;
+  position: relative;
+}
+.rb2-composer .foot {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; border-top: 1px solid var(--stroke-1);
+  background: var(--bg-canvas);
+}
+.rb2-composer .foot .left {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-3);
+}
+.rb2-composer .send {
+  height: 30px; padding: 0 14px; border-radius: 7px;
+  background: var(--citron-500); color: var(--graphite-950);
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 0;
+}
+.rb2-composer.expanded .meta-row {
+  display: grid; grid-template-columns: 56px 1fr;
+  padding: 6px 14px; gap: 10px;
+  border-bottom: 1px solid var(--stroke-1);
+  font-size: 12.5px;
+}
+.rb2-composer .meta-row .k { color: var(--fg-3); font-family: var(--font-mono); font-size: 10.5px; padding-top: 2px; }
+.rb2-composer .meta-row .v { color: var(--fg-1); }
+.rb2-composer .meta-row .chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 8px;
+  background: var(--bg-elev-2); border: 1px solid var(--stroke-1);
+  border-radius: 999px; font-size: 11.5px; color: var(--fg-1);
+}
+
+/* Selection rephrase popover */
+.rb2-sel {
+  background: color-mix(in oklch, var(--citron-500) 22%, transparent);
+  border-radius: 2px;
+  padding: 1px 0;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--citron-500) 35%, transparent) inset;
+}
+.rb2-rephrase {
+  position: absolute;
+  top: -42px; left: 8px;
+  display: inline-flex;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--stroke-2);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 0;
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / .55);
+  z-index: 5;
+}
+.rb2-rephrase button {
+  background: transparent; border: 0;
+  padding: 5px 10px; font: inherit; font-size: 11.5px;
+  color: var(--fg-2); border-radius: 5px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.rb2-rephrase button:hover { background: var(--bg-elev-3); color: var(--fg-1); }
+.rb2-rephrase .sep { width: 1px; background: var(--stroke-1); margin: 4px 2px; }
+.rb2-rephrase .sparkle { color: var(--citron-500); }
+
+/* ====== Card 4 — AI-summary previews in thread list ====== */
+.rb2-list { padding: 0; background: var(--bg-canvas); }
+.rb2-list-header {
+  padding: 14px 16px 10px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 1px solid var(--stroke-1);
+}
+.rb2-list-header .h { font-size: 17px; font-weight: 600; }
+.rb2-list-header .meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+.rb2-row {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 10px; padding: 12px 16px;
+  border-bottom: 1px solid var(--stroke-1);
+  position: relative; cursor: pointer;
+}
+.rb2-row:hover { background: var(--bg-elev-1); }
+.rb2-row.active { background: color-mix(in oklch, var(--citron-500) 9%, var(--bg-canvas)); }
+.rb2-row.active::before {
+  content: ""; position: absolute; left: 0; top: 12px; bottom: 12px;
+  width: 3px; background: var(--citron-500); border-radius: 2px;
+}
+.rb2-row .av {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff;
+  font-weight: 600; font-size: 12px;
+}
+.rb2-row .body { min-width: 0; }
+.rb2-row .top {
+  display: flex; justify-content: space-between; gap: 8px;
+  margin-bottom: 2px;
+}
+.rb2-row .from { font-weight: 600; font-size: 13px; color: var(--fg-1); }
+.rb2-row .from .udot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--citron-500); margin-right: 6px; vertical-align: middle;
+}
+.rb2-row .time { color: var(--fg-3); font-family: var(--font-mono); font-size: 10.5px; }
+.rb2-row .subj { font-size: 13px; color: var(--fg-1); font-weight: 500; margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb2-row .ai-prev {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 12px; color: var(--fg-2); line-height: 1.4;
+}
+.rb2-row .ai-prev .diamond {
+  flex: 0 0 auto; margin-top: 5px;
+  color: var(--citron-500); font-size: 9px;
+}
+.rb2-row .ai-prev em { font-style: normal; color: var(--fg-1); font-weight: 500; }
+.rb2-row .plain-prev {
+  font-size: 12px; color: var(--fg-3); line-height: 1.4;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rb2-row .chips { display: flex; gap: 4px; margin-top: 5px; }
+.rb2-mini-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 17px; padding: 0 7px;
+  font-family: var(--font-mono); font-size: 10px;
+  font-weight: 600; letter-spacing: .02em;
+  border-radius: 999px;
+}
+.rb2-mini-chip.due { background: var(--signal-deadline-bg); color: var(--signal-deadline); }
+.rb2-mini-chip.reply { color: var(--signal-reply); border: 1px solid color-mix(in oklch, var(--signal-reply) 50%, transparent); }
+.rb2-mini-chip.att { color: var(--fg-3); padding: 0 4px; }
+.rb2-mini-chip.fyi { color: var(--fg-3); border: 1px dashed var(--stroke-2); }
+
+/* ====== Card 5 — Done / terminal state ====== */
+.rb2-done-head {
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--stroke-1);
+  display: grid; gap: 8px;
+}
+.rb2-done-head .subj { font-size: 20px; font-weight: 600; }
+.rb2-done-head .meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+.rb2-done-body {
+  flex: 1;
+  display: grid; grid-template-columns: 1fr 280px; gap: 0;
+  min-height: 0;
+}
+.rb2-thread-col-faded {
+  padding: 16px 24px; overflow: hidden;
+  opacity: .55;
+  position: relative;
+  font-size: 13px; color: var(--fg-2); line-height: 1.55;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+          mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+}
+.rb2-done-rail {
+  padding: 18px 18px;
+  border-left: 1px solid var(--stroke-1);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--tone-jade-400) 5%, var(--bg-canvas)) 0%, var(--bg-canvas) 60%);
+  display: grid; gap: 14px;
+  align-content: start;
+}
+.rb2-done-card {
+  display: grid; gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklch, var(--tone-jade-400) 22%, var(--stroke-1));
+  border-radius: 12px;
+  background: var(--bg-elev-1);
+  position: relative;
+}
+.rb2-done-card::before {
+  content: ""; position: absolute; left: 0; top: 14px; bottom: 14px;
+  width: 3px; background: var(--tone-jade-400); border-radius: 2px;
+}
+.rb2-done-card .eb {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--tone-jade-400);
+  display: flex; align-items: center; gap: 6px;
+}
+.rb2-done-card .check {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--tone-jade-400); color: var(--graphite-950);
+  display: grid; place-items: center; font-size: 9px; font-weight: 700;
+}
+.rb2-done-card .summary {
+  font-size: 13px; color: var(--fg-1); font-weight: 500; line-height: 1.45;
+}
+.rb2-done-card .summary .when {
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); font-weight: 400;
+  display: block; margin-top: 2px;
+}
+.rb2-done-card .ask {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--stroke-1);
+  border-radius: 8px;
+}
+.rb2-done-card .ask .q { font-size: 12.5px; color: var(--fg-2); }
+.rb2-done-card .ask .yes {
+  height: 24px; padding: 0 10px;
+  background: var(--tone-jade-400); color: var(--graphite-950);
+  border: 0; border-radius: 6px;
+  font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+.rb2-done-thread-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 5px;
+  background: var(--bg-elev-2); border-radius: 999px;
+  font-size: 11.5px; color: var(--fg-2);
+  width: max-content;
+}
+.rb2-done-thread-pill .av {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--tone-jade-400); color: var(--graphite-950);
+  display: grid; place-items: center; font-size: 9px; font-weight: 700;
+}
+
+/* ====== Card 6 — Ambient FYI ====== */
+.rb2-fyi {
+  padding: 18px;
+  background: linear-gradient(180deg, color-mix(in oklch, var(--graphite-50) 3%, var(--bg-canvas)) 0%, var(--bg-canvas) 60%);
+  height: 100%; box-sizing: border-box;
+  display: grid; gap: 14px;
+  align-content: start;
+}
+.rb2-fyi-card {
+  border: 1px solid var(--stroke-1);
+  border-radius: 12px;
+  background: var(--bg-elev-1);
+  padding: 16px;
+  display: grid; gap: 12px;
+  position: relative;
+}
+.rb2-fyi-card::before {
+  content: ""; position: absolute; left: 0; top: 14px; bottom: 14px;
+  width: 3px; background: var(--graphite-300); border-radius: 2px;
+  opacity: .55;
+}
+.rb2-fyi-eb {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--fg-3);
+}
+.rb2-fyi-title { font-size: 15px; color: var(--fg-1); font-weight: 500; line-height: 1.4; }
+.rb2-fyi-reason {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-3);
+  line-height: 1.5;
+}
+.rb2-fyi-reason b { color: var(--fg-2); font-weight: 500; }
+.rb2-fyi-cta { display: flex; gap: 8px; flex-wrap: wrap; }
+.rb2-fyi-cta button {
+  height: 30px; padding: 0 12px;
+  background: var(--bg-elev-2); border: 1px solid var(--stroke-1);
+  border-radius: 7px; color: var(--fg-1); font-size: 12.5px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.rb2-fyi-cta button:hover { background: var(--bg-elev-3); }
+.rb2-fyi-cta button.pri {
+  background: var(--bg-elev-3); border-color: var(--stroke-2);
+}
+
+/* ====== Card 7 — Morning briefing ====== */
+.rb2-mb {
+  width: 100%; height: 100%;
+  display: grid; grid-template-rows: auto 1fr;
+  background: var(--bg-canvas);
+}
+.rb2-mb-head {
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid var(--stroke-1);
+  display: grid; gap: 8px;
+}
+.rb2-mb-eyebrow {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--citron-500);
+}
+.rb2-mb-title {
+  font-size: 22px; font-weight: 500; letter-spacing: -.01em;
+}
+.rb2-mb-title .em { font-family: var(--font-serif); font-style: italic; color: var(--fg-2); font-weight: 400; }
+.rb2-mb-tally {
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-3);
+  display: flex; gap: 14px;
+}
+.rb2-mb-tally b { color: var(--fg-1); font-weight: 500; }
+.rb2-mb-body {
+  padding: 14px 28px 22px;
+  overflow: hidden;
+  display: grid; gap: 14px;
+  align-content: start;
+}
+.rb2-mb-bucket {
+  border: 1px solid var(--stroke-1);
+  border-radius: 12px;
+  background: var(--bg-elev-1);
+  overflow: hidden;
+}
+.rb2-mb-bucket.urgent { border-color: color-mix(in oklch, var(--tone-coral-400) 25%, var(--stroke-1)); }
+.rb2-mb-bucket-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--stroke-1);
+}
+.rb2-mb-bucket-head .ttl {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--fg-1); font-weight: 600;
+}
+.rb2-mb-bucket-head .count {
+  font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); font-weight: 400;
+}
+.rb2-mb-bucket-head .bulkact {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--fg-3); cursor: pointer;
+  border: 1px dashed var(--stroke-2); padding: 3px 8px; border-radius: 5px;
+}
+.rb2-mb-bucket-head .bulkact:hover { color: var(--fg-1); border-style: solid; }
+.rb2-mb-bucket-head .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.rb2-mb-bucket-head .dot.coral { background: var(--tone-coral-400); }
+.rb2-mb-bucket-head .dot.amber { background: var(--tone-amber-300); }
+.rb2-mb-bucket-head .dot.muted { background: var(--graphite-400); }
+.rb2-mb-item {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 12px; padding: 10px 16px;
+  border-bottom: 1px solid var(--stroke-1);
+  align-items: center;
+  cursor: pointer;
+}
+.rb2-mb-item:last-child { border-bottom: 0; }
+.rb2-mb-item:hover { background: var(--bg-elev-2); }
+.rb2-mb-item .who { font-size: 12.5px; color: var(--fg-1); font-weight: 500; }
+.rb2-mb-item .what { font-size: 12.5px; color: var(--fg-2); margin-top: 2px; line-height: 1.4; }
+.rb2-mb-item .what .when { font-family: var(--font-mono); font-size: 10.5px; color: var(--tone-coral-400); margin-left: 4px; }
+.rb2-mb-item .quick {
+  height: 26px; padding: 0 10px;
+  border: 1px solid var(--stroke-1); background: var(--bg-canvas);
+  border-radius: 6px; font-size: 11.5px; color: var(--fg-1); font-weight: 500;
+  cursor: pointer;
+}
+.rb2-mb-item .quick.pri {
+  background: var(--citron-500); color: var(--graphite-950); border-color: transparent;
+}
+.rb2-mb-item .quick:hover { background: var(--bg-elev-3); }
+.rb2-mb-item .quick.pri:hover { background: var(--citron-400); }

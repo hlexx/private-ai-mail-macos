@@ -1,6 +1,6 @@
-import SwiftUI
-import SettingsFeature
 import DesignSystem
+import SettingsFeature
+import SwiftUI
 
 struct SettingsScene: View {
 
@@ -38,7 +38,7 @@ struct SettingsScene: View {
                 )
             }
         }
-        .frame(width: 520, height: 360)
+        .frame(width: RBLayout.settingsWidth, height: RBLayout.settingsHeight)
     }
 
     private func placeholder(title: String, systemImage: String) -> some View {

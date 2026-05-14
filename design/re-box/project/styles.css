@@ -1,0 +1,420 @@
+/* Re:Box — Wireframe styles
+   low-fi sketchy aesthetic, handwritten-but-readable
+   ---------------------------------------------------- */
+
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Architects+Daughter&family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap");
+
+:root {
+  --paper:        #f4efe4;
+  --paper-2:      #ebe6da;
+  --paper-3:      #ddd6c5;
+  --ink:          #1c1a17;
+  --ink-2:        #3a352c;
+  --ink-3:        #6b6457;
+  --ink-4:        #a39c8c;
+  --line:         #2a2620;
+  --line-soft:    rgba(28,24,20,0.32);
+  --line-softer:  rgba(28,24,20,0.18);
+  --citron:       #d4ed3a;   /* signature electric lime */
+  --citron-ink:   #5a6b00;
+  --signal-amber: #e6a543;
+  --signal-coral: #d4644a;
+  --signal-jade:  #6ba37a;
+  --signal-ice:   #7fa4c4;
+
+  --hand:    "Caveat", "Brush Script MT", cursive;
+  --sketch:  "Architects Daughter", "Comic Sans MS", cursive;
+  --ui:      "Geist", ui-sans-serif, system-ui, sans-serif;
+  --mono:    "Geist Mono", ui-monospace, Menlo, monospace;
+}
+
+/* Tweak: clean mode flips some sketchy decisions */
+[data-mode="clean"] {
+  --paper:    #f7f5ef;
+  --paper-2:  #efece4;
+  --paper-3:  #e2ddd0;
+}
+
+[data-color="bw"] {
+  --citron:       #ffffff;
+  --citron-ink:   var(--ink);
+  --signal-amber: var(--ink-3);
+  --signal-coral: var(--ink-3);
+  --signal-jade:  var(--ink-3);
+  --signal-ice:   var(--ink-3);
+}
+
+body {
+  font-family: var(--ui);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+/* ---------- Atoms ---------- */
+
+/* macOS window shell */
+.win {
+  position: relative;
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 4px 5px 0 0 rgba(28,24,20,0.10);
+}
+.win[data-rough] {
+  border-radius: 16px 14px 18px 12px / 12px 18px 14px 16px;
+}
+.win__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--paper-3);
+  border-bottom: 1.25px solid var(--line);
+  position: relative;
+}
+.win__dot {
+  width: 11px; height: 11px;
+  border: 1.25px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+}
+.win__title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--sketch);
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.win__body {
+  display: flex;
+  height: calc(100% - 34px);
+}
+
+/* Panels (sidebar, list, reading, brief) */
+.panel {
+  position: relative;
+  border-right: 1.25px solid var(--line);
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.panel:last-child { border-right: 0; }
+.panel--inset { background: var(--paper); }
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px dashed var(--line-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Generic "this is a region" sketchy label */
+.region-label {
+  position: absolute;
+  font-family: var(--hand);
+  font-size: 22px;
+  color: var(--ink-3);
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Thread row */
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-softer);
+  position: relative;
+}
+.row--unread::before {
+  content: "";
+  position: absolute;
+  left: 5px; top: 16px;
+  width: 5px; height: 5px;
+  background: var(--citron);
+  border: 1.25px solid var(--line);
+  border-radius: 50%;
+}
+.row__avatar {
+  width: 28px; height: 28px;
+  border: 1.25px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper-3);
+  flex: 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.row__main { flex: 1; min-width: 0; }
+.row__topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.row__from {
+  font-family: var(--sketch);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row__time {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  flex: 0 0 auto;
+}
+.row__subj {
+  font-family: var(--sketch);
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row__preview {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.row__line {
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--line-soft) 0 14px,
+    transparent 14px 18px,
+    var(--line-soft) 18px 26px,
+    transparent 26px 30px
+  );
+  flex: 1;
+  border-radius: 2px;
+}
+.row--selected {
+  background: var(--paper);
+  box-shadow: inset 3px 0 0 0 var(--citron);
+}
+
+/* Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1.25px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+.chip--citron { background: var(--citron); border-color: var(--line); color: var(--citron-ink); }
+.chip--amber  { background: color-mix(in oklch, var(--signal-amber) 35%, var(--paper)); }
+.chip--coral  { background: color-mix(in oklch, var(--signal-coral) 35%, var(--paper)); }
+.chip--jade   { background: color-mix(in oklch, var(--signal-jade) 35%, var(--paper)); }
+.chip--ice    { background: color-mix(in oklch, var(--signal-ice) 35%, var(--paper)); }
+.chip--ghost  { background: transparent; border-style: dashed; color: var(--ink-3); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-family: var(--sketch);
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1.1;
+}
+.btn[data-rough] {
+  border-radius: 10px 7px 9px 8px;
+}
+.btn--primary { background: var(--citron); color: var(--citron-ink); }
+.btn--ghost { background: transparent; border-style: dashed; color: var(--ink-2); }
+.btn--sm { padding: 4px 8px; font-size: 11px; }
+
+/* AI brief card */
+.brief {
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--paper);
+  position: relative;
+}
+.brief[data-rough] {
+  border-radius: 14px 10px 16px 12px;
+}
+.brief--accent {
+  background: color-mix(in oklch, var(--citron) 22%, var(--paper));
+}
+.brief__eyebrow {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.brief__eyebrow::before {
+  content: "";
+  width: 8px; height: 8px;
+  border: 1.25px solid var(--line);
+  border-radius: 50%;
+  background: var(--citron);
+}
+.brief__line {
+  font-family: var(--sketch);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.brief__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Handwritten annotations layered on top */
+.note {
+  position: absolute;
+  font-family: var(--hand);
+  font-size: 19px;
+  color: var(--ink-2);
+  line-height: 1.05;
+  pointer-events: none;
+  transform: rotate(-1.5deg);
+  max-width: 200px;
+}
+.note--right { text-align: right; }
+.note--small { font-size: 16px; }
+.note--big   { font-size: 24px; }
+.note--accent { color: var(--citron-ink); background: var(--citron); padding: 0 4px; border-radius: 3px; }
+
+/* Sketchy arrow utility */
+.arrow {
+  position: absolute;
+  pointer-events: none;
+}
+.arrow svg { display: block; overflow: visible; }
+.arrow path, .arrow polyline, .arrow line {
+  stroke: var(--ink-2);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sketchy bracket */
+.bracket {
+  position: absolute;
+  border: 1.5px solid var(--ink-2);
+  pointer-events: none;
+}
+.bracket--left  { border-right: 0; border-radius: 12px 0 0 12px; }
+.bracket--right { border-left: 0;  border-radius: 0 12px 12px 0; }
+
+/* Glass overlay (sketchy) */
+.glass {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 4px 5px 0 0 rgba(28,24,20,0.12);
+}
+.glass[data-rough] { border-radius: 16px 12px 18px 14px; }
+
+/* Hatch fill for "image / attachment" placeholders */
+.hatch {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      var(--line-soft) 0 1.25px,
+      transparent 1.25px 8px
+    ),
+    var(--paper);
+  border: 1.25px solid var(--line);
+  border-radius: 4px;
+}
+
+/* Inline placeholder text line */
+.placeholder-line {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-softer);
+}
+.placeholder-line--short { width: 40%; }
+.placeholder-line--mid   { width: 70%; }
+
+/* The "Re:" mark, hand-set */
+.rebox {
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--ink);
+}
+.rebox em {
+  font-family: "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  background: var(--citron);
+  padding: 0 4px;
+  border-radius: 4px 3px 5px 2px;
+  margin-right: 2px;
+}
+
+/* Sketchy underline for emphasis */
+.u-scribble {
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 8'><path d='M2 6 Q 20 2, 38 5 T 78 5' stroke='%231c1a17' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 7px;
+  padding-bottom: 4px;
+}
+
+/* Hand circle highlight around an element */
+.circled {
+  position: absolute;
+  inset: -6px -10px;
+  border: 1.75px solid var(--signal-coral);
+  border-radius: 50%;
+  pointer-events: none;
+}
+[data-color="bw"] .circled { border-color: var(--ink); }
+
+/* Section header on the canvas */
+.dc-section-vibe h2 {
+  font-family: var(--hand) !important;
+  font-size: 32px !important;
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+}

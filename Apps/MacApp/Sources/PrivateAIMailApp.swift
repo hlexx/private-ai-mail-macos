@@ -1,9 +1,12 @@
+import ComposeFeature
+import DesignSystem
 import SwiftUI
 
 @main
 struct PrivateAIMailApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
 
     private let composition = CompositionRoot()
 
@@ -12,13 +15,22 @@ struct PrivateAIMailApp: App {
             MainScene(composition: composition)
                 .frame(minWidth: 1000, minHeight: 640)
                 .task { composition.resumeExistingAccounts() }
+                .rbTheme()
+                .onAppear { configureMainWindow() }
+                .onChange(of: composition.showCompose) { _, show in
+                    if show {
+                        openWindow(id: "compose")
+                        composition.showCompose = false
+                    }
+                }
         }
-        .windowStyle(.titleBar)
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(String(localized: "menu.compose.new", defaultValue: "New Message")) {
-                    // Compose window — wired in later iteration.
+                    openWindow(id: "compose")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
             }
@@ -30,8 +42,17 @@ struct PrivateAIMailApp: App {
             }
         }
 
+        WindowGroup(id: "compose") {
+            ComposeWindowView()
+            .frame(minWidth: 600, minHeight: 480)
+            .rbTheme()
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 720, height: 560)
+
         Settings {
             SettingsScene(composition: composition)
+                .rbTheme()
         }
     }
 
@@ -42,6 +63,20 @@ struct PrivateAIMailApp: App {
             composition.refreshAccount(thread.accountId)
         } else {
             composition.refreshAllAccounts()
+        }
+    }
+
+    private func configureMainWindow() {
+        DispatchQueue.main.async {
+            guard let window = NSApplication.shared.windows.first(where: {
+                $0.identifier?.rawValue.contains("main") == true
+                || $0.title.contains("Private AI Mail")
+            }) else { return }
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.styleMask.insert(.fullSizeContentView)
+            window.isMovableByWindowBackground = true
+            window.backgroundColor = .clear
         }
     }
 }

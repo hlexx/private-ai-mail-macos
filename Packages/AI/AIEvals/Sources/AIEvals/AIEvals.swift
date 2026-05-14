@@ -1,5 +1,5 @@
-import Foundation
 import AIKit
+import Foundation
 
 // MARK: - Public API
 

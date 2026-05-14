@@ -1,10 +1,10 @@
-import Foundation
-import Observation
 import AuthKit
-import Persistence
-import MailSync
-import MailProviders
+import Foundation
 import GRDB
+import MailProviders
+import MailSync
+import Observation
+import Persistence
 
 public enum AddAccountPhase: Sendable, Equatable {
     case idle

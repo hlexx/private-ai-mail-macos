@@ -1,5 +1,5 @@
-import Foundation
 import CryptoKit
+import Foundation
 
 public enum PKCE: Sendable {
     public struct Challenge: Sendable {

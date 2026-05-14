@@ -1,6 +1,6 @@
-import Foundation
-import AIRuntime
 import AIEmbeddings
+import AIRuntime
+import Foundation
 import MailDomain
 
 // MARK: - Public API

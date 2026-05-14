@@ -32,6 +32,8 @@
     <true/>
     <key>NSSupportsSuddenTermination</key>
     <true/>
+    <key>ATSApplicationFontsPath</key>
+    <string>.</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

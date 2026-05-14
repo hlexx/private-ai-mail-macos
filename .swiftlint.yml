@@ -9,7 +9,6 @@ opt_in_rules:
   - empty_count
   - explicit_init
   - first_where
-  - force_unwrapping
   - redundant_nil_coalescing
 
 included:
@@ -21,6 +20,26 @@ excluded:
   - "**/DerivedData"
   - "**/Derived"
   - "**/Tests"
+
+identifier_name:
+  min_length: 1
+  max_length: 60
+  allowed_symbols: ["_"]
+
+type_name:
+  allowed_symbols: ["_"]
+
+large_tuple:
+  warning: 4
+
+function_body_length:
+  warning: 80
+
+cyclomatic_complexity:
+  warning: 15
+
+function_parameter_count:
+  warning: 7
 
 custom_rules:
   no_string_literals_in_swiftui_text:

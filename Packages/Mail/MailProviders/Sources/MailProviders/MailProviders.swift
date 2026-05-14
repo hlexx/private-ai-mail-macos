@@ -1,6 +1,6 @@
+import AppFoundation
 import Foundation
 import MailDomain
-import AppFoundation
 
 // MARK: - Public API
 

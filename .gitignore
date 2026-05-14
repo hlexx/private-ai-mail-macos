@@ -19,6 +19,7 @@ Tuist/Dependencies/Lockfiles/
 .build/
 .swiftpm/
 Package.resolved
+.package.resolved
 
 # Fastlane
 fastlane/report.xml

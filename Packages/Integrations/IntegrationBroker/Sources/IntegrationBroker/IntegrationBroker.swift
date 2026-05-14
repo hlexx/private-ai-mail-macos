@@ -1,6 +1,6 @@
+import AuthKit
 import Foundation
 import IntegrationDomain
-import AuthKit
 
 // MARK: - Public API
 

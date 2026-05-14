@@ -1,6 +1,6 @@
-import Foundation
-import AppFoundation
 import AIPrompts
+import AppFoundation
+import Foundation
 
 // MARK: - Public API
 
