@@ -25,7 +25,11 @@ struct PrivateAIMailApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
+        // No `.windowToolbarStyle(.unifiedCompact(...))`: we draw our own
+        // 56pt RBToolbar directly in the content view (per design's `.rb-toolbar`).
+        // Adding a SwiftUI window toolbar style on top reserves another
+        // ~28pt NSToolbar strip above the content and the chrome ends up
+        // visibly twice as tall as designed.
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {
