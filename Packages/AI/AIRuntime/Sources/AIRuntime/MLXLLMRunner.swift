@@ -4,16 +4,18 @@ import MLX
 /// Real LLM runner backed by Apple MLX.
 /// Loads Gemma weights via MLX and runs autoregressive decoding on the GPU.
 final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
+    private let lock = NSLock()
     private var isLoaded = false
     private var modelDirectory: URL?
 
     func load(from modelDirectory: URL) async throws {
-        guard !isLoaded else { return }
+        let alreadyLoaded = lock.withLock { isLoaded }
+        guard !alreadyLoaded else { return }
         self.modelDirectory = modelDirectory
         // TODO: Load model weights and tokeniser from modelDirectory using MLX.
         // This requires mlx-swift-examples LLM utilities or a custom Gemma
         // model implementation. Deferred until integration testing with GPU.
-        isLoaded = true
+        lock.withLock { isLoaded = true }
     }
 
     func generate(
@@ -22,7 +24,8 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         maxTokens: Int,
         onToken: @Sendable (String) -> Void
     ) async throws -> String {
-        guard isLoaded else {
+        let loaded = lock.withLock { isLoaded }
+        guard loaded else {
             throw MLXLLMRunnerError.modelNotLoaded
         }
 

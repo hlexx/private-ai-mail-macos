@@ -119,9 +119,42 @@ public enum ThreadBriefParser {
             text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        // Find first { and last }
-        guard let start = text.firstIndex(of: "{"),
-              let end = text.lastIndex(of: "}") else {
+        // Find first { and its matching } using brace-depth counting
+        guard let start = text.firstIndex(of: "{") else {
+            return text
+        }
+
+        var depth = 0
+        var inString = false
+        var escaped = false
+        var matchEnd: String.Index?
+
+        for i in text.indices[start...] {
+            let ch = text[i]
+            if escaped {
+                escaped = false
+                continue
+            }
+            if ch == "\\" && inString {
+                escaped = true
+                continue
+            }
+            if ch == "\"" {
+                inString.toggle()
+                continue
+            }
+            if inString { continue }
+            if ch == "{" { depth += 1 }
+            else if ch == "}" {
+                depth -= 1
+                if depth == 0 {
+                    matchEnd = i
+                    break
+                }
+            }
+        }
+
+        guard let end = matchEnd else {
             return text
         }
 
