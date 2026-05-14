@@ -45,6 +45,7 @@ private let appFeatureDeps: [TargetDependency] = [
     .package(product: "ActionsFeature"),
     .package(product: "SettingsFeature"),
     .package(product: "DesignSystem"),
+    .package(product: "AIRuntime"),
 ]
 
 // MARK: - Project

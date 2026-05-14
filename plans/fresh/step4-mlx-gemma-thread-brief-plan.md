@@ -172,13 +172,13 @@ ModelManager reports the weights are missing or incomplete; goes away
 when install completes. Resumes a partial download if the app was
 killed during setup.
 
-- [ ] Add `Apps/MacApp/Sources/Scenes/ModelSetupScene.swift` — full-window view with the Re:Box typography: serif "Re:" mark, eyebrow label ("Setting up local AI · one-time"), progress bar styled with `Color.rbCitron500`, bytes-downloaded counter using `ByteCountFormatStyle.byteCount(style: .file)`
-- [ ] Add a `Cancel and quit` ghost button. Cancellation must stop the in-flight download and exit the app (no half-installed state allowed to proceed)
-- [ ] In `PrivateAIMailApp.swift`, gate the `MainScene` on a `@State setupComplete: Bool` flag derived from `composition.modelManager.installedURL() != nil`. While false, show `ModelSetupScene`
-- [ ] Plumb a per-launch network reachability check that surfaces a clear error message ("No internet — required for one-time setup") when the user is offline
-- [ ] Verify resume: kill the app mid-download (Cmd+Q), relaunch — setup screen continues from where it left off, doesn't restart at 0 %
-- [ ] Verify success: after first install completes, relaunching the app skips the setup screen entirely
-- [ ] Add `Apps/MacApp/Tests/` snapshot tests for the three states (in-progress, error, idle-before-start) in dark and light themes (note pre-existing MacAppTests issue per `NOTES.md` — at minimum verify the package builds; defer snapshot fix if it stays blocked)
+- [x] Add `Apps/MacApp/Sources/Scenes/ModelSetupScene.swift` — full-window view with the Re:Box typography: serif "Re:" mark, eyebrow label ("Setting up local AI · one-time"), progress bar styled with `Color.rbCitron500`, bytes-downloaded counter using `ByteCountFormatStyle.byteCount(style: .file)`
+- [x] Add a `Cancel and quit` ghost button. Cancellation must stop the in-flight download and exit the app (no half-installed state allowed to proceed)
+- [x] In `PrivateAIMailApp.swift`, gate the `MainScene` on a `@State setupComplete: Bool` flag derived from `composition.modelManager.installedURL() != nil`. While false, show `ModelSetupScene`
+- [x] Plumb a per-launch network reachability check that surfaces a clear error message ("No internet — required for one-time setup") when the user is offline
+- [x] Verify resume: kill the app mid-download (Cmd+Q), relaunch — setup screen continues from where it left off, doesn't restart at 0 %
+- [x] Verify success: after first install completes, relaunching the app skips the setup screen entirely
+- [x] Add `Apps/MacApp/Tests/` snapshot tests for the three states (in-progress, error, idle-before-start) in dark and light themes (note pre-existing MacAppTests issue per `NOTES.md` — at minimum verify the package builds; defer snapshot fix if it stays blocked)
 
 ### Task 5: AIPrompts — system + task prompts and structured-output schema
 

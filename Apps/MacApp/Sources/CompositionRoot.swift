@@ -1,3 +1,4 @@
+import AIRuntime
 import AuthKit
 import BriefFeature
 import InboxFeature
@@ -11,6 +12,7 @@ import ThreadFeature
 @MainActor @Observable
 final class CompositionRoot {
     let db: AppDatabase
+    let modelManager: ModelManager
     let inboxStore: InboxStore
     let threadStore: ThreadStore
     let briefStore: BriefStore
@@ -28,6 +30,7 @@ final class CompositionRoot {
         let path = Self.defaultDBPath()
         // swiftlint:disable:next force_try
         self.db = try! AppDatabase.openSync(at: path)
+        self.modelManager = ModelManager()
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
         self.briefStore = BriefStore()
