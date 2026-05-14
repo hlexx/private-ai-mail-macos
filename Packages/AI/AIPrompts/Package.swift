@@ -18,6 +18,10 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "AIPromptsTests", dependencies: ["AIPrompts"]),
+        .testTarget(
+            name: "AIPromptsTests",
+            dependencies: ["AIPrompts"],
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )

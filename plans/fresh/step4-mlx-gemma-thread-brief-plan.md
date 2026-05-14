@@ -186,14 +186,14 @@ The two prompts that drive the thread-brief generation. Live in a
 dedicated package so they can be edited / versioned / localised
 separately from inference code.
 
-- [ ] Add `Packages/AI/AIPrompts/Sources/AIPrompts/ThreadBriefPrompt.swift`
-- [ ] Public `enum ThreadBriefPrompt` with `static let systemPrompt: String` and `static func taskPrompt(for input: AIThreadInput) -> String`
-- [ ] System prompt: terse, ≤ 150 tokens, instructs the model to (1) read all messages plus attachment metadata, (2) emit ONLY a JSON object matching the schema, (3) never invent senders / dates / amounts, (4) leave fields as JSON `null` when the source doesn't support a confident value, (5) confidence between 0 and 1 representing the model's own self-estimate
-- [ ] Task prompt: renders the thread as a structured block — sender / timestamp / body — then a list of attachment names + page counts (no bytes), then the JSON schema and the instruction "Reply with the JSON object only"
-- [ ] Add a `Packages/AI/AIPrompts/Sources/AIPrompts/StructuredOutput.swift` with the JSON schema constant + a strict parser that decodes the model output (or throws `AIError.invalidStructuredOutput` with the raw output truncated for diagnostics)
-- [ ] Add fixtures of expected JSON outputs in `Tests/AIPromptsTests/Fixtures/` (no real PII; reuse anonymised data from `DevSeeder.swift`)
-- [ ] Add tests: parser accepts every fixture, rejects malformed JSON, rejects schema violations (extra fields, wrong types), correctly maps `null` → Swift `nil`
-- [ ] Run `cd Packages/AI/AIPrompts && swift test`
+- [x] Add `Packages/AI/AIPrompts/Sources/AIPrompts/ThreadBriefPrompt.swift`
+- [x] Public `enum ThreadBriefPrompt` with `static let systemPrompt: String` and `static func taskPrompt(for input: AIThreadInput) -> String`
+- [x] System prompt: terse, ≤ 150 tokens, instructs the model to (1) read all messages plus attachment metadata, (2) emit ONLY a JSON object matching the schema, (3) never invent senders / dates / amounts, (4) leave fields as JSON `null` when the source doesn't support a confident value, (5) confidence between 0 and 1 representing the model's own self-estimate
+- [x] Task prompt: renders the thread as a structured block — sender / timestamp / body — then a list of attachment names + page counts (no bytes), then the JSON schema and the instruction "Reply with the JSON object only"
+- [x] Add a `Packages/AI/AIPrompts/Sources/AIPrompts/StructuredOutput.swift` with the JSON schema constant + a strict parser that decodes the model output (or throws `AIError.invalidStructuredOutput` with the raw output truncated for diagnostics)
+- [x] Add fixtures of expected JSON outputs in `Tests/AIPromptsTests/Fixtures/` (no real PII; reuse anonymised data from `DevSeeder.swift`)
+- [x] Add tests: parser accepts every fixture, rejects malformed JSON, rejects schema violations (extra fields, wrong types), correctly maps `null` → Swift `nil`
+- [x] Run `cd Packages/AI/AIPrompts && swift test`
 
 ### Task 6: MLXBackend — real Gemma 4 inference
 
