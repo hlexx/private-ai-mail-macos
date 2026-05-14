@@ -1,3 +1,4 @@
+import AIKit
 import AIRuntime
 import AuthKit
 import BriefFeature
@@ -13,6 +14,7 @@ import ThreadFeature
 final class CompositionRoot {
     let db: AppDatabase
     let modelManager: ModelManager
+    let aiService: any AIService
     let inboxStore: InboxStore
     let threadStore: ThreadStore
     let briefStore: BriefStore
@@ -31,9 +33,10 @@ final class CompositionRoot {
         // swiftlint:disable:next force_try
         self.db = try! AppDatabase.openSync(at: path)
         self.modelManager = ModelManager()
+        self.aiService = ThreadBriefService.live(modelManager: modelManager)
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
-        self.briefStore = BriefStore()
+        self.briefStore = BriefStore(aiService: aiService)
 
         let tokenStore: any TokenStore = KeychainTokenStore()
         self.tokenStore = tokenStore

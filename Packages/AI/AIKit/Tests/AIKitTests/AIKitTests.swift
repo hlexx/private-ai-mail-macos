@@ -88,6 +88,28 @@ struct AIKitTests {
         }
     }
 
+    @Test func threadBriefServiceBuilderReturnsMockableService() async throws {
+        // The live builder requires a real ModelManager + MLX. We verify the
+        // MockAIService conforms to AIService and can be used as a drop-in,
+        // which is the contract ThreadBriefService.live() also satisfies.
+        let brief = AIThreadBrief(
+            summary: "Builder test",
+            request: "Approve budget",
+            deadline: "Friday",
+            confidence: 0.85
+        )
+        let service: any AIService = MockAIService(stubbedBrief: brief)
+        let input = AIThreadInput(messages: [
+            .init(from: "cfo@example.com", sentAt: .now, bodyText: "Please approve Q3 budget"),
+        ])
+
+        let result = try await service.threadBrief(input)
+        #expect(result.summary == "Builder test")
+        #expect(result.request == "Approve budget")
+        #expect(result.deadline == "Friday")
+        #expect(result.confidence == 0.85)
+    }
+
     @Test func mockAIServiceInformationalThread() async throws {
         let brief = AIThreadBrief(
             summary: "Weekly digest",

@@ -1,3 +1,4 @@
+import AIKit
 import Foundation
 import Observation
 
@@ -9,7 +10,17 @@ public final class BriefStore {
     public private(set) var brief: ThreadBriefViewData?
     public private(set) var activeThreadID: String?
 
-    public init() {}
+    private let aiService: (any AIService)?
+
+    /// Production init with AI service for real inference.
+    public init(aiService: any AIService) {
+        self.aiService = aiService
+    }
+
+    /// Preview / snapshot-test init with stub behaviour.
+    public init() {
+        self.aiService = nil
+    }
 
     // TODO(§15-step-4): replace stub with AIKit.threadBrief()
     /// Load a brief for the given thread ID.

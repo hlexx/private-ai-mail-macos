@@ -219,12 +219,12 @@ The thin public surface feature code consumes. Wires the MLX backend
 in the composition root so the rest of the app doesn't need to know
 which backend runs.
 
-- [ ] Add `Packages/AI/AIKit/Sources/AIKit/ThreadBriefService.swift` with a default implementation of `AIService.threadBrief(_:)` that just delegates to the injected backend — keep the indirection for future routing (FoundationModels fallback, llama.cpp escape hatch)
-- [ ] Add a builder `static func live(modelManager: ModelManager) -> any AIService` returning an `MLXBackend`-backed service
-- [ ] In `Apps/MacApp/Sources/CompositionRoot.swift`, instantiate the `ModelManager` and the `AIService` and expose `let aiService: any AIService`
-- [ ] Update `Apps/MacApp/Sources/CompositionRoot.swift` to pass the `AIService` into `BriefStore`'s init
-- [ ] Add `cd Packages/AI/AIKit && swift test` for the service-builder happy path (using `MockAIService`)
-- [ ] Run all validation commands
+- [x] Add `Packages/AI/AIKit/Sources/AIKit/ThreadBriefService.swift` with a default implementation of `AIService.threadBrief(_:)` that just delegates to the injected backend — keep the indirection for future routing (FoundationModels fallback, llama.cpp escape hatch)
+- [x] Add a builder `static func live(modelManager: ModelManager) -> any AIService` returning an `MLXBackend`-backed service
+- [x] In `Apps/MacApp/Sources/CompositionRoot.swift`, instantiate the `ModelManager` and the `AIService` and expose `let aiService: any AIService`
+- [x] Update `Apps/MacApp/Sources/CompositionRoot.swift` to pass the `AIService` into `BriefStore`'s init
+- [x] Add `cd Packages/AI/AIKit && swift test` for the service-builder happy path (using `MockAIService`)
+- [x] Run all validation commands
 
 ### Task 8: Wire BriefStore to real AI; remove hardcoded stubs
 
