@@ -155,15 +155,15 @@ each shard, and stores them under
 `~/Library/Application Support/PrivateAIMail/models/gemma-4-it-4bit/`.
 Resumable, atomic, observable.
 
-- [ ] Add `Packages/AI/AIRuntime/Sources/AIRuntime/ModelManager.swift` exposing `public actor ModelManager`
-- [ ] Public API: `installedURL() -> URL?`, `installedURL` returns non-nil only when the manifest matches the expected SHA-256
-- [ ] `func install(progress: @Sendable @escaping (Double, Int64, Int64) -> Void) async throws -> URL` — `(fraction, bytesDownloaded, totalBytes)`
-- [ ] Store the model identifier and expected manifest (file names + SHA-256 hex digests + total bytes) in a `GemmaModelSpec.swift` constant. Use `mlx-community/gemma-4-it-4bit` (or the equivalent mirror that exists at execution time — verify URLs are reachable). Pin specific revision
-- [ ] Implement resumable HTTP using `URLSession` with `Range:` headers; write each shard to a `.part` file and rename atomically on full match
-- [ ] On any SHA mismatch, delete the offending `.part` and retry the shard up to 3 times
-- [ ] Provide `func uninstall() throws` for tests
-- [ ] Add unit tests under `Tests/AIRuntimeTests/ModelManagerTests.swift` using a fake `URLProtocol` that serves a 1 KB fixture; verify happy path, resume after partial-write, SHA-mismatch retry, and cancellation
-- [ ] Run `cd Packages/AI/AIRuntime && swift test`
+- [x] Add `Packages/AI/AIRuntime/Sources/AIRuntime/ModelManager.swift` exposing `public actor ModelManager`
+- [x] Public API: `installedURL() -> URL?`, `installedURL` returns non-nil only when the manifest matches the expected SHA-256
+- [x] `func install(progress: @Sendable @escaping (Double, Int64, Int64) -> Void) async throws -> URL` — `(fraction, bytesDownloaded, totalBytes)`
+- [x] Store the model identifier and expected manifest (file names + SHA-256 hex digests + total bytes) in a `GemmaModelSpec.swift` constant. Use `mlx-community/gemma-4-it-4bit` (or the equivalent mirror that exists at execution time — verify URLs are reachable). Pin specific revision
+- [x] Implement resumable HTTP using `URLSession` with `Range:` headers; write each shard to a `.part` file and rename atomically on full match
+- [x] On any SHA mismatch, delete the offending `.part` and retry the shard up to 3 times
+- [x] Provide `func uninstall() throws` for tests
+- [x] Add unit tests under `Tests/AIRuntimeTests/ModelManagerTests.swift` using a fake `URLProtocol` that serves a 1 KB fixture; verify happy path, resume after partial-write, SHA-mismatch retry, and cancellation
+- [x] Run `cd Packages/AI/AIRuntime && swift test`
 
 ### Task 4: First-launch ModelSetup UX
 
