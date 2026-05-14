@@ -69,6 +69,11 @@ struct MainScene: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
+        // Extend our 56pt RBToolbar all the way to the top of the window,
+        // under the (transparent) titlebar / traffic-light zone. Without
+        // this, SwiftUI keeps a ~28pt top safe-area inset reserved for the
+        // titlebar and the visible chrome ends up ~84pt tall.
+        .ignoresSafeArea(.container, edges: .top)
         .background(Color.rbBgDeep)
         .overlay {
             if composition.showActionSheet {
