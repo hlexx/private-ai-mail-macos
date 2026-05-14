@@ -170,7 +170,10 @@ public enum EvalCorpus {
     ]
 
     private static func d(_ iso: String) -> Date {
-        let f = ISO8601DateFormatter()
-        return f.date(from: iso) ?? Date()
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: iso) else {
+            preconditionFailure("EvalCorpus: invalid ISO8601 date string: \(iso)")
+        }
+        return date
     }
 }
