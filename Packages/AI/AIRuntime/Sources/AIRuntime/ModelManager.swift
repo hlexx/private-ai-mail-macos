@@ -5,6 +5,8 @@ public actor ModelManager {
     private let modelsRoot: URL
     private let session: URLSession
     private let maxRetries: Int
+    let fileEntries: [GemmaModelSpec.FileEntry]
+    let directoryName: String
 
     public init(
         modelsRoot: URL? = nil,
@@ -23,10 +25,26 @@ public actor ModelManager {
         }
         self.session = session
         self.maxRetries = maxRetries
+        self.fileEntries = GemmaModelSpec.files
+        self.directoryName = GemmaModelSpec.directoryName
+    }
+
+    init(
+        modelsRoot: URL,
+        session: URLSession,
+        maxRetries: Int = 3,
+        fileEntries: [GemmaModelSpec.FileEntry],
+        directoryName: String
+    ) {
+        self.modelsRoot = modelsRoot
+        self.session = session
+        self.maxRetries = maxRetries
+        self.fileEntries = fileEntries
+        self.directoryName = directoryName
     }
 
     private var modelDirectory: URL {
-        modelsRoot.appendingPathComponent(GemmaModelSpec.directoryName, isDirectory: true)
+        modelsRoot.appendingPathComponent(directoryName, isDirectory: true)
     }
 
     // MARK: - Public API
@@ -34,9 +52,13 @@ public actor ModelManager {
     public func installedURL() -> URL? {
         let dir = modelDirectory
         let fm = FileManager.default
-        for file in GemmaModelSpec.files {
+        for file in fileEntries {
             let path = dir.appendingPathComponent(file.name)
-            guard fm.fileExists(atPath: path.path) else { return nil }
+            guard fm.fileExists(atPath: path.path),
+                  let attrs = try? fm.attributesOfItem(atPath: path.path),
+                  let size = attrs[.size] as? Int64,
+                  size == file.byteCount
+            else { return nil }
         }
         return dir
     }
@@ -45,23 +67,36 @@ public actor ModelManager {
     public func install(
         progress: @Sendable @escaping (Double, Int64, Int64) -> Void
     ) async throws -> URL {
-        if let url = installedURL() { return url }
-
         let dir = modelDirectory
         let fm = FileManager.default
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
 
-        let totalBytes = GemmaModelSpec.totalBytes
+        let totalBytes = fileEntries.reduce(Int64(0)) { $0 + $1.byteCount }
         var downloadedSoFar: Int64 = 0
 
-        for file in GemmaModelSpec.files {
+        for file in fileEntries {
             try Task.checkCancellation()
 
             let dest = dir.appendingPathComponent(file.name)
-            if fm.fileExists(atPath: dest.path) {
-                downloadedSoFar += file.byteCount
-                progress(Double(downloadedSoFar) / Double(totalBytes), downloadedSoFar, totalBytes)
-                continue
+            if fm.fileExists(atPath: dest.path),
+               let attrs = try? fm.attributesOfItem(atPath: dest.path),
+               let size = attrs[.size] as? Int64,
+               size == file.byteCount
+            {
+                if let expectedHash = file.sha256 {
+                    let actual = try sha256Hash(of: dest)
+                    if actual != expectedHash {
+                        try? fm.removeItem(at: dest)
+                    } else {
+                        downloadedSoFar += file.byteCount
+                        progress(Double(downloadedSoFar) / Double(totalBytes), downloadedSoFar, totalBytes)
+                        continue
+                    }
+                } else {
+                    downloadedSoFar += file.byteCount
+                    progress(Double(downloadedSoFar) / Double(totalBytes), downloadedSoFar, totalBytes)
+                    continue
+                }
             }
 
             let partFile = dir.appendingPathComponent(file.name + ".part")
@@ -94,6 +129,9 @@ public actor ModelManager {
                         }
                     }
 
+                    if fm.fileExists(atPath: dest.path) {
+                        try fm.removeItem(at: dest)
+                    }
                     try fm.moveItem(at: partFile, to: dest)
                     lastError = nil
                     break

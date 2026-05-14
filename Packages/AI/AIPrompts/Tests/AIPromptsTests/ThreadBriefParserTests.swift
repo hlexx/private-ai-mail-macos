@@ -129,6 +129,16 @@ struct ThreadBriefParserTests {
         }
     }
 
+    @Test("rejects extra fields (additionalProperties: false)")
+    func rejectExtraFields() {
+        let json = """
+            {"summary": "test", "evidence": ["a"], "confidence": 0.5, "foo": "bar"}
+            """
+        #expect(throws: ThreadBriefParser.ParseError.self) {
+            try ThreadBriefParser.parse(json)
+        }
+    }
+
     @Test("rejects wrong type for evidence (string instead of array)")
     func rejectWrongEvidenceType() {
         let json = """

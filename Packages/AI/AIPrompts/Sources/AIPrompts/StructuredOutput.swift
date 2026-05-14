@@ -129,7 +129,7 @@ public enum ThreadBriefParser {
     }
 }
 
-// Lenient decoding struct: all fields optional for validation
+// Strict decoding struct: all fields optional for validation, rejects unknown keys
 private struct RawBrief: Decodable {
     let summary: String?
     let request: String?
@@ -138,4 +138,35 @@ private struct RawBrief: Decodable {
     let nextStep: String?
     let evidence: [String]?
     let confidence: Double?
+
+    private enum CodingKeys: String, CodingKey, CaseIterable {
+        case summary, request, deadline, risk, nextStep, evidence, confidence
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyCodingKey.self)
+        let allowed = Set(CodingKeys.allCases.map(\.rawValue))
+        let unknown = container.allKeys.filter { !allowed.contains($0.stringValue) }
+        if let extra = unknown.first {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: [extra], debugDescription: "unknown field: \(extra.stringValue)")
+            )
+        }
+
+        let known = try decoder.container(keyedBy: CodingKeys.self)
+        summary = try known.decodeIfPresent(String.self, forKey: .summary)
+        request = try known.decodeIfPresent(String.self, forKey: .request)
+        deadline = try known.decodeIfPresent(String.self, forKey: .deadline)
+        risk = try known.decodeIfPresent(String.self, forKey: .risk)
+        nextStep = try known.decodeIfPresent(String.self, forKey: .nextStep)
+        evidence = try known.decodeIfPresent([String].self, forKey: .evidence)
+        confidence = try known.decodeIfPresent(Double.self, forKey: .confidence)
+    }
+}
+
+private struct AnyCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { self.intValue = intValue; self.stringValue = "\(intValue)" }
 }
