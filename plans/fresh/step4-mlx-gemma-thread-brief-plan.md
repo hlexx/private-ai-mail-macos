@@ -202,16 +202,16 @@ runs MLX inference with the system + task prompts from Task 5, returns
 parsed `AIThreadBrief`. Long-running, cancellable, single-threaded per
 request (queue if multiple thread briefs are requested concurrently).
 
-- [ ] Add `Packages/AI/AIRuntime/Sources/AIRuntime/MLXBackend.swift` conforming to `AIKit.AIService`
-- [ ] Constructor takes a `ModelManager` and resolves model path eagerly; throws `AIError.modelNotInstalled` if not present
-- [ ] Lazy-load the MLX model and tokeniser on first `threadBrief` call; cache for the lifetime of the backend
-- [ ] Single-flight queue: serialize concurrent `threadBrief` calls so we never run two inferences at once (MLX state is not safe for concurrent decoding)
-- [ ] Cancellation: each call is a `Task` honouring `Task.checkCancellation()` between every decoded token. UI tearing down the brief request cancels in flight
-- [ ] Stream tokens internally (so we can implement progressive UI later) but return only when the full JSON object is decoded and parsed
-- [ ] Max output tokens: cap at 512 for thread brief; trim and retry once if the model returns more without closing the JSON object
-- [ ] Performance: log p50/p95 latency per call to a non-content metric collector (only counts and durations; no inputs or outputs)
-- [ ] Unit tests in `Tests/AIRuntimeTests/MLXBackendTests.swift`: cannot run live MLX in CI without GPU — instead, abstract the MLX inference behind an internal protocol `LLMRunner` that `MLXBackend` uses. Test `MLXBackend` against a `FakeLLMRunner` that returns canned token streams; the real `LLMRunner` impl is a thin adapter over MLX. Tests cover: happy path, cancellation, malformed output → retry, retry exhaustion → `AIError.invalidStructuredOutput`
-- [ ] Run `cd Packages/AI/AIRuntime && swift test`
+- [x] Add `Packages/AI/AIRuntime/Sources/AIRuntime/MLXBackend.swift` conforming to `AIKit.AIService`
+- [x] Constructor takes a `ModelManager` and resolves model path eagerly; throws `AIError.modelNotInstalled` if not present
+- [x] Lazy-load the MLX model and tokeniser on first `threadBrief` call; cache for the lifetime of the backend
+- [x] Single-flight queue: serialize concurrent `threadBrief` calls so we never run two inferences at once (MLX state is not safe for concurrent decoding)
+- [x] Cancellation: each call is a `Task` honouring `Task.checkCancellation()` between every decoded token. UI tearing down the brief request cancels in flight
+- [x] Stream tokens internally (so we can implement progressive UI later) but return only when the full JSON object is decoded and parsed
+- [x] Max output tokens: cap at 512 for thread brief; trim and retry once if the model returns more without closing the JSON object
+- [x] Performance: log p50/p95 latency per call to a non-content metric collector (only counts and durations; no inputs or outputs)
+- [x] Unit tests in `Tests/AIRuntimeTests/MLXBackendTests.swift`: cannot run live MLX in CI without GPU — instead, abstract the MLX inference behind an internal protocol `LLMRunner` that `MLXBackend` uses. Test `MLXBackend` against a `FakeLLMRunner` that returns canned token streams; the real `LLMRunner` impl is a thin adapter over MLX. Tests cover: happy path, cancellation, malformed output → retry, retry exhaustion → `AIError.invalidStructuredOutput`
+- [x] Run `cd Packages/AI/AIRuntime && swift test`
 
 ### Task 7: AIKit.threadBrief() public API + wire CompositionRoot
 
