@@ -32,17 +32,32 @@ struct MainScene: View {
                 onOpenActionSheet: { composition.showActionSheet = true }
             )
 
-            HStack(alignment: .top, spacing: 0) {
+            // HSplitView gives draggable column dividers between the three
+            // panes (sidebar / threadlist / reading). Initial widths follow
+            // the design tokens but the user can resize at runtime; min
+            // values keep panes usable at small window sizes.
+            HSplitView {
                 RBSidebar(
                     folders: sidebarFolders,
                     accounts: accounts.map { AccountRow(account: $0) },
                     activeFolder: $activeFolder
                 )
-                .frame(maxHeight: .infinity, alignment: .top)
+                .frame(
+                    minWidth: 180,
+                    idealWidth: RBLayout.sidebarWidth,
+                    maxWidth: 360,
+                    maxHeight: .infinity,
+                    alignment: .top
+                )
 
                 InboxView(store: inboxStore)
-                    .frame(width: RBLayout.threadListWidth)
-                    .frame(maxHeight: .infinity, alignment: .top)
+                    .frame(
+                        minWidth: 280,
+                        idealWidth: RBLayout.threadListWidth,
+                        maxWidth: 480,
+                        maxHeight: .infinity,
+                        alignment: .top
+                    )
 
                 ThreadView(
                     store: threadStore,
@@ -66,7 +81,12 @@ struct MainScene: View {
                             .frame(maxHeight: .infinity, alignment: .top)
                     }
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .frame(
+                    minWidth: 480,
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .topLeading
+                )
             }
         }
         // Extend our 56pt RBToolbar all the way to the top of the window,

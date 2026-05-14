@@ -57,25 +57,47 @@ struct RBSidebar: View {
     let accounts: [AccountRow]
     @Binding var activeFolder: String
 
+    // Per-section collapse state. Persisted across launches so layout
+    // memory survives quitting the app, matching Mail.app behavior.
+    @AppStorage("rb-sidebar-mail-collapsed") private var mailCollapsed = false
+    @AppStorage("rb-sidebar-accounts-collapsed") private var accountsCollapsed = false
+    @AppStorage("rb-sidebar-privacy-collapsed") private var privacyCollapsed = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    sectionHeader(String(localized: "sidebar.section.mail", defaultValue: "Mail"))
+                    sectionHeader(
+                        title: String(localized: "sidebar.section.mail", defaultValue: "Mail"),
+                        isCollapsed: mailCollapsed,
+                        onToggle: { mailCollapsed.toggle() }
+                    )
 
-                    ForEach(folders) { folder in
-                        folderRow(folder)
+                    if !mailCollapsed {
+                        ForEach(folders) { folder in
+                            folderRow(folder)
+                        }
                     }
 
-                    sectionHeader(String(localized: "sidebar.section.accounts", defaultValue: "Accounts"))
-                        .padding(.top, RBSpace.s2)
+                    sectionHeader(
+                        title: String(localized: "sidebar.section.accounts", defaultValue: "Accounts"),
+                        isCollapsed: accountsCollapsed,
+                        onToggle: { accountsCollapsed.toggle() }
+                    )
+                    .padding(.top, RBSpace.s2)
 
-                    ForEach(accounts) { account in
-                        accountRow(account)
+                    if !accountsCollapsed {
+                        ForEach(accounts) { account in
+                            accountRow(account)
+                        }
                     }
 
-                    sectionHeader(String(localized: "sidebar.section.privacy", defaultValue: "Privacy"))
-                        .padding(.top, RBSpace.s2)
+                    sectionHeader(
+                        title: String(localized: "sidebar.section.privacy", defaultValue: "Privacy"),
+                        isCollapsed: privacyCollapsed,
+                        onToggle: { privacyCollapsed.toggle() }
+                    )
+                    .padding(.top, RBSpace.s2)
                 }
                 .padding(.horizontal, RBSpace.s2)
                 .padding(.vertical, RBSpace.s3)
@@ -85,7 +107,6 @@ struct RBSidebar: View {
 
             footer
         }
-        .frame(width: RBLayout.sidebarWidth)
         .background(Color.clear)
         .overlay(alignment: .trailing) {
             Rectangle()
@@ -96,14 +117,33 @@ struct RBSidebar: View {
 
     // MARK: - Section header
 
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.rbMono(10, weight: .medium))
-            .tracking(0.14 * 10)
-            .foregroundStyle(Color.rbFg3)
+    private func sectionHeader(
+        title: String,
+        isCollapsed: Bool,
+        onToggle: @escaping () -> Void
+    ) -> some View {
+        Button(action: {
+            withAnimation(.easeOut(duration: RBDuration.d1)) {
+                onToggle()
+            }
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.rbFg3)
+                    .rotationEffect(.degrees(isCollapsed ? -90 : 0))
+                Text(title.uppercased())
+                    .font(.rbMono(10, weight: .medium))
+                    .tracking(0.14 * 10)
+                    .foregroundStyle(Color.rbFg3)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
             .padding(.horizontal, 8)
             .padding(.top, 10)
             .padding(.bottom, 6)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Folder row
