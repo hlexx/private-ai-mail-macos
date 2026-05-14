@@ -26,6 +26,10 @@
     <string>public.app-category.productivity</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 hlexx. All rights reserved.</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSSupportsAutomaticTermination</key>

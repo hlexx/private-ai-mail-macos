@@ -75,7 +75,16 @@ let project = Project(
             deploymentTargets: .macOS("15.0"),
             infoPlist: .file(path: "Apps/MacApp/Info.plist"),
             sources: ["Apps/MacApp/Sources/**"],
-            resources: ["Apps/MacApp/Resources/**"],
+            resources: [
+                // App icon ships as a pre-compiled `.icns` (via `iconutil`)
+                // because Tuist 4.193 does not invoke `actool` on the
+                // asset catalog for this target setup. Source PNGs live
+                // in Resources/Assets.xcassets/AppIcon.appiconset/ and are
+                // regenerated from `tools/make-icon.swift` (see NOTES.md).
+                "Apps/MacApp/Resources/AppIcon.icns",
+                "Apps/MacApp/Resources/Localizable.xcstrings",
+                "Apps/MacApp/Resources/Fonts/**",
+            ],
             entitlements: .file(path: "Apps/MacApp/PrivateAIMail.entitlements"),
             dependencies: appFeatureDeps,
             settings: .settings(
