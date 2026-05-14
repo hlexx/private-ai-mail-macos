@@ -138,7 +138,7 @@ struct BriefFeatureTests {
         let store = BriefStore(aiService: mock, db: db)
 
         store.loadBrief(forThreadID: "thread-1")
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(200))
 
         #expect(store.brief == nil)
         #expect(store.error != nil)
@@ -172,11 +172,12 @@ struct BriefFeatureTests {
         let store = BriefStore(aiService: mock, db: db)
 
         store.loadBrief(forThreadID: "thread-1")
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(200))
         #expect(mock.callCount == 1)
 
-        // Second load should hit cache
+        // Second load should hit cache (async check inside Task)
         store.loadBrief(forThreadID: "thread-1")
+        try await Task.sleep(for: .milliseconds(100))
         #expect(store.brief != nil)
         #expect(store.isLoading == false)
         #expect(mock.callCount == 1) // Not called again

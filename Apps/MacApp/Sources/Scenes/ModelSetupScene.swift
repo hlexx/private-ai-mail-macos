@@ -98,13 +98,6 @@ struct ModelSetupScene: View {
         isDownloading = true
         error = nil
 
-        // Check network reachability before attempting download
-        if !NetworkReachability.isReachable {
-            error = "No internet — required for one-time setup"
-            isDownloading = false
-            return
-        }
-
         do {
             _ = try await modelManager.install { frac, downloaded, total in
                 Task { @MainActor in
@@ -113,6 +106,7 @@ struct ModelSetupScene: View {
                     self.totalBytes = total
                 }
             }
+            isDownloading = false
             onComplete()
         } catch is CancellationError {
             // User cancelled
@@ -124,26 +118,5 @@ struct ModelSetupScene: View {
 
     private func cancelAndQuit() {
         NSApplication.shared.terminate(nil)
-    }
-}
-
-// MARK: - Network Reachability
-
-enum NetworkReachability {
-    static var isReachable: Bool {
-        let url = URL(string: "https://huggingface.co")!
-        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 5)
-        request.httpMethod = "HEAD"
-        let semaphore = DispatchSemaphore(value: 0)
-        var reachable = false
-        let task = URLSession.shared.dataTask(with: request) { _, response, _ in
-            if let http = response as? HTTPURLResponse, http.statusCode < 500 {
-                reachable = true
-            }
-            semaphore.signal()
-        }
-        task.resume()
-        _ = semaphore.wait(timeout: .now() + 5)
-        return reachable
     }
 }

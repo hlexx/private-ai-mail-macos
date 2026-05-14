@@ -7,7 +7,7 @@ import Persistence
 @Observable
 @MainActor
 public final class BriefStore {
-    public var brief: ThreadBriefViewData?
+    public internal(set) var brief: ThreadBriefViewData?
     public private(set) var activeThreadID: String?
     public private(set) var isLoading = false
     public private(set) var error: (any Error)?
@@ -29,6 +29,13 @@ public final class BriefStore {
         self.db = nil
     }
 
+    /// Create a preview store pre-populated with a brief.
+    public static func preview(brief: ThreadBriefViewData?) -> BriefStore {
+        let store = BriefStore()
+        store.brief = brief
+        return store
+    }
+
     public func loadBrief(forThreadID threadID: String?) {
         inflightTask?.cancel()
         inflightTask = nil
@@ -47,26 +54,27 @@ public final class BriefStore {
             return
         }
 
-        // Check cache
-        if let cached = briefCache[threadID] {
-            brief = cached.viewData
-            isLoading = false
-            return
-        }
-
         isLoading = true
         brief = nil
 
         inflightTask = Task {
             do {
                 let input = try fetchThreadInput(threadID: threadID, db: db)
+                let latestMessageKey = input.messages.last.map { "\($0.from)-\($0.sentAt)" } ?? ""
+
+                // Check cache with message-key freshness
+                if let cached = briefCache[threadID], cached.latestMessageKey == latestMessageKey {
+                    brief = cached.viewData
+                    isLoading = false
+                    return
+                }
+
                 try Task.checkCancellation()
                 let aiBrief = try await aiService.threadBrief(input)
                 try Task.checkCancellation()
 
                 let viewData = ThreadBriefViewData(from: aiBrief)
-                let latestMessageID = input.messages.last.map { "\($0.from)-\($0.sentAt)" } ?? ""
-                briefCache[threadID] = CacheEntry(viewData: viewData, latestMessageKey: latestMessageID)
+                briefCache[threadID] = CacheEntry(viewData: viewData, latestMessageKey: latestMessageKey)
                 brief = viewData
                 isLoading = false
                 error = nil

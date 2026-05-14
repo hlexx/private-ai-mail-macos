@@ -79,6 +79,11 @@ public enum GemmaModelSpec {
     }
 
     static func downloadURL(for fileName: String) -> URL {
-        URL(string: "https://huggingface.co/\(modelID)/resolve/\(revision)/\(fileName)")!
+        guard let encoded = fileName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "https://huggingface.co/\(modelID)/resolve/\(revision)/\(encoded)")
+        else {
+            preconditionFailure("GemmaModelSpec: invalid download URL for file '\(fileName)'")
+        }
+        return url
     }
 }

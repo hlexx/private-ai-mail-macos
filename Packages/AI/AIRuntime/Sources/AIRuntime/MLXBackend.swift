@@ -118,7 +118,11 @@ public actor MLXBackend {
         }
 
         let start = ContinuousClock.now
-        try await runner.load(from: modelURL)
+        do {
+            try await runner.load(from: modelURL)
+        } catch {
+            throw MLXBackendError.modelLoadFailed(error)
+        }
         isModelLoaded = true
 
         let elapsed = ContinuousClock.now - start

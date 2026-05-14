@@ -25,16 +25,10 @@ The design handoff lives at `design/re-box/`. The primary file is
 and CSS stylesheets defining every color, type scale, spacing token,
 and component.
 
-### Hardcoded stubs
+### Brief rail
 
-Brief rail and inline composer use hardcoded stub data for demonstration.
-Thread IDs ending in `t1` or `t2` get populated briefs; all other threads
-show the empty state. Each stub site is marked with a
-`// TODO(§15-step-4): remove stub when AIKit lands` comment.
-
-Covered thread IDs (exact match):
-- `t1` — "Client approved pricing…" brief (confidence 88%)
-- `t2` — "Jonas wants seat count…" brief (confidence 92%)
+Brief rail stubs removed in step 4. `BriefStore` now calls
+`AIService.threadBrief()` for all thread IDs via the on-device MLX backend.
 
 ### Key architectural decisions
 

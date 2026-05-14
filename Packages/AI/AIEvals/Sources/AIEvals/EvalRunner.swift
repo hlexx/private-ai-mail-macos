@@ -100,7 +100,7 @@ public struct EvalRunner: Sendable {
 
         let latencies = threadResults.map(\.latencySeconds).sorted()
         let successCount = threadResults.filter(\.schemaValid).count
-        let schemaRate = latencies.isEmpty ? 0 : Double(successCount) / Double(threadResults.count)
+        let schemaRate = threadResults.isEmpty ? 0 : Double(successCount) / Double(threadResults.count)
         let faithValues = threadResults.compactMap(\.faithfulness)
         let hallValues = threadResults.compactMap(\.hallucinationRate)
 
