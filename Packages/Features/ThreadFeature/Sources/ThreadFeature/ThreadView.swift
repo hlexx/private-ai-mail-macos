@@ -1,13 +1,19 @@
 import DesignSystem
 import SwiftUI
 
-public struct ThreadView<ComposerContent: View>: View {
+public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
     let store: ThreadStore
     let composerContent: ComposerContent
+    let briefContent: BriefContent
 
-    public init(store: ThreadStore, @ViewBuilder composer: () -> ComposerContent) {
+    public init(
+        store: ThreadStore,
+        @ViewBuilder composer: () -> ComposerContent,
+        @ViewBuilder briefRail: () -> BriefContent = { EmptyView() }
+    ) {
         self.store = store
         self.composerContent = composer()
+        self.briefContent = briefRail()
     }
 
     public var body: some View {
@@ -15,19 +21,30 @@ public struct ThreadView<ComposerContent: View>: View {
             if store.messages.isEmpty {
                 emptyState
             } else {
+                // Mirrors `.rb-read` from design/re-box/project/app/app.css:
+                //   grid-template-rows: auto 1fr auto
+                //   head spans the whole pane; body splits 1fr / 340px.
                 VStack(spacing: 0) {
                     headSection
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            threadColumn
-                            if store.hasAttachment {
-                                attachmentBlock
+                    HStack(spacing: 0) {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 0) {
+                                threadColumn
+                                if store.hasAttachment {
+                                    attachmentBlock
+                                }
+                                composerContent
                             }
-                            composerContent
+                            .padding(.horizontal, 28)
+                            .padding(.top, 20)
+                            .padding(.bottom, 24)
                         }
-                        .padding(.horizontal, 28)
-                        .padding(.top, 20)
-                        .padding(.bottom, 24)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        // Brief rail sits beside the thread column, under the
+                        // shared head. The rail enforces its own width via
+                        // RBLayout.briefRailWidth at the caller site.
+                        briefContent
                     }
                 }
                 .background(Color.rbBgCanvas)
@@ -184,10 +201,11 @@ public struct ThreadView<ComposerContent: View>: View {
     }
 }
 
-extension ThreadView where ComposerContent == EmptyView {
+extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView {
     public init(store: ThreadStore) {
         self.store = store
         self.composerContent = EmptyView()
+        self.briefContent = EmptyView()
     }
 }
 

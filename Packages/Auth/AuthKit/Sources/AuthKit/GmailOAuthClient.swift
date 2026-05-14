@@ -94,23 +94,30 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
                 url: url,
                 callbackURLScheme: "com.hlexx.privateaimail"
             ) { callbackURL, error in
-                // Break the intentional retain cycle now that the callback fired.
-                retainedSession = nil
+                // The completion is invoked on the XPC reply queue, but this
+                // closure captures `retainedSession` from a `@MainActor` scope.
+                // Hop to MainActor explicitly to satisfy Swift 6 isolation
+                // checking — without this, `_swift_task_checkIsolatedSwift`
+                // trips and the process crashes with SIGTRAP.
+                Task { @MainActor in
+                    // Break the intentional retain cycle now that the callback fired.
+                    retainedSession = nil
 
-                if let error {
-                    if (error as NSError).code
-                        == ASWebAuthenticationSessionError.canceledLogin.rawValue {
-                        continuation.resume(throwing: AuthError.cancelled)
-                    } else {
-                        continuation.resume(throwing: AuthError.network(error))
+                    if let error {
+                        if (error as NSError).code
+                            == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                            continuation.resume(throwing: AuthError.cancelled)
+                        } else {
+                            continuation.resume(throwing: AuthError.network(error))
+                        }
+                        return
                     }
-                    return
+                    guard let callbackURL else {
+                        continuation.resume(throwing: AuthError.invalidResponse)
+                        return
+                    }
+                    continuation.resume(returning: callbackURL)
                 }
-                guard let callbackURL else {
-                    continuation.resume(throwing: AuthError.invalidResponse)
-                    return
-                }
-                continuation.resume(returning: callbackURL)
             }
             retainedSession = session
             session.presentationContextProvider = WebAuthContextProvider.shared

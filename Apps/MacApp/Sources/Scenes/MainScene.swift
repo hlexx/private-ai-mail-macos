@@ -42,22 +42,28 @@ struct MainScene: View {
                 InboxView(store: inboxStore)
                     .frame(width: RBLayout.threadListWidth)
 
-                ThreadView(store: threadStore) {
-                    if briefStore.brief != nil {
-                        InlineComposer(
-                            evidence: briefStore.brief?.evidence ?? [],
-                            onEditInFull: { composition.showCompose = true },
-                            onSend: { /* TODO(§15-step-7): wire real send */ }
-                        )
+                ThreadView(
+                    store: threadStore,
+                    composer: {
+                        if briefStore.brief != nil {
+                            InlineComposer(
+                                evidence: briefStore.brief?.evidence ?? [],
+                                onEditInFull: { composition.showCompose = true },
+                                onSend: { /* TODO(§15-step-7): wire real send */ }
+                            )
+                        }
+                    },
+                    briefRail: {
+                        // Brief rail lives *inside* the reading pane per
+                        // design/re-box/project/app/app.css `.rb-read-body`
+                        // (grid 1fr / 340px). It sits beside the thread
+                        // column, under the shared head — not as a 4th
+                        // top-level pane.
+                        BriefRail(store: briefStore)
+                            .frame(width: RBLayout.briefRailWidth)
                     }
-                }
+                )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                Divider()
-                    .overlay(Color.rbStroke1)
-
-                BriefRail(store: briefStore)
-                    .frame(width: RBLayout.briefRailWidth)
             }
         }
         .background(Color.rbBgDeep)
