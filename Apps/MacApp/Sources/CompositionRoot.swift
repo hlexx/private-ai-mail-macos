@@ -74,6 +74,13 @@ final class CompositionRoot {
     }
 
     func resumeExistingAccounts() {
+        #if DEBUG
+        // Populate the DB with seven synthetic threads from the Re:Box
+        // handoff so the UI has something realistic to render before a real
+        // Gmail account is connected. No-op when the DB already has accounts.
+        DevSeeder.seedIfEmpty(db: db)
+        #endif
+
         Task {
             let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
             for account in accounts ?? [] {
