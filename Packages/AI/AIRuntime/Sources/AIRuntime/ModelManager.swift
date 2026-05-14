@@ -104,6 +104,7 @@ public actor ModelManager {
 
             var lastError: (any Error)?
             for attempt in 0 ..< maxRetries {
+                bytesForThisFile = partFileSize(partFile)
                 do {
                     try Task.checkCancellation()
                     let baseOffset = downloadedSoFar
