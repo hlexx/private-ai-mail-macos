@@ -126,12 +126,12 @@ Toolchain. Re-add the dep and the CI step. See `NOTES.md` "Why MLX is
 not yet linked" for the previous rationale (the rationale stops applying
 once we actually call MLX).
 
-- [ ] Add `.package(url: "https://github.com/ml-explore/mlx-swift.git", from: "0.20.0")` back to `Packages/AI/AIRuntime/Package.swift` and `Packages/AI/AIEmbeddings/Package.swift`. Re-pin to the latest tag in that minor series at the time of execution
-- [ ] Add `.product(name: "MLX", package: "mlx-swift")` to the target dependencies for both packages
-- [ ] In `.github/workflows/ci.yml`, add a `Download Metal Toolchain` step before the build job runs `xcodebuild build`: `sudo xcodebuild -downloadComponent MetalToolchain`. Cache the result via `actions/cache` keyed on Xcode version
-- [ ] Remove the "Why MLX is not yet linked" section from `NOTES.md` (or rewrite it to "MLX is linked; see Task 1 of step4-mlx-gemma-thread-brief-plan.md")
-- [ ] Run `tuist generate --no-open` and `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`. Confirm the build still ends with `** BUILD SUCCEEDED **`
-- [ ] Run `cd Packages/AI/AIRuntime && swift test` and confirm the placeholder test still passes
+- [x] Add `.package(url: "https://github.com/ml-explore/mlx-swift.git", from: "0.20.0")` back to `Packages/AI/AIRuntime/Package.swift` and `Packages/AI/AIEmbeddings/Package.swift`. Re-pin to the latest tag in that minor series at the time of execution
+- [x] Add `.product(name: "MLX", package: "mlx-swift")` to the target dependencies for both packages
+- [x] In `.github/workflows/ci.yml`, add a `Download Metal Toolchain` step before the build job runs `xcodebuild build`: `sudo xcodebuild -downloadComponent MetalToolchain`. Cache the result via `actions/cache` keyed on Xcode version
+- [x] Remove the "Why MLX is not yet linked" section from `NOTES.md` (or rewrite it to "MLX is linked; see Task 1 of step4-mlx-gemma-thread-brief-plan.md")
+- [x] Run `tuist generate --no-open` and `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`. Confirm the build still ends with `** BUILD SUCCEEDED **`
+- [x] Run `cd Packages/AI/AIRuntime && swift test` and confirm the placeholder test still passes
 
 ### Task 2: Define the AIService protocol and ThreadBrief domain types
 
