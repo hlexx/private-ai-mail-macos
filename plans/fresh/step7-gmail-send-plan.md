@@ -215,18 +215,18 @@ The visible behaviour change. Both composers get the same approval
 + Send wiring; the inline composer additionally gets reply pre-fill
 from the active thread.
 
-- [ ] Add `ComposeFeature/ApprovalRow.swift`: a small horizontal bar showing recipient count + sending-account chip + `Cancel` / `Send` buttons. Uses `RBDuration.d3` (320 ms) eased animations from DesignSystem; styles per the design's button stack
-- [ ] State machine for the approval flow: `.idle → .awaitingApproval(deadline: Date) → .sending → .sent | .failed(Error)`. Single source of truth in a `@Observable final class ComposeViewModel`
-- [ ] Auto-fire timer: when `awaitingApproval`, schedule a `Task` that waits 5 seconds (`Task.sleep`), then transitions to `.sending` unless cancelled
-- [ ] **Cancel** during the 5 s window: cancels the Task, returns to `.idle`. No send is issued
-- [ ] **Cancel** during `.sending` (rare — Gmail API is fast but possible): aborts the URLSession task and returns to `.idle` with body intact
-- [ ] On `.sent`: dismiss the composer; emit a `NSUserNotification` "Sent" or an in-app toast (toast is a thin DesignSystem affordance — add `RBToast` view if not yet present)
-- [ ] On `.failed(.needsReconsent)`: keep the composer open, show inline error "This account hasn't granted send permission yet — Re-authorize". Re-auth button triggers `OAuthClient.authorize(scopes:)` for the `gmail.send` scope and on success retries the send
-- [ ] **Reply pre-fill in `InlineComposer`**: take a new `replyContext: ReplyContext?` parameter, derive `to:` from the original sender, `subject:` = original subject with `"Re: "` prepended (deduped — don't produce `"Re: Re: Re: ..."`), wire `MainScene` to pass the active thread's context. The trailing-closure callback to `MainScene` becomes a typed model now
-- [ ] **Compose entry from inbox without thread context**: ⌘N opens `ComposeWindowView` with empty fields; user types recipient by hand
-- [ ] **Account selector in compose**: a `Picker` showing connected accounts (already on `accountsTabStore` in CompositionRoot); current account defaults to the active account
-- [ ] Snapshot tests for the approval row (idle / awaiting-with-countdown / sending / failed) in dark + light
-- [ ] Run `cd Packages/Features/ComposeFeature && swift test`
+- [x] Add `ComposeFeature/ApprovalRow.swift`: a small horizontal bar showing recipient count + sending-account chip + `Cancel` / `Send` buttons. Uses `RBDuration.d3` (320 ms) eased animations from DesignSystem; styles per the design's button stack
+- [x] State machine for the approval flow: `.idle → .awaitingApproval(deadline: Date) → .sending → .sent | .failed(Error)`. Single source of truth in a `@Observable final class ComposeViewModel`
+- [x] Auto-fire timer: when `awaitingApproval`, schedule a `Task` that waits 5 seconds (`Task.sleep`), then transitions to `.sending` unless cancelled
+- [x] **Cancel** during the 5 s window: cancels the Task, returns to `.idle`. No send is issued
+- [x] **Cancel** during `.sending` (rare — Gmail API is fast but possible): aborts the URLSession task and returns to `.idle` with body intact
+- [x] On `.sent`: dismiss the composer; emit a `NSUserNotification` "Sent" or an in-app toast (toast is a thin DesignSystem affordance — add `RBToast` view if not yet present)
+- [x] On `.failed(.needsReconsent)`: keep the composer open, show inline error "This account hasn't granted send permission yet — Re-authorize". Re-auth button triggers `OAuthClient.authorize(scopes:)` for the `gmail.send` scope and on success retries the send
+- [x] **Reply pre-fill in `InlineComposer`**: take a new `replyContext: ReplyContext?` parameter, derive `to:` from the original sender, `subject:` = original subject with `"Re: "` prepended (deduped — don't produce `"Re: Re: Re: ..."`), wire `MainScene` to pass the active thread's context. The trailing-closure callback to `MainScene` becomes a typed model now
+- [x] **Compose entry from inbox without thread context**: ⌘N opens `ComposeWindowView` with empty fields; user types recipient by hand
+- [x] **Account selector in compose**: a `Picker` showing connected accounts (already on `accountsTabStore` in CompositionRoot); current account defaults to the active account
+- [x] Snapshot tests for the approval row (idle / awaiting-with-countdown / sending / failed) in dark + light
+- [x] Run `cd Packages/Features/ComposeFeature && swift test`
 
 ### Task 6: Re-consent flow for existing accounts
 

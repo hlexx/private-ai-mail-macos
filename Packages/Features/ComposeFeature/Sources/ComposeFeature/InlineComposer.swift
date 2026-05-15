@@ -16,7 +16,7 @@ public struct InlineComposer: View {
     @State private var draftText: String
     let evidence: [String]
     let onEditInFull: () -> Void
-    let onSend: () -> Void
+    let onSend: (String) -> Void
 
     // TODO(§15-step-4): replace with AIKit.draftReply(tone:)
     private static let draftBodies: [ComposeTone: String] = [
@@ -28,7 +28,7 @@ public struct InlineComposer: View {
     public init(
         evidence: [String] = ["msg_1", "msg_3", "contract.pdf p.2"],
         onEditInFull: @escaping () -> Void = {},
-        onSend: @escaping () -> Void = {}
+        onSend: @escaping (String) -> Void = { _ in }
     ) {
         self.evidence = evidence
         self.onEditInFull = onEditInFull
@@ -137,7 +137,9 @@ public struct InlineComposer: View {
             }
             .buttonStyle(.rbSecondary)
 
-            Button(action: onSend) {
+            Button {
+                onSend(draftText)
+            } label: {
                 Label(String(localized: "composer.cta.send", defaultValue: "Send"), systemImage: "paperplane.fill")
             }
             .buttonStyle(.rbPrimary)

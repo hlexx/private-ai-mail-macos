@@ -4,6 +4,7 @@ import ComposeFeature
 import DesignSystem
 import GRDB
 import InboxFeature
+import MailDomain
 import Persistence
 import SwiftUI
 import ThreadFeature
@@ -65,8 +66,13 @@ struct MainScene: View {
                         if briefStore.brief != nil {
                             InlineComposer(
                                 evidence: briefStore.brief?.evidence ?? [],
-                                onEditInFull: { composition.showCompose = true },
-                                onSend: { /* TODO(§15-step-7): wire real send */ }
+                                onEditInFull: {
+                                    prefillComposeForReply()
+                                    composition.showCompose = true
+                                },
+                                onSend: { bodyText in
+                                    sendInlineReply(bodyText: bodyText)
+                                }
                             )
                         }
                     },
@@ -133,6 +139,61 @@ struct MainScene: View {
             folders[idx].count = unreadCount > 0 ? unreadCount : nil
         }
         return folders
+    }
+
+    // MARK: - Reply Helpers
+
+    private func prefillComposeForReply() {
+        let vm = composition.composeViewModel
+        guard let lastMessage = threadStore.messages.last else { return }
+        vm.prefillReply(
+            fromAddr: lastMessage.fromAddr,
+            subject: threadStore.subject,
+            threadID: lastMessage.threadId,
+            lastMessageID: lastMessage.id
+        )
+        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        if let activeID = composition.activeAccountID {
+            vm.selectedAccountID = activeID
+            vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
+        }
+    }
+
+    private func sendInlineReply(bodyText: String) {
+        guard let accountID = composition.activeAccountID,
+              let account = accounts.first(where: { $0.id == accountID }),
+              let lastMessage = threadStore.messages.last else { return }
+
+        let replySubject = ComposeViewModel.deduplicateRePrefix(threadStore.subject)
+
+        let draft = ComposeDraft(
+            accountID: accountID,
+            from: Address(name: nil, email: account.email),
+            to: [Address(name: nil, email: extractEmail(from: lastMessage.fromAddr))],
+            subject: replySubject,
+            body: bodyText,
+            replyContext: ReplyContext(
+                threadID: lastMessage.threadId,
+                inReplyToMessageID: lastMessage.id
+            )
+        )
+
+        let service = composition.makeComposeService(accountId: accountID)
+        Task {
+            do {
+                _ = try await service.send(draft)
+            } catch {
+                // Error handling deferred to compose UI
+            }
+        }
+    }
+
+    private func extractEmail(from addr: String) -> String {
+        if let open = addr.firstIndex(of: "<"),
+           let close = addr.firstIndex(of: ">") {
+            return String(addr[addr.index(after: open)..<close])
+        }
+        return addr.trimmingCharacters(in: .whitespaces)
     }
 
     private func observeAccounts() async {

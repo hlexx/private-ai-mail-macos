@@ -1,0 +1,170 @@
+import Foundation
+import MailDomain
+import Observation
+
+// MARK: - Send State
+
+public enum ComposeSendState: Sendable {
+    case idle
+    case awaitingApproval(deadline: Date)
+    case sending
+    case sent
+    case failed(ComposeError)
+
+    public var key: String {
+        switch self {
+        case .idle: return "idle"
+        case .awaitingApproval: return "awaiting"
+        case .sending: return "sending"
+        case .sent: return "sent"
+        case .failed: return "failed"
+        }
+    }
+}
+
+// MARK: - ComposeViewModel
+
+@Observable
+@MainActor
+public final class ComposeViewModel {
+
+    public var toField: String = ""
+    public var ccField: String = ""
+    public var subjectField: String = ""
+    public var bodyText: String = ""
+    public var sendState: ComposeSendState = .idle
+
+    public var selectedAccountID: String?
+    public var selectedAccountEmail: String?
+    public var accounts: [AccountInfo] = []
+
+    public var replyContext: ReplyContext?
+
+    public var recipientCount: Int {
+        parseAddresses(toField).count + parseAddresses(ccField).count
+    }
+
+    private var countdownTask: Task<Void, Never>?
+    private var sendTask: Task<Void, Never>?
+    private let composeServiceFactory: @Sendable (String) -> any ComposeService
+
+    public init(composeServiceFactory: @escaping @Sendable (String) -> any ComposeService) {
+        self.composeServiceFactory = composeServiceFactory
+    }
+
+    // MARK: - Reply Pre-fill
+
+    public func prefillReply(
+        fromAddr: String,
+        subject: String,
+        threadID: String,
+        lastMessageID: String,
+        referencesChain: [String] = []
+    ) {
+        toField = fromAddr
+        subjectField = Self.deduplicateRePrefix(subject)
+        replyContext = ReplyContext(
+            threadID: threadID,
+            inReplyToMessageID: lastMessageID,
+            referencesChain: referencesChain
+        )
+    }
+
+    // MARK: - Send Flow
+
+    public func requestSend() {
+        guard case .idle = sendState else { return }
+        let deadline = Date().addingTimeInterval(5)
+        sendState = .awaitingApproval(deadline: deadline)
+        countdownTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            self?.executeSend()
+        }
+    }
+
+    public func cancelSend() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        sendTask?.cancel()
+        sendTask = nil
+        sendState = .idle
+    }
+
+    public func retrySend() {
+        sendState = .idle
+        requestSend()
+    }
+
+    // MARK: - Private
+
+    private func executeSend() {
+        guard let accountID = selectedAccountID,
+              let accountEmail = selectedAccountEmail else {
+            sendState = .failed(.noRecipients)
+            return
+        }
+
+        sendState = .sending
+
+        sendTask = Task { [weak self] in
+            guard let self else { return }
+
+            let toAddrs = self.parseAddresses(self.toField)
+            let ccAddrs = self.parseAddresses(self.ccField)
+
+            let draft = ComposeDraft(
+                accountID: accountID,
+                from: Address(name: nil, email: accountEmail),
+                to: toAddrs,
+                cc: ccAddrs,
+                subject: self.subjectField,
+                body: self.bodyText,
+                replyContext: self.replyContext
+            )
+
+            let service = self.composeServiceFactory(accountID)
+
+            do {
+                _ = try await service.send(draft)
+                guard !Task.isCancelled else { return }
+                self.sendState = .sent
+            } catch let error as ComposeError {
+                guard !Task.isCancelled else { return }
+                self.sendState = .failed(error)
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.sendState = .failed(.send(underlying: error))
+            }
+        }
+    }
+
+    private func parseAddresses(_ raw: String) -> [Address] {
+        raw.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .map { Address(name: nil, email: String($0)) }
+    }
+
+    nonisolated static func deduplicateRePrefix(_ subject: String) -> String {
+        let trimmed = subject.trimmingCharacters(in: .whitespaces)
+        if trimmed.lowercased().hasPrefix("re: ") {
+            return trimmed
+        }
+        return "Re: \(trimmed)"
+    }
+}
+
+// MARK: - Account Info
+
+public struct AccountInfo: Identifiable, Sendable {
+    public let id: String
+    public let email: String
+    public let displayName: String?
+
+    public init(id: String, email: String, displayName: String? = nil) {
+        self.id = id
+        self.email = email
+        self.displayName = displayName
+    }
+}

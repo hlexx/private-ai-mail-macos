@@ -25,6 +25,7 @@ final class CompositionRoot {
     var activeAccountID: String?
     var showActionSheet = false
     var showCompose = false
+    let composeViewModel: ComposeViewModel
 
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
@@ -61,6 +62,12 @@ final class CompositionRoot {
         }
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
+
+        let capturedFactory = apiFactory
+        let capturedDB = db
+        self.composeViewModel = ComposeViewModel(composeServiceFactory: { accountId in
+            LiveComposeService(api: capturedFactory(accountId), db: capturedDB)
+        })
 
         self.accountsTabStore = AccountsTabStore(
             db: db,

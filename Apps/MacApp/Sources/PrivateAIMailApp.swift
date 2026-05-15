@@ -59,7 +59,7 @@ struct PrivateAIMailApp: App {
         }
 
         WindowGroup(id: "compose") {
-            ComposeWindowView()
+            ComposeWindowView(viewModel: composition.composeViewModel)
             .frame(minWidth: 600, minHeight: 480)
             .rbTheme()
         }

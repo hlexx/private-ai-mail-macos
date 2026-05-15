@@ -6,16 +6,12 @@ import SwiftUI
 /// a RichTextEditor body, and footer with metadata + CTAs.
 public struct ComposeWindowView: View {
 
-    @State private var toField: String = "marta@acme.de"
-    @State private var ccField: String = ""
-    @State private var subjectField: String = "Re: Contract approval \u{2014} Acme GmbH"
+    @Bindable var viewModel: ComposeViewModel
     @State private var richBody: NSAttributedString
     @Environment(\.dismiss) private var dismiss
 
-    // TODO(§15-step-4): replace stub with AIKit.draftReply(tone:)
-    private static let defaultBody = "Hi Marta \u{2014} yes, I\u{2019}ll send a clean draft by Friday EOD. I\u{2019}ll match the pricing we agreed and flag the two clauses we discussed for your legal team.\n\nIf there\u{2019}s anything else you\u{2019}d like me to include \u{2014} SLA terms, payment schedule \u{2014} let me know.\n\n\u{2014} Alex"
-
-    public init() {
+    public init(viewModel: ComposeViewModel) {
+        self.viewModel = viewModel
         let font = NSFont(name: "Geist-Regular", size: 14) ?? .systemFont(ofSize: 14)
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4
@@ -24,7 +20,7 @@ public struct ComposeWindowView: View {
             .foregroundColor: NSColor.labelColor,
             .paragraphStyle: paragraphStyle,
         ]
-        self._richBody = State(initialValue: NSAttributedString(string: Self.defaultBody, attributes: attrs))
+        self._richBody = State(initialValue: NSAttributedString(string: viewModel.bodyText, attributes: attrs))
     }
 
     public var body: some View {
@@ -35,16 +31,26 @@ public struct ComposeWindowView: View {
             Divider().overlay(Color.rbStroke1)
             editorSection
             Divider().overlay(Color.rbStroke1)
+            approvalSection
             footerSection
         }
         .background(Color.rbBgCanvas)
+        .onChange(of: richBody) { _, newValue in
+            viewModel.bodyText = newValue.string
+        }
+        .onChange(of: viewModel.sendState.key) { _, newKey in
+            if newKey == "sent" {
+                dismiss()
+            }
+        }
+        .animation(RBEase.out(duration: RBDuration.d3), value: viewModel.sendState.key)
     }
 
     // MARK: - Head
 
     private var headSection: some View {
         HStack {
-            Text(subjectField)
+            Text(viewModel.subjectField.isEmpty ? String(localized: "compose.newMessage", defaultValue: "New Message") : viewModel.subjectField)
                 .rbTextStyle(.h3)
                 .foregroundStyle(Color.rbFg1)
                 .lineLimit(1)
@@ -61,11 +67,15 @@ public struct ComposeWindowView: View {
 
     private var fieldRows: some View {
         VStack(spacing: 0) {
-            fieldRow(label: String(localized: "compose.field.to", defaultValue: "to"), text: $toField)
+            fieldRow(label: String(localized: "compose.field.to", defaultValue: "to"), text: $viewModel.toField)
             Divider().overlay(Color.rbStroke1)
-            fieldRow(label: String(localized: "compose.field.cc", defaultValue: "cc"), text: $ccField, placeholder: String(localized: "compose.field.ccPlaceholder", defaultValue: "add recipient\u{2026}"))
+            fieldRow(label: String(localized: "compose.field.cc", defaultValue: "cc"), text: $viewModel.ccField, placeholder: String(localized: "compose.field.ccPlaceholder", defaultValue: "add recipient\u{2026}"))
             Divider().overlay(Color.rbStroke1)
-            fieldRow(label: String(localized: "compose.field.subject", defaultValue: "subj"), text: $subjectField)
+            fieldRow(label: String(localized: "compose.field.subject", defaultValue: "subj"), text: $viewModel.subjectField)
+            if viewModel.accounts.count > 1 {
+                Divider().overlay(Color.rbStroke1)
+                accountRow
+            }
         }
     }
 
@@ -84,6 +94,31 @@ public struct ComposeWindowView: View {
         .padding(.vertical, RBSpace.s3)
     }
 
+    private var accountRow: some View {
+        HStack(spacing: RBSpace.s3) {
+            Text(String(localized: "compose.field.from", defaultValue: "from"))
+                .rbTextStyle(.bodySM)
+                .foregroundStyle(Color.rbFg3)
+                .frame(width: 32, alignment: .trailing)
+            Picker("", selection: Binding(
+                get: { viewModel.selectedAccountID ?? "" },
+                set: { newID in
+                    viewModel.selectedAccountID = newID
+                    viewModel.selectedAccountEmail = viewModel.accounts.first(where: { $0.id == newID })?.email
+                }
+            )) {
+                ForEach(viewModel.accounts) { account in
+                    Text(account.email).tag(account.id)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            Spacer()
+        }
+        .padding(.horizontal, RBSpace.s5)
+        .padding(.vertical, RBSpace.s3)
+    }
+
     // MARK: - Editor
 
     private var editorSection: some View {
@@ -91,11 +126,33 @@ public struct ComposeWindowView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Approval
+
+    @ViewBuilder
+    private var approvalSection: some View {
+        let isIdle: Bool = {
+            if case .idle = viewModel.sendState { return true }
+            return false
+        }()
+        if !isIdle {
+            ApprovalRow(
+                recipientCount: viewModel.recipientCount,
+                accountEmail: viewModel.selectedAccountEmail ?? "",
+                sendState: viewModel.sendState,
+                onCancel: { viewModel.cancelSend() },
+                onRetrySend: { viewModel.retrySend() }
+            )
+            .padding(.horizontal, RBSpace.s3)
+            .padding(.vertical, RBSpace.s2)
+            Divider().overlay(Color.rbStroke1)
+        }
+    }
+
     // MARK: - Footer
 
     private var footerSection: some View {
         HStack {
-            EyebrowLabel(String(localized: "compose.footer.meta", defaultValue: "\u{25C6} drafted locally \u{00B7} attached contract.pdf \u{00B7} tone: concise"))
+            EyebrowLabel(String(localized: "compose.footer.meta", defaultValue: "\u{25C6} drafted locally"))
             Spacer()
             HStack(spacing: RBSpace.s2) {
                 Button(String(localized: "compose.cta.saveDraft", defaultValue: "Save draft")) {}
@@ -109,22 +166,44 @@ public struct ComposeWindowView: View {
                 .buttonStyle(.rbSecondary)
 
                 Button {
-                    // TODO(§15-step-7): wire real send
+                    viewModel.requestSend()
                 } label: {
                     Label(String(localized: "compose.cta.send", defaultValue: "Send"), systemImage: "arrow.up")
                 }
                 .buttonStyle(.rbPrimary)
+                .disabled(!isSendEnabled)
             }
         }
         .padding(.horizontal, RBSpace.s5)
         .padding(.vertical, RBSpace.s3)
     }
+
+    private var isSendEnabled: Bool {
+        if case .idle = viewModel.sendState {
+            return !viewModel.toField.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        return false
+    }
 }
 
 #if DEBUG
 #Preview("Compose Window") {
-    ComposeWindowView()
-        .frame(width: 700, height: 560)
-        .preferredColorScheme(.dark)
+    ComposeWindowView(viewModel: {
+        let vm = ComposeViewModel(composeServiceFactory: { _ in
+            PreviewComposeService()
+        })
+        vm.toField = "marta@acme.de"
+        vm.subjectField = "Re: Contract approval \u{2014} Acme GmbH"
+        vm.bodyText = "Hi Marta — draft by Friday."
+        return vm
+    }())
+    .frame(width: 700, height: 560)
+    .preferredColorScheme(.dark)
+}
+
+private struct PreviewComposeService: ComposeService {
+    func send(_ draft: ComposeDraft) async throws -> SentEcho {
+        SentEcho(messageID: "preview", threadID: "preview", sentAt: Date())
+    }
 }
 #endif

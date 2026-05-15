@@ -1,6 +1,7 @@
 import Testing
 import SwiftUI
 import AppKit
+import MailDomain
 @testable import ComposeFeature
 
 @Suite("ComposeFeature")
@@ -59,12 +60,31 @@ struct InlineComposerSnapshotTests {
 
 // MARK: - ComposeWindowView Snapshot Tests
 
+@MainActor
+private func makePreviewViewModel() -> ComposeViewModel {
+    let vm = ComposeViewModel(composeServiceFactory: { _ in
+        StubComposeService()
+    })
+    vm.toField = "marta@acme.de"
+    vm.subjectField = "Re: Contract approval"
+    vm.bodyText = "Hi Marta"
+    vm.selectedAccountID = "acc1"
+    vm.selectedAccountEmail = "me@test.com"
+    return vm
+}
+
+private struct StubComposeService: ComposeService {
+    func send(_ draft: ComposeDraft) async throws -> SentEcho {
+        SentEcho(messageID: "stub", threadID: "stub", sentAt: Date())
+    }
+}
+
 @Suite("ComposeWindowView Snapshots")
 struct ComposeWindowViewSnapshotTests {
 
     @MainActor
     @Test func composeWindowDark() {
-        let view = ComposeWindowView()
+        let view = ComposeWindowView(viewModel: makePreviewViewModel())
             .preferredColorScheme(.dark)
             .frame(width: 720, height: 560)
         let host = NSHostingView(rootView: view)
@@ -74,7 +94,7 @@ struct ComposeWindowViewSnapshotTests {
 
     @MainActor
     @Test func composeWindowLight() {
-        let view = ComposeWindowView()
+        let view = ComposeWindowView(viewModel: makePreviewViewModel())
             .preferredColorScheme(.light)
             .frame(width: 720, height: 560)
         let host = NSHostingView(rootView: view)
@@ -84,7 +104,7 @@ struct ComposeWindowViewSnapshotTests {
 
     @MainActor
     @Test func composeWindowCompactSize() {
-        let view = ComposeWindowView()
+        let view = ComposeWindowView(viewModel: makePreviewViewModel())
             .preferredColorScheme(.dark)
             .frame(width: 600, height: 480)
         let host = NSHostingView(rootView: view)
@@ -94,7 +114,7 @@ struct ComposeWindowViewSnapshotTests {
 
     @MainActor
     @Test func composeWindowWideSize() {
-        let view = ComposeWindowView()
+        let view = ComposeWindowView(viewModel: makePreviewViewModel())
             .preferredColorScheme(.light)
             .frame(width: 900, height: 700)
         let host = NSHostingView(rootView: view)
@@ -116,6 +136,103 @@ struct RichTextEditorTests {
             .frame(width: 400, height: 200)
         let host = NSHostingView(rootView: view)
         host.frame = NSRect(x: 0, y: 0, width: 400, height: 200)
+        host.layout()
+    }
+}
+
+// MARK: - ApprovalRow Snapshot Tests
+
+@Suite("ApprovalRow Snapshots")
+struct ApprovalRowSnapshotTests {
+
+    @MainActor
+    @Test func approvalRowAwaitingDark() {
+        let view = ApprovalRow(
+            recipientCount: 2,
+            accountEmail: "me@test.com",
+            sendState: .awaitingApproval(deadline: Date().addingTimeInterval(5)),
+            onCancel: {},
+            onRetrySend: {}
+        )
+        .padding(16)
+        .background(Color(.windowBackgroundColor))
+        .preferredColorScheme(.dark)
+        .frame(width: 600, height: 80)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 80)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func approvalRowAwaitingLight() {
+        let view = ApprovalRow(
+            recipientCount: 2,
+            accountEmail: "me@test.com",
+            sendState: .awaitingApproval(deadline: Date().addingTimeInterval(3)),
+            onCancel: {},
+            onRetrySend: {}
+        )
+        .padding(16)
+        .background(Color(.windowBackgroundColor))
+        .preferredColorScheme(.light)
+        .frame(width: 600, height: 80)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 80)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func approvalRowSendingDark() {
+        let view = ApprovalRow(
+            recipientCount: 1,
+            accountEmail: "me@test.com",
+            sendState: .sending,
+            onCancel: {},
+            onRetrySend: {}
+        )
+        .padding(16)
+        .background(Color(.windowBackgroundColor))
+        .preferredColorScheme(.dark)
+        .frame(width: 600, height: 80)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 80)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func approvalRowFailedDark() {
+        let view = ApprovalRow(
+            recipientCount: 1,
+            accountEmail: "me@test.com",
+            sendState: .failed(.send(underlying: NSError(domain: "test", code: 500))),
+            onCancel: {},
+            onRetrySend: {}
+        )
+        .padding(16)
+        .background(Color(.windowBackgroundColor))
+        .preferredColorScheme(.dark)
+        .frame(width: 600, height: 80)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 80)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func approvalRowFailedLight() {
+        let view = ApprovalRow(
+            recipientCount: 1,
+            accountEmail: "me@test.com",
+            sendState: .failed(.needsReconsent),
+            onCancel: {},
+            onRetrySend: {},
+            onReauthorize: {}
+        )
+        .padding(16)
+        .background(Color(.windowBackgroundColor))
+        .preferredColorScheme(.light)
+        .frame(width: 600, height: 80)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 80)
         host.layout()
     }
 }
