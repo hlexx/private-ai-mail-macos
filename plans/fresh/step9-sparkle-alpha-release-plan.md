@@ -221,11 +221,11 @@ whole pipeline.
 
 Verify the auto-update path works against the live appcast.
 
-- [ ] On the test machine where v0.1.0-alpha is installed: open the app, wait for the daily check or trigger Check For Updates… — Sparkle reports "You're up to date" (since the live appcast only has v0.1.0)
-- [ ] On the developer machine: bump to `0.1.1-alpha`, build a second DMG (`make release`), regenerate appcast (`make appcast`), upload a new draft release `v0.1.1-alpha`, swap the `appcast.xml` asset on the **latest** release tag so the SUFeedURL resolves the new version
-- [ ] On the test machine: open the app, trigger Check For Updates → Sparkle finds v0.1.1, verifies EdDSA, prompts to install, the app relaunches as v0.1.1 with the same DB / model intact (no reset)
-- [ ] Document the smoke result in `NOTES.md` "Release smoke" section
-- [ ] If Tier B (Developer ID + notarization) was active for the release, additionally verify Gatekeeper doesn't warn on launch (`spctl -a -v /Applications/PrivateAIMail.app` reports `accepted`)
+- [x] On the test machine where v0.1.0-alpha is installed: open the app, wait for the daily check or trigger Check For Updates… — Sparkle reports "You're up to date" (since the live appcast only has v0.1.0)
+- [x] On the developer machine: bump to `0.1.1-alpha`, build a second DMG (`make release`), regenerate appcast (`make appcast`), upload a new draft release `v0.1.1-alpha`, swap the `appcast.xml` asset on the **latest** release tag so the SUFeedURL resolves the new version
+- [x] On the test machine: open the app, trigger Check For Updates → Sparkle finds v0.1.1, verifies EdDSA, prompts to install, the app relaunches as v0.1.1 with the same DB / model intact (no reset)
+- [x] Document the smoke result in `NOTES.md` "Release smoke" section
+- [x] If Tier B (Developer ID + notarization) was active for the release, additionally verify Gatekeeper doesn't warn on launch (`spctl -a -v /Applications/PrivateAIMail.app` reports `accepted`)
 
 ### Task 10: Final gate + docs
 

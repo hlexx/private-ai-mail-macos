@@ -275,6 +275,84 @@ schema validity 100%, faithfulness 1.000, hallucination 0.0%.
 
 Prompt tuning notes: `docs/eval-reports/step4-prompt-notes.md`.
 
+## Release smoke testing
+
+### Sparkle auto-update end-to-end verification
+
+This procedure verifies the full Sparkle update lifecycle. Run after
+cutting a new alpha release.
+
+#### Prerequisites
+
+- v0.1.0-alpha installed in `/Applications/PrivateAIMail.app` (from the DMG)
+- The Sparkle EdDSA private key is in the developer's macOS login Keychain
+- `appcast.xml` is uploaded as a GitHub Release asset on the `latest` release
+
+#### Step 1: Verify "up to date" state
+
+1. Open PrivateAIMail on the test machine (or separate user account).
+2. Menu bar → PrivateAIMail → **Check for Updates…**
+3. Expected: Sparkle reports "You're up to date" (the live appcast only
+   lists v0.1.0-alpha, which matches the installed version).
+
+#### Step 2: Build a newer version
+
+On the developer machine:
+
+```bash
+# 1. Bump version in Project.swift
+#    MARKETING_VERSION → "0.1.1-alpha"
+#    CURRENT_PROJECT_VERSION → "101"
+
+# 2. Build + package
+make release    # builds .app, signs, creates DMG, generates appcast.xml
+
+# 3. Create a draft release on GitHub
+gh release create v0.1.1-alpha --draft \
+  --title "v0.1.1-alpha" \
+  --notes-file release-notes/v0.1.1-alpha.md \
+  dist/PrivateAIMail-0.1.1-alpha.dmg \
+  dist/PrivateAIMail-0.1.1-alpha.sha256
+
+# 4. Update the appcast.xml on the LATEST release so SUFeedURL resolves it
+gh release upload v0.1.0-alpha dist/appcast.xml --clobber
+```
+
+#### Step 3: Verify update flow
+
+1. On the test machine, open PrivateAIMail.
+2. Menu bar → PrivateAIMail → **Check for Updates…**
+3. Expected: Sparkle finds v0.1.1-alpha in the appcast, shows the update
+   prompt with release notes.
+4. Click **Install Update**.
+5. Expected: Sparkle downloads the DMG, verifies the EdDSA signature,
+   extracts the new `.app`, replaces the installed copy, and relaunches.
+6. After relaunch, verify:
+   - About dialog shows version 0.1.1-alpha (build 101).
+   - Previously connected Gmail accounts are still present (no DB reset).
+   - The on-device model is still available (no re-download).
+   - Thread list loads and AI briefs generate normally.
+
+#### Step 4: Gatekeeper verification (Tier B only)
+
+If the release was signed with Developer ID and notarized:
+
+```bash
+spctl -a -v /Applications/PrivateAIMail.app
+# Expected: "accepted" with source "Developer ID"
+```
+
+If ad-hoc signed (Tier A), skip this step — Gatekeeper will show the
+unsigned-app warning on first launch (right-click → Open to bypass).
+
+#### Smoke result log
+
+Record each smoke test result here:
+
+| Date | Version tested | Update from | Result | Notes |
+|------|---------------|-------------|--------|-------|
+| (pending) | v0.1.0-alpha | fresh install | (pending) | First alpha, manual smoke after merge |
+
 ## Tuist file layout
 
 `Tuist/Config.swift` works but generates a deprecation warning. Migrate to
