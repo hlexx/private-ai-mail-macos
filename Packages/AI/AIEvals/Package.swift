@@ -10,6 +10,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../AIKit"),
+        .package(path: "../AIRuntime"),
     ],
     targets: [
         .target(
@@ -21,7 +22,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "EvalRunnerCLI",
-            dependencies: ["AIEvals", "AIKit"]
+            dependencies: ["AIEvals", "AIKit", "AIRuntime"]
         ),
         .testTarget(name: "AIEvalsTests", dependencies: ["AIEvals", "AIKit"]),
     ]

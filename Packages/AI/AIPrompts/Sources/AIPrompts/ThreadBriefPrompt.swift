@@ -33,9 +33,12 @@ public struct PromptAttachment: Sendable {
 public enum ThreadBriefPrompt {
 
     public static let systemPrompt: String = """
-        You are an email analyst. Read the thread and output ONLY a JSON object matching the schema below. \
-        Never invent senders, dates, or amounts. Leave fields as null when the source does not support a \
-        confident value. confidence is your self-estimate between 0 and 1.
+        You are an email analyst. Output ONLY a JSON object — no text before or after. \
+        Fields: summary (string), request (string or null), deadline (string or null), risk (string or null), \
+        nextStep (string or null), evidence (array of short quotes), confidence (number 0-1). \
+        Rules: never invent facts; use null when unsure; evidence must be verbatim quotes; keep response under 200 tokens. \
+        Example output: {"summary":"Team sync on Q3 goals","request":"Review the deck by Friday","deadline":"Friday", \
+        "risk":null,"nextStep":"Reply with feedback","evidence":["Review the deck by Friday","Q3 goals"],"confidence":0.9}
         """
 
     public static func taskPrompt(

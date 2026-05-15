@@ -1,5 +1,6 @@
 import AIEvals
 import AIKit
+import AIRuntime
 import Foundation
 
 /// CLI entry point that runs the eval corpus against an AIService
@@ -7,8 +8,9 @@ import Foundation
 ///
 /// Usage: swift run EvalRunnerCLI
 ///
-/// In production this runs against the live MLXBackend.
-/// For unit testing / CI, pass a mock service instead.
+/// When the real model is installed at the expected path, uses
+/// ThreadBriefService backed by MLXBackend for real on-device inference.
+/// Otherwise falls back to a stub service for offline/CI runs.
 
 /// A stub service for offline eval runs (no GPU required).
 /// Returns a brief that mirrors source content for high faithfulness scores.
@@ -30,12 +32,23 @@ struct StubEvalService: AIService {
 }
 
 let corpus = EvalCorpus.threads
-let service: any AIService = StubEvalService()
+
+let service: any AIService
+let modelManager = ModelManager()
+
+if await modelManager.installedURL() != nil {
+    fputs("Using real MLXBackend (model found)\n", stderr)
+    service = ThreadBriefService.live(modelManager: modelManager)
+} else {
+    fputs("WARNING: Model not installed. Using stub service. Download the model first for real eval.\n", stderr)
+    service = StubEvalService()
+}
+
 let runner = EvalRunner()
 let report = try await runner.run(corpus: corpus, service: service)
 
 print(report.markdownReport())
 
 if report.schemaValidityRate < 1.0 {
-    print("\nWARNING: Schema validity below 100%")
+    fputs("\nWARNING: Schema validity below 100%\n", stderr)
 }

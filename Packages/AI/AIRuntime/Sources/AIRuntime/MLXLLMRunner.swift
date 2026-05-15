@@ -43,17 +43,21 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             throw MLXLLMRunnerError.modelNotLoaded
         }
 
-        let messages: [MLXLMCommon.Message] = [
-            ["role": "user", "content": "\(systemPrompt)\n\n\(userPrompt)"],
-        ]
+        // Tokenize prompt directly to bypass the Jinja chat template parser
+        // (swift-transformers' Jinja parser doesn't support the * operator
+        // used in Gemma 4's chat_template.jinja).
+        // Seed the model response with "{" so it starts generating JSON immediately
+        // (critical for small models like E2B 1.21B that otherwise emit thinking tokens).
+        let prompt = "<start_of_turn>user\n\(systemPrompt)\n\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n{"
+        let tokens = try await container.perform { (model, tokenizer) in
+            tokenizer.encode(text: prompt)
+        }
+        let input = LMInput(tokens: MLXArray(tokens))
 
-        let userInput = UserInput(prompt: .messages(messages))
-        let input = try await container.prepare(input: userInput)
-
-        let effectiveMaxTokens = min(maxTokens, 512)
+        let effectiveMaxTokens = min(maxTokens, 256)
         let parameters = GenerateParameters(
             maxTokens: effectiveMaxTokens,
-            temperature: 0.2,
+            temperature: 0.1,
             topP: 0.9
         )
 
@@ -62,8 +66,8 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             parameters: parameters
         )
 
-        var fullOutput = ""
-        let jsonDetectionThreshold = 64
+        // Prepend the seeded "{" to capture the full JSON object
+        var fullOutput = "{"
 
         for await generation in stream {
             try Task.checkCancellation()
@@ -72,10 +76,6 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             case .chunk(let text):
                 fullOutput += text
                 onToken(text)
-
-                if fullOutput.count >= jsonDetectionThreshold && !fullOutput.contains("{") {
-                    throw MLXLLMRunnerError.nonJSONOutput(fullOutput)
-                }
             case .info:
                 break
             case .toolCall:

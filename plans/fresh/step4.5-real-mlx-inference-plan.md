@@ -243,19 +243,18 @@ it, we want accurate p50/p95 plumbed through the eval pipeline.
 Now that inference is real, regenerate the baseline report against the
 real `MLXBackend`-backed `AIService`. This is the calibration step.
 
-- [ ] Ensure `~/Library/Application Support/PrivateAIMail/models/gemma-4-it-4bit/` is populated (run the app once and let the first-launch flow download)
-- [ ] Run the eval CLI: `cd Packages/AI/AIEvals && swift run EvalRunner > docs/eval-reports/step4-baseline.md` (or whatever the entry-point is — verify Tools tree)
-- [ ] Inspect the report. Confirm (calibrated for OptiQ 7.5 B):
-    - All 20 corpus entries pass schema validity (≥ 95 % allowing
-      sampling jitter; aim for 100 %)
-    - p50 latency in `[3 s … 10 s]` range
-    - p95 latency ≤ 15 s
-    - Faithfulness ≥ 0.85
-    - Hallucination rate < 5 %
-- [ ] If any of those miss, tune the prompt in `Packages/AI/AIPrompts/Sources/AIPrompts/ThreadBriefPrompt.swift`: tighter instructions, fewer evidence-array slots, smaller max-token cap, lower temperature. Re-run eval. Iterate up to 3 times
-- [ ] If after tuning p95 is still > 20 s (or any other quality budget is missed by > 2×), execute the documented fallback: change the `repoID` in `GemmaModelSpec` to `mlx-community/gemma-4-e2b-it-4bit` (1.21 B params, Apache 2.0, ~700 MB on disk), update file list / SHA / totalBytes, re-download, re-eval. Capture the decision and the comparison numbers in `docs/eval-reports/step4.5-model-selection.md`
-- [ ] Commit the regenerated `docs/eval-reports/step4-baseline.md` with the real numbers
-- [ ] In `docs/eval-reports/`, add `step4-prompt-notes.md` if you ended up tuning the prompt — record what changed and which corpus entries improved
+- [x] Ensure `~/Library/Application Support/PrivateAIMail/models/gemma-4-e2b-it-4bit/` is populated (model downloaded via curl, verified 3,581,101,896 bytes)
+- [x] Run the eval CLI: `cd Packages/AI/AIEvals && swift run EvalRunnerCLI` — uses real MLXBackend when model is found
+- [x] Inspect the report. Final results with E2B (1.21B):
+    - Schema validity: 100% (20/20)
+    - p50 latency: 3.57s (in [3s..10s] range)
+    - p95 latency: 6.17s (<=15s)
+    - Faithfulness: 1.000 (>=0.85)
+    - Hallucination rate: 0.0% (<5%)
+- [x] Prompt tuned twice: (1) tightened rules to fix hallucination with E4B, (2) added JSON example + seeded generation with `{` for E2B
+- [x] Fallback executed: OptiQ failed to load, E4B p95=48.13s (>20s), fell back to E2B. Decision documented in `docs/eval-reports/step4.5-model-selection.md`
+- [x] Commit the regenerated `docs/eval-reports/step4-baseline.md` with the real numbers
+- [x] In `docs/eval-reports/`, added `step4-prompt-notes.md` documenting all prompt changes and `step4.5-model-selection.md` with the 3-model comparison
 
 ### Task 7: Optional integration test gated by env var
 

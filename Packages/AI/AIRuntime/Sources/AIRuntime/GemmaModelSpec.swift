@@ -1,9 +1,9 @@
 import Foundation
 
 public enum GemmaModelSpec {
-    public static let modelID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"
-    public static let revision = "cfac466f1bca589c605b9ca1dd57c2deb63c5c63"
-    public static let directoryName = "gemma-4-it-optiq-4bit"
+    public static let modelID = "mlx-community/gemma-4-e2b-it-4bit"
+    public static let revision = "99d9a53ff828d365a8ecae538e45f80a08d612cd"
+    public static let directoryName = "gemma-4-e2b-it-4bit"
 
     public struct FileEntry: Sendable {
         public let name: String
@@ -14,12 +14,12 @@ public enum GemmaModelSpec {
     public static let files: [FileEntry] = [
         FileEntry(
             name: "config.json",
-            byteCount: 81_691,
+            byteCount: 5_996,
             sha256: nil
         ),
         FileEntry(
             name: "chat_template.jinja",
-            byteCount: 16_804,
+            byteCount: 16_317,
             sha256: nil
         ),
         FileEntry(
@@ -28,23 +28,18 @@ public enum GemmaModelSpec {
             sha256: nil
         ),
         FileEntry(
-            name: "model-00001-of-00002.safetensors",
-            byteCount: 3_523_881_390,
-            sha256: "0d239262a51b1795d1556ba0d0bdea955c126108d053249d2fd4c1e1584100fd"
-        ),
-        FileEntry(
-            name: "model-00002-of-00002.safetensors",
-            byteCount: 3_010_217_360,
-            sha256: "da846c36ac065e0c8f558cd27286757490fc345b6613ac2789750c0d760f59a3"
+            name: "model.safetensors",
+            byteCount: 3_581_101_896,
+            sha256: "e9bea0584546fafb5ff83a1132a6c4662a8498cc6a5bcda52fc6ca562b7bafab"
         ),
         FileEntry(
             name: "model.safetensors.index.json",
-            byteCount: 151_391,
+            byteCount: 230_329,
             sha256: nil
         ),
         FileEntry(
-            name: "optiq_metadata.json",
-            byteCount: 40_081,
+            name: "processor_config.json",
+            byteCount: 902,
             sha256: nil
         ),
         FileEntry(
@@ -54,7 +49,7 @@ public enum GemmaModelSpec {
         ),
         FileEntry(
             name: "tokenizer_config.json",
-            byteCount: 2_744,
+            byteCount: 2_095,
             sha256: nil
         ),
     ]

@@ -30,7 +30,7 @@ public actor MLXBackend {
     public init(
         modelManager: ModelManager,
         maxOutputTokens: Int = 512,
-        maxRetries: Int = 1,
+        maxRetries: Int = 2,
         latencyRecorder: (any LatencyRecorder)? = nil
     ) {
         self.modelManager = modelManager
