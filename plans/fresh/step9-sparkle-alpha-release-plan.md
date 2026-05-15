@@ -144,11 +144,11 @@ Hook Sparkle into the SwiftUI app lifecycle so the user can
 manually check via the menu, and so the background scheduled check
 runs.
 
-- [ ] Add `Apps/MacApp/Sources/Updates/SparkleUpdater.swift`: a small `@Observable` class that owns a `SPUStandardUpdaterController` configured with the bundle's Info.plist values (default behaviour — Sparkle reads them on init). Expose `func checkForUpdates()` that forwards to `updater.checkForUpdates(nil)`
-- [ ] In `PrivateAIMailApp.swift`, instantiate one `SparkleUpdater()` at the App level. Pass it into `CompositionRoot` (or keep it App-local; either way it must outlive scenes)
-- [ ] Add a `CommandGroup(replacing: .appInfo)` entry that injects `Button("Check for Updates…")` calling `sparkleUpdater.checkForUpdates()`. Place between "About" and "Settings…" per macOS HIG conventions
-- [ ] Smoke-test locally: build, run; open the new menu item — Sparkle UI appears (likely "You're already up to date" since the appcast doesn't list a newer version yet)
-- [ ] Run `swiftlint --strict` and `xcodebuild build`
+- [x] Add `Apps/MacApp/Sources/Updates/SparkleUpdater.swift`: a small `@Observable` class that owns a `SPUStandardUpdaterController` configured with the bundle's Info.plist values (default behaviour — Sparkle reads them on init). Expose `func checkForUpdates()` that forwards to `updater.checkForUpdates(nil)`
+- [x] In `PrivateAIMailApp.swift`, instantiate one `SparkleUpdater()` at the App level. Pass it into `CompositionRoot` (or keep it App-local; either way it must outlive scenes)
+- [x] Add a `CommandGroup(replacing: .appInfo)` entry that injects `Button("Check for Updates…")` calling `sparkleUpdater.checkForUpdates()`. Place between "About" and "Settings…" per macOS HIG conventions
+- [x] Smoke-test locally: build, run; open the new menu item — Sparkle UI appears (likely "You're already up to date" since the appcast doesn't list a newer version yet)
+- [x] Run `swiftlint --strict` and `xcodebuild build`
 
 ### Task 4: DMG packaging — fastlane-less, pure-shell
 
