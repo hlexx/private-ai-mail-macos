@@ -7,6 +7,7 @@ public struct ApprovalRow: View {
     let accountEmail: String
     let sendState: ComposeSendState
     let onCancel: () -> Void
+    let onConfirmNow: () -> Void
     let onRetrySend: () -> Void
     let onReauthorize: () -> Void
 
@@ -15,6 +16,7 @@ public struct ApprovalRow: View {
         accountEmail: String,
         sendState: ComposeSendState,
         onCancel: @escaping () -> Void,
+        onConfirmNow: @escaping () -> Void,
         onRetrySend: @escaping () -> Void,
         onReauthorize: @escaping () -> Void = {}
     ) {
@@ -22,6 +24,7 @@ public struct ApprovalRow: View {
         self.accountEmail = accountEmail
         self.sendState = sendState
         self.onCancel = onCancel
+        self.onConfirmNow = onConfirmNow
         self.onRetrySend = onRetrySend
         self.onReauthorize = onReauthorize
     }
@@ -65,7 +68,7 @@ public struct ApprovalRow: View {
             Button(String(localized: "approval.cancel", defaultValue: "Cancel"), action: onCancel)
                 .buttonStyle(.rbGhost)
 
-            Button(String(localized: "approval.sendNow", defaultValue: "Send now"), action: onRetrySend)
+            Button(String(localized: "approval.sendNow", defaultValue: "Send now"), action: onConfirmNow)
                 .buttonStyle(.rbPrimary)
         }
         .padding(.horizontal, RBSpace.s5)

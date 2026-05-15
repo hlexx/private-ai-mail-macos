@@ -107,6 +107,12 @@ public final class ComposeViewModel {
         sendState = .idle
     }
 
+    public func confirmSendNow() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        executeSend()
+    }
+
     public func retrySend() {
         countdownTask?.cancel()
         countdownTask = nil

@@ -92,6 +92,7 @@ public final class LiveComposeService: ComposeService, Sendable {
             throw ComposeError.noRecipients
         }
 
+        let messageIDSeed = UUID().uuidString.lowercased()
         let outgoing = OutgoingMessage(
             from: draft.from,
             to: draft.to,
@@ -100,7 +101,8 @@ public final class LiveComposeService: ComposeService, Sendable {
             subject: draft.subject,
             body: draft.body,
             inReplyTo: draft.replyContext?.inReplyToMessageID,
-            references: draft.replyContext?.referencesChain ?? []
+            references: draft.replyContext?.referencesChain ?? [],
+            messageIDSeed: messageIDSeed
         )
 
         let raw: String
@@ -125,10 +127,12 @@ public final class LiveComposeService: ComposeService, Sendable {
         let now = Date()
         let sentAtUnix = Int(now.timeIntervalSince1970)
 
+        let generatedMessageId = "<\(messageIDSeed)@hlexx.privateaimail>"
         let record = MessageRecord(
             id: sent.id,
             threadId: sent.threadId,
             accountId: draft.accountID,
+            messageIdHeader: generatedMessageId,
             fromAddr: formatAddr(draft.from),
             toAddr: formatAddrList(draft.to),
             ccAddr: draft.cc.isEmpty ? nil : formatAddrList(draft.cc),

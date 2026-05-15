@@ -1,8 +1,8 @@
-import Testing
-import SwiftUI
 import AppKit
-import MailDomain
 @testable import ComposeFeature
+import MailDomain
+import SwiftUI
+import Testing
 
 @Suite("ComposeFeature")
 struct ComposeFeatureTests {
@@ -152,6 +152,7 @@ struct ApprovalRowSnapshotTests {
             accountEmail: "me@test.com",
             sendState: .awaitingApproval(deadline: Date().addingTimeInterval(5)),
             onCancel: {},
+            onConfirmNow: {},
             onRetrySend: {}
         )
         .padding(16)
@@ -170,6 +171,7 @@ struct ApprovalRowSnapshotTests {
             accountEmail: "me@test.com",
             sendState: .awaitingApproval(deadline: Date().addingTimeInterval(3)),
             onCancel: {},
+            onConfirmNow: {},
             onRetrySend: {}
         )
         .padding(16)
@@ -188,6 +190,7 @@ struct ApprovalRowSnapshotTests {
             accountEmail: "me@test.com",
             sendState: .sending,
             onCancel: {},
+            onConfirmNow: {},
             onRetrySend: {}
         )
         .padding(16)
@@ -206,6 +209,7 @@ struct ApprovalRowSnapshotTests {
             accountEmail: "me@test.com",
             sendState: .failed(.send(underlying: NSError(domain: "test", code: 500))),
             onCancel: {},
+            onConfirmNow: {},
             onRetrySend: {}
         )
         .padding(16)
@@ -224,6 +228,7 @@ struct ApprovalRowSnapshotTests {
             accountEmail: "me@test.com",
             sendState: .failed(.needsReconsent),
             onCancel: {},
+            onConfirmNow: {},
             onRetrySend: {},
             onReauthorize: {}
         )

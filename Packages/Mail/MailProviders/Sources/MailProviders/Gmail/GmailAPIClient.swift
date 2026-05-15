@@ -151,6 +151,12 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
             )
 
         case 500...599:
+            // POST requests are not idempotent — the server may have
+            // already processed the send before returning 5xx. Only
+            // retry safe (GET) methods to avoid duplicate emails.
+            guard httpMethod == "GET" else {
+                throw GmailAPIError.serverError(statusCode: httpResponse.statusCode)
+            }
             return try await handleRetryable(
                 url: url,
                 httpMethod: httpMethod,

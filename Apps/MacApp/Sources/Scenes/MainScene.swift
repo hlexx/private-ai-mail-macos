@@ -71,7 +71,9 @@ struct MainScene: View {
                                     composition.showCompose = true
                                 },
                                 onSend: { bodyText in
-                                    sendInlineReply(bodyText: bodyText)
+                                    prefillComposeForReply()
+                                    composition.composeViewModel.bodyText = bodyText
+                                    composition.showCompose = true
                                 }
                             )
                         }
@@ -159,54 +161,6 @@ struct MainScene: View {
         if let activeID = composition.activeAccountID {
             vm.selectedAccountID = activeID
             vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
-        }
-    }
-
-    private func sendInlineReply(bodyText: String) {
-        guard let accountID = composition.activeAccountID,
-              let account = accounts.first(where: { $0.id == accountID }),
-              let lastMessage = threadStore.messages.last else { return }
-
-        let replySubject = ComposeViewModel.deduplicateRePrefix(threadStore.subject)
-
-        let draft = ComposeDraft(
-            accountID: accountID,
-            from: Address(name: nil, email: account.email),
-            to: [Address(name: nil, email: extractEmail(from: lastMessage.fromAddr))],
-            subject: replySubject,
-            body: bodyText,
-            replyContext: ReplyContext(
-                threadID: lastMessage.threadId,
-                inReplyToMessageID: lastMessage.messageIdHeader ?? lastMessage.id
-            )
-        )
-
-        let service = composition.makeComposeService(accountId: accountID)
-        Task {
-            do {
-                _ = try await service.send(draft)
-            } catch let error as ComposeError {
-                if case .needsReconsent = error {
-                    await MainActor.run {
-                        composition.composeViewModel.reset()
-                        composition.composeViewModel.prefillReply(
-                            fromAddr: lastMessage.fromAddr,
-                            subject: threadStore.subject,
-                            threadID: lastMessage.threadId,
-                            lastMessageID: lastMessage.messageIdHeader ?? lastMessage.id
-                        )
-                        composition.composeViewModel.bodyText = bodyText
-                        composition.composeViewModel.accounts = accounts.map {
-                            AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName)
-                        }
-                        composition.composeViewModel.selectedAccountID = accountID
-                        composition.composeViewModel.selectedAccountEmail = account.email
-                        composition.showCompose = true
-                    }
-                }
-            } catch {
-                // Unexpected error — user can retry via compose window
-            }
         }
     }
 

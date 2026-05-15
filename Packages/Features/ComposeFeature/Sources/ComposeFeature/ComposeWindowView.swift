@@ -140,6 +140,7 @@ public struct ComposeWindowView: View {
                 accountEmail: viewModel.selectedAccountEmail ?? "",
                 sendState: viewModel.sendState,
                 onCancel: { viewModel.cancelSend() },
+                onConfirmNow: { viewModel.confirmSendNow() },
                 onRetrySend: { viewModel.retrySend() },
                 onReauthorize: { viewModel.reauthorizeAndRetry() }
             )
