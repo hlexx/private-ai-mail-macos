@@ -168,13 +168,13 @@ unmount, convert to compressed RO `.dmg`.
 
 Two execution modes for the same build pipeline, gated by env vars.
 
-- [ ] Add `scripts/sign-app.sh` taking the app path. Reads `RELEASE_DEVELOPER_TEAM` env var:
+- [x] Add `scripts/sign-app.sh` taking the app path. Reads `RELEASE_DEVELOPER_TEAM` env var:
     - If **set**: run `codesign --deep --force --options runtime --timestamp --sign "Developer ID Application: <TEAM_NAME> (<TEAM_ID>)" <app>` with the Hardened Runtime entitlement file
     - If **empty/unset**: run `codesign --deep --force --sign - <app>` (ad-hoc). Print a warning that the resulting build will require right-click-Open on first launch and **will not** auto-update via Sparkle without Gatekeeper assessment (Sparkle still verifies EdDSA, but macOS may refuse to swap an ad-hoc-signed app)
-- [ ] Add `scripts/notarize-dmg.sh` that runs **only if** all three of `RELEASE_DEVELOPER_TEAM`, `RELEASE_APPLE_ID`, `RELEASE_APPLE_PW` are present:
+- [x] Add `scripts/notarize-dmg.sh` that runs **only if** all three of `RELEASE_DEVELOPER_TEAM`, `RELEASE_APPLE_ID`, `RELEASE_APPLE_PW` are present:
     - `xcrun notarytool submit <dmg> --apple-id "$RELEASE_APPLE_ID" --password "$RELEASE_APPLE_PW" --team-id "$RELEASE_DEVELOPER_TEAM" --wait`
     - On success: `xcrun stapler staple <dmg>` then re-verify with `spctl -a -t open --context context:primary-signature <dmg>`
-- [ ] Document in `NOTES.md` the exact steps to get those three env vars from Apple (app-specific password generation, team ID lookup)
+- [x] Document in `NOTES.md` the exact steps to get those three env vars from Apple (app-specific password generation, team ID lookup)
 
 ### Task 6: Appcast XML generator + EdDSA signature
 

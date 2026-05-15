@@ -130,6 +130,46 @@ from the Sparkle 2.9.1 release. They are checked in as small native binaries
 (~200 KB each). `sign_update` reads the private key from Keychain to produce
 an EdDSA signature for a DMG file.
 
+## Code signing & notarization
+
+### Environment variables
+
+Three env vars control code signing and notarization. All are optional — if
+none are set, the build falls back to ad-hoc signing.
+
+| Variable | Purpose | Where to get it |
+|---|---|---|
+| `RELEASE_DEVELOPER_TEAM` | Apple Developer Team ID (e.g. `ABCDE12345`) | Apple Developer portal → Membership → Team ID |
+| `RELEASE_APPLE_ID` | Apple ID email used with `notarytool` | Your Apple Developer account email |
+| `RELEASE_APPLE_PW` | App-specific password for `notarytool` | [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords → Generate |
+
+### Getting an app-specific password
+
+1. Go to [appleid.apple.com](https://appleid.apple.com) and sign in.
+2. Navigate to **Sign-In and Security** → **App-Specific Passwords**.
+3. Click **Generate an app-specific password**, name it (e.g. "notarytool").
+4. Copy the generated password and use it as `RELEASE_APPLE_PW`.
+
+### Finding your Team ID
+
+1. Go to [developer.apple.com/account](https://developer.apple.com/account).
+2. Scroll to **Membership details**.
+3. Copy the **Team ID** (10-character alphanumeric string).
+
+### Signing tiers
+
+- **Tier A (ad-hoc, default)**: No env vars needed. Testers must right-click →
+  Open on first launch. Sparkle EdDSA verification still works.
+- **Tier B (Developer ID + notarization)**: Set all three env vars. The app
+  passes Gatekeeper without the right-click dance.
+
+### Scripts
+
+- `scripts/sign-app.sh <app-path>` — codesigns the `.app` bundle.
+- `scripts/notarize-dmg.sh <dmg-path>` — submits DMG to Apple notarization,
+  staples the ticket, and verifies Gatekeeper assessment. Exits cleanly if
+  env vars are missing.
+
 ## On-device AI runtime
 
 Thread briefs are generated on-device via **MLX** running **Gemma 4 E2B IT, 4-bit
