@@ -182,11 +182,11 @@ Two execution modes for the same build pipeline, gated by env vars.
 versions. It's a small RSS 2.0 file enumerating items with version,
 download URL, length, EdDSA signature, and release notes.
 
-- [ ] Add `scripts/generate-appcast.sh` that walks `dist/*.dmg`, for each emits an `<item>` block with `sparkle:version`, `sparkle:shortVersionString`, `enclosure url`, `enclosure length` (file size in bytes), `enclosure type="application/octet-stream"`, and `enclosure sparkle:edSignature="..."`. The EdDSA signature is produced by invoking `bin/sign_update` (also bundled with the Sparkle SPM checkout) on the DMG; it reads the private key from Keychain and prints the base64 signature to stdout
-- [ ] Release notes per item: read from `release-notes/<version>.html` (created by hand or by Task 8's release-prep helper). Inline the HTML inside `<description><![CDATA[ ... ]]></description>` or use `<sparkle:releaseNotesLink>` pointing at the GitHub release page
-- [ ] Pubdate: RFC 822 timestamp from the DMG mtime
-- [ ] Add `Makefile` with `make release` (build → test → DMG → sign → notarize if applicable → appcast) and `make appcast` (just regenerate)
-- [ ] Validate the output: `xmllint --noout dist/appcast.xml`
+- [x] Add `scripts/generate-appcast.sh` that walks `dist/*.dmg`, for each emits an `<item>` block with `sparkle:version`, `sparkle:shortVersionString`, `enclosure url`, `enclosure length` (file size in bytes), `enclosure type="application/octet-stream"`, and `enclosure sparkle:edSignature="..."`. The EdDSA signature is produced by invoking `bin/sign_update` (also bundled with the Sparkle SPM checkout) on the DMG; it reads the private key from Keychain and prints the base64 signature to stdout
+- [x] Release notes per item: read from `release-notes/<version>.html` (created by hand or by Task 8's release-prep helper). Inline the HTML inside `<description><![CDATA[ ... ]]></description>` or use `<sparkle:releaseNotesLink>` pointing at the GitHub release page
+- [x] Pubdate: RFC 822 timestamp from the DMG mtime
+- [x] Add `Makefile` with `make release` (build → test → DMG → sign → notarize if applicable → appcast) and `make appcast` (just regenerate)
+- [x] Validate the output: `xmllint --noout dist/appcast.xml`
 
 ### Task 7: GitHub Release workflow — `release.yml`
 
