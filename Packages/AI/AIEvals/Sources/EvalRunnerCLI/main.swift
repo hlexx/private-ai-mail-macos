@@ -39,9 +39,13 @@ let modelManager = ModelManager()
 if await modelManager.installedURL() != nil {
     fputs("Using real MLXBackend (model found)\n", stderr)
     service = ThreadBriefService.live(modelManager: modelManager)
-} else {
-    fputs("WARNING: Model not installed. Using stub service. Download the model first for real eval.\n", stderr)
+} else if ProcessInfo.processInfo.environment["RB_ALLOW_STUB_EVALS"] == "1" {
+    fputs("WARNING: Model not installed. Using stub service (RB_ALLOW_STUB_EVALS=1).\n", stderr)
     service = StubEvalService()
+} else {
+    fputs("ERROR: Model not installed. Download the model first for real eval.\n", stderr)
+    fputs("To run with stub data (not for baseline reports), set RB_ALLOW_STUB_EVALS=1\n", stderr)
+    exit(1)
 }
 
 let runner = EvalRunner()

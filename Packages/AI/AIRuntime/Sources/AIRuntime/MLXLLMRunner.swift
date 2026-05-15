@@ -48,7 +48,12 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         // used in Gemma 4's chat_template.jinja).
         // Seed the model response with "{" so it starts generating JSON immediately
         // (critical for small models like E2B 1.21B that otherwise emit thinking tokens).
-        let prompt = "<start_of_turn>user\n\(systemPrompt)\n\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n{"
+        //
+        // Sanitize inputs: strip Gemma control tokens so untrusted email content
+        // cannot escape the user turn (prompt injection mitigation).
+        let sanitizedSystem = Self.sanitizeForGemma(systemPrompt)
+        let sanitizedUser = Self.sanitizeForGemma(userPrompt)
+        let prompt = "<start_of_turn>user\n\(sanitizedSystem)\n\n\(sanitizedUser)<end_of_turn>\n<start_of_turn>model\n{"
         let tokens = try await container.perform { (_, tokenizer) in
             tokenizer.encode(text: prompt)
         }
@@ -85,6 +90,14 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         }
 
         return fullOutput
+    }
+
+    /// Strip Gemma control tokens from text to prevent prompt injection.
+    /// Untrusted content (email bodies) must not contain sequences that
+    /// the model interprets as structural turn boundaries.
+    private static func sanitizeForGemma(_ text: String) -> String {
+        text.replacingOccurrences(of: "<start_of_turn>", with: "")
+            .replacingOccurrences(of: "<end_of_turn>", with: "")
     }
 }
 
