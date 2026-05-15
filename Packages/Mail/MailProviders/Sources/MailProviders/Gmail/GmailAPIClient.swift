@@ -211,6 +211,7 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         )
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func handleRetryable<T: Decodable & Sendable>(
         url: URL,
         httpMethod: String,

@@ -181,6 +181,27 @@ struct GmailAPIClientTests {
         #expect(stored?.accessToken == "refreshed-token")
     }
 
+    // MARK: - sendMessage network isolation (exactly one request)
+
+    @Test func sendMessageIssuesExactlyOneRequest() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/send",
+            json: """
+            {"id": "iso001", "threadId": "tiso001", "labelIds": ["SENT"]}
+            """
+        )
+
+        let client = makeClient()
+        _ = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
+
+        let sendRequests = MockURLProtocol.requestLog.filter {
+            $0.url?.path.contains("/messages/send") == true
+        }
+        #expect(sendRequests.count == 1, "sendMessage must issue exactly one outbound request")
+        #expect(MockURLProtocol.requestLog.count == 1, "No implicit follow-ups or telemetry requests")
+    }
+
     // MARK: - sendMessage 429 → backoff → retry → 200
 
     @Test func sendMessageRateLimitedRetries() async throws {

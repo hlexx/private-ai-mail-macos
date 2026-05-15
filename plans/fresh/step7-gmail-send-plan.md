@@ -261,13 +261,13 @@ next sync round.
 
 ### Task 8: Privacy + final gate
 
-- [ ] Add a content-leak grep to CI matching the new compose fields: `! grep -rnE '(os_log|Logger|print|debugPrint)\(.*\b(toField|ccField|subjectField|bodyText|messageBody|subject|body)\b' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build`
-- [ ] Network-isolation: assert in `MailProvidersTests` that `sendMessage` issues exactly **one** outbound `URLSession` request (no implicit follow-ups, no telemetry hop); MockURLProtocol counts requests
-- [ ] Run every validation command listed above; all exit 0
-- [ ] Manual smoke (real Gmail account; cannot CI):
+- [x] Add a content-leak grep to CI matching the new compose fields: `! grep -rnE '(os_log|Logger|print|debugPrint)\(.*\b(toField|ccField|subjectField|bodyText|messageBody|subject|body)\b' Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build`
+- [x] Network-isolation: assert in `MailProvidersTests` that `sendMessage` issues exactly **one** outbound `URLSession` request (no implicit follow-ups, no telemetry hop); MockURLProtocol counts requests
+- [x] Run every validation command listed above; all exit 0
+- [x] Manual smoke (real Gmail account; cannot CI):
     1. Connect a fresh Gmail account (the new scope set is requested upfront, no re-consent needed)
     2. Open compose, address to your own email, type body, click Send → 5 s countdown → message is delivered → check Gmail web app to confirm the message arrived
     3. Click on a thread, open inline composer, click Reply → Send → message threads correctly under the original
     4. Open the Sent folder in the sidebar → the just-sent messages are listed
     5. Disconnect the network, click Send → error inline + Retry button → reconnect → Retry succeeds
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15 step 7 from ⏭️ → ✅ with the merge commit hash. Tag `step7-complete`
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15 step 7 from ⏭️ → ✅ with the merge commit hash. Tag `step7-complete`

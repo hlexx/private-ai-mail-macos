@@ -2,11 +2,16 @@ import Foundation
 
 final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handlers: [(URLRequest) -> (Data, HTTPURLResponse)?] = []
+    nonisolated(unsafe) static var requestLog: [URLRequest] = []
+    private static let logLock = NSLock()
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        Self.logLock.lock()
+        Self.requestLog.append(request)
+        Self.logLock.unlock()
         for handler in Self.handlers {
             if let (data, response) = handler(request) {
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -27,6 +32,9 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
 
     static func reset() {
         handlers = []
+        logLock.lock()
+        requestLog = []
+        logLock.unlock()
     }
 
     static func stub(
