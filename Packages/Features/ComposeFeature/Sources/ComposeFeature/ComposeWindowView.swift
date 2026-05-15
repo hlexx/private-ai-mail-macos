@@ -140,7 +140,8 @@ public struct ComposeWindowView: View {
                 accountEmail: viewModel.selectedAccountEmail ?? "",
                 sendState: viewModel.sendState,
                 onCancel: { viewModel.cancelSend() },
-                onRetrySend: { viewModel.retrySend() }
+                onRetrySend: { viewModel.retrySend() },
+                onReauthorize: { viewModel.reauthorizeAndRetry() }
             )
             .padding(.horizontal, RBSpace.s3)
             .padding(.vertical, RBSpace.s2)

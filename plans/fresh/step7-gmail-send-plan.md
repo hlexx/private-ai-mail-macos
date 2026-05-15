@@ -234,11 +234,11 @@ Users who connected before step 7 only granted read scopes. On their
 first send attempt the API returns 403. We need a smooth one-click
 re-auth path.
 
-- [ ] In `AuthKit.GmailOAuthClient`, add `func reauthorize(accountID: String, additionalScopes: [String]) async throws -> AuthTokens`. Implementation: same PKCE flow but pass `prompt=consent` so Google re-shows the consent screen; specifically requests the union of the existing scopes + the new ones
-- [ ] In the re-consent UI from Task 5, call `reauthorize` and on success replay the original send via `ComposeService.send(_:)`
-- [ ] Persist the updated refresh token back to `KeychainTokenStore`
-- [ ] Test in `AuthKitTests`: refresh request body contains all expected scopes (table-driven)
-- [ ] Manual smoke (must run after the rest of the plan is wired):
+- [x] In `AuthKit.GmailOAuthClient`, add `func reauthorize(accountID: String, additionalScopes: [String]) async throws -> AuthTokens`. Implementation: same PKCE flow but pass `prompt=consent` so Google re-shows the consent screen; specifically requests the union of the existing scopes + the new ones
+- [x] In the re-consent UI from Task 5, call `reauthorize` and on success replay the original send via `ComposeService.send(_:)`
+- [x] Persist the updated refresh token back to `KeychainTokenStore`
+- [x] Test in `AuthKitTests`: refresh request body contains all expected scopes (table-driven)
+- [x] Manual smoke (must run after the rest of the plan is wired):
     1. Connect a fresh Gmail account with the **old** scope set by temporarily reverting Task 1 (or use a feature flag to simulate)
     2. Restore Task 1
     3. Open compose, click Send → expect the re-consent inline row

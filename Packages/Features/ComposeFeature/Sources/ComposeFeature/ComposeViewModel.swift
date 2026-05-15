@@ -47,9 +47,14 @@ public final class ComposeViewModel {
     private var countdownTask: Task<Void, Never>?
     private var sendTask: Task<Void, Never>?
     private let composeServiceFactory: @Sendable (String) -> any ComposeService
+    private let reauthorizeHandler: @Sendable (String) async throws -> Void
 
-    public init(composeServiceFactory: @escaping @Sendable (String) -> any ComposeService) {
+    public init(
+        composeServiceFactory: @escaping @Sendable (String) -> any ComposeService,
+        reauthorizeHandler: @escaping @Sendable (String) async throws -> Void = { _ in }
+    ) {
         self.composeServiceFactory = composeServiceFactory
+        self.reauthorizeHandler = reauthorizeHandler
     }
 
     // MARK: - Reply Pre-fill
@@ -94,6 +99,23 @@ public final class ComposeViewModel {
     public func retrySend() {
         sendState = .idle
         requestSend()
+    }
+
+    public func reauthorizeAndRetry() {
+        guard let accountID = selectedAccountID else { return }
+        sendState = .sending
+        sendTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.reauthorizeHandler(accountID)
+                guard !Task.isCancelled else { return }
+                self.sendState = .idle
+                self.requestSend()
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.sendState = .failed(.send(underlying: error))
+            }
+        }
     }
 
     // MARK: - Private

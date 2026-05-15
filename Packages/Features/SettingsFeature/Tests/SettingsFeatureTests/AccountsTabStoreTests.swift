@@ -16,6 +16,10 @@ final class MockOAuthClient: OAuthClient, @unchecked Sendable {
         try authorizeResult.get()
     }
 
+    func reauthorize(additionalScopes: [String]) async throws -> TokenCredential {
+        try authorizeResult.get()
+    }
+
     func refresh(_ refreshToken: String) async throws -> TokenCredential {
         TokenCredential(
             accessToken: "refreshed",

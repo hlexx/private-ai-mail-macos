@@ -65,9 +65,19 @@ final class CompositionRoot {
 
         let capturedFactory = apiFactory
         let capturedDB = db
-        self.composeViewModel = ComposeViewModel(composeServiceFactory: { accountId in
-            LiveComposeService(api: capturedFactory(accountId), db: capturedDB)
-        })
+        let capturedOAuth = oauthClient
+        let capturedTokenStore = tokenStore
+        self.composeViewModel = ComposeViewModel(
+            composeServiceFactory: { accountId in
+                LiveComposeService(api: capturedFactory(accountId), db: capturedDB)
+            },
+            reauthorizeHandler: { @MainActor accountId in
+                let newCredential = try await capturedOAuth.reauthorize(
+                    additionalScopes: ["https://www.googleapis.com/auth/gmail.send"]
+                )
+                try capturedTokenStore.save(newCredential, for: accountId)
+            }
+        )
 
         self.accountsTabStore = AccountsTabStore(
             db: db,
