@@ -12,7 +12,11 @@ public struct BriefRail: View {
 
     public var body: some View {
         ScrollView {
-            if let brief = store.brief {
+            if store.isLoading {
+                loadingState
+            } else if store.error != nil {
+                errorState
+            } else if let brief = store.brief {
                 briefContent(brief)
             } else {
                 emptyState
@@ -109,21 +113,21 @@ public struct BriefRail: View {
     private var ctaRow: some View {
         HStack(spacing: 6) {
             Button {
-                // TODO(§15-step-4): wire to AIKit.draftReply()
+                // TODO(§15-step-7): wire to AIKit.draftReply()
             } label: {
                 Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
             }
             .buttonStyle(.rbPrimary)
 
             Button {
-                // TODO(§15-step-4): wire to snooze action
+                // TODO(§15-step-7): wire to snooze action
             } label: {
                 Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
             }
             .buttonStyle(.rbSecondary)
 
             Button {
-                // TODO(§15-step-4): wire to CRM logging
+                // TODO(§15-step-7): wire to CRM logging
             } label: {
                 Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
             }
@@ -131,6 +135,54 @@ public struct BriefRail: View {
 
             Spacer()
         }
+    }
+
+    // MARK: - Loading State
+
+    private var loadingState: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(String(localized: "brief.loading.eyebrow", defaultValue: "\u{25C6} THINKING LOCALLY"))
+                    .font(.rbMono(10.5))
+                    .tracking(1.47)
+                    .foregroundStyle(Color.rbSignalLocalAi)
+                Spacer()
+            }
+            .padding(.bottom, 4)
+
+            ProgressView()
+                .controlSize(.small)
+                .tint(Color.rbCitron500)
+        }
+        .padding(16)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.lg))
+    }
+
+    // MARK: - Error State
+
+    private var errorState: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                EyebrowLabel(String(localized: "brief.error.eyebrow", defaultValue: "Re:Box brief"))
+                Spacer()
+            }
+
+            Text(String(localized: "brief.error.message", defaultValue: "Brief generation failed"))
+                .font(.rbGeist(15, weight: .medium))
+                .foregroundStyle(Color.rbFg3)
+                .lineSpacing(3)
+
+            Button {
+                store.retry()
+            } label: {
+                Text(String(localized: "brief.error.retry", defaultValue: "Retry"))
+            }
+            .buttonStyle(.rbGhost)
+        }
+        .padding(16)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.lg))
     }
 
     // MARK: - Empty State
@@ -181,7 +233,17 @@ public struct BriefRail: View {
     let store = BriefStore()
     return BriefRail(store: store)
         .frame(width: RBLayout.briefRailWidth, height: 600)
-        .onAppear { store.loadBrief(forThreadID: "t1") }
+        .onAppear {
+            store.brief = ThreadBriefViewData(
+                summary: "Client approved pricing and asks for the contract draft by Friday.",
+                request: "Send contract draft",
+                deadline: "Fri \u{00B7} May 15",
+                risk: "Tight turnaround",
+                nextStep: "Draft reply with contract attached",
+                confidence: 0.88,
+                evidence: ["msg_1", "msg_3", "contract.pdf p.2"]
+            )
+        }
         .preferredColorScheme(.dark)
 }
 
@@ -189,7 +251,6 @@ public struct BriefRail: View {
     let store = BriefStore()
     return BriefRail(store: store)
         .frame(width: RBLayout.briefRailWidth, height: 600)
-        .onAppear { store.loadBrief(forThreadID: "t99") }
         .preferredColorScheme(.dark)
 }
 #endif

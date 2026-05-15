@@ -11,6 +11,7 @@ let package = Package(
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Mail/MailDomain"),
         .package(path: "../../Core/DesignSystem"),
+        .package(path: "../../Core/Persistence"),
     ],
     targets: [
         .target(
@@ -19,9 +20,10 @@ let package = Package(
                 "AIKit",
                 "MailDomain",
                 "DesignSystem",
+                "Persistence",
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "BriefFeatureTests", dependencies: ["BriefFeature"]),
+        .testTarget(name: "BriefFeatureTests", dependencies: ["BriefFeature", "AIKit", "Persistence"]),
     ]
 )

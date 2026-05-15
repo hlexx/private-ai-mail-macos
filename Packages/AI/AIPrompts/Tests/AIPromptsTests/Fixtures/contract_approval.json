@@ -1,0 +1,13 @@
+{
+  "summary": "Client approved pricing and requests contract draft by Friday to meet legal window.",
+  "request": "Send the contract draft by Friday EOD.",
+  "deadline": "Friday EOD",
+  "risk": "Missing the legal window if draft is not sent by Friday.",
+  "nextStep": "Prepare and send the contract draft before Friday end of day.",
+  "evidence": [
+    "Pricing works.",
+    "Can you send the contract draft by Friday so we can sign next week?",
+    "Friday EOD would be ideal, otherwise we miss the legal window."
+  ],
+  "confidence": 0.92
+}

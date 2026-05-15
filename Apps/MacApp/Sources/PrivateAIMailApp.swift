@@ -9,27 +9,39 @@ struct PrivateAIMailApp: App {
     @Environment(\.openWindow) private var openWindow
 
     private let composition = CompositionRoot()
+    @State private var setupComplete = false
 
     var body: some Scene {
         WindowGroup(id: "main") {
-            MainScene(composition: composition)
-                .frame(minWidth: 1000, minHeight: 640)
-                .task { composition.resumeExistingAccounts() }
-                .rbTheme()
-                .onAppear { configureMainWindow() }
-                .onChange(of: composition.showCompose) { _, show in
-                    if show {
-                        openWindow(id: "compose")
-                        composition.showCompose = false
-                    }
+            Group {
+                if setupComplete {
+                    MainScene(composition: composition)
+                        .frame(minWidth: 1000, minHeight: 640)
+                        .task { composition.resumeExistingAccounts() }
+                        .onAppear { configureMainWindow() }
+                        .onChange(of: composition.showCompose) { _, show in
+                            if show {
+                                openWindow(id: "compose")
+                                composition.showCompose = false
+                            }
+                        }
+                } else {
+                    ModelSetupScene(
+                        modelManager: composition.modelManager,
+                        onComplete: { setupComplete = true }
+                    )
+                    .frame(minWidth: 480, minHeight: 360)
                 }
+            }
+            .task {
+                let installed = await composition.modelManager.installedURL()
+                if installed != nil {
+                    setupComplete = true
+                }
+            }
+            .rbTheme()
         }
         .windowStyle(.hiddenTitleBar)
-        // No `.windowToolbarStyle(.unifiedCompact(...))`: we draw our own
-        // 56pt RBToolbar directly in the content view (per design's `.rb-toolbar`).
-        // Adding a SwiftUI window toolbar style on top reserves another
-        // ~28pt NSToolbar strip above the content and the chrome ends up
-        // visibly twice as tall as designed.
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) {

@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "AIEvals", targets: ["AIEvals"]),
+        .executable(name: "EvalRunnerCLI", targets: ["EvalRunnerCLI"]),
     ],
     dependencies: [
         .package(path: "../AIKit"),
@@ -18,6 +19,10 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "AIEvalsTests", dependencies: ["AIEvals"]),
+        .executableTarget(
+            name: "EvalRunnerCLI",
+            dependencies: ["AIEvals", "AIKit"]
+        ),
+        .testTarget(name: "AIEvalsTests", dependencies: ["AIEvals", "AIKit"]),
     ]
 )

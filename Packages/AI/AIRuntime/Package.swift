@@ -11,6 +11,7 @@ let package = Package(
         .package(path: "../../Core/AppFoundation"),
         .package(path: "../AIPrompts"),
         .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", branch: "main"),
+        .package(url: "https://github.com/ml-explore/mlx-swift.git", from: "0.21.0"),
     ],
     targets: [
         .target(
@@ -20,6 +21,7 @@ let package = Package(
                 "AIPrompts",
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+                .product(name: "MLX", package: "mlx-swift"),
             ],
             resources: [.process("Resources")]
         ),

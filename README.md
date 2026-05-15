@@ -10,8 +10,10 @@ this codebase are documented in
 
 ## Status
 
-**Skeleton iteration.** Hello-world MacApp shell, 24 empty Swift packages with
-working dependency graph. No real mail sync, no AI calls, no composer yet.
+**Step 4 complete.** Gmail read-only sync and on-device AI thread briefs via
+MLX + Gemma are merged. The app generates per-thread briefs locally on Apple
+Silicon with zero network traffic at inference time. First launch downloads
+the model (~2.1 GB).
 
 ## Requirements
 
@@ -20,6 +22,8 @@ working dependency graph. No real mail sync, no AI calls, no composer yet.
 - Apple Silicon
 - Xcode 16+ / Swift 6
 - [Tuist](https://docs.tuist.dev) 4.x (`brew install tuist`)
+- Metal Toolchain for local builds: `sudo xcodebuild -downloadComponent MetalToolchain`
+- ~2.1 GB disk space for on-device AI model (downloaded automatically on first launch)
 
 ## Quickstart
 
