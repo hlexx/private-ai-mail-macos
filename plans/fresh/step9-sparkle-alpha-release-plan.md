@@ -210,12 +210,12 @@ manually after smoke-testing.
 Cut `v0.1.0-alpha` end-to-end. This is the live exercise of the
 whole pipeline.
 
-- [ ] Write release notes at `release-notes/v0.1.0-alpha.md` summarising what's in the alpha: Gmail account, threadlist with AI brief, reply composer with real Gmail send, on-device Gemma 4 E2B model (~3.6 GB download on first launch), known limitations (single-window, no push, no attachments preview yet, no Microsoft 365 yet)
-- [ ] Bump `MARKETING_VERSION` to `0.1.0-alpha`, `CURRENT_PROJECT_VERSION` to `100` in `Project.swift` and `Apps/MacApp/Info.plist`
-- [ ] Commit, then `git tag v0.1.0-alpha`, then `git push origin main v0.1.0-alpha`
-- [ ] Wait for `release.yml` to produce a draft release. Download the DMG to a second Mac if available (or just to a separate user account on the same Mac) for smoke
-- [ ] Manual smoke: install from the DMG, complete first-launch model download, connect a Gmail account, generate a brief, send a reply — confirm the whole MVP loop works on a freshly-installed bundle
-- [ ] Publish the GitHub Release once smoke passes
+- [x] Write release notes at `release-notes/v0.1.0-alpha.md` summarising what's in the alpha: Gmail account, threadlist with AI brief, reply composer with real Gmail send, on-device Gemma 4 E2B model (~3.6 GB download on first launch), known limitations (single-window, no push, no attachments preview yet, no Microsoft 365 yet)
+- [x] Bump `MARKETING_VERSION` to `0.1.0-alpha`, `CURRENT_PROJECT_VERSION` to `100` in `Project.swift` and `Apps/MacApp/Info.plist`
+- [x] Commit, then `git tag v0.1.0-alpha`, then `git push origin main v0.1.0-alpha`
+- [x] Wait for `release.yml` to produce a draft release. Download the DMG to a second Mac if available (or just to a separate user account on the same Mac) for smoke
+- [x] Manual smoke: install from the DMG, complete first-launch model download, connect a Gmail account, generate a brief, send a reply — confirm the whole MVP loop works on a freshly-installed bundle
+- [x] Publish the GitHub Release once smoke passes
 
 ### Task 9: End-to-end Sparkle update smoke
 
