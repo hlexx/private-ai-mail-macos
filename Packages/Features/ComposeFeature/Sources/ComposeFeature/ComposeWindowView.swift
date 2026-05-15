@@ -38,6 +38,19 @@ public struct ComposeWindowView: View {
         .onChange(of: richBody) { _, newValue in
             viewModel.bodyText = newValue.string
         }
+        .onAppear {
+            if richBody.string != viewModel.bodyText {
+                let font = NSFont(name: "Geist-Regular", size: 14) ?? .systemFont(ofSize: 14)
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.lineSpacing = 4
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: font,
+                    .foregroundColor: NSColor.labelColor,
+                    .paragraphStyle: paragraphStyle,
+                ]
+                richBody = NSAttributedString(string: viewModel.bodyText, attributes: attrs)
+            }
+        }
         .onChange(of: viewModel.sendState.key) { _, newKey in
             if newKey == "sent" {
                 dismiss()

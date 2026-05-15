@@ -126,6 +126,7 @@ public final class ComposeViewModel {
     public func reauthorizeAndRetry() {
         guard let accountID = selectedAccountID else { return }
         sendState = .sending
+        sendTask?.cancel()
         sendTask = Task { [weak self] in
             guard let self else { return }
             do {

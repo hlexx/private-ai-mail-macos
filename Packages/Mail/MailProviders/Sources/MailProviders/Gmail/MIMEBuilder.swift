@@ -33,16 +33,17 @@ public enum MIMEBuilder {
         lines.append("Subject: \(encodeHeaderValue(message.subject))")
 
         if let inReplyTo = message.inReplyTo {
-            lines.append("In-Reply-To: \(inReplyTo)")
+            let sanitizedReplyTo = sanitizeHeaderValue(inReplyTo)
+            lines.append("In-Reply-To: \(sanitizedReplyTo)")
             var refs = message.references
             if !refs.contains(inReplyTo) {
                 refs.append(inReplyTo)
             }
             if !refs.isEmpty {
-                lines.append("References: \(refs.joined(separator: " "))")
+                lines.append("References: \(refs.map(sanitizeHeaderValue).joined(separator: " "))")
             }
         } else if !message.references.isEmpty {
-            lines.append("References: \(message.references.joined(separator: " "))")
+            lines.append("References: \(message.references.map(sanitizeHeaderValue).joined(separator: " "))")
         }
 
         lines.append("MIME-Version: 1.0")
@@ -58,20 +59,25 @@ public enum MIMEBuilder {
 
     private static let rfc5322Specials = CharacterSet(charactersIn: "()<>[]:;@\\,\"")
 
+    static func sanitizeHeaderValue(_ value: String) -> String {
+        value.filter { $0 != "\r" && $0 != "\n" }
+    }
+
     static func formatAddress(_ addr: Address) -> String {
+        let email = sanitizeHeaderValue(addr.email)
         guard let name = addr.name, !name.isEmpty else {
-            return addr.email
+            return email
         }
         if !name.allSatisfy({ $0.isASCII && $0 != "\r" && $0 != "\n" }) {
             let encoded = encodeHeaderValue(name)
-            return "\(encoded) <\(addr.email)>"
+            return "\(encoded) <\(email)>"
         }
         if name.unicodeScalars.contains(where: { rfc5322Specials.contains($0) }) {
             let quoted = name.replacingOccurrences(of: "\\", with: "\\\\")
                              .replacingOccurrences(of: "\"", with: "\\\"")
-            return "\"\(quoted)\" <\(addr.email)>"
+            return "\"\(quoted)\" <\(email)>"
         }
-        return "\(name) <\(addr.email)>"
+        return "\(name) <\(email)>"
     }
 
     // MARK: - RFC 2047 encoding
