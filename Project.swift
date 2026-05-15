@@ -87,7 +87,9 @@ let project = Project(
                 "Apps/MacApp/Resources/Fonts/**",
             ],
             entitlements: .file(path: "Apps/MacApp/PrivateAIMail.entitlements"),
-            dependencies: appFeatureDeps,
+            dependencies: appFeatureDeps + [
+                .xcframework(path: "Frameworks/Sparkle.xcframework"),
+            ],
             settings: .settings(
                 base: [
                     "CODE_SIGN_STYLE": "Automatic",

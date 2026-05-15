@@ -116,14 +116,14 @@ Sparkle 2 ships as a SwiftPM package. For sandboxed apps it requires
 inside the `.app`. Both ship with the Sparkle SPM target — we just
 have to opt in via Info.plist keys and link the target.
 
-- [ ] Add `Apps/MacApp/Project.swift` packages section: `.package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0")`. Add `.product(name: "Sparkle", package: "Sparkle")` to MacApp target dependencies. Pin to the latest 2.x tag at execution time
-- [ ] Add to `Apps/MacApp/Info.plist`:
+- [x] Add `Apps/MacApp/Project.swift` packages section: `.package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0")`. Add `.product(name: "Sparkle", package: "Sparkle")` to MacApp target dependencies. Pin to the latest 2.x tag at execution time
+- [x] Add to `Apps/MacApp/Info.plist`:
     - `SUEnableInstallerLauncherService` = `true` (BOOL)
     - `SUEnableDownloaderService` = `true` (BOOL)
     - `SUFeedURL` = `https://github.com/hlexx/private-ai-mail-macos/releases/latest/download/appcast.xml` (STRING; the exact `hlexx/private-ai-mail-macos` path is verified in Task 7)
     - `SUPublicEDKey` = leave empty STRING for now; populated in Task 2 after key generation
     - `SUScheduledCheckInterval` = `86400` (integer; daily check)
-- [ ] Run `tuist generate --no-open` then `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`. Confirm build succeeds and `find` shows `Installer.xpc` and `Downloader.xpc` inside the built `.app`'s `Contents/XPCServices/`
+- [x] Run `tuist generate --no-open` then `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`. Confirm build succeeds and `find` shows `Installer.xpc` and `Downloader.xpc` inside the built `.app`'s `Contents/XPCServices/`
 
 ### Task 2: Generate EdDSA signing keys + ignore private key
 
