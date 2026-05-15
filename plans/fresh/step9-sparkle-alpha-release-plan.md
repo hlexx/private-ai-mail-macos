@@ -229,8 +229,8 @@ Verify the auto-update path works against the live appcast.
 
 ### Task 10: Final gate + docs
 
-- [ ] Update `README.md`: add an **Install** section with the GitHub Releases link, the right-click-Open instruction (for unsigned alphas), the disk-space note (~3.6 GB extra for the model), and the macOS 15+ Apple Silicon requirement
-- [ ] Update `NOTES.md` with a "Releases" section covering: how to cut a release locally, what env vars enable signing/notarization, where the Sparkle keys live, how to roll the key if needed
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15 step 9 from ⏭️ → ✅ with the merge commit hash + the v0.1.0-alpha release URL
-- [ ] Run every command under `## Validation Commands` above; every one exits 0
-- [ ] Tag the merge commit `step9-complete`
+- [x] Update `README.md`: add an **Install** section with the GitHub Releases link, the right-click-Open instruction (for unsigned alphas), the disk-space note (~3.6 GB extra for the model), and the macOS 15+ Apple Silicon requirement
+- [x] Update `NOTES.md` with a "Releases" section covering: how to cut a release locally, what env vars enable signing/notarization, where the Sparkle keys live, how to roll the key if needed
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15 step 9 from ⏭️ → ✅ with the merge commit hash + the v0.1.0-alpha release URL
+- [x] Run every command under `## Validation Commands` above; every one exits 0
+- [x] Tag the merge commit `step9-complete`

@@ -388,3 +388,61 @@ Record each smoke test result here:
 8. Select a thread to see its messages in the right pane.
 9. Press Cmd+R to trigger incremental sync — new messages should
    appear without restarting the app.
+
+## Releases
+
+### How to cut a release locally
+
+1. Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Project.swift`.
+2. Write release notes in `release-notes/v<version>.md`.
+3. Commit and tag:
+   ```bash
+   git add -A && git commit -m "prepare v<version>"
+   git tag v<version>
+   git push origin main v<version>
+   ```
+4. Build the release on the maintainer's machine (where the Sparkle
+   EdDSA key is in the Keychain):
+   ```bash
+   make release
+   ```
+   This runs: generate -> build -> test -> sign -> DMG -> notarize (if
+   env vars present) -> appcast.
+5. Create a GitHub Release:
+   ```bash
+   gh release create v<version> --draft \
+     --title "v<version>" \
+     --notes-file release-notes/v<version>.md \
+     dist/PrivateAIMail-<version>.dmg \
+     dist/PrivateAIMail-<version>.sha256 \
+     dist/appcast.xml
+   ```
+6. Smoke-test the DMG, then publish the release.
+
+### Signing and notarization env vars
+
+| Variable | Purpose |
+|---|---|
+| `RELEASE_DEVELOPER_TEAM` | Apple Developer Team ID for codesigning |
+| `RELEASE_APPLE_ID` | Apple ID email for `notarytool` |
+| `RELEASE_APPLE_PW` | App-specific password for `notarytool` |
+
+Without these, the build produces an ad-hoc-signed DMG (Tier A). With
+all three set, the build is Developer ID signed and notarized (Tier B).
+
+See "Code signing & notarization" section above for details on obtaining
+these values.
+
+### Where the Sparkle keys live
+
+- **Private key**: macOS login Keychain (account: `ed25519`, service:
+  `https://sparkle-project.org`). See "Sparkle EdDSA key management"
+  section above.
+- **Public key**: `Apps/MacApp/Info.plist` under `SUPublicEDKey`.
+
+### Key rotation
+
+See the "Sparkle EdDSA key management > Key rotation" section above.
+In short: ship a transitional release signed with the old key that
+contains the new public key, then switch to the new key for all
+subsequent releases.

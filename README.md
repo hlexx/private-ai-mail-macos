@@ -8,12 +8,30 @@ Product strategy, threat model, and roadmap live in the spec repo: see
 this codebase are documented in
 [`EMAIL_ALF/14_macos_app_design.md`](../EMAIL_ALF/14_macos_app_design.md) (v0.2).
 
+## Install
+
+Download the latest `.dmg` from
+[GitHub Releases](https://github.com/hlexx/private-ai-mail-macos/releases).
+
+1. Mount the DMG and drag **PrivateAIMail.app** to `/Applications`.
+2. On first launch, right-click the app and choose **Open** (required for
+   unsigned alpha builds; macOS blocks unsigned apps on double-click).
+3. The app downloads the on-device AI model (~3.6 GB) on first launch.
+   This is a one-time download stored in
+   `~/Library/Application Support/PrivateAIMail/models/`.
+4. Subsequent updates are delivered automatically via Sparkle. Check
+   manually via the app menu: **PrivateAIMail > Check for Updates...**
+
+**Requirements:** macOS 15+, Apple Silicon (M1 or later), ~4 GB free disk
+space for the app + AI model.
+
 ## Status
 
-**Step 4 complete.** Gmail read-only sync and on-device AI thread briefs via
-MLX + Gemma are merged. The app generates per-thread briefs locally on Apple
-Silicon with zero network traffic at inference time. First launch downloads
-the model (~3.6 GB).
+**Step 9 complete.** First installable alpha (v0.1.0-alpha) released with
+Sparkle auto-update support. Gmail read-only sync, on-device AI thread
+briefs via MLX + Gemma, reply composer with real Gmail send. The app
+generates per-thread briefs locally on Apple Silicon with zero network
+traffic at inference time.
 
 ## Requirements
 
