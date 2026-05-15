@@ -160,10 +160,10 @@ trade-off note above — don't ship a 30-second-per-brief experience.
 the gemma4 architecture with weight loading, tokenization, and
 generation utilities. Add it to AIRuntime so we can drop the stub.
 
-- [ ] In `Packages/AI/AIRuntime/Package.swift`, add `.package(url: "https://github.com/ml-explore/mlx-swift-examples.git", branch: "main")`. Pin to a specific commit hash after Task 6 stabilises (don't keep `branch: "main"` long-term — capture the resolved commit and rewrite as `revision:`)
-- [ ] Add the target dependency: `.product(name: "MLXLLM", package: "mlx-swift-examples")` and `.product(name: "MLXLMCommon", package: "mlx-swift-examples")`
-- [ ] Run `tuist generate --no-open` so the SPM graph picks up the new dep
-- [ ] Run `cd Packages/AI/AIRuntime && swift build` and confirm both new modules resolve and compile
+- [x] In `Packages/AI/AIRuntime/Package.swift`, add `.package(url: "https://github.com/ml-explore/mlx-swift-lm.git", branch: "main")` (corrected: MLXLLM lives in mlx-swift-lm, not mlx-swift-examples). Pin to a specific commit hash after Task 6 stabilises (don't keep `branch: "main"` long-term — capture the resolved commit and rewrite as `revision:`)
+- [x] Add the target dependency: `.product(name: "MLXLLM", package: "mlx-swift-lm")` and `.product(name: "MLXLMCommon", package: "mlx-swift-lm")`
+- [x] Run `tuist generate --no-open` so the SPM graph picks up the new dep
+- [x] Run `cd Packages/AI/AIRuntime && swift build` and confirm both new modules resolve and compile
 
 ### Task 2: Update GemmaModelSpec to match gemma-4-e4b-it-4bit
 
