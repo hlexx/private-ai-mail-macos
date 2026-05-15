@@ -124,6 +124,7 @@ public final class ComposeViewModel {
     }
 
     public func reauthorizeAndRetry() {
+        guard case .failed(.needsReconsent) = sendState else { return }
         guard let accountID = selectedAccountID else { return }
         sendState = .sending
         sendTask?.cancel()
@@ -185,19 +186,49 @@ public final class ComposeViewModel {
     }
 
     private func parseAddresses(_ raw: String) -> [Address] {
-        raw.split(separator: ",")
+        splitAddresses(raw)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
             .map { chunk -> Address in
-                let str = String(chunk)
-                if let open = str.firstIndex(of: "<"),
-                   let close = str.firstIndex(of: ">") {
-                    let email = String(str[str.index(after: open)..<close])
-                    let name = str[str.startIndex..<open].trimmingCharacters(in: .whitespaces)
-                    return Address(name: name.isEmpty ? nil : name, email: email)
+                if let open = chunk.firstIndex(of: "<"),
+                   let close = chunk.firstIndex(of: ">") {
+                    let email = String(chunk[chunk.index(after: open)..<close])
+                    let name = chunk[chunk.startIndex..<open].trimmingCharacters(in: .whitespacesAndNewlines)
+                    let cleanName = name.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                    return Address(name: cleanName.isEmpty ? nil : cleanName, email: email)
                 }
-                return Address(name: nil, email: str)
+                return Address(name: nil, email: chunk)
             }
+    }
+
+    /// Split on commas, respecting quoted strings and angle brackets.
+    private func splitAddresses(_ raw: String) -> [String] {
+        var results: [String] = []
+        var current = ""
+        var inQuotes = false
+        var inAngle = false
+
+        for ch in raw {
+            if ch == "\"" && !inAngle {
+                inQuotes.toggle()
+                current.append(ch)
+            } else if ch == "<" && !inQuotes {
+                inAngle = true
+                current.append(ch)
+            } else if ch == ">" && !inQuotes {
+                inAngle = false
+                current.append(ch)
+            } else if ch == "," && !inQuotes && !inAngle {
+                results.append(current)
+                current = ""
+            } else {
+                current.append(ch)
+            }
+        }
+        if !current.isEmpty {
+            results.append(current)
+        }
+        return results
     }
 
     public nonisolated static func deduplicateRePrefix(_ subject: String) -> String {
