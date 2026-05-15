@@ -2,6 +2,7 @@ import AIKit
 import AIRuntime
 import AuthKit
 import BriefFeature
+import ComposeFeature
 import InboxFeature
 import MailProviders
 import MailSync
@@ -27,6 +28,7 @@ final class CompositionRoot {
 
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
+    private let apiFactory: @Sendable (String) -> any GmailAPI
 
     init() {
         let path = Self.defaultDBPath()
@@ -44,7 +46,7 @@ final class CompositionRoot {
         let oauthClient: any OAuthClient = GmailOAuthClient()
         self.oauthClient = oauthClient
 
-        let apiFactory: @Sendable (String) -> any GmailAPI = { [tokenStore, oauthClient] accountId in
+        self.apiFactory = { [tokenStore, oauthClient] accountId in
             let credential = (try? tokenStore.load(for: accountId)) ?? TokenCredential(
                 accessToken: "",
                 refreshToken: "",
@@ -99,6 +101,10 @@ final class CompositionRoot {
         Task {
             await syncSupervisor.refresh(accountId: accountId)
         }
+    }
+
+    func makeComposeService(accountId: String) -> any ComposeService {
+        LiveComposeService(api: apiFactory(accountId), db: db)
     }
 
     func refreshAllAccounts() {

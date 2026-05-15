@@ -188,11 +188,11 @@ call `sendMessage`, insert local record. Lives in a new file inside
 `ComposeFeature` so feature-package contains the workflow; the
 service depends on `GmailAPI` (protocol) and `AppDatabase`.
 
-- [ ] Add `Packages/Features/ComposeFeature/Sources/ComposeFeature/ComposeService.swift` exposing `public protocol ComposeService: Sendable` with `func send(_ draft: ComposeDraft) async throws -> SentEcho`
-- [ ] `ComposeDraft` struct: `accountID: String`, `from: Address`, `to: [Address]`, `cc: [Address]`, `bcc: [Address]`, `subject: String`, `body: String`, `replyContext: ReplyContext?` (Sendable)
-- [ ] `ReplyContext` struct: `threadID: String`, `inReplyToMessageID: String`, `referencesChain: [String]`
-- [ ] `SentEcho`: the values needed to insert the local row — `messageID`, `threadID`, `sentAt`
-- [ ] `LiveComposeService` implementation:
+- [x] Add `Packages/Features/ComposeFeature/Sources/ComposeFeature/ComposeService.swift` exposing `public protocol ComposeService: Sendable` with `func send(_ draft: ComposeDraft) async throws -> SentEcho`
+- [x] `ComposeDraft` struct: `accountID: String`, `from: Address`, `to: [Address]`, `cc: [Address]`, `bcc: [Address]`, `subject: String`, `body: String`, `replyContext: ReplyContext?` (Sendable)
+- [x] `ReplyContext` struct: `threadID: String`, `inReplyToMessageID: String`, `referencesChain: [String]`
+- [x] `SentEcho`: the values needed to insert the local row — `messageID`, `threadID`, `sentAt`
+- [x] `LiveComposeService` implementation:
     1. Validate `to.count >= 1`; else throw `ComposeError.noRecipients`
     2. Build `OutgoingMessage` from draft + reply context
     3. `let raw = try MIMEBuilder.encode(outgoing)`
@@ -200,14 +200,14 @@ service depends on `GmailAPI` (protocol) and `AppDatabase`.
     5. On `GmailAPIError.insufficientScope` → throw `ComposeError.needsReconsent` (caller surfaces re-auth UI)
     6. Insert a `MessageRecord` via `@DatabaseActor` write: `flags |= sentByMe`, `from_addr = account.email`, etc.
     7. Return `SentEcho`
-- [ ] Add `MockComposeService` (in `Tests/ComposeFeatureTests/Support/`) for view tests
-- [ ] Wire `LiveComposeService` into `CompositionRoot` — instantiate one per active account, reuse the existing `GmailAPIClient` factory
-- [ ] Unit tests in `Tests/ComposeFeatureTests/ComposeServiceTests.swift`:
+- [x] Add `MockComposeService` (in `Tests/ComposeFeatureTests/Support/`) for view tests
+- [x] Wire `LiveComposeService` into `CompositionRoot` — instantiate one per active account, reuse the existing `GmailAPIClient` factory
+- [x] Unit tests in `Tests/ComposeFeatureTests/ComposeServiceTests.swift`:
     - Happy path: send → DB has the new row → SentEcho values match
     - `insufficientScope` from API → throws `needsReconsent`
     - Empty `to:` → throws `noRecipients`
     - Generic API error → wraps as `ComposeError.send(underlying:)`
-- [ ] Run `cd Packages/Features/ComposeFeature && swift test`
+- [x] Run `cd Packages/Features/ComposeFeature && swift test`
 
 ### Task 5: Compose UI — approval row + Send wiring + reply-prefill
 
