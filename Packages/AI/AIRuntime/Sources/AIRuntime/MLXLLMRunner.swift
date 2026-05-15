@@ -98,6 +98,10 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
     private static func sanitizeForGemma(_ text: String) -> String {
         text.replacingOccurrences(of: "<start_of_turn>", with: "")
             .replacingOccurrences(of: "<end_of_turn>", with: "")
+            .replacingOccurrences(of: "<turn|>", with: "")
+            .replacingOccurrences(of: "<bos>", with: "")
+            .replacingOccurrences(of: "<eos>", with: "")
+            .replacingOccurrences(of: "<pad>", with: "")
     }
 }
 
