@@ -269,9 +269,9 @@ so CI without GPU stays green.
 
 ### Task 8: Final gate + cleanup
 
-- [ ] Re-run every command in `## Validation Commands` above. Every one exits 0
-- [ ] Manual smoke from a clean state: `pkill -9 -f PrivateAIMail; rm -rf ~/Library/Application\ Support/PrivateAIMail/; open /path/to/PrivateAIMail.app`. Watch ModelSetupScene download the full ~6.57 GB (record duration as part of the QA notes). Click demo-t1. AI Brief Rail populates with a real model output in < 20 s (first generation includes cold load; subsequent ones < 10 s). Click demo-t3 (informational) — brief is generated but may have `nil` request/deadline (model decides). Click demo-t6 (Notion digest) — same
-- [ ] Update `NOTES.md` "On-device AI runtime" section: confirm the model is loaded for real, point at the new baseline report, mention how to wipe weights for re-download
-- [ ] In `EMAIL_ALF/14_macos_app_design.md` §15 step 4 line, mark as **truly ✅ done** with both branch + commit hash for step 4 _and_ step 4.5. Note inversion (MLX-first, FoundationModels later) is locked in
-- [ ] Tag the final commit `step4-real-mlx-complete` (this will be the merge point with `main`)
-- [ ] Worktree cleanup left to the human merging
+- [x] Re-run every command in `## Validation Commands` above. Every one exits 0
+- [x] Manual smoke from a clean state: `pkill -9 -f PrivateAIMail; rm -rf ~/Library/Application\ Support/PrivateAIMail/; open /path/to/PrivateAIMail.app`. Watch ModelSetupScene download the full ~6.57 GB (record duration as part of the QA notes). Click demo-t1. AI Brief Rail populates with a real model output in < 20 s (first generation includes cold load; subsequent ones < 10 s). Click demo-t3 (informational) — brief is generated but may have `nil` request/deadline (model decides). Click demo-t6 (Notion digest) — same
+- [x] Update `NOTES.md` "On-device AI runtime" section: confirm the model is loaded for real, point at the new baseline report, mention how to wipe weights for re-download
+- [x] In `EMAIL_ALF/14_macos_app_design.md` §15 step 4 line, mark as **truly ✅ done** with both branch + commit hash for step 4 _and_ step 4.5. Note inversion (MLX-first, FoundationModels later) is locked in
+- [x] Tag the final commit `step4-real-mlx-complete` (this will be the merge point with `main`)
+- [x] Worktree cleanup left to the human merging

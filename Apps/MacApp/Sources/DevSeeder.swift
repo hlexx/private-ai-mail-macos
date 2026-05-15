@@ -1,3 +1,4 @@
+// swiftlint:disable type_body_length function_body_length
 #if DEBUG
 
 import Foundation
@@ -331,5 +332,6 @@ enum DevSeeder {
         }
     }
 }
+// swiftlint:enable type_body_length function_body_length
 
 #endif

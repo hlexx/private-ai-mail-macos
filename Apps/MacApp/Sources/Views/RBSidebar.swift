@@ -122,11 +122,11 @@ struct RBSidebar: View {
         isCollapsed: Bool,
         onToggle: @escaping () -> Void
     ) -> some View {
-        Button(action: {
+        Button {
             withAnimation(.easeOut(duration: RBDuration.d1)) {
                 onToggle()
             }
-        }) {
+        } label: {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .semibold))

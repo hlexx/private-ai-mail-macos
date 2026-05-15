@@ -144,8 +144,9 @@ public enum ThreadBriefParser {
                 continue
             }
             if inString { continue }
-            if ch == "{" { depth += 1 }
-            else if ch == "}" {
+            if ch == "{" {
+                depth += 1
+            } else if ch == "}" {
                 depth -= 1
                 if depth == 0 {
                     matchEnd = i

@@ -49,7 +49,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         // Seed the model response with "{" so it starts generating JSON immediately
         // (critical for small models like E2B 1.21B that otherwise emit thinking tokens).
         let prompt = "<start_of_turn>user\n\(systemPrompt)\n\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n{"
-        let tokens = try await container.perform { (model, tokenizer) in
+        let tokens = try await container.perform { (_, tokenizer) in
             tokenizer.encode(text: prompt)
         }
         let input = LMInput(tokens: MLXArray(tokens))
@@ -139,7 +139,6 @@ struct TransformersTokenizerLoader: TokenizerLoader {
 
 enum MLXLLMRunnerError: Error, Sendable {
     case modelNotLoaded
-    case notImplemented
     case weightLoadFailed(String)
     case tokeniserMissing
     case nonJSONOutput(String)
