@@ -2,6 +2,13 @@ import AIPrompts
 import Foundation
 import os
 
+/// Records latency samples from MLXBackend inference calls.
+/// Conform to this protocol and inject into MLXBackend to capture
+/// real timing data programmatically (e.g. from AIEvals).
+public protocol LatencyRecorder: Sendable {
+    func record(label: String, duration: Duration)
+}
+
 /// On-device LLM backend for generating thread briefs via MLX + Gemma.
 ///
 /// Public API uses AIPrompts types (not AIKit) to avoid circular dependencies.
@@ -11,6 +18,7 @@ public actor MLXBackend {
     private let runner: any LLMRunner
     private let maxOutputTokens: Int
     private let maxRetries: Int
+    private let latencyRecorder: (any LatencyRecorder)?
 
     private var isModelLoaded = false
 
@@ -22,24 +30,28 @@ public actor MLXBackend {
     public init(
         modelManager: ModelManager,
         maxOutputTokens: Int = 512,
-        maxRetries: Int = 1
+        maxRetries: Int = 1,
+        latencyRecorder: (any LatencyRecorder)? = nil
     ) {
         self.modelManager = modelManager
         self.runner = MLXLLMRunner()
         self.maxOutputTokens = maxOutputTokens
         self.maxRetries = maxRetries
+        self.latencyRecorder = latencyRecorder
     }
 
     init(
         modelManager: ModelManager,
         runner: any LLMRunner,
         maxOutputTokens: Int = 512,
-        maxRetries: Int = 1
+        maxRetries: Int = 1,
+        latencyRecorder: (any LatencyRecorder)? = nil
     ) {
         self.modelManager = modelManager
         self.runner = runner
         self.maxOutputTokens = maxOutputTokens
         self.maxRetries = maxRetries
+        self.latencyRecorder = latencyRecorder
     }
 
     // MARK: - Public API
@@ -79,6 +91,7 @@ public actor MLXBackend {
                 Self.logger.info(
                     "Thread brief generated in \(elapsed) (attempt \(attempt + 1))"
                 )
+                latencyRecorder?.record(label: "threadBrief", duration: elapsed)
 
                 return parsed
             } catch is CancellationError {
@@ -135,6 +148,7 @@ public actor MLXBackend {
 
         let elapsed = ContinuousClock.now - start
         Self.logger.info("Model loaded in \(elapsed)")
+        latencyRecorder?.record(label: "modelLoad", duration: elapsed)
     }
 }
 

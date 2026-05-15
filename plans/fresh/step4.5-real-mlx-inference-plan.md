@@ -234,9 +234,9 @@ Replace the stub `generate()` with real token-by-token generation.
 `MLXBackend` already collects timing metrics; with a real LLM behind
 it, we want accurate p50/p95 plumbed through the eval pipeline.
 
-- [ ] In `Packages/AI/AIRuntime/Sources/AIRuntime/MLXBackend.swift`, ensure each `threadBrief(_:)` call records start/end timestamps and exposes them via the existing `LatencySample` (or equivalent) hook the `AIEvals` runner reads
-- [ ] If the existing impl just logs durations to stderr, add a `Sendable` `LatencyRecorder` protocol that `AIEvals.EvalRunner` can plug into
-- [ ] Run `cd Packages/AI/AIRuntime && swift test` — keep all `MLXBackendTests` (which use `FakeLLMRunner`) passing
+- [x] In `Packages/AI/AIRuntime/Sources/AIRuntime/MLXBackend.swift`, ensure each `threadBrief(_:)` call records start/end timestamps and exposes them via the existing `LatencySample` (or equivalent) hook the `AIEvals` runner reads
+- [x] If the existing impl just logs durations to stderr, add a `Sendable` `LatencyRecorder` protocol that `AIEvals.EvalRunner` can plug into
+- [x] Run `cd Packages/AI/AIRuntime && swift test` — keep all `MLXBackendTests` (which use `FakeLLMRunner`) passing
 
 ### Task 6: Real eval baseline + commit report
 
