@@ -65,6 +65,7 @@ public struct SentEcho: Sendable {
 
 public enum ComposeError: Error, Sendable {
     case noRecipients
+    case noAccount
     case needsReconsent
     case send(underlying: any Error & Sendable)
 }

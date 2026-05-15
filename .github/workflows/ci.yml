@@ -126,5 +126,5 @@ jobs:
 
       - name: Content-leak grep (compose fields)
         run: |
-          ! grep -rnE '(os_log|Logger|print|debugPrint)\(.*\b(toField|ccField|subjectField|bodyText|messageBody|subject|body)\b' \
+          ! grep -rnE '(os_log|Logger|print|debugPrint)\(.*\b(toField|ccField|subjectField|bodyText|draftText|messageBody|subject|body)\b' \
             Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build

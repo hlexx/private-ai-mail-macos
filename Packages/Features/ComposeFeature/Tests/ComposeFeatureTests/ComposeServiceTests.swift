@@ -114,10 +114,6 @@ struct ComposeServiceTests {
         let service = LiveComposeService(api: mockAPI, db: db)
         let draft = makeDraft()
 
-        await #expect(throws: ComposeError.self) {
-            let _ = try await service.send(draft)
-        }
-
         do {
             _ = try await service.send(draft)
             Issue.record("Expected ComposeError.needsReconsent")

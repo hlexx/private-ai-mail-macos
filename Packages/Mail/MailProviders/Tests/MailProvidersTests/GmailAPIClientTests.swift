@@ -146,8 +146,13 @@ struct GmailAPIClientTests {
 
         let client = makeClient()
 
-        await #expect(throws: GmailAPIError.self) {
+        do {
             _ = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
+            Issue.record("Expected GmailAPIError.insufficientScope")
+        } catch GmailAPIError.insufficientScope {
+            // expected
+        } catch {
+            Issue.record("Expected insufficientScope, got \(error)")
         }
     }
 

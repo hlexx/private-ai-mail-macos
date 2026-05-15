@@ -97,7 +97,7 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
             URLQueryItem(name: "code_challenge", value: pkce.challenge),
             URLQueryItem(name: "code_challenge_method", value: pkce.method),
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: forceConsent ? "consent" : "consent"),
+            URLQueryItem(name: "prompt", value: forceConsent ? "consent" : "select_account"),
         ]
         return components.url!
     }

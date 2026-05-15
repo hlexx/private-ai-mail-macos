@@ -34,7 +34,7 @@ func makeMessageRecord(from msg: MailDomain.Message, accountId: String) -> Messa
         messageIdHeader: msg.messageIdHeader,
         fromAddr: msg.from.map(formatAddress),
         toAddr: msg.to.map(formatAddress).joined(separator: ", "),
-        ccAddr: msg.cc.map(formatAddress).joined(separator: ", "),
+        ccAddr: msg.cc.isEmpty ? nil : msg.cc.map(formatAddress).joined(separator: ", "),
         sentAt: Int(msg.sentAt.timeIntervalSince1970),
         snippet: msg.snippet,
         bodyHtml: msg.bodyHTML,

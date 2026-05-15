@@ -127,6 +127,8 @@ public struct ApprovalRow: View {
         switch error {
         case .noRecipients:
             return String(localized: "approval.error.noRecipients", defaultValue: "No recipients specified")
+        case .noAccount:
+            return String(localized: "approval.error.noAccount", defaultValue: "No sending account selected")
         case .needsReconsent:
             return String(localized: "approval.error.needsReconsent", defaultValue: "This account hasn\u{2019}t granted send permission yet \u{2014} Re-authorize")
         case .send:

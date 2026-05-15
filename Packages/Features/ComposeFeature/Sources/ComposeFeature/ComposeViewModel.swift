@@ -57,6 +57,17 @@ public final class ComposeViewModel {
         self.reauthorizeHandler = reauthorizeHandler
     }
 
+    // MARK: - Reset
+
+    public func reset() {
+        cancelSend()
+        toField = ""
+        ccField = ""
+        subjectField = ""
+        bodyText = ""
+        replyContext = nil
+    }
+
     // MARK: - Reply Pre-fill
 
     public func prefillReply(
@@ -97,6 +108,10 @@ public final class ComposeViewModel {
     }
 
     public func retrySend() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        sendTask?.cancel()
+        sendTask = nil
         sendState = .idle
         requestSend()
     }
@@ -123,7 +138,7 @@ public final class ComposeViewModel {
     private func executeSend() {
         guard let accountID = selectedAccountID,
               let accountEmail = selectedAccountEmail else {
-            sendState = .failed(.noRecipients)
+            sendState = .failed(.noAccount)
             return
         }
 

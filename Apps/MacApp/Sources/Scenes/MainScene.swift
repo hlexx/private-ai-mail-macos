@@ -153,7 +153,7 @@ struct MainScene: View {
             fromAddr: lastMessage.fromAddr,
             subject: threadStore.subject,
             threadID: lastMessage.threadId,
-            lastMessageID: lastMessage.id
+            lastMessageID: lastMessage.messageIdHeader ?? lastMessage.id
         )
         vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
         if let activeID = composition.activeAccountID {
@@ -177,7 +177,7 @@ struct MainScene: View {
             body: bodyText,
             replyContext: ReplyContext(
                 threadID: lastMessage.threadId,
-                inReplyToMessageID: lastMessage.id
+                inReplyToMessageID: lastMessage.messageIdHeader ?? lastMessage.id
             )
         )
 
@@ -185,8 +185,27 @@ struct MainScene: View {
         Task {
             do {
                 _ = try await service.send(draft)
+            } catch let error as ComposeError {
+                if case .needsReconsent = error {
+                    await MainActor.run {
+                        composition.composeViewModel.reset()
+                        composition.composeViewModel.prefillReply(
+                            fromAddr: lastMessage.fromAddr,
+                            subject: threadStore.subject,
+                            threadID: lastMessage.threadId,
+                            lastMessageID: lastMessage.messageIdHeader ?? lastMessage.id
+                        )
+                        composition.composeViewModel.bodyText = bodyText
+                        composition.composeViewModel.accounts = accounts.map {
+                            AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName)
+                        }
+                        composition.composeViewModel.selectedAccountID = accountID
+                        composition.composeViewModel.selectedAccountEmail = account.email
+                        composition.showCompose = true
+                    }
+                }
             } catch {
-                // Error handling deferred to compose UI
+                // Unexpected error — user can retry via compose window
             }
         }
     }

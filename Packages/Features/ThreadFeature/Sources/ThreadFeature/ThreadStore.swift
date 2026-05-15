@@ -6,6 +6,7 @@ import Persistence
 public struct MessageRow: Identifiable, Sendable {
     public let id: String
     public let threadId: String
+    public let messageIdHeader: String?
     public let fromAddr: String
     public let sentAt: Date
     public let snippet: String
@@ -14,6 +15,7 @@ public struct MessageRow: Identifiable, Sendable {
     public init(record: MessageRecord) {
         self.id = record.id
         self.threadId = record.threadId
+        self.messageIdHeader = record.messageIdHeader
         self.fromAddr = record.fromAddr ?? "(unknown)"
         self.sentAt = Date(timeIntervalSince1970: TimeInterval(record.sentAt))
         self.snippet = record.snippet ?? ""
