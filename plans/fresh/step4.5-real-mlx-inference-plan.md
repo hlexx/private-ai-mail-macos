@@ -261,11 +261,11 @@ real `MLXBackend`-backed `AIService`. This is the calibration step.
 A real-model integration test that only runs when explicitly opted-in,
 so CI without GPU stays green.
 
-- [ ] Add `Packages/AI/AIRuntime/Tests/AIRuntimeTests/MLXLLMRunnerLiveTests.swift`
-- [ ] In `setUp`, return early (skip) unless `ProcessInfo.processInfo.environment["RB_RUN_REAL_MLX_TESTS"] == "1"` and the model directory exists at the expected path
-- [ ] One test: `loadAndGenerateShortOutput()` — loads the model, generates against a fixed 1-message thread input, asserts the output starts with `{` and contains the substring `"summary"`, in < 10 s wall clock
-- [ ] Locally run with `RB_RUN_REAL_MLX_TESTS=1 swift test` after Task 6 baseline lands. Commit only after this passes
-- [ ] CI: leave the env unset → test auto-skips
+- [x] Add `Packages/AI/AIRuntime/Tests/AIRuntimeTests/MLXLLMRunnerLiveTests.swift`
+- [x] In `setUp`, return early (skip) unless `ProcessInfo.processInfo.environment["RB_RUN_REAL_MLX_TESTS"] == "1"` and the model directory exists at the expected path
+- [x] One test: `loadAndGenerateShortOutput()` — loads the model, generates against a fixed 1-message thread input, asserts the output starts with `{` and contains the substring `"summary"`, in < 10 s wall clock
+- [x] Locally run with `RB_RUN_REAL_MLX_TESTS=1 swift test` after Task 6 baseline lands. Commit only after this passes
+- [x] CI: leave the env unset → test auto-skips
 
 ### Task 8: Final gate + cleanup
 
