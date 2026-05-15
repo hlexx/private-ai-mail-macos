@@ -59,6 +59,10 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse {
         GmailDTO.HistoryResponse(history: nil, nextPageToken: nil, historyId: startHistoryId)
     }
+
+    func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage {
+        throw GmailAPIError.invalidResponse
+    }
 }
 
 // MARK: - Helpers

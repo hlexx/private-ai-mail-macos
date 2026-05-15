@@ -135,23 +135,23 @@ takes a base64url-encoded RFC 5322 message in `raw`, optionally a
 `threadId` for replies, returns the canonical message with its
 assigned `id` and `threadId`.
 
-- [ ] Add a method to `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/GmailAPI.swift`: `func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage`
-- [ ] Add a `GmailDTO.SentMessage` struct with `id: String`, `threadId: String`, `labelIds: [String]?` decoded from the API response (Codable, snake-case decoder already configured)
-- [ ] Add endpoint helper to `GmailEndpoint.swift` for `POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send`
-- [ ] Implement in `GmailAPIClient.swift`:
+- [x] Add a method to `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/GmailAPI.swift`: `func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage`
+- [x] Add a `GmailDTO.SentMessage` struct with `id: String`, `threadId: String`, `labelIds: [String]?` decoded from the API response (Codable, snake-case decoder already configured)
+- [x] Add endpoint helper to `GmailEndpoint.swift` for `POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send`
+- [x] Implement in `GmailAPIClient.swift`:
     - `URLRequest` with `POST` method, JSON body `{"raw": "<base64url>", "threadId": "..."}` (omit `threadId` when nil)
     - Reuse the existing token-refresh-on-401 retry path
     - Distinguish `403` with response error `insufficientPermissions` → throw a new typed error `GmailAPIError.insufficientScope`
     - On `429` → backoff per existing rate-limit policy
-- [ ] Add fixtures under `Tests/MailProvidersTests/Fixtures/gmail/`:
+- [x] Add fixtures under `Tests/MailProvidersTests/Fixtures/gmail/`:
     - `send_success.json` — canonical response for a successful send
     - `send_insufficient_scope.json` — the 403 body with `insufficientPermissions` reason
-- [ ] Tests in `Tests/MailProvidersTests/GmailAPIClientTests.swift`:
+- [x] Tests in `Tests/MailProvidersTests/GmailAPIClientTests.swift`:
     - Happy path send 200 → returns `SentMessage` with non-empty id
     - 403 insufficient scope → throws `GmailAPIError.insufficientScope`
     - 401 → token refresh → retry → 200
     - 429 → backoff path (same fixture style as existing)
-- [ ] Run `cd Packages/Mail/MailProviders && swift test`
+- [x] Run `cd Packages/Mail/MailProviders && swift test`
 
 ### Task 3: SMTP-like MIME builder (RFC 5322 + Gmail base64url framing)
 
