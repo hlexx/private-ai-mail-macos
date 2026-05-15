@@ -32,3 +32,6 @@ fastlane/test_output/
 
 # Sparkle xcframework (downloaded via scripts/fetch-sparkle.sh)
 Frameworks/Sparkle.xcframework/
+
+# Release artifacts (built by scripts/build-dmg.sh)
+dist/
