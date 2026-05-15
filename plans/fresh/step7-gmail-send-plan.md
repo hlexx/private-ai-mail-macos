@@ -123,10 +123,10 @@ Add the send scope to the requested set. New accounts pick it up on
 first authorize; existing accounts handle it on demand via Task 3's
 re-consent path.
 
-- [ ] Open `Packages/Auth/AuthKit/Sources/AuthKit/GmailOAuthConfig.swift`
-- [ ] Append `"https://www.googleapis.com/auth/gmail.send"` to the default `scopes` array. Keep `gmail.readonly` and `gmail.metadata`. **Do not** swap to `gmail.modify` — that's broader than we need; least-privilege wins
-- [ ] Update the test in `AuthKitTests` that asserts the default scope set; it should now include the three scopes in a defined order (write the test to use `Set` comparison to avoid order brittleness)
-- [ ] Run `cd Packages/Auth/AuthKit && swift test`
+- [x] Open `Packages/Auth/AuthKit/Sources/AuthKit/GmailOAuthConfig.swift`
+- [x] Append `"https://www.googleapis.com/auth/gmail.send"` to the default `scopes` array. Keep `gmail.readonly` and `gmail.metadata`. **Do not** swap to `gmail.modify` — that's broader than we need; least-privilege wins
+- [x] Update the test in `AuthKitTests` that asserts the default scope set; it should now include the three scopes in a defined order (write the test to use `Set` comparison to avoid order brittleness)
+- [x] Run `cd Packages/Auth/AuthKit && swift test`
 
 ### Task 2: GmailAPI.sendMessage + GmailDTO.SentMessage + endpoint
 

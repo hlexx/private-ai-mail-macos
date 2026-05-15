@@ -7,6 +7,17 @@ struct AuthKitTests {
     @Test func moduleNameIsExported() {
         #expect(AuthKit.moduleName == "AuthKit")
     }
+
+    @Test func defaultScopesIncludeReadMetadataSendAndUserinfo() {
+        let expected: Set<String> = [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.metadata",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/userinfo.email"
+        ]
+        let actual = Set(GmailOAuthConfig.default.scopes)
+        #expect(actual == expected)
+    }
 }
 
 @Suite("PKCE")
