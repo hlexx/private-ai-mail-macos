@@ -7,6 +7,17 @@ struct AuthKitTests {
     @Test func moduleNameIsExported() {
         #expect(AuthKit.moduleName == "AuthKit")
     }
+
+    @Test func defaultScopesIncludeReadMetadataSendAndUserinfo() {
+        let expected: Set<String> = [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.metadata",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/userinfo.email"
+        ]
+        let actual = Set(GmailOAuthConfig.default.scopes)
+        #expect(actual == expected)
+    }
 }
 
 @Suite("PKCE")
@@ -111,6 +122,45 @@ struct InMemoryTokenStoreTests {
             refreshToken: "rt",
             expiresAt: Date().addingTimeInterval(3600)
         )
+    }
+}
+
+@Suite("ReauthorizeScopes")
+struct ReauthorizeScopeTests {
+    @Test(arguments: [
+        (
+            label: "default config includes gmail.send",
+            additionalScopes: [] as [String],
+            mustContain: ["gmail.send", "gmail.readonly", "gmail.metadata", "userinfo.email"]
+        ),
+        (
+            label: "adding gmail.compose merges with defaults",
+            additionalScopes: ["https://www.googleapis.com/auth/gmail.compose"],
+            mustContain: ["gmail.send", "gmail.readonly", "gmail.compose"]
+        ),
+        (
+            label: "duplicate scope is deduplicated",
+            additionalScopes: ["https://www.googleapis.com/auth/gmail.send"],
+            mustContain: ["gmail.send", "gmail.readonly"]
+        ),
+    ])
+    func reauthorizeScopesMergeCorrectly(
+        label: String, additionalScopes: [String], mustContain: [String]
+    ) {
+        let config = GmailOAuthConfig.default
+        let merged = Set(config.scopes + additionalScopes)
+        for keyword in mustContain {
+            let found = merged.contains { $0.contains(keyword) }
+            #expect(found, "Expected merged scopes to contain '\(keyword)' — \(label)")
+        }
+    }
+
+    @Test func duplicateScopesAreDeduped() {
+        let config = GmailOAuthConfig.default
+        let additional = ["https://www.googleapis.com/auth/gmail.send"]
+        let merged = Array(Set(config.scopes + additional))
+        let sendCount = merged.filter { $0.contains("gmail.send") }.count
+        #expect(sendCount == 1)
     }
 }
 

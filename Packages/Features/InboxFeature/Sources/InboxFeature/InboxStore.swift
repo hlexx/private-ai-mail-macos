@@ -72,6 +72,11 @@ public final class InboxStore {
     public private(set) var threads: [ThreadRow] = []
     public var selectedThreadID: String?
     public var filter: ThreadFilter = .all
+    public var activeFolder: String = "inbox" {
+        didSet {
+            if oldValue != activeFolder { startObserving() }
+        }
+    }
 
     public var filteredThreads: [ThreadRow] {
         guard filter != .all else { return threads }
@@ -100,11 +105,26 @@ public final class InboxStore {
 
     public func startObserving() {
         observationTask?.cancel()
+        let folder = activeFolder
         observationTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db in
-                let threads = try ThreadRecord
-                    .order(Column("last_message_at").desc)
-                    .fetchAll(db)
+                let threads: [ThreadRecord]
+                if folder == "sent" {
+                    // Only threads containing at least one sent message
+                    threads = try ThreadRecord
+                        .filter(sql: """
+                            id IN (
+                                SELECT DISTINCT thread_id FROM message
+                                WHERE (flags & ?) != 0
+                            )
+                            """, arguments: [MessageRecord.sentByMe])
+                        .order(Column("last_message_at").desc)
+                        .fetchAll(db)
+                } else {
+                    threads = try ThreadRecord
+                        .order(Column("last_message_at").desc)
+                        .fetchAll(db)
+                }
 
                 // Batch query: latest from_addr per thread
                 let senderRows = try Row.fetchAll(

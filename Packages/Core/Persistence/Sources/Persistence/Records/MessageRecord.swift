@@ -4,6 +4,9 @@ import GRDB
 public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "message"
 
+    public static let read = 1 << 1
+    public static let sentByMe = 1 << 2
+
     public var id: String
     public var threadId: String
     public var accountId: String

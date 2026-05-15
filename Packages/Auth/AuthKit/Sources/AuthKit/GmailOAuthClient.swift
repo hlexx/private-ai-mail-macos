@@ -29,6 +29,21 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
         return try await exchangeCode(code, pkce: pkce)
     }
 
+    @MainActor
+    public func reauthorize(additionalScopes: [String]) async throws -> TokenCredential {
+        let merged = Array(Set(config.scopes + additionalScopes))
+        let overrideConfig = GmailOAuthConfig(
+            clientID: config.clientID,
+            redirectURI: config.redirectURI,
+            scopes: merged
+        )
+        let pkce = PKCE.generate()
+        let authURL = buildAuthorizationURL(config: overrideConfig, pkce: pkce, forceConsent: true)
+        let callbackURL = try await startWebAuthSession(url: authURL)
+        let code = try extractCode(from: callbackURL)
+        return try await exchangeCode(code, pkce: pkce)
+    }
+
     public func refresh(_ refreshToken: String) async throws -> TokenCredential {
         var request = URLRequest(url: GmailOAuthConfig.tokenEndpoint)
         request.httpMethod = "POST"
@@ -63,6 +78,10 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
     // MARK: - Private
 
     private func buildAuthorizationURL(pkce: PKCE.Challenge) -> URL {
+        buildAuthorizationURL(config: config, pkce: pkce, forceConsent: true)
+    }
+
+    private func buildAuthorizationURL(config: GmailOAuthConfig, pkce: PKCE.Challenge, forceConsent: Bool) -> URL {
         var components = URLComponents(
             url: GmailOAuthConfig.authorizationEndpoint,
             resolvingAgainstBaseURL: false
@@ -78,7 +97,7 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
             URLQueryItem(name: "code_challenge", value: pkce.challenge),
             URLQueryItem(name: "code_challenge_method", value: pkce.method),
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: "consent"),
+            URLQueryItem(name: "prompt", value: forceConsent ? "consent" : "select_account"),
         ]
         return components.url!
     }

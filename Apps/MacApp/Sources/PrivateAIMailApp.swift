@@ -1,5 +1,6 @@
 import ComposeFeature
 import DesignSystem
+import Persistence
 import SwiftUI
 
 @main
@@ -46,6 +47,7 @@ struct PrivateAIMailApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(String(localized: "menu.compose.new", defaultValue: "New Message")) {
+                    prepareComposeViewModel()
                     openWindow(id: "compose")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
@@ -59,7 +61,7 @@ struct PrivateAIMailApp: App {
         }
 
         WindowGroup(id: "compose") {
-            ComposeWindowView()
+            ComposeWindowView(viewModel: composition.composeViewModel)
             .frame(minWidth: 600, minHeight: 480)
             .rbTheme()
         }
@@ -79,6 +81,17 @@ struct PrivateAIMailApp: App {
             composition.refreshAccount(thread.accountId)
         } else {
             composition.refreshAllAccounts()
+        }
+    }
+
+    private func prepareComposeViewModel() {
+        let vm = composition.composeViewModel
+        vm.reset()
+        let accounts = (try? composition.db.read { db in try AccountRecord.fetchAll(db) }) ?? []
+        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        if let activeID = composition.activeAccountID ?? accounts.first?.id {
+            vm.selectedAccountID = activeID
+            vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
         }
     }
 

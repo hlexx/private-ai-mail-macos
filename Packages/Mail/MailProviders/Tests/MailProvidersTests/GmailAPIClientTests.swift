@@ -106,6 +106,127 @@ struct GmailAPIClientTests {
 
         #expect(result.messages?.count == 1)
     }
+
+    // MARK: - sendMessage happy path
+
+    @Test func sendMessageHappyPath() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/send",
+            json: """
+            {"id": "19abc123def45678", "threadId": "19abc123def00000", "labelIds": ["SENT"]}
+            """
+        )
+
+        let client = makeClient()
+        let result = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
+
+        #expect(result.id == "19abc123def45678")
+        #expect(result.threadId == "19abc123def00000")
+        #expect(result.labelIds == ["SENT"])
+    }
+
+    // MARK: - sendMessage 403 insufficient scope
+
+    @Test func sendMessageInsufficientScopeThrows() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/send",
+            statusCode: 403,
+            json: """
+            {
+              "error": {
+                "errors": [{"domain": "global", "reason": "insufficientPermissions", "message": "Insufficient Permission"}],
+                "code": 403,
+                "message": "Insufficient Permission"
+              }
+            }
+            """
+        )
+
+        let client = makeClient()
+
+        do {
+            _ = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
+            Issue.record("Expected GmailAPIError.insufficientScope")
+        } catch GmailAPIError.insufficientScope {
+            // expected
+        } catch {
+            Issue.record("Expected insufficientScope, got \(error)")
+        }
+    }
+
+    // MARK: - sendMessage 401 → refresh → retry → 200
+
+    @Test func sendMessageUnauthorizedTriggersRefreshAndRetry() async throws {
+        MockURLProtocol.reset()
+
+        let oauthClient = MockOAuthClient()
+        let newCred = makeCredential(accessToken: "refreshed-token")
+        oauthClient.refreshResult = newCred
+
+        let tokenStore = MockTokenStore()
+
+        MockURLProtocol.stubSequence(
+            path: "/messages/send",
+            responses: [
+                (statusCode: 401, json: "{\"error\": \"unauthorized\"}", headers: ["Content-Type": "application/json"]),
+                (statusCode: 200, json: """
+                    {"id": "sent001", "threadId": "thread001", "labelIds": ["SENT"]}
+                    """, headers: ["Content-Type": "application/json"])
+            ]
+        )
+
+        let client = makeClient(oauthClient: oauthClient, tokenStore: tokenStore)
+        let result = try await client.sendMessage(raw: "dGVzdA", threadId: "thread001")
+
+        #expect(result.id == "sent001")
+        #expect(oauthClient.refreshCallCount == 1)
+        let stored = try tokenStore.load(for: accountId)
+        #expect(stored?.accessToken == "refreshed-token")
+    }
+
+    // MARK: - sendMessage network isolation (exactly one request)
+
+    @Test func sendMessageIssuesExactlyOneRequest() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/send",
+            json: """
+            {"id": "iso001", "threadId": "tiso001", "labelIds": ["SENT"]}
+            """
+        )
+
+        let client = makeClient()
+        _ = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
+
+        let sendRequests = MockURLProtocol.requestLog.filter {
+            $0.url?.path.contains("/messages/send") == true
+        }
+        #expect(sendRequests.count == 1, "sendMessage must issue exactly one outbound request")
+        #expect(MockURLProtocol.requestLog.count == 1, "No implicit follow-ups or telemetry requests")
+    }
+
+    // MARK: - sendMessage 429 → backoff → retry → 200
+
+    @Test func sendMessageRateLimitedRetries() async throws {
+        MockURLProtocol.reset()
+
+        MockURLProtocol.stubSequence(
+            path: "/messages/send",
+            responses: [
+                (statusCode: 429, json: "{\"error\": \"rate limited\"}", headers: ["Content-Type": "application/json", "Retry-After": "1"]),
+                (statusCode: 200, json: """
+                    {"id": "sent002", "threadId": "thread002"}
+                    """, headers: ["Content-Type": "application/json"])
+            ]
+        )
+
+        let client = makeClient()
+        let result = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
+
+        #expect(result.id == "sent002")
+    }
 }
 
 @Suite("GmailMapper")

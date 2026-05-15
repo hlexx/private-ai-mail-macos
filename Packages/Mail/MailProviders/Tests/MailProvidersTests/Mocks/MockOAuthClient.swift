@@ -10,6 +10,10 @@ final class MockOAuthClient: OAuthClient, @unchecked Sendable {
         fatalError("Not used in tests")
     }
 
+    func reauthorize(additionalScopes: [String]) async throws -> TokenCredential {
+        fatalError("Not used in tests")
+    }
+
     func refresh(_ refreshToken: String) async throws -> TokenCredential {
         refreshCallCount += 1
         if let error = refreshError { throw error }

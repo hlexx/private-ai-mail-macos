@@ -6,18 +6,28 @@ import Persistence
 public struct MessageRow: Identifiable, Sendable {
     public let id: String
     public let threadId: String
+    public let messageIdHeader: String?
     public let fromAddr: String
+    public let toAddr: String?
     public let sentAt: Date
     public let snippet: String
     public let bodyText: String
+    public let flags: Int
+
+    public var isSentByMe: Bool {
+        (flags & MessageRecord.sentByMe) != 0
+    }
 
     public init(record: MessageRecord) {
         self.id = record.id
         self.threadId = record.threadId
+        self.messageIdHeader = record.messageIdHeader
         self.fromAddr = record.fromAddr ?? "(unknown)"
+        self.toAddr = record.toAddr
         self.sentAt = Date(timeIntervalSince1970: TimeInterval(record.sentAt))
         self.snippet = record.snippet ?? ""
         self.bodyText = record.bodyText ?? record.snippet ?? ""
+        self.flags = record.flags
     }
 
     public var senderName: String {

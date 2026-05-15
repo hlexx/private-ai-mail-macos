@@ -11,6 +11,7 @@ public struct GmailOAuthConfig: Sendable {
         scopes: [
             "https://www.googleapis.com/auth/gmail.readonly",
             "https://www.googleapis.com/auth/gmail.metadata",
+            "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/userinfo.email"
         ]
     )

@@ -16,6 +16,10 @@ final class MockOAuthClient: OAuthClient, @unchecked Sendable {
         try authorizeResult.get()
     }
 
+    func reauthorize(additionalScopes: [String]) async throws -> TokenCredential {
+        try authorizeResult.get()
+    }
+
     func refresh(_ refreshToken: String) async throws -> TokenCredential {
         TokenCredential(
             accessToken: "refreshed",
@@ -58,6 +62,10 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
 
     func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse {
         GmailDTO.HistoryResponse(history: nil, nextPageToken: nil, historyId: startHistoryId)
+    }
+
+    func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage {
+        throw GmailAPIError.invalidResponse
     }
 }
 

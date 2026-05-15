@@ -2,6 +2,7 @@ import AIKit
 import AIRuntime
 import AuthKit
 import BriefFeature
+import ComposeFeature
 import InboxFeature
 import MailProviders
 import MailSync
@@ -24,9 +25,11 @@ final class CompositionRoot {
     var activeAccountID: String?
     var showActionSheet = false
     var showCompose = false
+    let composeViewModel: ComposeViewModel
 
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
+    private let apiFactory: @Sendable (String) -> any GmailAPI
 
     init() {
         let path = Self.defaultDBPath()
@@ -44,7 +47,7 @@ final class CompositionRoot {
         let oauthClient: any OAuthClient = GmailOAuthClient()
         self.oauthClient = oauthClient
 
-        let apiFactory: @Sendable (String) -> any GmailAPI = { [tokenStore, oauthClient] accountId in
+        self.apiFactory = { [tokenStore, oauthClient] accountId in
             let credential = (try? tokenStore.load(for: accountId)) ?? TokenCredential(
                 accessToken: "",
                 refreshToken: "",
@@ -59,6 +62,22 @@ final class CompositionRoot {
         }
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
+
+        let capturedFactory = apiFactory
+        let capturedDB = db
+        let capturedOAuth = oauthClient
+        let capturedTokenStore = tokenStore
+        self.composeViewModel = ComposeViewModel(
+            composeServiceFactory: { accountId in
+                LiveComposeService(api: capturedFactory(accountId), db: capturedDB)
+            },
+            reauthorizeHandler: { @MainActor accountId in
+                let newCredential = try await capturedOAuth.reauthorize(
+                    additionalScopes: ["https://www.googleapis.com/auth/gmail.send"]
+                )
+                try capturedTokenStore.save(newCredential, for: accountId)
+            }
+        )
 
         self.accountsTabStore = AccountsTabStore(
             db: db,
@@ -99,6 +118,10 @@ final class CompositionRoot {
         Task {
             await syncSupervisor.refresh(accountId: accountId)
         }
+    }
+
+    func makeComposeService(accountId: String) -> any ComposeService {
+        LiveComposeService(api: apiFactory(accountId), db: db)
     }
 
     func refreshAllAccounts() {

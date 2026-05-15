@@ -118,3 +118,13 @@ jobs:
       - name: Test ${{ matrix.package }}
         working-directory: ${{ matrix.package }}
         run: swift test
+
+  privacy-check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Content-leak grep (compose fields)
+        run: |
+          ! grep -rnE '(os_log|Logger|print|debugPrint)\(.*\b(toField|ccField|subjectField|bodyText|draftText|messageBody|subject|body)\b' \
+            Apps Packages --include='*.swift' --exclude-dir=Tests --exclude-dir=.build

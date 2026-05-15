@@ -275,6 +275,106 @@ struct MailSyncEngineTests {
         #expect(countAfterSecond == 1)
         #expect(msgCountAfterSecond == 2)
     }
+    @Test func syncReplacesLocalSentMessageWithCanonical() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+
+        // Simulate a locally-inserted sent message (as ComposeService would)
+        try await DatabaseActor.shared.run {
+            try db.write { dbConn in
+                let thread = ThreadRecord(
+                    id: "t1", accountId: "acc1", subject: "My sent msg",
+                    lastMessageAt: 5000, messageCount: 1
+                )
+                try thread.insert(dbConn)
+                let msg = MessageRecord(
+                    id: "m1", threadId: "t1", accountId: "acc1",
+                    fromAddr: "me@gmail.com",
+                    toAddr: "them@example.com",
+                    sentAt: 5000,
+                    snippet: "local snippet",
+                    bodyText: "local body",
+                    flags: MessageRecord.sentByMe | MessageRecord.read
+                )
+                try msg.insert(dbConn)
+                var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
+                syncState.historyId = "50"
+                try syncState.update(dbConn)
+            }
+        }
+
+        // Verify local record exists
+        let localMsg = try db.read { dbConn in
+            try MessageRecord.fetchOne(dbConn, key: ["account_id": "acc1", "id": "m1"])
+        }
+        #expect(localMsg?.snippet == "local snippet")
+        #expect(localMsg?.flags == MessageRecord.sentByMe | MessageRecord.read)
+
+        // Now simulate incremental sync that re-fetches the thread with canonical data
+        let api = MockGmailAPI()
+        let canonicalMessage = GmailDTO.Message(
+            id: "m1",
+            threadId: "t1",
+            labelIds: ["SENT"],
+            snippet: "canonical snippet from Gmail",
+            historyId: "60",
+            internalDate: "5000000",
+            payload: GmailDTO.MessagePart(
+                headers: [
+                    GmailDTO.MessagePartHeader(name: "Subject", value: "My sent msg"),
+                    GmailDTO.MessagePartHeader(name: "From", value: "me@gmail.com"),
+                ]
+            )
+        )
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        messagesAdded: [
+                            GmailDTO.HistoryMessageAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1")
+                            )
+                        ]
+                    )
+                ],
+                nextPageToken: nil,
+                historyId: "60"
+            ))
+        ]
+        api.getThreadResults = [
+            "t1": .success(GmailDTO.Thread(
+                id: "t1",
+                historyId: "60",
+                messages: [canonicalMessage]
+            )),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        // After sync, the canonical record replaces the local one (UPSERT)
+        let syncedMsg = try db.read { dbConn in
+            try MessageRecord.fetchOne(dbConn, key: ["account_id": "acc1", "id": "m1"])
+        }
+        #expect(syncedMsg != nil)
+        #expect(syncedMsg?.snippet == "canonical snippet from Gmail")
+        // sentByMe flag preserved because SENT label is present
+        #expect((syncedMsg?.flags ?? 0) & MessageRecord.sentByMe != 0)
+
+        // Only one message in DB — no duplicates
+        let totalMessages = try db.read { dbConn in
+            try MessageRecord.filter(Column("account_id") == "acc1").fetchCount(dbConn)
+        }
+        #expect(totalMessages == 1)
+
+        // Thread also updated
+        let syncedThread = try db.read { dbConn in
+            try ThreadRecord.fetchOne(dbConn, key: ["account_id": "acc1", "id": "t1"])
+        }
+        #expect(syncedThread != nil)
+        #expect(syncedThread?.messageCount == 1)
+    }
 }
 
 // Helper to run code on DatabaseActor

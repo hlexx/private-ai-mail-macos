@@ -4,6 +4,7 @@ import ComposeFeature
 import DesignSystem
 import GRDB
 import InboxFeature
+import MailDomain
 import Persistence
 import SwiftUI
 import ThreadFeature
@@ -28,7 +29,10 @@ struct MainScene: View {
                 onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
                 onToggleTheme: { toggleTheme() },
                 onOpenSettings: { openSettings() },
-                onCompose: { composition.showCompose = true },
+                onCompose: {
+                    prepareNewCompose()
+                    composition.showCompose = true
+                },
                 onOpenActionSheet: { composition.showActionSheet = true }
             )
 
@@ -65,8 +69,15 @@ struct MainScene: View {
                         if briefStore.brief != nil {
                             InlineComposer(
                                 evidence: briefStore.brief?.evidence ?? [],
-                                onEditInFull: { composition.showCompose = true },
-                                onSend: { /* TODO(§15-step-7): wire real send */ }
+                                onEditInFull: {
+                                    prefillComposeForReply()
+                                    composition.showCompose = true
+                                },
+                                onSend: { bodyText in
+                                    prefillComposeForReply()
+                                    composition.composeViewModel.bodyText = bodyText
+                                    composition.showCompose = true
+                                }
                             )
                         }
                     },
@@ -106,6 +117,9 @@ struct MainScene: View {
                 )
             }
         }
+        .onChange(of: activeFolder) { _, newFolder in
+            inboxStore.activeFolder = newFolder
+        }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             if let threadId = newValue,
                let thread = inboxStore.threads.first(where: { $0.id == threadId }) {
@@ -133,6 +147,72 @@ struct MainScene: View {
             folders[idx].count = unreadCount > 0 ? unreadCount : nil
         }
         return folders
+    }
+
+    // MARK: - Compose Helpers
+
+    private func prepareNewCompose() {
+        let vm = composition.composeViewModel
+        vm.reset()
+        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        if let activeID = composition.activeAccountID ?? accounts.first?.id {
+            vm.selectedAccountID = activeID
+            vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
+        }
+    }
+
+    private func prefillComposeForReply() {
+        let vm = composition.composeViewModel
+        vm.reset()
+        guard let lastMessage = threadStore.messages.last else { return }
+
+        // For To: field, find the last message NOT sent by the user so we
+        // reply to the other party. For sent-only threads, use the toAddr
+        // of the last message (the original recipient).
+        let replyTarget = threadStore.messages.last(where: { !$0.isSentByMe })
+        let replyToAddr: String
+        if let target = replyTarget {
+            replyToAddr = extractEmail(from: target.fromAddr)
+        } else {
+            replyToAddr = extractEmail(from: lastMessage.toAddr)
+        }
+
+        // For In-Reply-To, always use the absolute last message in the
+        // thread so threading headers stay correct even when we send
+        // multiple replies in a row.
+        let inReplyToID = lastMessage.messageIdHeader ?? lastMessage.id
+
+        // Build the References chain from all messages' Message-ID headers
+        // so the outgoing reply preserves the full thread ancestry.
+        let referencesChain = threadStore.messages.compactMap(\.messageIdHeader)
+
+        // Bind to the thread's account, not the toolbar-global active account,
+        // so multi-account sessions always reply from the correct mailbox.
+        let threadAccountId = inboxStore.threads.first(where: { $0.id == lastMessage.threadId })?.accountId
+        let replyAccountId = threadAccountId ?? composition.activeAccountID
+        let replyAccountEmail = accounts.first(where: { $0.id == replyAccountId })?.email
+
+        vm.prefillReply(
+            fromAddr: replyToAddr,
+            subject: threadStore.subject,
+            threadID: lastMessage.threadId,
+            lastMessageID: inReplyToID,
+            referencesChain: referencesChain
+        )
+        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        if let accountID = replyAccountId {
+            vm.selectedAccountID = accountID
+            vm.selectedAccountEmail = replyAccountEmail
+        }
+    }
+
+    private func extractEmail(from addr: String?) -> String {
+        guard let addr else { return "" }
+        if let open = addr.firstIndex(of: "<"),
+           let close = addr.firstIndex(of: ">") {
+            return String(addr[addr.index(after: open)..<close])
+        }
+        return addr.trimmingCharacters(in: .whitespaces)
     }
 
     private func observeAccounts() async {
