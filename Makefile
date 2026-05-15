@@ -10,7 +10,7 @@
 #   make clean     — remove dist/ artefacts
 
 SHELL := /bin/bash
-.PHONY: release appcast build test dmg sign notarize clean
+.PHONY: release appcast build test dmg sign notarize clean fetch-sparkle
 
 # Extract version from Project.swift MARKETING_VERSION
 VERSION := $(shell grep 'MARKETING_VERSION' Project.swift | head -1 | sed 's/.*"\(.*\)".*/\1/')
@@ -33,18 +33,22 @@ release: build test sign dmg notarize appcast
 	@echo "Artefacts in $(DIST_DIR)/"
 	@ls -lh $(DIST_DIR)/PrivateAIMail-$(VERSION).dmg $(DIST_DIR)/appcast.xml 2>/dev/null || true
 
+# --- Fetch Sparkle xcframework (idempotent) ---
+fetch-sparkle:
+	@./scripts/fetch-sparkle.sh
+
 # --- Generate project + build ---
-build:
+build: fetch-sparkle
 	@echo "==> Generating project with Tuist..."
 	tuist generate --no-open
 	@echo "==> Building $(SCHEME) ($(CONFIGURATION))..."
-	xcodebuild build \
+	set -o pipefail && xcodebuild build \
 		-workspace $(WORKSPACE) \
 		-scheme $(SCHEME) \
 		-configuration $(CONFIGURATION) \
 		-destination '$(DESTINATION)' \
 		CODE_SIGNING_ALLOWED=NO \
-		| tail -5
+		2>&1 | tail -30
 	@echo "==> Build complete."
 
 # --- Run tests ---

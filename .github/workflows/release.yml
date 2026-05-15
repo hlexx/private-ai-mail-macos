@@ -66,7 +66,7 @@ jobs:
             -scheme MacApp \
             -configuration Release \
             -destination 'platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO | xcpretty
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -30
 
       - name: Run SwiftLint
         run: swiftlint --strict
@@ -113,22 +113,22 @@ jobs:
         run: |
           TAG="${{ steps.tag.outputs.version }}"
           VERSION="${TAG#v}"
+          NOTES_ARGS=()
           NOTES_FILE="release-notes/${TAG}.md"
           if [ ! -f "$NOTES_FILE" ]; then
             NOTES_FILE="release-notes/${TAG}.html"
           fi
-          NOTES_FLAG=""
           if [ -f "$NOTES_FILE" ]; then
-            NOTES_FLAG="--notes-file $NOTES_FILE"
+            NOTES_ARGS=(--notes-file "$NOTES_FILE")
           else
-            NOTES_FLAG="--notes 'Release ${TAG}'"
+            NOTES_ARGS=(--notes "Release ${TAG}")
           fi
           # Upload DMG + SHA256; appcast.xml is added later by maintainer
-          eval gh release create "$TAG" \
+          gh release create "$TAG" \
             --draft \
             --title "PrivateAIMail $TAG" \
-            $NOTES_FLAG \
-            dist/PrivateAIMail-${VERSION}.dmg \
-            dist/PrivateAIMail-${VERSION}.sha256
+            "${NOTES_ARGS[@]}" \
+            "dist/PrivateAIMail-${VERSION}.dmg" \
+            "dist/PrivateAIMail-${VERSION}.sha256"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

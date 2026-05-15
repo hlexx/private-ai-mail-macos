@@ -11,7 +11,7 @@
 # is used.
 #
 # The download URL follows the GitHub Releases convention:
-#   https://github.com/hlexx/private-ai-mail-macos/releases/latest/download/<dmg-name>
+#   https://github.com/hlexx/private-ai-mail-macos/releases/download/v<version>/<dmg-name>
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -20,7 +20,7 @@ DIST_DIR="$PROJECT_ROOT/dist"
 SIGN_UPDATE="$PROJECT_ROOT/tools/sparkle/sign_update"
 RELEASE_NOTES_DIR="$PROJECT_ROOT/release-notes"
 APPCAST_PATH="$DIST_DIR/appcast.xml"
-GITHUB_DOWNLOAD_BASE="https://github.com/hlexx/private-ai-mail-macos/releases/latest/download"
+GITHUB_REPO="hlexx/private-ai-mail-macos"
 
 if [[ ! -x "$SIGN_UPDATE" ]]; then
   echo "Error: sign_update tool not found at $SIGN_UPDATE" >&2
@@ -105,7 +105,7 @@ for dmg in "${DMGS_SORTED[@]}"; do
     NOTES_HTML="<p>PrivateAIMail ${VERSION}</p>"
   fi
 
-  DOWNLOAD_URL="${GITHUB_DOWNLOAD_BASE}/${DMG_BASENAME}"
+  DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${DMG_BASENAME}"
 
   cat >> "$APPCAST_PATH" <<ITEM_EOF
     <item>

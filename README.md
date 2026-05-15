@@ -46,6 +46,9 @@ traffic at inference time.
 ## Quickstart
 
 ```bash
+# Download Sparkle xcframework (one-time, not committed to repo)
+./scripts/fetch-sparkle.sh
+
 # Generate the Xcode workspace
 tuist generate
 

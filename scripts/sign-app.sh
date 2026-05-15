@@ -22,7 +22,14 @@ ENTITLEMENTS_PATH="$(cd "$(dirname "$0")/.." && pwd)/Apps/MacApp/PrivateAIMail.e
 if [[ -n "${RELEASE_DEVELOPER_TEAM:-}" ]]; then
   echo "==> Signing with Developer ID (team: $RELEASE_DEVELOPER_TEAM)"
 
-  IDENTITY="Developer ID Application: ($RELEASE_DEVELOPER_TEAM)"
+  # Find the Developer ID Application identity matching the team ID
+  IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | grep "$RELEASE_DEVELOPER_TEAM" | head -1 | sed 's/.*"\(.*\)"/\1/')
+  if [[ -z "$IDENTITY" ]]; then
+    echo "Error: No 'Developer ID Application' certificate found for team $RELEASE_DEVELOPER_TEAM" >&2
+    echo "Install the certificate from the Apple Developer portal first." >&2
+    exit 1
+  fi
+  echo "  Using identity: $IDENTITY"
 
   # Sign embedded frameworks and XPC services first (--deep handles this,
   # but being explicit is more reliable for nested bundles)
@@ -46,6 +53,7 @@ else
   echo ""
 
   codesign --deep --force \
+    --entitlements "$ENTITLEMENTS_PATH" \
     --sign - \
     "$APP_PATH"
 

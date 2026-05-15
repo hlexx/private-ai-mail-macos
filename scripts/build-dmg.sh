@@ -47,7 +47,8 @@ rm -f "$DMG_PATH" "$DIST_DIR/${DMG_NAME%.dmg}.sha256"
 
 # --- Create staging area ---
 STAGING="$(mktemp -d -t dmg-staging.XXXXXX)"
-trap 'rm -rf "$STAGING"' EXIT
+RW_DMG=""
+trap 'rm -rf "$STAGING" "$RW_DMG"' EXIT
 
 # Copy the .app
 ditto "$APP_SOURCE" "$STAGING/$APP_NAME"
@@ -109,7 +110,7 @@ SWIFT_EOF
 echo "Background image generated."
 
 # --- Create temporary read-write DMG, set window layout, convert to compressed ---
-RW_DMG="$(mktemp -t rw-dmg.XXXXXX).dmg"
+RW_DMG="$(mktemp -t rw-dmg.XXXXXX).dmg"  # cleaned up by EXIT trap
 MOUNT_POINT="/Volumes/$VOLUME_NAME"
 
 # Detach any stale mount with the same volume name
