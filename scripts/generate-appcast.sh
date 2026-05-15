@@ -74,9 +74,10 @@ for dmg in "${DMGS_SORTED[@]}"; do
   # File size in bytes
   FILE_SIZE=$(stat -f%z "$dmg")
 
-  # EdDSA signature via sign_update
+  # EdDSA signature via sign_update (-p prints only the raw base64 signature,
+  # without the sparkle:edSignature="..." length="..." attribute wrapper)
   echo "  Signing $DMG_BASENAME..."
-  ED_SIGNATURE=$("$SIGN_UPDATE" "$dmg" 2>/dev/null) || {
+  ED_SIGNATURE=$("$SIGN_UPDATE" -p "$dmg" 2>/dev/null) || {
     echo "Error: sign_update failed for $dmg" >&2
     echo "Make sure the EdDSA private key is in your login Keychain." >&2
     echo "(Run tools/sparkle/generate_keys to create one if needed)" >&2

@@ -104,7 +104,12 @@ else {
     exit(1)
 }
 
-try! png.write(to: URL(fileURLWithPath: path))
+do {
+    try png.write(to: URL(fileURLWithPath: path))
+} catch {
+    fputs("Failed to write background image: \(error)\n", stderr)
+    exit(1)
+}
 SWIFT_EOF
 
 echo "Background image generated."
