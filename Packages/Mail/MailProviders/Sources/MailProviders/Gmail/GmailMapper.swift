@@ -15,6 +15,7 @@ public enum GmailMapper {
             sentAt = Date.distantPast
         }
         let isUnread = dto.labelIds?.contains("UNREAD") ?? false
+        let isSentByMe = dto.labelIds?.contains("SENT") ?? false
         let (bodyText, bodyHTML) = extractBodies(from: dto.payload)
         let attachments = extractAttachments(from: dto.payload, messageId: dto.id)
 
@@ -31,7 +32,8 @@ public enum GmailMapper {
             bodyText: bodyText,
             bodyHTML: bodyHTML,
             attachments: attachments,
-            isUnread: isUnread
+            isUnread: isUnread,
+            isSentByMe: isSentByMe
         )
     }
 

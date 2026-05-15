@@ -315,7 +315,7 @@ enum DevSeeder {
                     snippet: String(msg.body.prefix(140)),
                     bodyHtml: nil,
                     bodyText: msg.body,
-                    flags: seed.hasUnread && index == seed.messages.count - 1 ? 0 : 1
+                    flags: seed.hasUnread && index == seed.messages.count - 1 ? 0 : MessageRecord.read
                 ).insert(db)
             }
 

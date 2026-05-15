@@ -168,7 +168,7 @@ public final class ComposeViewModel {
             .map { Address(name: nil, email: String($0)) }
     }
 
-    nonisolated static func deduplicateRePrefix(_ subject: String) -> String {
+    public nonisolated static func deduplicateRePrefix(_ subject: String) -> String {
         let trimmed = subject.trimmingCharacters(in: .whitespaces)
         if trimmed.lowercased().hasPrefix("re: ") {
             return trimmed

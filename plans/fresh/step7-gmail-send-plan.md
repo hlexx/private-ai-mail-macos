@@ -250,14 +250,14 @@ After a successful send, the local record needs to materialise so the
 threadlist / Sent folder reflect the action immediately, before the
 next sync round.
 
-- [ ] In `LiveComposeService.send`, after a successful API response:
+- [x] In `LiveComposeService.send`, after a successful API response:
     - Insert a `MessageRecord` with `id = sent.id`, `thread_id = sent.threadId`, `account_id = accountID`, `from_addr = "Display <account.email>"`, `to_addr = encoded recipients JSON`, `cc_addr = encoded`, `sent_at = now`, `body_text = draft.body`, `flags = sentByMe | read`
     - If `replyContext != nil`, the `thread_id` already exists; otherwise we're starting a new thread — insert a `ThreadRecord` too with `subject = draft.subject`, `last_message_at = now`, `message_count = 1`
     - All inserts on `@DatabaseActor`
-- [ ] Add a `flags` constants set in `MessageRecord`: `static let sentByMe = 1 << 0`, `static let read = 1 << 1`. Existing usages of flags (Inbox unread dot) shift to use named constants for legibility
-- [ ] Update `InboxStore` query: the Sent folder filter should match `(flags & sentByMe) != 0`. Verify the existing `FolderItem.id == "sent"` row in the sidebar drives the filter (may already; check)
-- [ ] Verify the next incremental sync replaces our locally-inserted row with the canonical one from Gmail (`UPSERT` semantics — Gmail's message id is stable, so our `INSERT OR REPLACE` keyed on `(account_id, id)` Just Works). Add a `MailSyncTests` regression test for this UPSERT path
-- [ ] Run `cd Packages/Mail/MailSync && swift test`
+- [x] Add a `flags` constants set in `MessageRecord`: `static let sentByMe = 1 << 0`, `static let read = 1 << 1`. Existing usages of flags (Inbox unread dot) shift to use named constants for legibility
+- [x] Update `InboxStore` query: the Sent folder filter should match `(flags & sentByMe) != 0`. Verify the existing `FolderItem.id == "sent"` row in the sidebar drives the filter (may already; check)
+- [x] Verify the next incremental sync replaces our locally-inserted row with the canonical one from Gmail (`UPSERT` semantics — Gmail's message id is stable, so our `INSERT OR REPLACE` keyed on `(account_id, id)` Just Works). Add a `MailSyncTests` regression test for this UPSERT path
+- [x] Run `cd Packages/Mail/MailSync && swift test`
 
 ### Task 8: Privacy + final gate
 

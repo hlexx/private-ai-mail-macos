@@ -14,6 +14,7 @@ public struct Message: Sendable, Equatable, Identifiable {
     public let bodyHTML: String?
     public let attachments: [Attachment]
     public let isUnread: Bool
+    public let isSentByMe: Bool
 
     public init(
         id: String,
@@ -28,7 +29,8 @@ public struct Message: Sendable, Equatable, Identifiable {
         bodyText: String? = nil,
         bodyHTML: String? = nil,
         attachments: [Attachment] = [],
-        isUnread: Bool = false
+        isUnread: Bool = false,
+        isSentByMe: Bool = false
     ) {
         self.id = id
         self.threadId = threadId
@@ -43,5 +45,6 @@ public struct Message: Sendable, Equatable, Identifiable {
         self.bodyHTML = bodyHTML
         self.attachments = attachments
         self.isUnread = isUnread
+        self.isSentByMe = isSentByMe
     }
 }

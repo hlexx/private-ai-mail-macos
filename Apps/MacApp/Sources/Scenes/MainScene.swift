@@ -112,6 +112,9 @@ struct MainScene: View {
                 )
             }
         }
+        .onChange(of: activeFolder) { _, newFolder in
+            inboxStore.activeFolder = newFolder
+        }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             if let threadId = newValue,
                let thread = inboxStore.threads.first(where: { $0.id == threadId }) {

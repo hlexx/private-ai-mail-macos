@@ -23,7 +23,11 @@ func makeThreadRecord(from mapped: MailDomain.Thread, accountId: String) -> Thre
 }
 
 func makeMessageRecord(from msg: MailDomain.Message, accountId: String) -> MessageRecord {
-    MessageRecord(
+    var flags = 0
+    if !msg.isUnread { flags |= MessageRecord.read }
+    if msg.isSentByMe { flags |= MessageRecord.sentByMe }
+
+    return MessageRecord(
         id: msg.id,
         threadId: msg.threadId,
         accountId: accountId,
@@ -35,7 +39,7 @@ func makeMessageRecord(from msg: MailDomain.Message, accountId: String) -> Messa
         snippet: msg.snippet,
         bodyHtml: msg.bodyHTML,
         bodyText: msg.bodyText,
-        flags: msg.isUnread ? 1 : 0
+        flags: flags
     )
 }
 
