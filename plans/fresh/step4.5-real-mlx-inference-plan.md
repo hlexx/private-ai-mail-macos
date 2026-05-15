@@ -199,19 +199,19 @@ HuggingFace.
 Replace the stub `load()` with code that loads the gemma-4 model and
 tokeniser from disk using `MLXLLM`'s factory APIs.
 
-- [ ] Open `Packages/AI/AIRuntime/Sources/AIRuntime/MLXLLMRunner.swift`
-- [ ] Import `MLXLLM` and `MLXLMCommon`
-- [ ] Add private state: `private var modelContainer: ModelContainer?` (type from MLXLMCommon)
-- [ ] Rewrite `load(from modelDirectory: URL)`:
+- [x] Open `Packages/AI/AIRuntime/Sources/AIRuntime/MLXLLMRunner.swift`
+- [x] Import `MLXLLM` and `MLXLMCommon`
+- [x] Add private state: `private var modelContainer: ModelContainer?` (type from MLXLMCommon)
+- [x] Rewrite `load(from modelDirectory: URL)`:
     - `let factory = LLMModelFactory.shared`
     - `let configuration = ModelConfiguration(directory: modelDirectory)`
     - `let container = try await factory.loadContainer(configuration: configuration)`
     - Store `container` in `self.modelContainer`
     - Set `isLoaded = true`
-- [ ] Keep the `NSLock` for the `isLoaded` flag, but mark the function `async` and avoid locking across `await` (use the lock only for setter, the actor or main-actor isolation if needed)
-- [ ] Handle errors: catch and rethrow as `MLXLLMRunnerError.weightLoadFailed(String(describing: error))` (add this new case to the enum)
-- [ ] Update `MLXLLMRunnerError` to include `.weightLoadFailed(String)` and `.tokeniserMissing` cases
-- [ ] Run `cd Packages/AI/AIRuntime && swift build` to confirm types match. Fix `LLMModelFactory` / `ModelConfiguration` API surface if mlx-swift-examples API differs from this checkbox text (check their README — the API has changed across releases). The Hugging Face model card for gemma-4-e4b-it-4bit links to an mlx-swift example script that shows the exact loader sequence; mirror it
+- [x] Keep the `NSLock` for the `isLoaded` flag, but mark the function `async` and avoid locking across `await` (use the lock only for setter, the actor or main-actor isolation if needed)
+- [x] Handle errors: catch and rethrow as `MLXLLMRunnerError.weightLoadFailed(String(describing: error))` (add this new case to the enum)
+- [x] Update `MLXLLMRunnerError` to include `.weightLoadFailed(String)` and `.tokeniserMissing` cases
+- [x] Run `cd Packages/AI/AIRuntime && swift build` to confirm types match. Fix `LLMModelFactory` / `ModelConfiguration` API surface if mlx-swift-examples API differs from this checkbox text (check their README — the API has changed across releases). The Hugging Face model card for gemma-4-e4b-it-4bit links to an mlx-swift example script that shows the exact loader sequence; mirror it
 
 ### Task 4: Implement MLXLLMRunner.generate — real autoregressive decoding
 

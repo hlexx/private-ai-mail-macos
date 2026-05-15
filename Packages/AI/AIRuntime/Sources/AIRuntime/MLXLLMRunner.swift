@@ -1,22 +1,35 @@
 import Foundation
 import MLX
+import MLXLLM
+import MLXLMCommon
+@preconcurrency import Tokenizers
 
 /// Real LLM runner backed by Apple MLX.
 /// Loads Gemma weights via MLX and runs autoregressive decoding on the GPU.
 final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
     private let lock = NSLock()
-    private var isLoaded = false
-    private var modelDirectory: URL?
+    private var _isLoaded = false
+    private var _modelContainer: ModelContainer?
+
+    var isLoaded: Bool {
+        lock.withLock { _isLoaded }
+    }
 
     func load(from modelDirectory: URL) async throws {
-        let alreadyLoaded = lock.withLock { isLoaded }
+        let alreadyLoaded = lock.withLock { _isLoaded }
         guard !alreadyLoaded else { return }
-        // TODO: Load model weights and tokeniser from modelDirectory using MLX.
-        // This requires mlx-swift-examples LLM utilities or a custom Gemma
-        // model implementation. Deferred until integration testing with GPU.
-        lock.withLock {
-            self.modelDirectory = modelDirectory
-            isLoaded = true
+
+        do {
+            let container = try await LLMModelFactory.shared.loadContainer(
+                from: modelDirectory,
+                using: TransformersTokenizerLoader()
+            )
+            lock.withLock {
+                self._modelContainer = container
+                self._isLoaded = true
+            }
+        } catch {
+            throw MLXLLMRunnerError.weightLoadFailed(String(describing: error))
         }
     }
 
@@ -26,22 +39,102 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         maxTokens: Int,
         onToken: @Sendable (String) -> Void
     ) async throws -> String {
-        let loaded = lock.withLock { isLoaded }
-        guard loaded else {
+        guard let container = lock.withLock({ _modelContainer }) else {
             throw MLXLLMRunnerError.modelNotLoaded
         }
 
-        // TODO: Real MLX inference — tokenise, run forward pass, sample,
-        // decode tokens, call onToken for each. Check Task.isCancelled
-        // between tokens. Cap at maxTokens.
-        //
-        // Placeholder: this will be replaced with actual MLX calls once
-        // the model loading pipeline is complete.
-        throw MLXLLMRunnerError.notImplemented
+        let messages: [MLXLMCommon.Message] = [
+            ["role": "user", "content": "\(systemPrompt)\n\n\(userPrompt)"],
+        ]
+
+        let userInput = UserInput(prompt: .messages(messages))
+        let input = try await container.prepare(input: userInput)
+
+        let effectiveMaxTokens = min(maxTokens, 512)
+        let parameters = GenerateParameters(
+            maxTokens: effectiveMaxTokens,
+            temperature: 0.2,
+            topP: 0.9
+        )
+
+        let stream = try await container.generate(
+            input: input,
+            parameters: parameters
+        )
+
+        var fullOutput = ""
+
+        for await generation in stream {
+            try Task.checkCancellation()
+
+            switch generation {
+            case .chunk(let text):
+                fullOutput += text
+                onToken(text)
+            case .info:
+                break
+            case .toolCall:
+                break
+            }
+        }
+
+        return fullOutput
+    }
+}
+
+/// Bridges swift-transformers' Tokenizer to MLXLMCommon.Tokenizer
+/// and provides a TokenizerLoader for loading from local directories.
+private struct TokenizerBridge: MLXLMCommon.Tokenizer {
+    private let upstream: any Tokenizers.Tokenizer
+
+    init(_ upstream: any Tokenizers.Tokenizer) {
+        self.upstream = upstream
+    }
+
+    func encode(text: String, addSpecialTokens: Bool) -> [Int] {
+        upstream.encode(text: text, addSpecialTokens: addSpecialTokens)
+    }
+
+    func decode(tokenIds: [Int], skipSpecialTokens: Bool) -> String {
+        upstream.decode(tokens: tokenIds, skipSpecialTokens: skipSpecialTokens)
+    }
+
+    func convertTokenToId(_ token: String) -> Int? {
+        upstream.convertTokenToId(token)
+    }
+
+    func convertIdToToken(_ id: Int) -> String? {
+        upstream.convertIdToToken(id)
+    }
+
+    var bosToken: String? { upstream.bosToken }
+    var eosToken: String? { upstream.eosToken }
+    var unknownToken: String? { upstream.unknownToken }
+
+    func applyChatTemplate(
+        messages: [[String: any Sendable]],
+        tools: [[String: any Sendable]]?,
+        additionalContext: [String: any Sendable]?
+    ) throws -> [Int] {
+        do {
+            return try upstream.applyChatTemplate(
+                messages: messages, tools: tools, additionalContext: additionalContext)
+        } catch Tokenizers.TokenizerError.missingChatTemplate {
+            throw MLXLMCommon.TokenizerError.missingChatTemplate
+        }
+    }
+}
+
+struct TransformersTokenizerLoader: TokenizerLoader {
+    func load(from directory: URL) async throws -> any MLXLMCommon.Tokenizer {
+        let upstream = try await AutoTokenizer.from(modelFolder: directory)
+        return TokenizerBridge(upstream)
     }
 }
 
 enum MLXLLMRunnerError: Error, Sendable {
     case modelNotLoaded
     case notImplemented
+    case weightLoadFailed(String)
+    case tokeniserMissing
 }
