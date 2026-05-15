@@ -63,6 +63,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         )
 
         var fullOutput = ""
+        let jsonDetectionThreshold = 64
 
         for await generation in stream {
             try Task.checkCancellation()
@@ -71,6 +72,10 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             case .chunk(let text):
                 fullOutput += text
                 onToken(text)
+
+                if fullOutput.count >= jsonDetectionThreshold && !fullOutput.contains("{") {
+                    throw MLXLLMRunnerError.nonJSONOutput(fullOutput)
+                }
             case .info:
                 break
             case .toolCall:
@@ -137,4 +142,12 @@ enum MLXLLMRunnerError: Error, Sendable {
     case notImplemented
     case weightLoadFailed(String)
     case tokeniserMissing
+    case nonJSONOutput(String)
+
+    var isRetryable: Bool {
+        switch self {
+        case .nonJSONOutput: return true
+        default: return false
+        }
+    }
 }

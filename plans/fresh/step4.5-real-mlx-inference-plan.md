@@ -217,7 +217,7 @@ tokeniser from disk using `MLXLLM`'s factory APIs.
 
 Replace the stub `generate()` with real token-by-token generation.
 
-- [ ] In `MLXLLMRunner.generate(systemPrompt:userPrompt:maxTokens:onToken:)`:
+- [x] In `MLXLLMRunner.generate(systemPrompt:userPrompt:maxTokens:onToken:)`:
     - Guard `modelContainer != nil`, else throw `.modelNotLoaded`
     - Build the chat-template prompt. Gemma 4 uses Gemma's chat template: `<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n<start_of_turn>model\n`. Use `tokenizer.applyChatTemplate(...)` if MLXLMCommon exposes it; otherwise format the string manually and tokenise
     - Use `modelContainer.perform { context in ... }` (the lock-style API of MLXLMCommon) to run a `generate(...)` call with `GenerateParameters(temperature: 0.2, topP: 0.9, maxTokens: maxTokens)` — temperature low because we want structured JSON output, not creativity
@@ -225,9 +225,9 @@ Replace the stub `generate()` with real token-by-token generation.
     - Between every token, call `try Task.checkCancellation()`. If cancelled, return what we have or rethrow `AIError.cancelled` (let `MLXBackend` map it)
     - Stop early if the model emits the end-of-turn token before `maxTokens`
     - Return the full decoded string (concatenated, no system/user prefix)
-- [ ] Stricter token bound: cap at `min(maxTokens, 512)` for thread brief — keeps p95 latency manageable
-- [ ] If the model produces output not matching JSON schema (no `{` after some threshold), abort and let `MLXBackend` retry once — the retry already exists in step 4's `MLXBackend.threadBrief`
-- [ ] Remove the `throw MLXLLMRunnerError.notImplemented` line. The enum case stays for backwards compatibility but is unreachable
+- [x] Stricter token bound: cap at `min(maxTokens, 512)` for thread brief — keeps p95 latency manageable
+- [x] If the model produces output not matching JSON schema (no `{` after some threshold), abort and let `MLXBackend` retry once — the retry already exists in step 4's `MLXBackend.threadBrief`
+- [x] Remove the `throw MLXLLMRunnerError.notImplemented` line. The enum case stays for backwards compatibility but is unreachable
 
 ### Task 5: Tighten MLXBackend to surface real latency
 

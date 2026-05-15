@@ -91,6 +91,14 @@ public actor MLXBackend {
                     )
                     continue
                 }
+            } catch let runnerError as MLXLLMRunnerError where runnerError.isRetryable {
+                lastError = runnerError
+                if attempt < maxRetries {
+                    Self.logger.warning(
+                        "Non-JSON output on attempt \(attempt + 1), retrying"
+                    )
+                    continue
+                }
             } catch {
                 throw MLXBackendError.inferenceFailed(error)
             }
