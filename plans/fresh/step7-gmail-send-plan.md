@@ -159,9 +159,9 @@ A pure-Swift helper that takes structured compose data and emits the
 base64url-encoded MIME blob that `sendMessage` expects. No third-party
 deps — `Foundation` only.
 
-- [ ] Add `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/MIMEBuilder.swift` exposing `public enum MIMEBuilder` with `static func encode(_ message: OutgoingMessage) throws -> String` (returns the base64url-encoded RFC 5322 message ready for `raw:`)
-- [ ] Add `Packages/Mail/MailDomain/Sources/MailDomain/OutgoingMessage.swift`: a Sendable struct with `from: Address`, `to: [Address]`, `cc: [Address]`, `bcc: [Address]`, `subject: String`, `body: String` (UTF-8 plain text; HTML is a follow-up), `inReplyTo: String?` (RFC 2822 Message-ID), `references: [String]` (thread chain)
-- [ ] MIME builder:
+- [x] Add `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/MIMEBuilder.swift` exposing `public enum MIMEBuilder` with `static func encode(_ message: OutgoingMessage) throws -> String` (returns the base64url-encoded RFC 5322 message ready for `raw:`)
+- [x] Add `Packages/Mail/MailDomain/Sources/MailDomain/OutgoingMessage.swift`: a Sendable struct with `from: Address`, `to: [Address]`, `cc: [Address]`, `bcc: [Address]`, `subject: String`, `body: String` (UTF-8 plain text; HTML is a follow-up), `inReplyTo: String?` (RFC 2822 Message-ID), `references: [String]` (thread chain)
+- [x] MIME builder:
     - `Date:` header in RFC 5322 format
     - `Message-ID:` header generated locally (uuid@hlexx.privateaimail) — deterministic from a passed-in seed for tests
     - `From:`, `To:`, `Cc:`, `Bcc:` headers built from `Address` values, properly RFC 2047-encoded for non-ASCII display names
@@ -172,14 +172,14 @@ deps — `Foundation` only.
     - CRLF line endings everywhere (Gmail rejects bare LFs)
     - Body wrapped to ≤ 76 chars per RFC 5322 §2.1.1
     - Base64url-encode the assembled bytes (Gmail's spec: standard base64 with `+`→`-`, `/`→`_`, optional padding stripping)
-- [ ] Tests in `Tests/MailProvidersTests/MIMEBuilderTests.swift`:
+- [x] Tests in `Tests/MailProvidersTests/MIMEBuilderTests.swift`:
     - Plain ASCII subject + body → expected verbatim header block (use a fixture)
     - UTF-8 subject ("Контракт — Acme") → RFC 2047 encoded correctly (use a fixture; encoded form is stable)
     - Multi-recipient `To:` and `Cc:` produce comma-separated address lists
     - `inReplyTo` populates both `In-Reply-To` and prepends to `References`
     - Output is valid base64url (no `+`, no `/`, no whitespace)
     - Round-trip: decode the base64url, parse with a known-good library reference (or hand-roll a `MIMEParser` helper limited to what we need), assert all fields match
-- [ ] Run `cd Packages/Mail/MailProviders && swift test`
+- [x] Run `cd Packages/Mail/MailProviders && swift test`
 
 ### Task 4: ComposeService — bridge ComposeFeature ↔ GmailAPI + DB
 
