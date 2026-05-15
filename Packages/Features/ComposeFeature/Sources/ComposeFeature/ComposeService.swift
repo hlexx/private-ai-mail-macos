@@ -178,10 +178,18 @@ public final class LiveComposeService: ComposeService, Sendable {
                     id: threadId,
                     accountId: accountID,
                     subject: subject,
+                    snippet: String(record.snippet?.prefix(200) ?? ""),
                     lastMessageAt: sentAtUnix,
                     messageCount: 1
                 )
                 try thread.save(dbConn, onConflict: .replace)
+            } else if var existing = try ThreadRecord
+                .filter(Column("id") == threadId && Column("account_id") == accountID)
+                .fetchOne(dbConn) {
+                existing.lastMessageAt = sentAtUnix
+                existing.messageCount += 1
+                existing.snippet = record.snippet
+                try existing.update(dbConn)
             }
         }
     }
