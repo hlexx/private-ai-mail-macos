@@ -132,11 +132,11 @@ private key signs each `.dmg`; the public key lives in Info.plist
 so the running app can verify the signature on the update bundle
 before installing.
 
-- [ ] Run Sparkle's bundled `generate_keys` tool. It's inside the SPM checkout at `~/Library/Developer/Xcode/DerivedData/<...>/SourcePackages/checkouts/Sparkle/bin/generate_keys`. The tool stores the **private key** in the macOS login Keychain (account name `ed25519`, service `https://sparkle-project.org`) and prints the **public key** to stdout
-- [ ] Capture the printed public key (~44 chars base64). Paste it into `Apps/MacApp/Info.plist` `SUPublicEDKey`
-- [ ] Document the key-rotation process in `NOTES.md` (re-run `generate_keys`, update Info.plist, ship a new version users-must-install-before-the-old-key-stops-being-honoured; long term this just requires planning)
-- [ ] Verify `.gitignore` excludes `*.eddsa_priv` (already there per skeleton) — Sparkle keeps the private key in Keychain, not as a file, but add the pattern as belt-and-suspenders in case a future contributor exports it
-- [ ] **Do NOT commit the private key**. If `git status` ever shows a file matching `*eddsa*` or `*ed25519*`, stop and inspect
+- [x] Run Sparkle's bundled `generate_keys` tool. It's inside the SPM checkout at `~/Library/Developer/Xcode/DerivedData/<...>/SourcePackages/checkouts/Sparkle/bin/generate_keys`. The tool stores the **private key** in the macOS login Keychain (account name `ed25519`, service `https://sparkle-project.org`) and prints the **public key** to stdout
+- [x] Capture the printed public key (~44 chars base64). Paste it into `Apps/MacApp/Info.plist` `SUPublicEDKey`
+- [x] Document the key-rotation process in `NOTES.md` (re-run `generate_keys`, update Info.plist, ship a new version users-must-install-before-the-old-key-stops-being-honoured; long term this just requires planning)
+- [x] Verify `.gitignore` excludes `*.eddsa_priv` (already there per skeleton) — Sparkle keeps the private key in Keychain, not as a file, but add the pattern as belt-and-suspenders in case a future contributor exports it
+- [x] **Do NOT commit the private key**. If `git status` ever shows a file matching `*eddsa*` or `*ed25519*`, stop and inspect
 
 ### Task 3: SPUStandardUpdaterController + Check-for-Updates menu item
 

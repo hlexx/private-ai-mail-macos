@@ -101,6 +101,35 @@ Proper fix (later): extract `RBSidebar`, `RBToolbar`, `AccountRow`,
 `FolderItem` into a new `Packages/Features/AppFrameFeature/` package so
 the tests can `@testable import AppFrameFeature` from a package context.
 
+## Sparkle EdDSA key management
+
+### Where the keys live
+
+- **Private key**: macOS login Keychain (account: `ed25519`, service:
+  `https://sparkle-project.org`). Never exported to a file, never committed.
+- **Public key**: `Apps/MacApp/Info.plist` under `SUPublicEDKey`.
+
+### Key rotation
+
+1. Run `./tools/sparkle/generate_keys` — this overwrites the Keychain entry
+   and prints a new public key.
+2. Update `SUPublicEDKey` in `Apps/MacApp/Info.plist` with the new value.
+3. Ship a **transitional release** signed with the **old** key that contains
+   the **new** public key in its Info.plist. Users who installed via the old
+   key will auto-update to this transitional build. After that, all
+   subsequent releases are signed with the new key and verified against the
+   new public key already baked into the installed app.
+4. If the old key is lost (no transitional release possible), users must
+   manually re-download the app — there is no recovery path for EdDSA key
+   loss.
+
+### Sparkle tools
+
+`tools/sparkle/generate_keys` and `tools/sparkle/sign_update` are extracted
+from the Sparkle 2.9.1 release. They are checked in as small native binaries
+(~200 KB each). `sign_update` reads the private key from Keychain to produce
+an EdDSA signature for a DMG file.
+
 ## On-device AI runtime
 
 Thread briefs are generated on-device via **MLX** running **Gemma 4 E2B IT, 4-bit

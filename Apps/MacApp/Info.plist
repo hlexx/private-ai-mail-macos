@@ -41,7 +41,7 @@
     <key>SUFeedURL</key>
     <string>https://github.com/hlexx/private-ai-mail-macos/releases/latest/download/appcast.xml</string>
     <key>SUPublicEDKey</key>
-    <string></string>
+    <string>OOaOvUsCEZZc7TYU0tepl2qo9fpYXO/PhuiW1Odn3pw=</string>
     <key>SUEnableInstallerLauncherService</key>
     <true/>
     <key>SUEnableDownloaderService</key>
