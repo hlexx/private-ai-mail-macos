@@ -159,9 +159,10 @@ public final class ComposeViewModel {
             let toAddrs = self.parseAddresses(self.toField)
             let ccAddrs = self.parseAddresses(self.ccField)
 
+            let displayName = self.accounts.first(where: { $0.id == accountID })?.displayName
             let draft = ComposeDraft(
                 accountID: accountID,
-                from: Address(name: nil, email: accountEmail),
+                from: Address(name: displayName, email: accountEmail),
                 to: toAddrs,
                 cc: ccAddrs,
                 subject: self.subjectField,
