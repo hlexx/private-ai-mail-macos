@@ -108,6 +108,7 @@ public final class ComposeViewModel {
     }
 
     public func confirmSendNow() {
+        guard case .awaitingApproval = sendState else { return }
         countdownTask?.cancel()
         countdownTask = nil
         executeSend()
@@ -186,7 +187,16 @@ public final class ComposeViewModel {
         raw.split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-            .map { Address(name: nil, email: String($0)) }
+            .map { chunk -> Address in
+                let str = String(chunk)
+                if let open = str.firstIndex(of: "<"),
+                   let close = str.firstIndex(of: ">") {
+                    let email = String(str[str.index(after: open)..<close])
+                    let name = str[str.startIndex..<open].trimmingCharacters(in: .whitespaces)
+                    return Address(name: name.isEmpty ? nil : name, email: email)
+                }
+                return Address(name: nil, email: str)
+            }
     }
 
     public nonisolated static func deduplicateRePrefix(_ subject: String) -> String {

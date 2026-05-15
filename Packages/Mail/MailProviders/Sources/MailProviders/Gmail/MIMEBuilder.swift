@@ -56,12 +56,22 @@ public enum MIMEBuilder {
 
     // MARK: - Address formatting
 
+    private static let rfc5322Specials = CharacterSet(charactersIn: "()<>[]:;@\\,\"")
+
     static func formatAddress(_ addr: Address) -> String {
         guard let name = addr.name, !name.isEmpty else {
             return addr.email
         }
-        let encoded = encodeHeaderValue(name)
-        return "\(encoded) <\(addr.email)>"
+        if !name.allSatisfy({ $0.isASCII && $0 != "\r" && $0 != "\n" }) {
+            let encoded = encodeHeaderValue(name)
+            return "\(encoded) <\(addr.email)>"
+        }
+        if name.unicodeScalars.contains(where: { rfc5322Specials.contains($0) }) {
+            let quoted = name.replacingOccurrences(of: "\\", with: "\\\\")
+                             .replacingOccurrences(of: "\"", with: "\\\"")
+            return "\"\(quoted)\" <\(addr.email)>"
+        }
+        return "\(name) <\(addr.email)>"
     }
 
     // MARK: - RFC 2047 encoding
@@ -142,16 +152,12 @@ public enum MIMEBuilder {
 
     // MARK: - RFC 5322 Date
 
-    private static let dateFormatter: DateFormatter = {
+    static func rfc5322Date(_ date: Date = Date()) -> String {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "en_US_POSIX")
         fmt.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
         fmt.timeZone = TimeZone.current
-        return fmt
-    }()
-
-    static func rfc5322Date(_ date: Date = Date()) -> String {
-        dateFormatter.string(from: date)
+        return fmt.string(from: date)
     }
 
     // MARK: - Base64URL

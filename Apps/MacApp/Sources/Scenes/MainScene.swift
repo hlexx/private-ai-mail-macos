@@ -29,7 +29,10 @@ struct MainScene: View {
                 onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
                 onToggleTheme: { toggleTheme() },
                 onOpenSettings: { openSettings() },
-                onCompose: { composition.showCompose = true },
+                onCompose: {
+                    prepareNewCompose()
+                    composition.showCompose = true
+                },
                 onOpenActionSheet: { composition.showActionSheet = true }
             )
 
@@ -146,13 +149,24 @@ struct MainScene: View {
         return folders
     }
 
-    // MARK: - Reply Helpers
+    // MARK: - Compose Helpers
+
+    private func prepareNewCompose() {
+        let vm = composition.composeViewModel
+        vm.reset()
+        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        if let activeID = composition.activeAccountID ?? accounts.first?.id {
+            vm.selectedAccountID = activeID
+            vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
+        }
+    }
 
     private func prefillComposeForReply() {
         let vm = composition.composeViewModel
+        vm.reset()
         guard let lastMessage = threadStore.messages.last else { return }
         vm.prefillReply(
-            fromAddr: lastMessage.fromAddr,
+            fromAddr: extractEmail(from: lastMessage.fromAddr),
             subject: threadStore.subject,
             threadID: lastMessage.threadId,
             lastMessageID: lastMessage.messageIdHeader ?? lastMessage.id
@@ -164,7 +178,8 @@ struct MainScene: View {
         }
     }
 
-    private func extractEmail(from addr: String) -> String {
+    private func extractEmail(from addr: String?) -> String {
+        guard let addr else { return "" }
         if let open = addr.firstIndex(of: "<"),
            let close = addr.firstIndex(of: ">") {
             return String(addr[addr.index(after: open)..<close])

@@ -22,7 +22,6 @@ struct PrivateAIMailApp: App {
                         .onAppear { configureMainWindow() }
                         .onChange(of: composition.showCompose) { _, show in
                             if show {
-                                prepareComposeViewModel()
                                 openWindow(id: "compose")
                                 composition.showCompose = false
                             }
