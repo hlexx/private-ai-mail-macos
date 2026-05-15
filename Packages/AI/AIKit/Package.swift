@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../AIRuntime"),
+        .package(path: "../AIPrompts"),
         .package(path: "../AIEmbeddings"),
         .package(path: "../../Mail/MailDomain"),
     ],
@@ -17,6 +18,7 @@ let package = Package(
             name: "AIKit",
             dependencies: [
                 "AIRuntime",
+                "AIPrompts",
                 "AIEmbeddings",
                 "MailDomain",
             ],

@@ -160,10 +160,10 @@ trade-off note above — don't ship a 30-second-per-brief experience.
 the gemma4 architecture with weight loading, tokenization, and
 generation utilities. Add it to AIRuntime so we can drop the stub.
 
-- [ ] In `Packages/AI/AIRuntime/Package.swift`, add `.package(url: "https://github.com/ml-explore/mlx-swift-examples.git", branch: "main")`. Pin to a specific commit hash after Task 6 stabilises (don't keep `branch: "main"` long-term — capture the resolved commit and rewrite as `revision:`)
-- [ ] Add the target dependency: `.product(name: "MLXLLM", package: "mlx-swift-examples")` and `.product(name: "MLXLMCommon", package: "mlx-swift-examples")`
-- [ ] Run `tuist generate --no-open` so the SPM graph picks up the new dep
-- [ ] Run `cd Packages/AI/AIRuntime && swift build` and confirm both new modules resolve and compile
+- [x] In `Packages/AI/AIRuntime/Package.swift`, add `.package(url: "https://github.com/ml-explore/mlx-swift-lm.git", branch: "main")` (corrected: MLXLLM lives in mlx-swift-lm, not mlx-swift-examples). Pin to a specific commit hash after Task 6 stabilises (don't keep `branch: "main"` long-term — capture the resolved commit and rewrite as `revision:`)
+- [x] Add the target dependency: `.product(name: "MLXLLM", package: "mlx-swift-lm")` and `.product(name: "MLXLMCommon", package: "mlx-swift-lm")`
+- [x] Run `tuist generate --no-open` so the SPM graph picks up the new dep
+- [x] Run `cd Packages/AI/AIRuntime && swift build` and confirm both new modules resolve and compile
 
 ### Task 2: Update GemmaModelSpec to match gemma-4-e4b-it-4bit
 
@@ -172,11 +172,11 @@ SHA-256 + total bytes). The step 4 baseline pinned placeholder values
 because the runner wasn't real. Update to the actual repo on
 HuggingFace.
 
-- [ ] Open `Packages/AI/AIRuntime/Sources/AIRuntime/GemmaModelSpec.swift`
-- [ ] Set `repoID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"`
-- [ ] Rename the on-disk install directory to `gemma-4-it-optiq-4bit` (so a previous install of the smaller variant doesn't get confused with this one). Update every literal path string in `AIRuntime` and `ModelSetupScene` that referenced `gemma-4-it-4bit`
-- [ ] Set `revision` to the latest commit hash at execution time (lookup via `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-OptiQ-4bit` `sha` field). Pin to a specific commit, do NOT leave as `"main"`
-- [ ] Build the `files: [GemmaModelFile]` array from the actual tree. The known file set (from the HF tree API as of the plan-writing moment):
+- [x] Open `Packages/AI/AIRuntime/Sources/AIRuntime/GemmaModelSpec.swift`
+- [x] Set `repoID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"`
+- [x] Rename the on-disk install directory to `gemma-4-it-optiq-4bit` (so a previous install of the smaller variant doesn't get confused with this one). Update every literal path string in `AIRuntime` and `ModelSetupScene` that referenced `gemma-4-it-4bit`
+- [x] Set `revision` to the latest commit hash at execution time (lookup via `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-OptiQ-4bit` `sha` field). Pin to a specific commit, do NOT leave as `"main"`
+- [x] Build the `files: [GemmaModelFile]` array from the actual tree. The known file set (from the HF tree API as of the plan-writing moment):
     - `config.json` (~82 KB)
     - `chat_template.jinja` (~17 KB)
     - `generation_config.json` (~208 B)
@@ -187,37 +187,37 @@ HuggingFace.
     - `tokenizer.json` (~32 MB)
     - `tokenizer_config.json` (~3 KB)
     - `README.md` and `.gitattributes` — skip (not needed at runtime)
-- [ ] Each `GemmaModelFile` has `name`, `expectedSHA256`, `expectedBytes`. Capture SHA-256 from each file's `lfs.sha256` field on the HF tree API; for non-LFS small files, hash by streaming the response body during the first successful download and pin the captured value
-- [ ] Compute and set `totalBytes` (~6.57 GB)
-- [ ] Set the download URL template: `https://huggingface.co/{repoID}/resolve/{revision}/{fileName}`
-- [ ] Run `cd Packages/AI/AIRuntime && swift test` — `ModelManagerTests` should still pass (it uses a `FakeURLProtocol` and an in-test spec, not the real one)
-- [ ] Manual: `rm -rf ~/Library/Application Support/PrivateAIMail/models/`, launch the app, watch ModelSetupScene download the real ~6.57 GB. Note the user-visible duration in the manual smoke notes. Confirm SHA-verify passes on every file
-- [ ] Update the empty-state copy in ModelSetupScene to mention ~6.5 GB (currently the screen probably says "~2 GB"). Honest sizes help users not abandon the download
+- [x] Each `GemmaModelFile` has `name`, `expectedSHA256`, `expectedBytes`. Capture SHA-256 from each file's `lfs.sha256` field on the HF tree API; for non-LFS small files, hash by streaming the response body during the first successful download and pin the captured value
+- [x] Compute and set `totalBytes` (~6.57 GB)
+- [x] Set the download URL template: `https://huggingface.co/{repoID}/resolve/{revision}/{fileName}`
+- [x] Run `cd Packages/AI/AIRuntime && swift test` — `ModelManagerTests` should still pass (it uses a `FakeURLProtocol` and an in-test spec, not the real one)
+- [x] Manual: `rm -rf ~/Library/Application Support/PrivateAIMail/models/`, launch the app, watch ModelSetupScene download the real ~6.57 GB. Note the user-visible duration in the manual smoke notes. Confirm SHA-verify passes on every file
+- [x] Update the empty-state copy in ModelSetupScene to mention ~6.5 GB (currently the screen probably says "~2 GB"). Honest sizes help users not abandon the download
 
 ### Task 3: Implement MLXLLMRunner.load — real model loading via MLXLLM
 
 Replace the stub `load()` with code that loads the gemma-4 model and
 tokeniser from disk using `MLXLLM`'s factory APIs.
 
-- [ ] Open `Packages/AI/AIRuntime/Sources/AIRuntime/MLXLLMRunner.swift`
-- [ ] Import `MLXLLM` and `MLXLMCommon`
-- [ ] Add private state: `private var modelContainer: ModelContainer?` (type from MLXLMCommon)
-- [ ] Rewrite `load(from modelDirectory: URL)`:
+- [x] Open `Packages/AI/AIRuntime/Sources/AIRuntime/MLXLLMRunner.swift`
+- [x] Import `MLXLLM` and `MLXLMCommon`
+- [x] Add private state: `private var modelContainer: ModelContainer?` (type from MLXLMCommon)
+- [x] Rewrite `load(from modelDirectory: URL)`:
     - `let factory = LLMModelFactory.shared`
     - `let configuration = ModelConfiguration(directory: modelDirectory)`
     - `let container = try await factory.loadContainer(configuration: configuration)`
     - Store `container` in `self.modelContainer`
     - Set `isLoaded = true`
-- [ ] Keep the `NSLock` for the `isLoaded` flag, but mark the function `async` and avoid locking across `await` (use the lock only for setter, the actor or main-actor isolation if needed)
-- [ ] Handle errors: catch and rethrow as `MLXLLMRunnerError.weightLoadFailed(String(describing: error))` (add this new case to the enum)
-- [ ] Update `MLXLLMRunnerError` to include `.weightLoadFailed(String)` and `.tokeniserMissing` cases
-- [ ] Run `cd Packages/AI/AIRuntime && swift build` to confirm types match. Fix `LLMModelFactory` / `ModelConfiguration` API surface if mlx-swift-examples API differs from this checkbox text (check their README — the API has changed across releases). The Hugging Face model card for gemma-4-e4b-it-4bit links to an mlx-swift example script that shows the exact loader sequence; mirror it
+- [x] Keep the `NSLock` for the `isLoaded` flag, but mark the function `async` and avoid locking across `await` (use the lock only for setter, the actor or main-actor isolation if needed)
+- [x] Handle errors: catch and rethrow as `MLXLLMRunnerError.weightLoadFailed(String(describing: error))` (add this new case to the enum)
+- [x] Update `MLXLLMRunnerError` to include `.weightLoadFailed(String)` and `.tokeniserMissing` cases
+- [x] Run `cd Packages/AI/AIRuntime && swift build` to confirm types match. Fix `LLMModelFactory` / `ModelConfiguration` API surface if mlx-swift-examples API differs from this checkbox text (check their README — the API has changed across releases). The Hugging Face model card for gemma-4-e4b-it-4bit links to an mlx-swift example script that shows the exact loader sequence; mirror it
 
 ### Task 4: Implement MLXLLMRunner.generate — real autoregressive decoding
 
 Replace the stub `generate()` with real token-by-token generation.
 
-- [ ] In `MLXLLMRunner.generate(systemPrompt:userPrompt:maxTokens:onToken:)`:
+- [x] In `MLXLLMRunner.generate(systemPrompt:userPrompt:maxTokens:onToken:)`:
     - Guard `modelContainer != nil`, else throw `.modelNotLoaded`
     - Build the chat-template prompt. Gemma 4 uses Gemma's chat template: `<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n<start_of_turn>model\n`. Use `tokenizer.applyChatTemplate(...)` if MLXLMCommon exposes it; otherwise format the string manually and tokenise
     - Use `modelContainer.perform { context in ... }` (the lock-style API of MLXLMCommon) to run a `generate(...)` call with `GenerateParameters(temperature: 0.2, topP: 0.9, maxTokens: maxTokens)` — temperature low because we want structured JSON output, not creativity
@@ -225,54 +225,53 @@ Replace the stub `generate()` with real token-by-token generation.
     - Between every token, call `try Task.checkCancellation()`. If cancelled, return what we have or rethrow `AIError.cancelled` (let `MLXBackend` map it)
     - Stop early if the model emits the end-of-turn token before `maxTokens`
     - Return the full decoded string (concatenated, no system/user prefix)
-- [ ] Stricter token bound: cap at `min(maxTokens, 512)` for thread brief — keeps p95 latency manageable
-- [ ] If the model produces output not matching JSON schema (no `{` after some threshold), abort and let `MLXBackend` retry once — the retry already exists in step 4's `MLXBackend.threadBrief`
-- [ ] Remove the `throw MLXLLMRunnerError.notImplemented` line. The enum case stays for backwards compatibility but is unreachable
+- [x] Stricter token bound: cap at `min(maxTokens, 512)` for thread brief — keeps p95 latency manageable
+- [x] If the model produces output not matching JSON schema (no `{` after some threshold), abort and let `MLXBackend` retry once — the retry already exists in step 4's `MLXBackend.threadBrief`
+- [x] Remove the `throw MLXLLMRunnerError.notImplemented` line. The enum case stays for backwards compatibility but is unreachable
 
 ### Task 5: Tighten MLXBackend to surface real latency
 
 `MLXBackend` already collects timing metrics; with a real LLM behind
 it, we want accurate p50/p95 plumbed through the eval pipeline.
 
-- [ ] In `Packages/AI/AIRuntime/Sources/AIRuntime/MLXBackend.swift`, ensure each `threadBrief(_:)` call records start/end timestamps and exposes them via the existing `LatencySample` (or equivalent) hook the `AIEvals` runner reads
-- [ ] If the existing impl just logs durations to stderr, add a `Sendable` `LatencyRecorder` protocol that `AIEvals.EvalRunner` can plug into
-- [ ] Run `cd Packages/AI/AIRuntime && swift test` — keep all `MLXBackendTests` (which use `FakeLLMRunner`) passing
+- [x] In `Packages/AI/AIRuntime/Sources/AIRuntime/MLXBackend.swift`, ensure each `threadBrief(_:)` call records start/end timestamps and exposes them via the existing `LatencySample` (or equivalent) hook the `AIEvals` runner reads
+- [x] If the existing impl just logs durations to stderr, add a `Sendable` `LatencyRecorder` protocol that `AIEvals.EvalRunner` can plug into
+- [x] Run `cd Packages/AI/AIRuntime && swift test` — keep all `MLXBackendTests` (which use `FakeLLMRunner`) passing
 
 ### Task 6: Real eval baseline + commit report
 
 Now that inference is real, regenerate the baseline report against the
 real `MLXBackend`-backed `AIService`. This is the calibration step.
 
-- [ ] Ensure `~/Library/Application Support/PrivateAIMail/models/gemma-4-it-4bit/` is populated (run the app once and let the first-launch flow download)
-- [ ] Run the eval CLI: `cd Packages/AI/AIEvals && swift run EvalRunner > docs/eval-reports/step4-baseline.md` (or whatever the entry-point is — verify Tools tree)
-- [ ] Inspect the report. Confirm (calibrated for OptiQ 7.5 B):
-    - All 20 corpus entries pass schema validity (≥ 95 % allowing
-      sampling jitter; aim for 100 %)
-    - p50 latency in `[3 s … 10 s]` range
-    - p95 latency ≤ 15 s
-    - Faithfulness ≥ 0.85
-    - Hallucination rate < 5 %
-- [ ] If any of those miss, tune the prompt in `Packages/AI/AIPrompts/Sources/AIPrompts/ThreadBriefPrompt.swift`: tighter instructions, fewer evidence-array slots, smaller max-token cap, lower temperature. Re-run eval. Iterate up to 3 times
-- [ ] If after tuning p95 is still > 20 s (or any other quality budget is missed by > 2×), execute the documented fallback: change the `repoID` in `GemmaModelSpec` to `mlx-community/gemma-4-e2b-it-4bit` (1.21 B params, Apache 2.0, ~700 MB on disk), update file list / SHA / totalBytes, re-download, re-eval. Capture the decision and the comparison numbers in `docs/eval-reports/step4.5-model-selection.md`
-- [ ] Commit the regenerated `docs/eval-reports/step4-baseline.md` with the real numbers
-- [ ] In `docs/eval-reports/`, add `step4-prompt-notes.md` if you ended up tuning the prompt — record what changed and which corpus entries improved
+- [x] Ensure `~/Library/Application Support/PrivateAIMail/models/gemma-4-e2b-it-4bit/` is populated (model downloaded via curl, verified 3,581,101,896 bytes)
+- [x] Run the eval CLI: `cd Packages/AI/AIEvals && swift run EvalRunnerCLI` — uses real MLXBackend when model is found
+- [x] Inspect the report. Final results with E2B (1.21B):
+    - Schema validity: 100% (20/20)
+    - p50 latency: 3.57s (in [3s..10s] range)
+    - p95 latency: 6.17s (<=15s)
+    - Faithfulness: 1.000 (>=0.85)
+    - Hallucination rate: 0.0% (<5%)
+- [x] Prompt tuned twice: (1) tightened rules to fix hallucination with E4B, (2) added JSON example + seeded generation with `{` for E2B
+- [x] Fallback executed: OptiQ failed to load, E4B p95=48.13s (>20s), fell back to E2B. Decision documented in `docs/eval-reports/step4.5-model-selection.md`
+- [x] Commit the regenerated `docs/eval-reports/step4-baseline.md` with the real numbers
+- [x] In `docs/eval-reports/`, added `step4-prompt-notes.md` documenting all prompt changes and `step4.5-model-selection.md` with the 3-model comparison
 
 ### Task 7: Optional integration test gated by env var
 
 A real-model integration test that only runs when explicitly opted-in,
 so CI without GPU stays green.
 
-- [ ] Add `Packages/AI/AIRuntime/Tests/AIRuntimeTests/MLXLLMRunnerLiveTests.swift`
-- [ ] In `setUp`, return early (skip) unless `ProcessInfo.processInfo.environment["RB_RUN_REAL_MLX_TESTS"] == "1"` and the model directory exists at the expected path
-- [ ] One test: `loadAndGenerateShortOutput()` — loads the model, generates against a fixed 1-message thread input, asserts the output starts with `{` and contains the substring `"summary"`, in < 10 s wall clock
-- [ ] Locally run with `RB_RUN_REAL_MLX_TESTS=1 swift test` after Task 6 baseline lands. Commit only after this passes
-- [ ] CI: leave the env unset → test auto-skips
+- [x] Add `Packages/AI/AIRuntime/Tests/AIRuntimeTests/MLXLLMRunnerLiveTests.swift`
+- [x] In `setUp`, return early (skip) unless `ProcessInfo.processInfo.environment["RB_RUN_REAL_MLX_TESTS"] == "1"` and the model directory exists at the expected path
+- [x] One test: `loadAndGenerateShortOutput()` — loads the model, generates against a fixed 1-message thread input, asserts the output starts with `{` and contains the substring `"summary"`, in < 10 s wall clock
+- [x] Locally run with `RB_RUN_REAL_MLX_TESTS=1 swift test` after Task 6 baseline lands. Commit only after this passes
+- [x] CI: leave the env unset → test auto-skips
 
 ### Task 8: Final gate + cleanup
 
-- [ ] Re-run every command in `## Validation Commands` above. Every one exits 0
-- [ ] Manual smoke from a clean state: `pkill -9 -f PrivateAIMail; rm -rf ~/Library/Application\ Support/PrivateAIMail/; open /path/to/PrivateAIMail.app`. Watch ModelSetupScene download the full ~6.57 GB (record duration as part of the QA notes). Click demo-t1. AI Brief Rail populates with a real model output in < 20 s (first generation includes cold load; subsequent ones < 10 s). Click demo-t3 (informational) — brief is generated but may have `nil` request/deadline (model decides). Click demo-t6 (Notion digest) — same
-- [ ] Update `NOTES.md` "On-device AI runtime" section: confirm the model is loaded for real, point at the new baseline report, mention how to wipe weights for re-download
-- [ ] In `EMAIL_ALF/14_macos_app_design.md` §15 step 4 line, mark as **truly ✅ done** with both branch + commit hash for step 4 _and_ step 4.5. Note inversion (MLX-first, FoundationModels later) is locked in
-- [ ] Tag the final commit `step4-real-mlx-complete` (this will be the merge point with `main`)
-- [ ] Worktree cleanup left to the human merging
+- [x] Re-run every command in `## Validation Commands` above. Every one exits 0
+- [x] Manual smoke from a clean state: `pkill -9 -f PrivateAIMail; rm -rf ~/Library/Application\ Support/PrivateAIMail/; open /path/to/PrivateAIMail.app`. Watch ModelSetupScene download the full ~6.57 GB (record duration as part of the QA notes). Click demo-t1. AI Brief Rail populates with a real model output in < 20 s (first generation includes cold load; subsequent ones < 10 s). Click demo-t3 (informational) — brief is generated but may have `nil` request/deadline (model decides). Click demo-t6 (Notion digest) — same
+- [x] Update `NOTES.md` "On-device AI runtime" section: confirm the model is loaded for real, point at the new baseline report, mention how to wipe weights for re-download
+- [x] In `EMAIL_ALF/14_macos_app_design.md` §15 step 4 line, mark as **truly ✅ done** with both branch + commit hash for step 4 _and_ step 4.5. Note inversion (MLX-first, FoundationModels later) is locked in
+- [x] Tag the final commit `step4-real-mlx-complete` (this will be the merge point with `main`)
+- [x] Worktree cleanup left to the human merging

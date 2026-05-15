@@ -1,0 +1,11 @@
+{
+  "summary": "Payment receipt for invoice #INV-2418, amount €1,840.",
+  "request": null,
+  "deadline": null,
+  "risk": null,
+  "nextStep": null,
+  "evidence": [
+    "Receipt for €1,840 attached."
+  ],
+  "confidence": 0.88
+}

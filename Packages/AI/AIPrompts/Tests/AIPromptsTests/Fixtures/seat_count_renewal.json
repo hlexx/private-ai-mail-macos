@@ -1,0 +1,11 @@
+{
+  "summary": "Q3 SaaS renewal kicked off; legal team added. Seat count confirmation needed by Wednesday.",
+  "request": "Confirm the seat count by Wednesday.",
+  "deadline": "Wednesday",
+  "risk": null,
+  "nextStep": "Check and confirm seat count.",
+  "evidence": [
+    "Can you confirm the seat count by Wednesday?"
+  ],
+  "confidence": 0.85
+}

@@ -10,6 +10,9 @@ let package = Package(
     dependencies: [
         .package(path: "../../Core/AppFoundation"),
         .package(path: "../AIPrompts"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "5b7e543e70c47e99f8f38886752fcb49b3388226"),
+        .package(url: "https://github.com/ml-explore/mlx-swift.git", from: "0.21.0"),
+        .package(url: "https://github.com/huggingface/swift-transformers.git", from: "0.1.12"),
     ],
     targets: [
         .target(
@@ -17,6 +20,10 @@ let package = Package(
             dependencies: [
                 "AppFoundation",
                 "AIPrompts",
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+                .product(name: "MLX", package: "mlx-swift"),
+                .product(name: "Transformers", package: "swift-transformers"),
             ],
             resources: [.process("Resources")]
         ),
