@@ -44,7 +44,7 @@ public actor MLXBackend {
         modelManager: ModelManager,
         runner: any LLMRunner,
         maxOutputTokens: Int = 512,
-        maxRetries: Int = 1,
+        maxRetries: Int = 2,
         latencyRecorder: (any LatencyRecorder)? = nil
     ) {
         self.modelManager = modelManager
@@ -101,14 +101,6 @@ public actor MLXBackend {
                 if attempt < maxRetries {
                     Self.logger.warning(
                         "Malformed output on attempt \(attempt + 1), retrying"
-                    )
-                    continue
-                }
-            } catch let runnerError as MLXLLMRunnerError where runnerError.isRetryable {
-                lastError = runnerError
-                if attempt < maxRetries {
-                    Self.logger.warning(
-                        "Non-JSON output on attempt \(attempt + 1), retrying"
                     )
                     continue
                 }

@@ -121,7 +121,7 @@ Full comparison: `docs/eval-reports/step4.5-model-selection.md`
 
 `~/Library/Application Support/PrivateAIMail/models/gemma-4-e2b-it-4bit/`
 
-The model is downloaded automatically on first launch (~700 MB). A blocking
+The model is downloaded automatically on first launch (~3.6 GB). A blocking
 "Setting up local AI" screen shows progress. The download is resumable — killing
 the app mid-download and relaunching continues from where it left off.
 

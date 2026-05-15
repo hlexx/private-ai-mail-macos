@@ -54,7 +54,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         }
         let input = LMInput(tokens: MLXArray(tokens))
 
-        let effectiveMaxTokens = min(maxTokens, 256)
+        let effectiveMaxTokens = min(maxTokens, 512)
         let parameters = GenerateParameters(
             maxTokens: effectiveMaxTokens,
             temperature: 0.1,
@@ -68,6 +68,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
 
         // Prepend the seeded "{" to capture the full JSON object
         var fullOutput = "{"
+        onToken("{")
 
         for await generation in stream {
             try Task.checkCancellation()
@@ -141,12 +142,4 @@ enum MLXLLMRunnerError: Error, Sendable {
     case modelNotLoaded
     case weightLoadFailed(String)
     case tokeniserMissing
-    case nonJSONOutput(String)
-
-    var isRetryable: Bool {
-        switch self {
-        case .nonJSONOutput: return true
-        default: return false
-        }
-    }
 }
