@@ -172,11 +172,11 @@ SHA-256 + total bytes). The step 4 baseline pinned placeholder values
 because the runner wasn't real. Update to the actual repo on
 HuggingFace.
 
-- [ ] Open `Packages/AI/AIRuntime/Sources/AIRuntime/GemmaModelSpec.swift`
-- [ ] Set `repoID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"`
-- [ ] Rename the on-disk install directory to `gemma-4-it-optiq-4bit` (so a previous install of the smaller variant doesn't get confused with this one). Update every literal path string in `AIRuntime` and `ModelSetupScene` that referenced `gemma-4-it-4bit`
-- [ ] Set `revision` to the latest commit hash at execution time (lookup via `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-OptiQ-4bit` `sha` field). Pin to a specific commit, do NOT leave as `"main"`
-- [ ] Build the `files: [GemmaModelFile]` array from the actual tree. The known file set (from the HF tree API as of the plan-writing moment):
+- [x] Open `Packages/AI/AIRuntime/Sources/AIRuntime/GemmaModelSpec.swift`
+- [x] Set `repoID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"`
+- [x] Rename the on-disk install directory to `gemma-4-it-optiq-4bit` (so a previous install of the smaller variant doesn't get confused with this one). Update every literal path string in `AIRuntime` and `ModelSetupScene` that referenced `gemma-4-it-4bit`
+- [x] Set `revision` to the latest commit hash at execution time (lookup via `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-OptiQ-4bit` `sha` field). Pin to a specific commit, do NOT leave as `"main"`
+- [x] Build the `files: [GemmaModelFile]` array from the actual tree. The known file set (from the HF tree API as of the plan-writing moment):
     - `config.json` (~82 KB)
     - `chat_template.jinja` (~17 KB)
     - `generation_config.json` (~208 B)
@@ -187,12 +187,12 @@ HuggingFace.
     - `tokenizer.json` (~32 MB)
     - `tokenizer_config.json` (~3 KB)
     - `README.md` and `.gitattributes` — skip (not needed at runtime)
-- [ ] Each `GemmaModelFile` has `name`, `expectedSHA256`, `expectedBytes`. Capture SHA-256 from each file's `lfs.sha256` field on the HF tree API; for non-LFS small files, hash by streaming the response body during the first successful download and pin the captured value
-- [ ] Compute and set `totalBytes` (~6.57 GB)
-- [ ] Set the download URL template: `https://huggingface.co/{repoID}/resolve/{revision}/{fileName}`
-- [ ] Run `cd Packages/AI/AIRuntime && swift test` — `ModelManagerTests` should still pass (it uses a `FakeURLProtocol` and an in-test spec, not the real one)
-- [ ] Manual: `rm -rf ~/Library/Application Support/PrivateAIMail/models/`, launch the app, watch ModelSetupScene download the real ~6.57 GB. Note the user-visible duration in the manual smoke notes. Confirm SHA-verify passes on every file
-- [ ] Update the empty-state copy in ModelSetupScene to mention ~6.5 GB (currently the screen probably says "~2 GB"). Honest sizes help users not abandon the download
+- [x] Each `GemmaModelFile` has `name`, `expectedSHA256`, `expectedBytes`. Capture SHA-256 from each file's `lfs.sha256` field on the HF tree API; for non-LFS small files, hash by streaming the response body during the first successful download and pin the captured value
+- [x] Compute and set `totalBytes` (~6.57 GB)
+- [x] Set the download URL template: `https://huggingface.co/{repoID}/resolve/{revision}/{fileName}`
+- [x] Run `cd Packages/AI/AIRuntime && swift test` — `ModelManagerTests` should still pass (it uses a `FakeURLProtocol` and an in-test spec, not the real one)
+- [x] Manual: `rm -rf ~/Library/Application Support/PrivateAIMail/models/`, launch the app, watch ModelSetupScene download the real ~6.57 GB. Note the user-visible duration in the manual smoke notes. Confirm SHA-verify passes on every file
+- [x] Update the empty-state copy in ModelSetupScene to mention ~6.5 GB (currently the screen probably says "~2 GB"). Honest sizes help users not abandon the download
 
 ### Task 3: Implement MLXLLMRunner.load — real model loading via MLXLLM
 

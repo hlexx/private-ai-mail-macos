@@ -24,7 +24,7 @@ struct ModelSetupScene: View {
                     .foregroundStyle(Color.rbCitron500)
 
                 // Eyebrow
-                Text("SETTING UP LOCAL AI · ONE-TIME")
+                Text("SETTING UP LOCAL AI · ONE-TIME · ~6.5 GB")
                     .rbTextStyle(.eyebrow)
                     .foregroundStyle(Color.rbFg3)
 

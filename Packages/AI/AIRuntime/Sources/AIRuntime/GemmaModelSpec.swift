@@ -1,9 +1,9 @@
 import Foundation
 
 public enum GemmaModelSpec {
-    public static let modelID = "mlx-community/gemma-3-4b-it-4bit"
-    public static let revision = "d1f58b0e44e0a3586cf1a3c3b5bc8aa48b601cda"
-    public static let directoryName = "gemma-3-4b-it-4bit"
+    public static let modelID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"
+    public static let revision = "cfac466f1bca589c605b9ca1dd57c2deb63c5c63"
+    public static let directoryName = "gemma-4-it-optiq-4bit"
 
     public struct FileEntry: Sendable {
         public let name: String
@@ -13,63 +13,48 @@ public enum GemmaModelSpec {
 
     public static let files: [FileEntry] = [
         FileEntry(
-            name: "model.safetensors",
-            byteCount: 3_400_569_562,
-            sha256: "94d3d701367d78584a9334ca00672b1c86e4aefa6a94167556c0485381e74af3"
-        ),
-        FileEntry(
-            name: "model.safetensors.index.json",
-            byteCount: 90_558,
-            sha256: nil
-        ),
-        FileEntry(
             name: "config.json",
-            byteCount: 1_072,
+            byteCount: 81_691,
             sha256: nil
         ),
         FileEntry(
-            name: "tokenizer.json",
-            byteCount: 33_384_568,
-            sha256: "4667f2089529e8e7657cfb6d1c19910ae71ff5f28aa7ab2ff2763330affad795"
-        ),
-        FileEntry(
-            name: "tokenizer.model",
-            byteCount: 4_689_074,
-            sha256: "1299c11d7cf632ef3b4e11937501358ada021bbdf7c47638d13c0ee982f2e79c"
-        ),
-        FileEntry(
-            name: "tokenizer_config.json",
-            byteCount: 1_157_007,
+            name: "chat_template.jinja",
+            byteCount: 16_804,
             sha256: nil
         ),
         FileEntry(
             name: "generation_config.json",
-            byteCount: 192,
+            byteCount: 208,
             sha256: nil
         ),
         FileEntry(
-            name: "special_tokens_map.json",
-            byteCount: 662,
+            name: "model-00001-of-00002.safetensors",
+            byteCount: 3_523_881_390,
+            sha256: "0d239262a51b1795d1556ba0d0bdea955c126108d053249d2fd4c1e1584100fd"
+        ),
+        FileEntry(
+            name: "model-00002-of-00002.safetensors",
+            byteCount: 3_010_217_360,
+            sha256: "da846c36ac065e0c8f558cd27286757490fc345b6613ac2789750c0d760f59a3"
+        ),
+        FileEntry(
+            name: "model.safetensors.index.json",
+            byteCount: 151_391,
             sha256: nil
         ),
         FileEntry(
-            name: "preprocessor_config.json",
-            byteCount: 570,
+            name: "optiq_metadata.json",
+            byteCount: 40_081,
             sha256: nil
         ),
         FileEntry(
-            name: "processor_config.json",
-            byteCount: 70,
-            sha256: nil
+            name: "tokenizer.json",
+            byteCount: 32_169_626,
+            sha256: "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"
         ),
         FileEntry(
-            name: "added_tokens.json",
-            byteCount: 35,
-            sha256: nil
-        ),
-        FileEntry(
-            name: "chat_template.json",
-            byteCount: 1_615,
+            name: "tokenizer_config.json",
+            byteCount: 2_744,
             sha256: nil
         ),
     ]
