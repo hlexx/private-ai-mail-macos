@@ -170,6 +170,48 @@ none are set, the build falls back to ad-hoc signing.
   staples the ticket, and verifies Gatekeeper assessment. Exits cleanly if
   env vars are missing.
 
+## CI release workflow
+
+### Overview
+
+`.github/workflows/release.yml` runs on any pushed tag matching `v*`. It builds
+a Release-configuration DMG and creates a **draft** GitHub Release with the DMG
+and SHA-256 checksum attached. The maintainer publishes manually after smoke.
+
+### CI secrets and variables
+
+| Name | Type | Required? | Purpose |
+|---|---|---|---|
+| `GITHUB_TOKEN` | Secret (auto) | Yes | Provided automatically by GitHub Actions |
+| `RELEASE_APPLE_ID` | Secret | No (Tier B only) | Apple ID for `notarytool` |
+| `RELEASE_APPLE_PW` | Secret | No (Tier B only) | App-specific password for `notarytool` |
+| `RELEASE_DEVELOPER_TEAM` | Variable | No (Tier B only) | Apple Developer Team ID for codesigning |
+
+Without the optional secrets, the workflow produces an ad-hoc-signed DMG (Tier A).
+
+### Sparkle private key on CI
+
+The Sparkle EdDSA private key is **NOT** stored on CI. It lives exclusively in
+the maintainer's macOS login Keychain (see "Sparkle EdDSA key management" above).
+
+The release workflow builds the DMG and creates a draft release, but does **not**
+generate `appcast.xml` — that requires the private key for EdDSA signing.
+
+**Workflow for cutting a release:**
+
+1. Push a version tag: `git tag v0.1.0-alpha && git push origin v0.1.0-alpha`
+2. CI builds the DMG, creates a draft release with the DMG attached.
+3. On the maintainer's machine (where the Keychain has the key):
+   - Download the DMG from the draft release (or build locally via `make release`)
+   - Run `make appcast` to generate the signed `appcast.xml`
+   - Upload: `gh release upload v0.1.0-alpha dist/appcast.xml --clobber`
+4. Smoke-test, then publish the release.
+
+If a future contributor wants fully automated CI releases, they would need to
+store the EdDSA private key as an encrypted CI secret and modify `sign_update` to
+read from a file instead of Keychain. This changes the threat model — document
+and assess before proceeding.
+
 ## On-device AI runtime
 
 Thread briefs are generated on-device via **MLX** running **Gemma 4 E2B IT, 4-bit

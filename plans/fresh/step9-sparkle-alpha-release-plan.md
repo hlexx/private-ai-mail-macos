@@ -194,16 +194,16 @@ CI runs on a pushed tag `v*.*.*-*` and produces a draft GitHub
 Release with the DMG and appcast attached. The maintainer publishes
 manually after smoke-testing.
 
-- [ ] If `hlexx/private-ai-mail-macos` does not yet exist on github.com (verify via `gh repo view hlexx/private-ai-mail-macos`), create it (`gh repo create hlexx/private-ai-mail-macos --private --source=. --remote=origin --push`) and push current main
-- [ ] Add `.github/workflows/release.yml` triggered on `push: tags: [v*]`:
+- [x] If `hlexx/private-ai-mail-macos` does not yet exist on github.com (verify via `gh repo view hlexx/private-ai-mail-macos`), create it (`gh repo create hlexx/private-ai-mail-macos --private --source=. --remote=origin --push`) and push current main
+- [x] Add `.github/workflows/release.yml` triggered on `push: tags: [v*]`:
     1. Checkout
     2. Set up Tuist + Metal Toolchain (same as existing CI)
     3. `tuist generate --no-open`
     4. `xcodebuild build -scheme MacApp -configuration Release ...` — note Release config, with `DEVELOPMENT_TEAM` injected from `vars.RELEASE_DEVELOPER_TEAM` if present
     5. Run `make release` (skip the notarize step if secrets are missing; print a warning, don't fail)
     6. `gh release create $TAG --draft --notes-file release-notes/$TAG.md dist/*.dmg dist/appcast.xml dist/*.sha256`
-- [ ] CI secrets to document in `NOTES.md`: `RELEASE_APPLE_ID`, `RELEASE_APPLE_PW`, `RELEASE_DEVELOPER_TEAM` (all optional for tier A); `GITHUB_TOKEN` already provided
-- [ ] **Sparkle private key on CI**: do NOT keep it on CI. Releases are cut from a maintainer's machine where the Keychain has the key. The `release.yml` builds the DMG, but the EdDSA signing happens in the local `make release` step before `gh release upload`. Document this clearly — if a future contributor wants CI-only releases, they need a different key storage path (e.g. encrypted secret + ed25519 file)
+- [x] CI secrets to document in `NOTES.md`: `RELEASE_APPLE_ID`, `RELEASE_APPLE_PW`, `RELEASE_DEVELOPER_TEAM` (all optional for tier A); `GITHUB_TOKEN` already provided
+- [x] **Sparkle private key on CI**: do NOT keep it on CI. Releases are cut from a maintainer's machine where the Keychain has the key. The `release.yml` builds the DMG, but the EdDSA signing happens in the local `make release` step before `gh release upload`. Document this clearly — if a future contributor wants CI-only releases, they need a different key storage path (e.g. encrypted secret + ed25519 file)
 
 ### Task 8: First alpha — tag, build, upload
 
