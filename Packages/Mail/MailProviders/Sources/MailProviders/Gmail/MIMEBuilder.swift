@@ -95,7 +95,10 @@ public enum MIMEBuilder {
 
     static func quotedPrintableEncode(_ text: String) -> String {
         var result: [String] = []
-        let lines = text.components(separatedBy: "\n")
+        // Normalize line endings: strip \r so \r\n and bare \r become \n
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+                             .replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalized.components(separatedBy: "\n")
 
         for line in lines {
             let encoded = quotedPrintableEncodeLine(line)
@@ -113,6 +116,12 @@ public enum MIMEBuilder {
             } else {
                 out.append(String(format: "=%02X", byte))
             }
+        }
+        // RFC 2045 §6.7 rule 3: trailing whitespace must be encoded
+        if out.hasSuffix(" ") {
+            out = String(out.dropLast()) + "=20"
+        } else if out.hasSuffix("\t") {
+            out = String(out.dropLast()) + "=09"
         }
         return out
     }
