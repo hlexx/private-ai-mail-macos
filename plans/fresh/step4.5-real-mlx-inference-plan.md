@@ -18,19 +18,57 @@ demo-t1 / demo-t2).
 Step 4.5 replaces that stub with **real on-device generation** using
 [mlx-swift-examples](https://github.com/ml-explore/mlx-swift-examples)
 `MLXLLM`, loading
-[`mlx-community/gemma-4-e4b-it-4bit`](https://hf.co/mlx-community/gemma-4-e4b-it-4bit):
+[`mlx-community/gemma-4-e4b-it-OptiQ-4bit`](https://hf.co/mlx-community/gemma-4-e4b-it-OptiQ-4bit):
 
-- 1.67 B parameters, 4-bit quantised
-- Apache 2.0 — clean for commercial product
-- ~1.0–1.5 GB on disk
+- **7.52 B parameters**, mixed-precision OptiQ quantisation (155
+  sensitive layers at 8-bit, 224 robust layers at 4-bit — per-layer
+  bit-widths chosen by KL-divergence sensitivity analysis)
+- Tagged `apple-silicon` — explicitly tuned for M-series; OptiQ
+  toolkit is from mlx-optiq.com
+- License: `gemma` (Google Gemma Terms of Use — commercial use
+  allowed, with standard responsible-use clauses)
+- ~6.57 GB on disk (two safetensors shards: 3.52 GB + 3.01 GB) plus
+  config / tokenizer (~30 MB)
+- `optiq_metadata.json` is the only non-standard file; both `mlx-lm`
+  (Python) and `mlx-swift-examples` (`MLXLLM` Swift module) handle it
+  transparently — no custom loader needed
 - gemma4 architecture, supported by MLXLLM out of the box
-- Released by mlx-community on 2 Apr 2026, updated 13 Apr 2026, 79.5K+
-  downloads (community-validated)
+- Released by mlx-community on 11 Apr 2026, updated 10 May 2026,
+  11K+ downloads (smaller community than the vanilla quants but
+  validated; **note size**: every other gemma-4-e4b-it variant ships
+  at ~1.2 GB, so the OptiQ version is intentionally a quality-over-
+  size trade-off)
 
 After step 4.5 the `AIEvals` baseline report contains real latency and
 real faithfulness numbers, the manual smoke test (open demo-t1 → see
-populated Brief Rail in < 5 s) works, and the privacy network-isolation
-test stays green because all inference is on-device.
+populated Brief Rail in single-digit seconds) works, and the privacy
+network-isolation test stays green because all inference is on-device.
+
+### Trade-offs we accept by picking OptiQ
+
+- **First-launch download is ~6.6 GB**, not ~1.2 GB. On a 100 Mbps
+  home connection that's ~9 min; on flaky mobile-tether it's an hour
+  plus. ModelSetupScene (already shipped in step 4) has the
+  progress-bar + resume affordance; we don't change UX, just message
+  the size in the empty-state copy.
+- **Latency is higher than a 1.67 B model**. Realistic on M-series:
+  p50 in the 5–10 s range, p95 ≤ 15 s for a 256-token brief. See
+  success criteria below; budgets are calibrated for OptiQ, not for
+  the smaller quant.
+- **Disk pressure**: the user's `~/Library/Application Support/
+  PrivateAIMail/models/` directory carries ~6.6 GB after first launch.
+  This is the largest single thing the app owns; Settings → AI should
+  surface it and provide an "Uninstall model" action (out of scope
+  for step 4.5 but flagged for a follow-up).
+
+### Fallback path if OptiQ doesn't hit budget
+
+If `AIEvals` reports p95 > 20 s on a target M-series machine (or any
+other blocking quality regression), fall back to
+[`mlx-community/gemma-4-e2b-it-4bit`](https://hf.co/mlx-community/gemma-4-e2b-it-4bit)
+(1.21 B params, Apache 2.0, ~700 MB on disk, 313K+ downloads). The
+fallback is just a `GemmaModelSpec` swap — no architectural change.
+Document the decision in `docs/eval-reports/`.
 
 ## Context
 
@@ -62,10 +100,12 @@ test stays green because all inference is on-device.
 
 ## Success Criteria
 
-- `MLXLLMRunner.load(from:)` loads
-  `gemma-4-e4b-it-4bit` from `~/Library/Application Support/PrivateAIMail/models/gemma-4-it-4bit/`
-  using `MLXLLM.LLMModelFactory` or equivalent, caches the model
-  in-process, completes in ≤ 15 s on M-series cold start.
+- `MLXLLMRunner.load(from:)` loads `gemma-4-e4b-it-OptiQ-4bit` from
+  `~/Library/Application Support/PrivateAIMail/models/gemma-4-it-optiq-4bit/`
+  using `MLXLLM.LLMModelFactory` (or equivalent — verify exact API at
+  execution time), caches the `ModelContainer` in-process, completes
+  in **≤ 30 s on M-series cold start** (model is 6.6 GB, loaded into
+  unified memory).
 - `MLXLLMRunner.generate(...)` runs real autoregressive decoding via
   MLX, honours `Task.checkCancellation()` between tokens, calls the
   `onToken` callback for each decoded token, caps at `maxTokens`,
@@ -73,14 +113,19 @@ test stays green because all inference is on-device.
 - A brand-new manual smoke run: wipe sandbox container + DB, launch
   the app, complete the first-launch model download, click demo-t1 in
   the inbox, see the AI Brief Rail populate with a real model output
-  within **≤ 8 s p95 on M-series** (allows 1 cold load + 1 generation).
-  Subsequent thread clicks ≤ 3 s p95 (cached model).
-- `AIEvals` baseline report shows real numbers:
-    - p50 latency in `[0.8 s … 2.5 s]` range (suspicious if outside)
-    - p95 latency ≤ 5.0 s
+  within **≤ 20 s p95 on M-series** (allows 1 cold load + 1
+  generation). Subsequent thread clicks ≤ 10 s p95 (cached model).
+- `AIEvals` baseline report shows real numbers (calibrated for OptiQ
+  7.5 B):
+    - p50 latency in `[3 s … 10 s]` range
+    - p95 latency ≤ 15 s
     - Schema validity ≥ 95 % (some sampling-randomness tolerated)
     - Faithfulness (heuristic) ≥ 0.85
     - Hallucination rate < 5 %
+
+If real numbers blow past these by > 2× on the dev machine, treat it
+as a signal to drop to the `gemma-4-e2b-it-4bit` fallback per the
+trade-off note above — don't ship a 30-second-per-brief experience.
 - `docs/eval-reports/step4-baseline.md` regenerated with the real
   numbers and committed.
 - The previous `MLXLLMRunnerError.notImplemented` case stays in the
@@ -128,13 +173,26 @@ because the runner wasn't real. Update to the actual repo on
 HuggingFace.
 
 - [ ] Open `Packages/AI/AIRuntime/Sources/AIRuntime/GemmaModelSpec.swift`
-- [ ] Set `repoID = "mlx-community/gemma-4-e4b-it-4bit"`
-- [ ] Set `revision` to the latest commit hash at execution time (lookup via `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-4bit` `sha` field)
-- [ ] Build the `files: [GemmaModelFile]` array. Each `GemmaModelFile` has `name`, `expectedSHA256`, `expectedBytes`. Required files for MLX gemma4: `config.json`, `tokenizer.json`, `tokenizer_config.json`, `special_tokens_map.json`, plus the `*.safetensors` shards (typically `model.safetensors` or `model-00001-of-N.safetensors`). Get the file list from `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-4bit/tree/main`. Capture SHA-256 from each file's `lfs.sha256` field (or compute by streaming)
-- [ ] Compute and set `totalBytes` (sum of file `size` fields from the API response)
+- [ ] Set `repoID = "mlx-community/gemma-4-e4b-it-OptiQ-4bit"`
+- [ ] Rename the on-disk install directory to `gemma-4-it-optiq-4bit` (so a previous install of the smaller variant doesn't get confused with this one). Update every literal path string in `AIRuntime` and `ModelSetupScene` that referenced `gemma-4-it-4bit`
+- [ ] Set `revision` to the latest commit hash at execution time (lookup via `https://huggingface.co/api/models/mlx-community/gemma-4-e4b-it-OptiQ-4bit` `sha` field). Pin to a specific commit, do NOT leave as `"main"`
+- [ ] Build the `files: [GemmaModelFile]` array from the actual tree. The known file set (from the HF tree API as of the plan-writing moment):
+    - `config.json` (~82 KB)
+    - `chat_template.jinja` (~17 KB)
+    - `generation_config.json` (~208 B)
+    - `model-00001-of-00002.safetensors` (~3.52 GB)
+    - `model-00002-of-00002.safetensors` (~3.01 GB)
+    - `model.safetensors.index.json` (~151 KB)
+    - `optiq_metadata.json` (~40 KB) — keep this one; the loader looks for it
+    - `tokenizer.json` (~32 MB)
+    - `tokenizer_config.json` (~3 KB)
+    - `README.md` and `.gitattributes` — skip (not needed at runtime)
+- [ ] Each `GemmaModelFile` has `name`, `expectedSHA256`, `expectedBytes`. Capture SHA-256 from each file's `lfs.sha256` field on the HF tree API; for non-LFS small files, hash by streaming the response body during the first successful download and pin the captured value
+- [ ] Compute and set `totalBytes` (~6.57 GB)
 - [ ] Set the download URL template: `https://huggingface.co/{repoID}/resolve/{revision}/{fileName}`
 - [ ] Run `cd Packages/AI/AIRuntime && swift test` — `ModelManagerTests` should still pass (it uses a `FakeURLProtocol` and an in-test spec, not the real one)
-- [ ] Manual: `rm -rf ~/Library/Application Support/PrivateAIMail/models/`, launch the app, watch ModelSetupScene download the real ~1.2 GB. Confirm SHA-verify passes on every file
+- [ ] Manual: `rm -rf ~/Library/Application Support/PrivateAIMail/models/`, launch the app, watch ModelSetupScene download the real ~6.57 GB. Note the user-visible duration in the manual smoke notes. Confirm SHA-verify passes on every file
+- [ ] Update the empty-state copy in ModelSetupScene to mention ~6.5 GB (currently the screen probably says "~2 GB"). Honest sizes help users not abandon the download
 
 ### Task 3: Implement MLXLLMRunner.load — real model loading via MLXLLM
 
@@ -187,13 +245,15 @@ real `MLXBackend`-backed `AIService`. This is the calibration step.
 
 - [ ] Ensure `~/Library/Application Support/PrivateAIMail/models/gemma-4-it-4bit/` is populated (run the app once and let the first-launch flow download)
 - [ ] Run the eval CLI: `cd Packages/AI/AIEvals && swift run EvalRunner > docs/eval-reports/step4-baseline.md` (or whatever the entry-point is — verify Tools tree)
-- [ ] Inspect the report. Confirm:
-    - All 20 corpus entries pass schema validity
-    - p50 latency is non-zero and < 2.5 s
-    - p95 < 5.0 s
+- [ ] Inspect the report. Confirm (calibrated for OptiQ 7.5 B):
+    - All 20 corpus entries pass schema validity (≥ 95 % allowing
+      sampling jitter; aim for 100 %)
+    - p50 latency in `[3 s … 10 s]` range
+    - p95 latency ≤ 15 s
     - Faithfulness ≥ 0.85
     - Hallucination rate < 5 %
-- [ ] If any of those miss, tune the prompt in `Packages/AI/AIPrompts/Sources/AIPrompts/ThreadBriefPrompt.swift`: tighter instructions, fewer evidence-array slots, smaller max-token cap, lower temperature. Re-run eval. Iterate up to 3 times; if still failing, fall back to `gemma-4-e2b-it-4bit` (1.21 B params) and re-eval
+- [ ] If any of those miss, tune the prompt in `Packages/AI/AIPrompts/Sources/AIPrompts/ThreadBriefPrompt.swift`: tighter instructions, fewer evidence-array slots, smaller max-token cap, lower temperature. Re-run eval. Iterate up to 3 times
+- [ ] If after tuning p95 is still > 20 s (or any other quality budget is missed by > 2×), execute the documented fallback: change the `repoID` in `GemmaModelSpec` to `mlx-community/gemma-4-e2b-it-4bit` (1.21 B params, Apache 2.0, ~700 MB on disk), update file list / SHA / totalBytes, re-download, re-eval. Capture the decision and the comparison numbers in `docs/eval-reports/step4.5-model-selection.md`
 - [ ] Commit the regenerated `docs/eval-reports/step4-baseline.md` with the real numbers
 - [ ] In `docs/eval-reports/`, add `step4-prompt-notes.md` if you ended up tuning the prompt — record what changed and which corpus entries improved
 
@@ -211,7 +271,7 @@ so CI without GPU stays green.
 ### Task 8: Final gate + cleanup
 
 - [ ] Re-run every command in `## Validation Commands` above. Every one exits 0
-- [ ] Manual smoke from a clean state: `pkill -9 -f PrivateAIMail; rm -rf ~/Library/Application\ Support/PrivateAIMail/; open /path/to/PrivateAIMail.app`. Watch ModelSetupScene download. Click demo-t1. AI Brief Rail populates with a real model output in < 8 s. Click demo-t3 (informational) — brief is generated but may have `nil` request/deadline (model decides). Click demo-t6 (Notion digest) — same
+- [ ] Manual smoke from a clean state: `pkill -9 -f PrivateAIMail; rm -rf ~/Library/Application\ Support/PrivateAIMail/; open /path/to/PrivateAIMail.app`. Watch ModelSetupScene download the full ~6.57 GB (record duration as part of the QA notes). Click demo-t1. AI Brief Rail populates with a real model output in < 20 s (first generation includes cold load; subsequent ones < 10 s). Click demo-t3 (informational) — brief is generated but may have `nil` request/deadline (model decides). Click demo-t6 (Notion digest) — same
 - [ ] Update `NOTES.md` "On-device AI runtime" section: confirm the model is loaded for real, point at the new baseline report, mention how to wipe weights for re-download
 - [ ] In `EMAIL_ALF/14_macos_app_design.md` §15 step 4 line, mark as **truly ✅ done** with both branch + commit hash for step 4 _and_ step 4.5. Note inversion (MLX-first, FoundationModels later) is locked in
 - [ ] Tag the final commit `step4-real-mlx-complete` (this will be the merge point with `main`)
