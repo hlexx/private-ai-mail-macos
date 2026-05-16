@@ -29,3 +29,9 @@ fastlane/test_output/
 
 # Sparkle private key (never commit)
 *.eddsa_priv
+
+# Sparkle xcframework (downloaded via scripts/fetch-sparkle.sh)
+Frameworks/Sparkle.xcframework/
+
+# Release artifacts (built by scripts/build-dmg.sh)
+dist/

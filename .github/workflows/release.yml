@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TUIST_VERSION: "4.193.1"
+  XCODE_VERSION: "16.0"
+
+jobs:
+  build-release:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract tag version
+        id: tag
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Metal Toolchain
+        id: cache-metal
+        uses: actions/cache@v4
+        with:
+          path: /Library/Developer/Toolchains/MetalToolchain.xctoolchain
+          key: metal-toolchain-${{ runner.os }}-xcode-${{ env.XCODE_VERSION }}
+
+      - name: Download Metal Toolchain
+        if: steps.cache-metal.outputs.cache-hit != 'true'
+        run: sudo xcodebuild -downloadComponent MetalToolchain
+
+      - name: Install Tuist
+        run: |
+          brew install tuist
+          tuist version
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Fetch Sparkle xcframework
+        run: ./scripts/fetch-sparkle.sh
+
+      - name: Tuist generate
+        run: tuist generate --no-open
+
+      - name: Build MacApp (Release)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace PrivateAIMail.xcworkspace \
+            -scheme MacApp \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -30
+
+      - name: Run SwiftLint
+        run: swiftlint --strict
+
+      - name: Sign app
+        run: ./scripts/sign-app.sh "$(find ~/Library/Developer/Xcode/DerivedData -maxdepth 8 -type d -name 'PrivateAIMail.app' -path '*Release*' | sort -r | head -1)"
+        env:
+          RELEASE_DEVELOPER_TEAM: ${{ vars.RELEASE_DEVELOPER_TEAM }}
+
+      - name: Package DMG
+        run: |
+          TAG="${{ steps.tag.outputs.version }}"
+          # Strip leading 'v' for the version string
+          VERSION="${TAG#v}"
+          ./scripts/build-dmg.sh "$VERSION"
+
+      - name: Notarize DMG (skipped if secrets missing)
+        run: |
+          TAG="${{ steps.tag.outputs.version }}"
+          VERSION="${TAG#v}"
+          DMG="dist/PrivateAIMail-${VERSION}.dmg"
+          if [ -f "$DMG" ]; then
+            ./scripts/notarize-dmg.sh "$DMG"
+          else
+            echo "::warning::No DMG found at $DMG — skipping notarization."
+          fi
+        env:
+          RELEASE_DEVELOPER_TEAM: ${{ vars.RELEASE_DEVELOPER_TEAM }}
+          RELEASE_APPLE_ID: ${{ secrets.RELEASE_APPLE_ID }}
+          RELEASE_APPLE_PW: ${{ secrets.RELEASE_APPLE_PW }}
+
+      # NOTE: EdDSA signing of the appcast is NOT done on CI.
+      # The Sparkle private key lives in the maintainer's macOS Keychain.
+      # CI builds the DMG; the maintainer runs `make appcast` locally
+      # to produce the signed appcast.xml, then uploads both to the release.
+      - name: Upload artefacts
+        run: |
+          TAG="${{ steps.tag.outputs.version }}"
+          VERSION="${TAG#v}"
+          echo "::notice::EdDSA appcast signing is done locally by the maintainer (private key is in macOS Keychain, not on CI)."
+          echo "::notice::After this workflow completes, run locally: make appcast && gh release upload $TAG dist/appcast.xml --clobber"
+
+      - name: Create draft GitHub Release
+        run: |
+          TAG="${{ steps.tag.outputs.version }}"
+          VERSION="${TAG#v}"
+          NOTES_ARGS=()
+          NOTES_FILE="release-notes/${TAG}.md"
+          if [ ! -f "$NOTES_FILE" ]; then
+            NOTES_FILE="release-notes/${TAG}.html"
+          fi
+          if [ -f "$NOTES_FILE" ]; then
+            NOTES_ARGS=(--notes-file "$NOTES_FILE")
+          else
+            NOTES_ARGS=(--notes "Release ${TAG}")
+          fi
+          # Upload DMG + SHA256; appcast.xml is added later by maintainer
+          gh release create "$TAG" \
+            --draft \
+            --title "PrivateAIMail $TAG" \
+            "${NOTES_ARGS[@]}" \
+            "dist/PrivateAIMail-${VERSION}.dmg" \
+            "dist/PrivateAIMail-${VERSION}.sha256"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

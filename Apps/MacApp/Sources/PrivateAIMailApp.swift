@@ -10,6 +10,7 @@ struct PrivateAIMailApp: App {
     @Environment(\.openWindow) private var openWindow
 
     private let composition = CompositionRoot()
+    private let sparkleUpdater = SparkleUpdater()
     @State private var setupComplete = false
 
     var body: some Scene {
@@ -51,6 +52,12 @@ struct PrivateAIMailApp: App {
                     openWindow(id: "compose")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
+            }
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates\u{2026}") {
+                    sparkleUpdater.checkForUpdates()
+                }
+                .disabled(!sparkleUpdater.canCheckForUpdates)
             }
             CommandGroup(after: .toolbar) {
                 Button(String(localized: "menu.refresh", defaultValue: "Refresh")) {

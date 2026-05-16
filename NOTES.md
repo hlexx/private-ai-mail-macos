@@ -101,6 +101,117 @@ Proper fix (later): extract `RBSidebar`, `RBToolbar`, `AccountRow`,
 `FolderItem` into a new `Packages/Features/AppFrameFeature/` package so
 the tests can `@testable import AppFrameFeature` from a package context.
 
+## Sparkle EdDSA key management
+
+### Where the keys live
+
+- **Private key**: macOS login Keychain (account: `ed25519`, service:
+  `https://sparkle-project.org`). Never exported to a file, never committed.
+- **Public key**: `Apps/MacApp/Info.plist` under `SUPublicEDKey`.
+
+### Key rotation
+
+1. Run `./tools/sparkle/generate_keys` — this overwrites the Keychain entry
+   and prints a new public key.
+2. Update `SUPublicEDKey` in `Apps/MacApp/Info.plist` with the new value.
+3. Ship a **transitional release** signed with the **old** key that contains
+   the **new** public key in its Info.plist. Users who installed via the old
+   key will auto-update to this transitional build. After that, all
+   subsequent releases are signed with the new key and verified against the
+   new public key already baked into the installed app.
+4. If the old key is lost (no transitional release possible), users must
+   manually re-download the app — there is no recovery path for EdDSA key
+   loss.
+
+### Sparkle tools
+
+`tools/sparkle/generate_keys` and `tools/sparkle/sign_update` are extracted
+from the Sparkle 2.9.1 release. They are checked in as small native binaries
+(~200 KB each). `sign_update` reads the private key from Keychain to produce
+an EdDSA signature for a DMG file.
+
+## Code signing & notarization
+
+### Environment variables
+
+Three env vars control code signing and notarization. All are optional — if
+none are set, the build falls back to ad-hoc signing.
+
+| Variable | Purpose | Where to get it |
+|---|---|---|
+| `RELEASE_DEVELOPER_TEAM` | Apple Developer Team ID (e.g. `ABCDE12345`) | Apple Developer portal → Membership → Team ID |
+| `RELEASE_APPLE_ID` | Apple ID email used with `notarytool` | Your Apple Developer account email |
+| `RELEASE_APPLE_PW` | App-specific password for `notarytool` | [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords → Generate |
+
+### Getting an app-specific password
+
+1. Go to [appleid.apple.com](https://appleid.apple.com) and sign in.
+2. Navigate to **Sign-In and Security** → **App-Specific Passwords**.
+3. Click **Generate an app-specific password**, name it (e.g. "notarytool").
+4. Copy the generated password and use it as `RELEASE_APPLE_PW`.
+
+### Finding your Team ID
+
+1. Go to [developer.apple.com/account](https://developer.apple.com/account).
+2. Scroll to **Membership details**.
+3. Copy the **Team ID** (10-character alphanumeric string).
+
+### Signing tiers
+
+- **Tier A (ad-hoc, default)**: No env vars needed. Testers must right-click →
+  Open on first launch. Sparkle EdDSA verification still works.
+- **Tier B (Developer ID + notarization)**: Set all three env vars. The app
+  passes Gatekeeper without the right-click dance.
+
+### Scripts
+
+- `scripts/sign-app.sh <app-path>` — codesigns the `.app` bundle.
+- `scripts/notarize-dmg.sh <dmg-path>` — submits DMG to Apple notarization,
+  staples the ticket, and verifies Gatekeeper assessment. Exits cleanly if
+  env vars are missing.
+
+## CI release workflow
+
+### Overview
+
+`.github/workflows/release.yml` runs on any pushed tag matching `v*`. It builds
+a Release-configuration DMG and creates a **draft** GitHub Release with the DMG
+and SHA-256 checksum attached. The maintainer publishes manually after smoke.
+
+### CI secrets and variables
+
+| Name | Type | Required? | Purpose |
+|---|---|---|---|
+| `GITHUB_TOKEN` | Secret (auto) | Yes | Provided automatically by GitHub Actions |
+| `RELEASE_APPLE_ID` | Secret | No (Tier B only) | Apple ID for `notarytool` |
+| `RELEASE_APPLE_PW` | Secret | No (Tier B only) | App-specific password for `notarytool` |
+| `RELEASE_DEVELOPER_TEAM` | Variable | No (Tier B only) | Apple Developer Team ID for codesigning |
+
+Without the optional secrets, the workflow produces an ad-hoc-signed DMG (Tier A).
+
+### Sparkle private key on CI
+
+The Sparkle EdDSA private key is **NOT** stored on CI. It lives exclusively in
+the maintainer's macOS login Keychain (see "Sparkle EdDSA key management" above).
+
+The release workflow builds the DMG and creates a draft release, but does **not**
+generate `appcast.xml` — that requires the private key for EdDSA signing.
+
+**Workflow for cutting a release:**
+
+1. Push a version tag: `git tag v0.1.0-alpha && git push origin v0.1.0-alpha`
+2. CI builds the DMG, creates a draft release with the DMG attached.
+3. On the maintainer's machine (where the Keychain has the key):
+   - Download the DMG from the draft release (or build locally via `make release`)
+   - Run `make appcast` to generate the signed `appcast.xml`
+   - Upload: `gh release upload v0.1.0-alpha dist/appcast.xml --clobber`
+4. Smoke-test, then publish the release.
+
+If a future contributor wants fully automated CI releases, they would need to
+store the EdDSA private key as an encrypted CI secret and modify `sign_update` to
+read from a file instead of Keychain. This changes the threat model — document
+and assess before proceeding.
+
 ## On-device AI runtime
 
 Thread briefs are generated on-device via **MLX** running **Gemma 4 E2B IT, 4-bit
@@ -164,6 +275,84 @@ schema validity 100%, faithfulness 1.000, hallucination 0.0%.
 
 Prompt tuning notes: `docs/eval-reports/step4-prompt-notes.md`.
 
+## Release smoke testing
+
+### Sparkle auto-update end-to-end verification
+
+This procedure verifies the full Sparkle update lifecycle. Run after
+cutting a new alpha release.
+
+#### Prerequisites
+
+- v0.1.0-alpha installed in `/Applications/PrivateAIMail.app` (from the DMG)
+- The Sparkle EdDSA private key is in the developer's macOS login Keychain
+- `appcast.xml` is uploaded as a GitHub Release asset on the `latest` release
+
+#### Step 1: Verify "up to date" state
+
+1. Open PrivateAIMail on the test machine (or separate user account).
+2. Menu bar → PrivateAIMail → **Check for Updates…**
+3. Expected: Sparkle reports "You're up to date" (the live appcast only
+   lists v0.1.0-alpha, which matches the installed version).
+
+#### Step 2: Build a newer version
+
+On the developer machine:
+
+```bash
+# 1. Bump version in Project.swift
+#    MARKETING_VERSION → "0.1.1-alpha"
+#    CURRENT_PROJECT_VERSION → "101"
+
+# 2. Build + package
+make release    # builds .app, signs, creates DMG, generates appcast.xml
+
+# 3. Create a draft release on GitHub
+gh release create v0.1.1-alpha --draft \
+  --title "v0.1.1-alpha" \
+  --notes-file release-notes/v0.1.1-alpha.md \
+  dist/PrivateAIMail-0.1.1-alpha.dmg \
+  dist/PrivateAIMail-0.1.1-alpha.sha256
+
+# 4. Update the appcast.xml on the LATEST release so SUFeedURL resolves it
+gh release upload v0.1.0-alpha dist/appcast.xml --clobber
+```
+
+#### Step 3: Verify update flow
+
+1. On the test machine, open PrivateAIMail.
+2. Menu bar → PrivateAIMail → **Check for Updates…**
+3. Expected: Sparkle finds v0.1.1-alpha in the appcast, shows the update
+   prompt with release notes.
+4. Click **Install Update**.
+5. Expected: Sparkle downloads the DMG, verifies the EdDSA signature,
+   extracts the new `.app`, replaces the installed copy, and relaunches.
+6. After relaunch, verify:
+   - About dialog shows version 0.1.1-alpha (build 101).
+   - Previously connected Gmail accounts are still present (no DB reset).
+   - The on-device model is still available (no re-download).
+   - Thread list loads and AI briefs generate normally.
+
+#### Step 4: Gatekeeper verification (Tier B only)
+
+If the release was signed with Developer ID and notarized:
+
+```bash
+spctl -a -v /Applications/PrivateAIMail.app
+# Expected: "accepted" with source "Developer ID"
+```
+
+If ad-hoc signed (Tier A), skip this step — Gatekeeper will show the
+unsigned-app warning on first launch (right-click → Open to bypass).
+
+#### Smoke result log
+
+Record each smoke test result here:
+
+| Date | Version tested | Update from | Result | Notes |
+|------|---------------|-------------|--------|-------|
+| (pending) | v0.1.0-alpha | fresh install | (pending) | First alpha, manual smoke after merge |
+
 ## Tuist file layout
 
 `Tuist/Config.swift` works but generates a deprecation warning. Migrate to
@@ -199,3 +388,61 @@ Prompt tuning notes: `docs/eval-reports/step4-prompt-notes.md`.
 8. Select a thread to see its messages in the right pane.
 9. Press Cmd+R to trigger incremental sync — new messages should
    appear without restarting the app.
+
+## Releases
+
+### How to cut a release locally
+
+1. Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Project.swift`.
+2. Write release notes in `release-notes/v<version>.md`.
+3. Commit and tag:
+   ```bash
+   git add -A && git commit -m "prepare v<version>"
+   git tag v<version>
+   git push origin main v<version>
+   ```
+4. Build the release on the maintainer's machine (where the Sparkle
+   EdDSA key is in the Keychain):
+   ```bash
+   make release
+   ```
+   This runs: generate -> build -> test -> sign -> DMG -> notarize (if
+   env vars present) -> appcast.
+5. Create a GitHub Release:
+   ```bash
+   gh release create v<version> --draft \
+     --title "v<version>" \
+     --notes-file release-notes/v<version>.md \
+     dist/PrivateAIMail-<version>.dmg \
+     dist/PrivateAIMail-<version>.sha256 \
+     dist/appcast.xml
+   ```
+6. Smoke-test the DMG, then publish the release.
+
+### Signing and notarization env vars
+
+| Variable | Purpose |
+|---|---|
+| `RELEASE_DEVELOPER_TEAM` | Apple Developer Team ID for codesigning |
+| `RELEASE_APPLE_ID` | Apple ID email for `notarytool` |
+| `RELEASE_APPLE_PW` | App-specific password for `notarytool` |
+
+Without these, the build produces an ad-hoc-signed DMG (Tier A). With
+all three set, the build is Developer ID signed and notarized (Tier B).
+
+See "Code signing & notarization" section above for details on obtaining
+these values.
+
+### Where the Sparkle keys live
+
+- **Private key**: macOS login Keychain (account: `ed25519`, service:
+  `https://sparkle-project.org`). See "Sparkle EdDSA key management"
+  section above.
+- **Public key**: `Apps/MacApp/Info.plist` under `SUPublicEDKey`.
+
+### Key rotation
+
+See the "Sparkle EdDSA key management > Key rotation" section above.
+In short: ship a transitional release signed with the old key that
+contains the new public key, then switch to the new key for all
+subsequent releases.
