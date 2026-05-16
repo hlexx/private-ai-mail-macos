@@ -14,8 +14,23 @@ Download the latest `.dmg` from
 [GitHub Releases](https://github.com/hlexx/private-ai-mail-macos/releases).
 
 1. Mount the DMG and drag **PrivateAIMail.app** to `/Applications`.
-2. On first launch, right-click the app and choose **Open** (required for
-   unsigned alpha builds; macOS blocks unsigned apps on double-click).
+2. Unblock Gatekeeper — this build is ad-hoc-signed (no Apple Developer
+   ID yet), so macOS will show "Apple could not verify PrivateAIMail is
+   free of malware." Pick one path:
+
+   **Terminal (one line):**
+   ```sh
+   xattr -d com.apple.quarantine /Applications/PrivateAIMail.app
+   ```
+   then double-click the app as usual.
+
+   **GUI:** double-click the app → click **Done** on the warning →
+   open **System Settings → Privacy & Security** → scroll to the
+   blocked-app row → click **Open Anyway**.
+
+   The legacy *right-click → Open* override worked on macOS 14 and
+   older. Apple removed it for quarantined ad-hoc apps in macOS 15
+   (Sequoia), so use one of the two paths above.
 3. The app downloads the on-device AI model (~3.6 GB) on first launch.
    This is a one-time download stored in
    `~/Library/Application Support/PrivateAIMail/models/`.
