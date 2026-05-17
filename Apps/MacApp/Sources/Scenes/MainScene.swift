@@ -101,7 +101,6 @@ struct MainScene: View {
                                     prefillComposeForReply()
                                     composition.composeViewModel.bodyText = bodyText
                                     composition.showCompose = true
-                                    composition.composeViewModel.requestSend()
                                 }
                             )
                         }

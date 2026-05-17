@@ -260,7 +260,14 @@ public final class InboxStore {
             arguments: StatementArguments(arguments)
         )
 
-        // Batch query: latest from_addr per thread
+        // Build thread ID set for scoping batch queries
+        let threadIds = threads.map(\.id)
+        guard !threadIds.isEmpty else {
+            return threads.map { ($0, nil, 0) }
+        }
+        let placeholders = threadIds.map { _ in "?" }.joined(separator: ",")
+
+        // Batch query: latest from_addr per thread (scoped to filtered set)
         let senderRows = try Row.fetchAll(
             db,
             sql: """
@@ -269,10 +276,12 @@ public final class InboxStore {
                 INNER JOIN (
                     SELECT thread_id, MAX(sent_at) AS max_sent
                     FROM message
+                    WHERE thread_id IN (\(placeholders))
                     GROUP BY thread_id
                 ) latest ON m.thread_id = latest.thread_id
                     AND m.sent_at = latest.max_sent
-                """
+                """,
+            arguments: StatementArguments(threadIds)
         )
         var senderByThread: [String: String] = [:]
         for row in senderRows {
@@ -281,15 +290,17 @@ public final class InboxStore {
             senderByThread[tid] = from ?? ""
         }
 
-        // Batch query: attachment count per thread
+        // Batch query: attachment count per thread (scoped to filtered set)
         let attRows = try Row.fetchAll(
             db,
             sql: """
                 SELECT m.thread_id, COUNT(*) AS cnt
                 FROM attachment a
                 JOIN message m ON m.id = a.message_id
+                WHERE m.thread_id IN (\(placeholders))
                 GROUP BY m.thread_id
-                """
+                """,
+            arguments: StatementArguments(threadIds)
         )
         var attByThread: [String: Int] = [:]
         for row in attRows {

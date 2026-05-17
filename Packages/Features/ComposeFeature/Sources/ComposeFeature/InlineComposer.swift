@@ -7,8 +7,7 @@ import SwiftUI
 public struct InlineComposer: View {
     @AppStorage("pam.defaultTone") private var defaultToneRaw: String = "warm"
     @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
-    @State private var tone: AIReplyTone = .warm
-    @State private var toneInitialized = false
+    @State private var tone: AIReplyTone
     @State private var draftText: String = ""
     @State private var detectedLanguage: String?
     @State private var languageOverride: String?
@@ -32,6 +31,9 @@ public struct InlineComposer: View {
         self.replyStore = replyStore
         self.onEditInFull = onEditInFull
         self.onSend = onSend
+        // Read default tone synchronously so .task uses the correct value
+        let raw = UserDefaults.standard.string(forKey: "pam.defaultTone") ?? "warm"
+        _tone = State(initialValue: AIReplyTone(rawValue: raw) ?? .warm)
     }
 
     private var effectiveLanguage: String? {
@@ -56,12 +58,6 @@ public struct InlineComposer: View {
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
         .task {
-            if !toneInitialized {
-                toneInitialized = true
-                if let stored = AIReplyTone(rawValue: defaultToneRaw) {
-                    tone = stored
-                }
-            }
             replyStore.generate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
         }
         .onChange(of: replyStore.reply) { _, newReply in
