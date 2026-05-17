@@ -103,9 +103,9 @@ struct HTMLWebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.evaluateJavaScript("document.body.scrollHeight") { [weak self] result, _ in
-                if let height = result as? CGFloat {
+                if let height = result as? Double {
                     Task { @MainActor in
-                        self?.heightBinding?.wrappedValue = min(height, 2000)
+                        self?.heightBinding?.wrappedValue = min(CGFloat(height), 2000)
                     }
                 }
             }

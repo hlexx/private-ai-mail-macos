@@ -288,6 +288,22 @@ enum DevSeeder {
             ),
         ]
 
+        // ── System labels per account ─────────────────────────────
+        let systemLabelIDs = ["INBOX", "SENT", "DRAFT", "TRASH", "SPAM", "STARRED", "IMPORTANT", "UNREAD"]
+        for account in accounts {
+            for labelID in systemLabelIDs {
+                try LabelRecord(
+                    id: labelID,
+                    accountId: account.id,
+                    name: labelID.capitalized,
+                    type: .system,
+                    color: nil,
+                    messagesUnreadCount: 0,
+                    messagesTotalCount: 0
+                ).insert(db)
+            }
+        }
+
         for seed in threads {
             let threadTs = ts(.day, seed.ageDays, hour: seed.hour, minute: seed.minute)
             try ThreadRecord(
@@ -299,6 +315,16 @@ enum DevSeeder {
                 messageCount: seed.messages.count,
                 hasUnread: seed.hasUnread ? 1 : 0
             ).insert(db)
+
+            // Add thread labels: all demo threads go to INBOX
+            try ThreadLabelRecord(threadId: seed.id, labelId: "INBOX").insert(db)
+            if seed.hasUnread {
+                try ThreadLabelRecord(threadId: seed.id, labelId: "UNREAD").insert(db)
+            }
+            // Star the first thread for testing
+            if seed.id == "demo-t1" {
+                try ThreadLabelRecord(threadId: seed.id, labelId: "STARRED").insert(db)
+            }
 
             for (index, msg) in seed.messages.enumerated() {
                 let messageID = "\(seed.id)-m\(index + 1)"
