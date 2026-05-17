@@ -11,6 +11,17 @@ import SettingsFeature
 import SwiftUI
 import ThreadFeature
 
+struct ToastState: Equatable {
+    let message: String
+    let undoAction: UndoAction?
+
+    enum UndoAction: Equatable {
+        case unarchive(threadId: String, accountId: String)
+        case unstar(threadId: String, accountId: String)
+        case untrash(threadId: String, accountId: String)
+    }
+}
+
 @MainActor @Observable
 final class CompositionRoot {
     let db: AppDatabase
@@ -22,8 +33,10 @@ final class CompositionRoot {
     let replyStore: ReplyStore
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
+    let mailMutator: MailMutator
 
     var activeAccountID: String?
+    var toastMessage: ToastState?
     var showActionSheet = false
     var showCompose = false
     let composeViewModel: ComposeViewModel
@@ -64,6 +77,7 @@ final class CompositionRoot {
         }
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
+        self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
 
         let capturedFactory = apiFactory
         let capturedDB = db

@@ -467,11 +467,11 @@ Replace the hardcoded English `draftBodies` with real on-device output.
 
 Optimistic-then-server, label-driven, idempotent.
 
-- [ ] Add `GmailAPIClient.modifyThread(id:addLabelIds:removeLabelIds:)
+- [x] Add `GmailAPIClient.modifyThread(id:addLabelIds:removeLabelIds:)
       async throws -> GmailDTO.Thread` — `POST
       /users/me/threads/{id}/modify` body `{ addLabelIds:[],
       removeLabelIds:[] }`.
-- [ ] Add `MailMutator` actor in `MailSync`:
+- [x] Add `MailMutator` actor in `MailSync`:
       ```swift
       public actor MailMutator {
           public func archive(_ threadId: String, accountId: String) async throws
@@ -491,7 +491,7 @@ Optimistic-then-server, label-driven, idempotent.
          addLabelIds=["STARRED"], trash = addLabelIds=["TRASH"]).
       3. On API success: no-op (already applied locally).
       4. On API failure: rollback the local change, surface a toast.
-- [ ] Wire to UI:
+- [x] Wire to UI:
       - `ThreadView.head` Archive button: `Task { try await
         mutator.archive(threadId, accountId: ...) }`. Snooze stays
         stub for now (out of scope), Send-to stays stub.
@@ -503,10 +503,10 @@ Optimistic-then-server, label-driven, idempotent.
       - Add a brief toast bar at the bottom of MainWindow: "Archived
         — Undo". Undo within 8 s reverts the operation
         (`mutator.unarchive(...)`).
-- [ ] Tests: `MailSyncTests/MailMutatorTests.swift` with a fake
+- [x] Tests: `MailSyncTests/MailMutatorTests.swift` with a fake
       `GmailAPI` that records add/remove pairs, assert each method
       produces the correct payload + reverts on simulated 5xx.
-- [ ] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
 
 ### Task 7: Translation tab (Apple Translation framework)
 

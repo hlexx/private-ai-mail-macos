@@ -57,4 +57,15 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     func listLabels() async throws -> [GmailDTO.Label] {
         try listLabelsResult.get()
     }
+
+    var modifyThreadCalls: [(id: String, add: [String], remove: [String])] = []
+    var modifyThreadResult: Result<GmailDTO.Thread, Error>?
+
+    func modifyThread(id: String, addLabelIds: [String], removeLabelIds: [String]) async throws -> GmailDTO.Thread {
+        modifyThreadCalls.append((id: id, add: addLabelIds, remove: removeLabelIds))
+        if let result = modifyThreadResult {
+            return try result.get()
+        }
+        return GmailDTO.Thread(id: id)
+    }
 }

@@ -75,6 +75,11 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         return response.labels ?? []
     }
 
+    public func modifyThread(id: String, addLabelIds: [String], removeLabelIds: [String]) async throws -> GmailDTO.Thread {
+        let endpoint = GmailEndpoint.modifyThread(id: id, addLabelIds: addLabelIds, removeLabelIds: removeLabelIds)
+        return try await perform(endpoint)
+    }
+
     // MARK: - Request execution
 
     private func perform<T: Decodable & Sendable>(_ endpoint: GmailEndpoint) async throws -> T {

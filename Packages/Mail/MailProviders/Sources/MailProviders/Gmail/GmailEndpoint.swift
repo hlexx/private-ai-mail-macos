@@ -9,6 +9,7 @@ enum GmailEndpoint {
     case listHistory(startHistoryId: String, pageToken: String?)
     case sendMessage(raw: String, threadId: String?)
     case listLabels
+    case modifyThread(id: String, addLabelIds: [String], removeLabelIds: [String])
 
     var url: URL {
         var components = URLComponents(string: Self.baseURL + path)!
@@ -30,6 +31,8 @@ enum GmailEndpoint {
             return "/messages/send"
         case .listLabels:
             return "/labels"
+        case .modifyThread(let id, _, _):
+            return "/threads/\(id)/modify"
         }
     }
 
@@ -42,12 +45,14 @@ enum GmailEndpoint {
         case .listHistory: return 2
         case .sendMessage: return 100
         case .listLabels: return 1
+        case .modifyThread: return 5
         }
     }
 
     var httpMethod: String {
         switch self {
         case .sendMessage: return "POST"
+        case .modifyThread: return "POST"
         case .listLabels: return "GET"
         default: return "GET"
         }
@@ -58,6 +63,11 @@ enum GmailEndpoint {
         case .sendMessage(let raw, let threadId):
             var dict: [String: String] = ["raw": raw]
             if let threadId { dict["threadId"] = threadId }
+            return try? JSONSerialization.data(withJSONObject: dict)
+        case .modifyThread(_, let addLabelIds, let removeLabelIds):
+            var dict: [String: [String]] = [:]
+            if !addLabelIds.isEmpty { dict["addLabelIds"] = addLabelIds }
+            if !removeLabelIds.isEmpty { dict["removeLabelIds"] = removeLabelIds }
             return try? JSONSerialization.data(withJSONObject: dict)
         case .listLabels:
             return nil
@@ -84,6 +94,8 @@ enum GmailEndpoint {
         case .sendMessage:
             return []
         case .listLabels:
+            return []
+        case .modifyThread:
             return []
         }
     }

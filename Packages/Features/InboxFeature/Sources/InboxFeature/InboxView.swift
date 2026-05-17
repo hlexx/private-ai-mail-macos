@@ -3,9 +3,17 @@ import SwiftUI
 
 public struct InboxView: View {
     @Bindable var store: InboxStore
+    var onArchive: ((String, String) -> Void)?
+    var onTrash: ((String, String) -> Void)?
 
-    public init(store: InboxStore) {
+    public init(
+        store: InboxStore,
+        onArchive: ((String, String) -> Void)? = nil,
+        onTrash: ((String, String) -> Void)? = nil
+    ) {
         self.store = store
+        self.onArchive = onArchive
+        self.onTrash = onTrash
     }
 
     public var body: some View {
@@ -126,6 +134,25 @@ public struct InboxView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing) {
+                        if let onArchive {
+                            Button {
+                                onArchive(thread.id, thread.accountId)
+                            } label: {
+                                Label("Archive", systemImage: "archivebox")
+                            }
+                            .tint(.orange)
+                        }
+                    }
+                    .swipeActions(edge: .leading) {
+                        if let onTrash {
+                            Button(role: .destructive) {
+                                onTrash(thread.id, thread.accountId)
+                            } label: {
+                                Label("Trash", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)

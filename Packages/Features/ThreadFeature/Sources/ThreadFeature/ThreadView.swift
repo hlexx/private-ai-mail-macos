@@ -5,13 +5,19 @@ public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
     let store: ThreadStore
     let composerContent: ComposerContent
     let briefContent: BriefContent
+    var onArchive: (() -> Void)?
+    var onStar: (() -> Void)?
 
     public init(
         store: ThreadStore,
+        onArchive: (() -> Void)? = nil,
+        onStar: (() -> Void)? = nil,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() }
     ) {
         self.store = store
+        self.onArchive = onArchive
+        self.onStar = onStar
         self.composerContent = composer()
         self.briefContent = briefRail()
     }
@@ -82,10 +88,11 @@ public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
 
             HStack(spacing: RBSpace.s2) {
                 Spacer()
-                Button { /* Archive stub */ } label: {
+                Button { onArchive?() } label: {
                     Label(String(localized: "thread.action.archive", defaultValue: "Archive"), systemImage: "archivebox")
                 }
                 .buttonStyle(.rbGhost)
+                .disabled(onArchive == nil)
 
                 Button { /* Snooze stub */ } label: {
                     Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
@@ -202,8 +209,10 @@ public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
 }
 
 extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView {
-    public init(store: ThreadStore) {
+    public init(store: ThreadStore, onArchive: (() -> Void)? = nil, onStar: (() -> Void)? = nil) {
         self.store = store
+        self.onArchive = onArchive
+        self.onStar = onStar
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
     }

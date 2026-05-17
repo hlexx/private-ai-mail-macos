@@ -54,7 +54,22 @@ struct MainScene: View {
                     alignment: .top
                 )
 
-                InboxView(store: inboxStore)
+                InboxView(
+                    store: inboxStore,
+                    onArchive: { threadId, accountId in
+                        Task {
+                            do {
+                                try await composition.mailMutator.archive(threadId, accountId: accountId)
+                                showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
+                            } catch {
+                                showToast("Archive failed", undo: nil)
+                            }
+                        }
+                    },
+                    onTrash: { threadId, accountId in
+                        trashThread(threadId, accountId: accountId)
+                    }
+                )
                     .frame(
                         minWidth: 280,
                         idealWidth: RBLayout.threadListWidth,
@@ -65,6 +80,8 @@ struct MainScene: View {
 
                 ThreadView(
                     store: threadStore,
+                    onArchive: { archiveSelectedThread() },
+                    onStar: { starSelectedThread() },
                     composer: {
                         if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
                             InlineComposer(
@@ -143,6 +160,20 @@ struct MainScene: View {
         .keyboardShortcut(key: "k", modifiers: .command) {
             composition.showActionSheet.toggle()
         }
+        .keyboardShortcut(key: "e", modifiers: []) {
+            archiveSelectedThread()
+        }
+        .keyboardShortcut(key: "s", modifiers: []) {
+            starSelectedThread()
+        }
+        .overlay(alignment: .bottom) {
+            if let toast = composition.toastMessage {
+                toastBar(toast)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, 16)
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: composition.toastMessage)
     }
 
     private var sidebarFolders: [FolderItem] {
@@ -234,6 +265,86 @@ struct MainScene: View {
             }
         } catch {
             // Observation ended
+        }
+    }
+
+    // MARK: - Mutation helpers
+
+    private func archiveSelectedThread() {
+        guard let threadId = inboxStore.selectedThreadID,
+              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
+        let accountId = thread.accountId
+        Task {
+            do {
+                try await composition.mailMutator.archive(threadId, accountId: accountId)
+                showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
+            } catch {
+                showToast("Archive failed", undo: nil)
+            }
+        }
+    }
+
+    private func starSelectedThread() {
+        guard let threadId = inboxStore.selectedThreadID,
+              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
+        let accountId = thread.accountId
+        Task {
+            do {
+                try await composition.mailMutator.star(threadId, accountId: accountId)
+                showToast("Starred", undo: .unstar(threadId: threadId, accountId: accountId))
+            } catch {
+                showToast("Star failed", undo: nil)
+            }
+        }
+    }
+
+    private func trashThread(_ threadId: String, accountId: String) {
+        Task {
+            do {
+                try await composition.mailMutator.trash(threadId, accountId: accountId)
+                showToast("Trashed", undo: .untrash(threadId: threadId, accountId: accountId))
+            } catch {
+                showToast("Trash failed", undo: nil)
+            }
+        }
+    }
+
+    private func showToast(_ message: String, undo: ToastState.UndoAction?) {
+        composition.toastMessage = ToastState(message: message, undoAction: undo)
+        Task {
+            try? await Task.sleep(for: .seconds(8))
+            if composition.toastMessage?.message == message {
+                composition.toastMessage = nil
+            }
+        }
+    }
+
+    private func handleUndo(_ action: ToastState.UndoAction) {
+        composition.toastMessage = nil
+        Task {
+            switch action {
+            case .unarchive(let threadId, let accountId):
+                try? await composition.mailMutator.unarchive(threadId, accountId: accountId)
+            case .unstar(let threadId, let accountId):
+                try? await composition.mailMutator.unstar(threadId, accountId: accountId)
+            case .untrash(let threadId, let accountId):
+                try? await composition.mailMutator.untrash(threadId, accountId: accountId)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func toastBar(_ toast: ToastState) -> some View {
+        HStack(spacing: RBSpace.s2) {
+            RBToast(toast.message, systemImage: "checkmark.circle.fill")
+            if toast.undoAction != nil {
+                Button("Undo") {
+                    if let action = toast.undoAction {
+                        handleUndo(action)
+                    }
+                }
+                .buttonStyle(.rbGhost)
+            }
         }
     }
 
