@@ -275,6 +275,12 @@ public final class InboxStore {
         case .account(let accountId):
             conditions.append("t.account_id = ?")
             arguments.append(accountId)
+            conditions.append("""
+                t.id NOT IN (
+                    SELECT thread_id FROM thread_label
+                    WHERE account_id = t.account_id AND label_id IN ('TRASH','SPAM','DRAFT')
+                )
+                """)
         }
 
         // Chip filter as additional narrowing

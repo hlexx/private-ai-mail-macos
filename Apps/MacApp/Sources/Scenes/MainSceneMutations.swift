@@ -62,7 +62,7 @@ extension MainScene {
         composition.toastMessage = toast
         Task {
             try? await Task.sleep(for: .seconds(8))
-            if composition.toastMessage == toast {
+            if composition.toastMessage?.id == toast.id {
                 composition.toastMessage = nil
             }
         }

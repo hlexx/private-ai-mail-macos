@@ -55,13 +55,16 @@ struct HTMLWebView: NSViewRepresentable {
         return result
     }
 
-    /// Strip injected `<meta http-equiv=...>` and `</head>` / `<head>` tags from email
-    /// body to prevent CSP override via HTML injection.
+    /// Strip injected `<meta http-equiv=...>`, `<base>`, and `</head>` / `<head>` tags
+    /// from email body to prevent CSP override and URL redirection via HTML injection.
     private func sanitizeBody(_ body: String) -> String {
         var result = body
         // Remove any <meta http-equiv=...> tags that could override our CSP
         let metaPattern = #"<meta\s+[^>]*http-equiv\s*=[^>]*>"#
         result = result.replacingOccurrences(of: metaPattern, with: "", options: .regularExpression)
+        // Remove <base> tags that could redirect relative URLs to an attacker domain
+        let basePattern = #"<base\s[^>]*>"#
+        result = result.replacingOccurrences(of: basePattern, with: "", options: [.regularExpression, .caseInsensitive])
         // Remove </head> and <head> tags that could break out of the body
         let headPattern = #"</?head\s*>"#
         result = result.replacingOccurrences(of: headPattern, with: "", options: [.regularExpression, .caseInsensitive])

@@ -13,6 +13,7 @@ import ThreadFeature
 import TranslationFeature
 
 struct ToastState: Equatable {
+    let id = UUID()
     let message: String
     let undoAction: UndoAction?
 
