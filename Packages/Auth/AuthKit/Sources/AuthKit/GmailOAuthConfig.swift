@@ -23,8 +23,14 @@ public struct GmailOAuthConfig: Sendable {
         clientID: "398444518659-8e9pmd46dbm71a2t0ejuui2b6tvcgtkp.apps.googleusercontent.com",
         redirectURI: "\(reversedClientIDScheme):/oauth2callback",
         scopes: [
+            // NOTE — do NOT request gmail.metadata alongside gmail.readonly.
+            // Google treats `gmail.metadata` as a stricter, mutually
+            // exclusive variant: combining the two yields a token with
+            // metadata-only access, so any messages.get / message body
+            // read fails with 403 insufficient_scope and Bootstrap aborts.
+            // `gmail.readonly` already grants metadata + full message
+            // reads, which is what the on-device pipeline needs.
             "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/gmail.metadata",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/userinfo.email"
         ]
