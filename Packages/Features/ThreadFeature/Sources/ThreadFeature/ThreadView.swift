@@ -8,11 +8,15 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     let translationHeader: TranslationHeader
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
+    var showTranslated: Bool
+    var translatedTexts: [String: String]
 
     public init(
         store: ThreadStore,
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
+        showTranslated: Bool = false,
+        translatedTexts: [String: String] = [:],
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
@@ -20,6 +24,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.store = store
         self.onArchive = onArchive
         self.onStar = onStar
+        self.showTranslated = showTranslated
+        self.translatedTexts = translatedTexts
         self.composerContent = composer()
         self.briefContent = briefRail()
         self.translationHeader = translationHeader()
@@ -155,8 +161,11 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 
     private var threadColumn: some View {
         ForEach(store.messages) { message in
-            MessageCardView(message: message)
-                .padding(.bottom, 12)
+            MessageCardView(
+                message: message,
+                translatedText: showTranslated ? translatedTexts[message.id] : nil
+            )
+            .padding(.bottom, 12)
         }
     }
 
@@ -223,6 +232,8 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.store = store
         self.onArchive = onArchive
         self.onStar = onStar
+        self.showTranslated = false
+        self.translatedTexts = [:]
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()
@@ -233,11 +244,17 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
 
 private struct MessageCardView: View {
     let message: MessageRow
+    let translatedText: String?
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEE HH:mm"
         return f
     }()
+
+    init(message: MessageRow, translatedText: String? = nil) {
+        self.message = message
+        self.translatedText = translatedText
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: RBSpace.s2) {
@@ -251,12 +268,20 @@ private struct MessageCardView: View {
                     .font(.rbMono(11))
                     .foregroundStyle(Color.rbFg3)
             }
-            MessageBodyView(
-                bodyHtml: message.bodyHtml,
-                bodyText: message.bodyText,
-                snippet: message.snippet,
-                attachments: []
-            )
+            if let translated = translatedText {
+                Text(translated)
+                    .font(.rbGeist(14))
+                    .foregroundStyle(Color.rbFg2)
+                    .lineSpacing(4)
+                    .textSelection(.enabled)
+            } else {
+                MessageBodyView(
+                    bodyHtml: message.bodyHtml,
+                    bodyText: message.bodyText,
+                    snippet: message.snippet,
+                    attachments: []
+                )
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

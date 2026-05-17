@@ -140,4 +140,3 @@ public struct TranslationToggleView: View {
         }
     }
 }
-

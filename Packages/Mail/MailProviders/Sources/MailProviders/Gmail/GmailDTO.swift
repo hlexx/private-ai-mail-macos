@@ -113,24 +113,24 @@ public enum GmailDTO {
         }
     }
 
+    public struct LabelColorInfo: Decodable, Sendable {
+        public let backgroundColor: String?
+        public let textColor: String?
+    }
+
     public struct Label: Decodable, Sendable {
         public let id: String
         public let name: String
         public let type: String
-        public let color: ColorInfo?
+        public let color: LabelColorInfo?
         public let messagesUnread: Int?
         public let messagesTotal: Int?
-
-        public struct ColorInfo: Decodable, Sendable {
-            public let backgroundColor: String?
-            public let textColor: String?
-        }
 
         public init(
             id: String,
             name: String,
             type: String = "system",
-            color: ColorInfo? = nil,
+            color: LabelColorInfo? = nil,
             messagesUnread: Int? = nil,
             messagesTotal: Int? = nil
         ) {

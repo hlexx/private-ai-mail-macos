@@ -55,7 +55,21 @@ struct HTMLWebView: NSViewRepresentable {
         return result
     }
 
+    /// Strip injected `<meta http-equiv=...>` and `</head>` / `<head>` tags from email
+    /// body to prevent CSP override via HTML injection.
+    private func sanitizeBody(_ body: String) -> String {
+        var result = body
+        // Remove any <meta http-equiv=...> tags that could override our CSP
+        let metaPattern = #"<meta\s+[^>]*http-equiv\s*=[^>]*>"#
+        result = result.replacingOccurrences(of: metaPattern, with: "", options: .regularExpression)
+        // Remove </head> and <head> tags that could break out of the body
+        let headPattern = #"</?head\s*>"#
+        result = result.replacingOccurrences(of: headPattern, with: "", options: [.regularExpression, .caseInsensitive])
+        return result
+    }
+
     private func wrapHTML(_ body: String) -> String {
+        let sanitized = sanitizeBody(body)
         let imgSrc = allowRemoteImages ? "img-src * cid: data: blob:;" : "img-src cid: data:;"
         let csp = "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:;"
         return """
@@ -88,7 +102,7 @@ struct HTMLWebView: NSViewRepresentable {
         </style>
         </head>
         <body>
-        \(body)
+        \(sanitized)
         </body>
         </html>
         """

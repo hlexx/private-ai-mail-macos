@@ -3,6 +3,7 @@ import GRDB
 
 public struct LabelRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "label"
+    public static let persistenceKeyColumns = ["account_id", "id"]
 
     public var id: String
     public var accountId: String

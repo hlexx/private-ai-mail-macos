@@ -260,14 +260,23 @@ public final class InboxStore {
             arguments: StatementArguments(arguments)
         )
 
-        // Build thread ID set for scoping batch queries
         let threadIds = threads.map(\.id)
         guard !threadIds.isEmpty else {
             return threads.map { ($0, nil, 0) }
         }
+
+        let (senderByThread, attByThread) = try fetchThreadMetadata(db: db, threadIds: threadIds)
+        return threads.map { thread in
+            (thread, senderByThread[thread.id], attByThread[thread.id] ?? 0)
+        }
+    }
+
+    private nonisolated static func fetchThreadMetadata(
+        db: Database,
+        threadIds: [String]
+    ) throws -> (senders: [String: String], attachments: [String: Int]) {
         let placeholders = threadIds.map { _ in "?" }.joined(separator: ",")
 
-        // Batch query: latest from_addr per thread (scoped to filtered set)
         let senderRows = try Row.fetchAll(
             db,
             sql: """
@@ -290,7 +299,6 @@ public final class InboxStore {
             senderByThread[tid] = from ?? ""
         }
 
-        // Batch query: attachment count per thread (scoped to filtered set)
         let attRows = try Row.fetchAll(
             db,
             sql: """
@@ -309,8 +317,6 @@ public final class InboxStore {
             attByThread[tid] = cnt
         }
 
-        return threads.map { thread in
-            (thread, senderByThread[thread.id], attByThread[thread.id] ?? 0)
-        }
+        return (senderByThread, attByThread)
     }
 }

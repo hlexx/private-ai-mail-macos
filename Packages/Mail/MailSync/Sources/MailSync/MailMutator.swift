@@ -48,14 +48,15 @@ public actor MailMutator {
     }
 
     public func markRead(_ threadId: String, accountId: String, read: Bool) async throws {
-        try await mutateLabels(
-            threadId: threadId,
-            accountId: accountId,
-            addLabelIds: read ? [] : ["UNREAD"],
-            removeLabelIds: read ? ["UNREAD"] : []
-        )
         let readFlag = MessageRecord.read
+        // Optimistic local update: labels + flags in one transaction
         try await db.dbQueue.write { dbConn in
+            if read {
+                try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD").delete(dbConn)
+            } else {
+                try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD")
+                    .insert(dbConn, onConflict: .ignore)
+            }
             if read {
                 try dbConn.execute(
                     sql: "UPDATE message SET flags = flags | ? WHERE thread_id = ?",
@@ -71,6 +72,42 @@ public actor MailMutator {
                 sql: "UPDATE thread SET has_unread = ? WHERE id = ?",
                 arguments: [read ? 0 : 1, threadId]
             )
+        }
+
+        // API call
+        do {
+            let api = apiFactory(accountId)
+            _ = try await api.modifyThread(
+                id: threadId,
+                addLabelIds: read ? [] : ["UNREAD"],
+                removeLabelIds: read ? ["UNREAD"] : []
+            )
+        } catch {
+            // Rollback all local changes on failure
+            try? await db.dbQueue.write { dbConn in
+                if read {
+                    try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD")
+                        .insert(dbConn, onConflict: .ignore)
+                } else {
+                    try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD").delete(dbConn)
+                }
+                if read {
+                    try dbConn.execute(
+                        sql: "UPDATE message SET flags = flags & ~? WHERE thread_id = ?",
+                        arguments: [readFlag, threadId]
+                    )
+                } else {
+                    try dbConn.execute(
+                        sql: "UPDATE message SET flags = flags | ? WHERE thread_id = ?",
+                        arguments: [readFlag, threadId]
+                    )
+                }
+                try dbConn.execute(
+                    sql: "UPDATE thread SET has_unread = ? WHERE id = ?",
+                    arguments: [read ? 1 : 0, threadId]
+                )
+            }
+            throw error
         }
     }
 
