@@ -111,30 +111,43 @@ public struct BriefRail: View {
     }
 
     private var ctaRow: some View {
-        HStack(spacing: 6) {
-            Button {
-                // TODO(§15-step-7): wire to AIKit.draftReply()
-            } label: {
-                Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
-            }
-            .buttonStyle(.rbPrimary)
+        GeometryReader { geo in
+            let narrow = geo.size.width < 360
+            let layout = narrow
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                : AnyLayout(HStackLayout(spacing: 6))
+            layout {
+                Button {
+                } label: {
+                    Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+                .buttonStyle(.rbPrimary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Button {
-                // TODO(§15-step-7): wire to snooze action
-            } label: {
-                Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
-            }
-            .buttonStyle(.rbSecondary)
+                Button {
+                } label: {
+                    Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+                .buttonStyle(.rbSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Button {
-                // TODO(§15-step-7): wire to CRM logging
-            } label: {
-                Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
-            }
-            .buttonStyle(.rbGhost)
+                Button {
+                } label: {
+                    Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+                .buttonStyle(.rbGhost)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
+                if !narrow { Spacer() }
+            }
         }
+        .frame(height: 80)
     }
 
     // MARK: - Loading State

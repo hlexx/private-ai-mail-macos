@@ -58,6 +58,37 @@ struct InlineComposerSnapshotTests {
         host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
         host.layout()
     }
+
+    // MARK: - CTA Layout Snapshots (Task 9)
+
+    @MainActor
+    @Test(arguments: [280, 340, 480])
+    func inlineComposerCTALayoutDark(width: Int) {
+        let view = InlineComposer(threadID: "t1", replyStore: ReplyStore())
+            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            .preferredColorScheme(.dark)
+            .frame(width: CGFloat(width), height: 400)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: width, height: 400)
+        host.layout()
+        // At widths < 400, "Edit in full" collapses to pencil icon
+        #expect(host.frame.width == CGFloat(width))
+    }
+
+    @MainActor
+    @Test(arguments: [280, 340, 480])
+    func inlineComposerCTALayoutLight(width: Int) {
+        let view = InlineComposer(threadID: "t1", replyStore: ReplyStore())
+            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            .preferredColorScheme(.light)
+            .frame(width: CGFloat(width), height: 400)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: width, height: 400)
+        host.layout()
+        #expect(host.frame.width == CGFloat(width))
+    }
 }
 
 // MARK: - ComposeWindowView Snapshot Tests

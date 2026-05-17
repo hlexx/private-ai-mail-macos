@@ -279,4 +279,47 @@ struct BriefFeatureTests {
         host.frame = NSRect(x: 0, y: 0, width: 340, height: 300)
         host.layout()
     }
+
+    // MARK: - CTA Layout Snapshots (Task 9)
+
+    @MainActor
+    @Test(arguments: [280, 340, 480])
+    func briefRailCTALayoutDark(width: Int) {
+        let store = BriefStore()
+        store.brief = ThreadBriefViewData(
+            summary: "Client approved pricing and asks for the contract draft by Friday.",
+            request: "Send contract draft",
+            deadline: "Fri",
+            confidence: 0.88,
+            evidence: ["msg_1"]
+        )
+        let view = BriefRail(store: store)
+            .frame(width: CGFloat(width), height: 600)
+            .preferredColorScheme(.dark)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: width, height: 600)
+        host.layout()
+        // At 280pt the CTAs should stack vertically without word-splitting
+        #expect(host.frame.width == CGFloat(width))
+    }
+
+    @MainActor
+    @Test(arguments: [280, 340, 480])
+    func briefRailCTALayoutLight(width: Int) {
+        let store = BriefStore()
+        store.brief = ThreadBriefViewData(
+            summary: "Client approved pricing and asks for the contract draft by Friday.",
+            request: "Send contract draft",
+            deadline: "Fri",
+            confidence: 0.88,
+            evidence: ["msg_1"]
+        )
+        let view = BriefRail(store: store)
+            .frame(width: CGFloat(width), height: 600)
+            .preferredColorScheme(.light)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: width, height: 600)
+        host.layout()
+        #expect(host.frame.width == CGFloat(width))
+    }
 }

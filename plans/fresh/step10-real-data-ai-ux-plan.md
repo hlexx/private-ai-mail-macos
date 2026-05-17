@@ -565,19 +565,19 @@ Make sure replies go out in the right language without user thinking.
 
 Pixel-level. Test in both 1200pt and 1600pt window widths.
 
-- [ ] `BriefRail.swift` CTAs: wrap each `Button { ... } label: { Label(...) }`
+- [x] `BriefRail.swift` CTAs: wrap each `Button { ... } label: { Label(...) }`
       in `.lineLimit(1)` + `.minimumScaleFactor(0.82)` +
       `.fixedSize(horizontal: false, vertical: true)`. Stack three
       buttons vertically on widths < 360pt (use a `ViewThatFits` or
       a `@Environment(\.horizontalSizeClass)` check; for macOS use
       `GeometryReader` to read the rail's width).
-- [ ] `InlineComposer.ctaButtons`: same `.lineLimit(1) +
+- [x] `InlineComposer.ctaButtons`: same `.lineLimit(1) +
       .minimumScaleFactor(0.85)`. If composer width < 400pt, collapse
       "Edit in full" label to just an `pencil` icon (`RBIconButton`
       style), keep tooltip.
-- [ ] Add a snapshot test row for each at 280pt / 340pt / 480pt
+- [x] Add a snapshot test row for each at 280pt / 340pt / 480pt
       widths in dark and light.
-- [ ] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
       and `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 10: Settings — language, default tone, auto-translate

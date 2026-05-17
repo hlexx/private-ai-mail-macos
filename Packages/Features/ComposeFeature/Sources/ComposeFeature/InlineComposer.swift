@@ -244,28 +244,53 @@ public struct InlineComposer: View {
     }
 
     private var ctaButtons: some View {
-        HStack(spacing: RBSpace.s2) {
-            Button {
-                replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage)
-            } label: {
-                Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
-            }
-            .buttonStyle(.rbGhost)
+        GeometryReader { geo in
+            let narrow = geo.size.width < 400
+            HStack(spacing: RBSpace.s2) {
+                Spacer(minLength: 0)
 
-            Button {
-                onEditInFull(draftText)
-            } label: {
-                Text(String(localized: "composer.cta.editInFull", defaultValue: "Edit in full"))
-            }
-            .buttonStyle(.rbSecondary)
+                Button {
+                    replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage)
+                } label: {
+                    Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .buttonStyle(.rbGhost)
+                .fixedSize(horizontal: false, vertical: true)
 
-            Button {
-                onSend(draftText)
-            } label: {
-                Label(String(localized: "composer.cta.send", defaultValue: "Send"), systemImage: "paperplane.fill")
+                if narrow {
+                    Button {
+                        onEditInFull(draftText)
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.rbSecondary)
+                    .help(String(localized: "composer.cta.editInFull", defaultValue: "Edit in full"))
+                } else {
+                    Button {
+                        onEditInFull(draftText)
+                    } label: {
+                        Text(String(localized: "composer.cta.editInFull", defaultValue: "Edit in full"))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .buttonStyle(.rbSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button {
+                    onSend(draftText)
+                } label: {
+                    Label(String(localized: "composer.cta.send", defaultValue: "Send"), systemImage: "paperplane.fill")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .buttonStyle(.rbPrimary)
+                .fixedSize(horizontal: false, vertical: true)
             }
-            .buttonStyle(.rbPrimary)
         }
+        .frame(height: 32)
     }
 }
 
