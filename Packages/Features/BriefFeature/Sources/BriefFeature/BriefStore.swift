@@ -1,5 +1,4 @@
 import AIKit
-import AppKit
 import Foundation
 import GRDB
 import Observation
@@ -150,21 +149,29 @@ extension BriefStore {
         return msg.snippet ?? ""
     }
 
-    /// Convert HTML to plain text using NSAttributedString.
+    /// Convert HTML to plain text by stripping tags. Thread-safe (no WebKit dependency).
     private static nonisolated func htmlToPlainText(_ html: String) -> String? {
-        guard let data = html.data(using: .utf8) else { return nil }
-        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-            .documentType: NSAttributedString.DocumentType.html,
-            .characterEncoding: String.Encoding.utf8.rawValue,
-        ]
-        guard let attributed = try? NSAttributedString(data: data, options: options, documentAttributes: nil) else {
-            return nil
-        }
-        var text = attributed.string
+        var text = html
+        // Replace common block elements with newlines
+        text = text.replacingOccurrences(of: "<br[^>]*>", with: "\n", options: .regularExpression)
+        text = text.replacingOccurrences(of: "</p>", with: "\n\n", options: .caseInsensitive)
+        text = text.replacingOccurrences(of: "</div>", with: "\n", options: .caseInsensitive)
+        text = text.replacingOccurrences(of: "</li>", with: "\n", options: .caseInsensitive)
+        // Strip all remaining tags
+        text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        // Decode common HTML entities
+        text = text.replacingOccurrences(of: "&amp;", with: "&")
+        text = text.replacingOccurrences(of: "&lt;", with: "<")
+        text = text.replacingOccurrences(of: "&gt;", with: ">")
+        text = text.replacingOccurrences(of: "&quot;", with: "\"")
+        text = text.replacingOccurrences(of: "&#39;", with: "'")
+        text = text.replacingOccurrences(of: "&nbsp;", with: " ")
+        // Collapse whitespace
         while text.contains("\n\n\n") {
             text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n")
         }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return result.isEmpty ? nil : result
     }
 }
 

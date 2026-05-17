@@ -131,7 +131,11 @@ enum IncrementalSync {
         db: AppDatabase
     ) throws {
         try db.write { dbConn in
-            // Delete messages first (FK cascade removes their attachments), then the thread
+            // Delete thread_label rows (no FK cascade from thread), messages (FK cascade
+            // removes their attachments), then the thread record itself.
+            try ThreadLabelRecord
+                .filter(Column("thread_id") == threadId)
+                .deleteAll(dbConn)
             try MessageRecord
                 .filter(Column("account_id") == accountId && Column("thread_id") == threadId)
                 .deleteAll(dbConn)

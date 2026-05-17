@@ -18,6 +18,7 @@ struct ToastState: Equatable {
 
     enum UndoAction: Equatable {
         case unarchive(threadId: String, accountId: String)
+        case star(threadId: String, accountId: String)
         case unstar(threadId: String, accountId: String)
         case untrash(threadId: String, accountId: String)
     }

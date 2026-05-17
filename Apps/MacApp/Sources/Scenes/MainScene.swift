@@ -176,10 +176,10 @@ struct MainScene: View {
         .keyboardShortcut(key: "k", modifiers: .command) {
             composition.showActionSheet.toggle()
         }
-        .keyboardShortcut(key: "e", modifiers: []) {
+        .keyboardShortcut(key: "e", modifiers: .control) {
             archiveSelectedThread()
         }
-        .keyboardShortcut(key: "s", modifiers: []) {
+        .keyboardShortcut(key: "s", modifiers: .control) {
             starSelectedThread()
         }
         .overlay(alignment: .bottom) {
@@ -329,10 +329,20 @@ struct MainScene: View {
         guard let threadId = inboxStore.selectedThreadID,
               let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
         let accountId = thread.accountId
+        let isStarred = (try? composition.db.read { db in
+            try ThreadLabelRecord
+                .filter(Column("thread_id") == threadId && Column("label_id") == "STARRED")
+                .fetchOne(db)
+        }) != nil
         Task {
             do {
-                try await composition.mailMutator.star(threadId, accountId: accountId)
-                showToast("Starred", undo: .unstar(threadId: threadId, accountId: accountId))
+                if isStarred {
+                    try await composition.mailMutator.unstar(threadId, accountId: accountId)
+                    showToast("Unstarred", undo: .star(threadId: threadId, accountId: accountId))
+                } else {
+                    try await composition.mailMutator.star(threadId, accountId: accountId)
+                    showToast("Starred", undo: .unstar(threadId: threadId, accountId: accountId))
+                }
             } catch {
                 showToast("Star failed", undo: nil)
             }
@@ -368,6 +378,8 @@ struct MainScene: View {
                 switch action {
                 case .unarchive(let threadId, let accountId):
                     try await composition.mailMutator.unarchive(threadId, accountId: accountId)
+                case .star(let threadId, let accountId):
+                    try await composition.mailMutator.star(threadId, accountId: accountId)
                 case .unstar(let threadId, let accountId):
                     try await composition.mailMutator.unstar(threadId, accountId: accountId)
                 case .untrash(let threadId, let accountId):

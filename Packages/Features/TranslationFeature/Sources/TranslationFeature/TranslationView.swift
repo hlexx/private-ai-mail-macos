@@ -25,9 +25,16 @@ public struct TranslationToggleView: View {
         self.messages = messages
     }
 
+    private var effectivePreferredLanguage: String {
+        if preferredLanguage.isEmpty {
+            return Locale.current.language.languageCode?.identifier ?? "en"
+        }
+        return preferredLanguage
+    }
+
     private var shouldShow: Bool {
         guard let detected = detectedLanguage else { return false }
-        return detected != preferredLanguage
+        return detected != effectivePreferredLanguage
     }
 
     public var body: some View {
@@ -98,7 +105,7 @@ public struct TranslationToggleView: View {
         guard let detected = detectedLanguage else { return }
 
         let source = Locale.Language(identifier: detected)
-        let target = Locale.Language(identifier: preferredLanguage)
+        let target = Locale.Language(identifier: effectivePreferredLanguage)
 
         if translationConfig == nil {
             translationConfig = TranslationSession.Configuration(source: source, target: target)
