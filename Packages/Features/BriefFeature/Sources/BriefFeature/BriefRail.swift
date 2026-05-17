@@ -147,7 +147,7 @@ public struct BriefRail: View {
                 if !narrow { Spacer() }
             }
         }
-        .frame(minHeight: 34, idealHeight: 80)
+        .frame(minHeight: 34, idealHeight: 120)
     }
 
     // MARK: - Loading State

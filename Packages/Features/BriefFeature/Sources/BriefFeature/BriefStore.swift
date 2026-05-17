@@ -140,7 +140,7 @@ public final class BriefStore {
             AIThreadInput.Message(
                 from: msg.fromAddr ?? "Unknown",
                 sentAt: Date(timeIntervalSince1970: TimeInterval(msg.sentAt)),
-                bodyText: Self.bestPlainText(msg)
+                bodyText: msg.bestPlainText
             )
         }
         let aiAttachments = attachments.map { att in
@@ -154,43 +154,6 @@ public final class BriefStore {
     }
 }
 
-// MARK: - Plain Text Extraction
-
-extension BriefStore {
-    /// Best-effort plain text: prefer bodyText, fall back to HTML-to-plain, then snippet.
-    static nonisolated func bestPlainText(_ msg: MessageRecord) -> String {
-        if let text = msg.bodyText, !text.isEmpty { return text }
-        if let html = msg.bodyHtml, !html.isEmpty {
-            return htmlToPlainText(html) ?? msg.snippet ?? ""
-        }
-        return msg.snippet ?? ""
-    }
-
-    /// Convert HTML to plain text by stripping tags. Thread-safe (no WebKit dependency).
-    private static nonisolated func htmlToPlainText(_ html: String) -> String? {
-        var text = html
-        // Replace common block elements with newlines
-        text = text.replacingOccurrences(of: "<br[^>]*>", with: "\n", options: .regularExpression)
-        text = text.replacingOccurrences(of: "</p>", with: "\n\n", options: .caseInsensitive)
-        text = text.replacingOccurrences(of: "</div>", with: "\n", options: .caseInsensitive)
-        text = text.replacingOccurrences(of: "</li>", with: "\n", options: .caseInsensitive)
-        // Strip all remaining tags
-        text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-        // Decode common HTML entities
-        text = text.replacingOccurrences(of: "&amp;", with: "&")
-        text = text.replacingOccurrences(of: "&lt;", with: "<")
-        text = text.replacingOccurrences(of: "&gt;", with: ">")
-        text = text.replacingOccurrences(of: "&quot;", with: "\"")
-        text = text.replacingOccurrences(of: "&#39;", with: "'")
-        text = text.replacingOccurrences(of: "&nbsp;", with: " ")
-        // Collapse whitespace
-        while text.contains("\n\n\n") {
-            text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n")
-        }
-        let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return result.isEmpty ? nil : result
-    }
-}
 
 // MARK: - Cache
 
