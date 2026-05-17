@@ -34,13 +34,31 @@ public struct InboxView: View {
 
     // MARK: - Header
 
+    private var headerTitle: String {
+        switch store.selection {
+        case .folder(let fid):
+            switch fid {
+            case .inbox: return String(localized: "inbox.header.title", defaultValue: "Inbox")
+            case .needsReply: return String(localized: "inbox.header.needsReply", defaultValue: "Needs reply")
+            case .hasDeadline: return String(localized: "inbox.header.hasDeadline", defaultValue: "Has deadline")
+            case .attachments: return String(localized: "inbox.header.attachments", defaultValue: "Attachments")
+            case .logged: return String(localized: "inbox.header.logged", defaultValue: "Logged")
+            case .starred: return String(localized: "inbox.header.starred", defaultValue: "Starred")
+            case .sent: return String(localized: "inbox.header.sent", defaultValue: "Sent")
+            case .archive: return String(localized: "inbox.header.archive", defaultValue: "Archive")
+            }
+        case .account:
+            return String(localized: "inbox.header.account", defaultValue: "Account")
+        }
+    }
+
     private var threadListHeader: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(String(localized: "inbox.header.title", defaultValue: "Inbox"))
+            Text(headerTitle)
                 .font(.rbGeist(18, weight: .semibold))
                 .foregroundStyle(Color.rbFg1)
             Spacer()
-            Text("\(store.filteredThreads.count) threads \u{00B7} \(store.needsReplyCount) need reply")
+            Text("\(store.filteredThreads.count) threads")
                 .font(.rbMono(11))
                 .foregroundStyle(Color.rbFg3)
         }

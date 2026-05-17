@@ -1,4 +1,5 @@
 import AppKit
+import InboxFeature
 import SwiftUI
 import Testing
 @testable import MacApp
@@ -20,7 +21,7 @@ struct RBSidebarTests {
         return RBSidebar(
             folders: folders,
             accounts: accounts,
-            activeFolder: .constant("inbox")
+            selection: .constant(.folder(.inbox))
         )
         .frame(width: 240, height: 600)
         .background(Color.rbBgDeep)
@@ -65,13 +66,59 @@ struct RBSidebarTests {
     @Test func folderItemDefaultCount() {
         let folders = FolderItem.defaultFolders
         #expect(folders.count == 8)
-        #expect(folders[0].id == "inbox")
-        #expect(folders[7].id == "arch")
+        #expect(folders[0].id == .inbox)
+        #expect(folders[7].id == .archive)
     }
 
     @Test func accountRowDeterministicColor() {
         let color1 = AccountRow.deterministicColor(for: "test-id-1")
         let color2 = AccountRow.deterministicColor(for: "test-id-1")
         #expect(color1 == color2)
+    }
+
+    @MainActor
+    @Test func sidebarStarredSelected() {
+        let view = makeSidebarWithSelection(.folder(.starred))
+            .preferredColorScheme(.dark)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 240, height: 600)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func sidebarAccountSelected() {
+        let view = makeSidebarWithSelection(.account("g1"))
+            .preferredColorScheme(.dark)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 240, height: 600)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func sidebarArchiveSelected() {
+        let view = makeSidebarWithSelection(.folder(.archive))
+            .preferredColorScheme(.light)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 240, height: 600)
+        host.layout()
+    }
+
+    private func makeSidebarWithSelection(_ sel: SidebarSelection) -> some View {
+        var folders = FolderItem.defaultFolders
+        folders[0].count = 12
+        folders[5].count = 3
+
+        let accounts: [AccountRow] = [
+            AccountRow(id: "g1", email: "alex@studio.eu", dotColor: .rbCobalt400),
+            AccountRow(id: "m1", email: "a.chen@partners.io", dotColor: .rbViolet500),
+        ]
+
+        return RBSidebar(
+            folders: folders,
+            accounts: accounts,
+            selection: .constant(sel)
+        )
+        .frame(width: 240, height: 600)
+        .background(Color.rbBgDeep)
     }
 }

@@ -1,24 +1,25 @@
 import DesignSystem
+import InboxFeature
 import Persistence
 import SwiftUI
 
 // MARK: - Model types
 
 struct FolderItem: Identifiable, Hashable {
-    let id: String
+    let id: FolderID
     let name: String
     let icon: String
     var count: Int?
 
     static let defaultFolders: [FolderItem] = [
-        FolderItem(id: "inbox", name: String(localized: "sidebar.folder.inbox", defaultValue: "Inbox"), icon: "tray"),
-        FolderItem(id: "reply", name: String(localized: "sidebar.folder.needsReply", defaultValue: "Needs reply"), icon: "arrowshape.turn.up.left"),
-        FolderItem(id: "due", name: String(localized: "sidebar.folder.hasDeadline", defaultValue: "Has deadline"), icon: "clock"),
-        FolderItem(id: "att", name: String(localized: "sidebar.folder.attachments", defaultValue: "Attachments"), icon: "paperclip"),
-        FolderItem(id: "logged", name: String(localized: "sidebar.folder.logged", defaultValue: "Logged"), icon: "checkmark.circle"),
-        FolderItem(id: "starred", name: String(localized: "sidebar.folder.starred", defaultValue: "Starred"), icon: "star"),
-        FolderItem(id: "sent", name: String(localized: "sidebar.folder.sent", defaultValue: "Sent"), icon: "paperplane"),
-        FolderItem(id: "arch", name: String(localized: "sidebar.folder.archive", defaultValue: "Archive"), icon: "archivebox"),
+        FolderItem(id: .inbox, name: String(localized: "sidebar.folder.inbox", defaultValue: "Inbox"), icon: "tray"),
+        FolderItem(id: .needsReply, name: String(localized: "sidebar.folder.needsReply", defaultValue: "Needs reply"), icon: "arrowshape.turn.up.left"),
+        FolderItem(id: .hasDeadline, name: String(localized: "sidebar.folder.hasDeadline", defaultValue: "Has deadline"), icon: "clock"),
+        FolderItem(id: .attachments, name: String(localized: "sidebar.folder.attachments", defaultValue: "Attachments"), icon: "paperclip"),
+        FolderItem(id: .logged, name: String(localized: "sidebar.folder.logged", defaultValue: "Logged"), icon: "checkmark.circle"),
+        FolderItem(id: .starred, name: String(localized: "sidebar.folder.starred", defaultValue: "Starred"), icon: "star"),
+        FolderItem(id: .sent, name: String(localized: "sidebar.folder.sent", defaultValue: "Sent"), icon: "paperplane"),
+        FolderItem(id: .archive, name: String(localized: "sidebar.folder.archive", defaultValue: "Archive"), icon: "archivebox"),
     ]
 }
 
@@ -55,7 +56,7 @@ struct AccountRow: Identifiable, Hashable {
 struct RBSidebar: View {
     let folders: [FolderItem]
     let accounts: [AccountRow]
-    @Binding var activeFolder: String
+    @Binding var selection: SidebarSelection
 
     // Per-section collapse state. Persisted across launches so layout
     // memory survives quitting the app, matching Mail.app behavior.
@@ -149,9 +150,12 @@ struct RBSidebar: View {
     // MARK: - Folder row
 
     private func folderRow(_ folder: FolderItem) -> some View {
-        let isActive = folder.id == activeFolder
+        let isActive: Bool = {
+            if case .folder(let fid) = selection { return fid == folder.id }
+            return false
+        }()
         return Button {
-            activeFolder = folder.id
+            selection = .folder(folder.id)
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: folder.icon)
@@ -191,18 +195,34 @@ struct RBSidebar: View {
     // MARK: - Account row
 
     private func accountRow(_ account: AccountRow) -> some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(account.dotColor)
-                .frame(width: 8, height: 8)
-            Text(account.email)
-                .font(.rbGeist(12))
-                .foregroundStyle(Color.rbFg2)
-                .lineLimit(1)
-                .truncationMode(.tail)
+        let isActive: Bool = {
+            if case .account(let aid) = selection { return aid == account.id }
+            return false
+        }()
+        return Button {
+            selection = .account(account.id)
+        } label: {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(account.dotColor)
+                    .frame(width: 8, height: 8)
+                Text(account.email)
+                    .font(.rbGeist(12))
+                    .foregroundStyle(isActive ? Color.rbFg1 : Color.rbFg2)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: RBRadius.sm)
+                    .fill(isActive
+                        ? Color.rbCobalt400.opacity(0.12)
+                        : Color.clear)
+            )
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Footer
@@ -236,7 +256,7 @@ struct RBSidebar: View {
             AccountRow(id: "g1", email: "alex@studio.eu", dotColor: .rbCobalt400),
             AccountRow(id: "m1", email: "a.chen@partners.io", dotColor: .rbViolet500),
         ],
-        activeFolder: .constant("inbox")
+        selection: .constant(.folder(.inbox))
     )
     .background(Color.rbBgDeep)
     .preferredColorScheme(.dark)
@@ -252,7 +272,7 @@ struct RBSidebar: View {
         accounts: [
             AccountRow(id: "g1", email: "alex@studio.eu", dotColor: .rbCobalt400),
         ],
-        activeFolder: .constant("inbox")
+        selection: .constant(.folder(.inbox))
     )
     .background(Color.rbBgDeep)
     .preferredColorScheme(.light)

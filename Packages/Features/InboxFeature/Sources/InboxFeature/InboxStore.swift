@@ -51,14 +51,12 @@ public struct ThreadRow: Identifiable, Sendable, Hashable {
     static func extractName(from addr: String) -> String {
         let trimmed = addr.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return "?" }
-        // "Display Name <email@example.com>" → "Display Name"
         if let angleBracket = trimmed.firstIndex(of: "<") {
             let name = trimmed[trimmed.startIndex..<angleBracket]
                 .trimmingCharacters(in: .whitespaces)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
             if !name.isEmpty { return name }
         }
-        // Bare email → use local part
         if let at = trimmed.firstIndex(of: "@") {
             return String(trimmed[trimmed.startIndex..<at])
         }
@@ -71,102 +69,56 @@ public struct ThreadRow: Identifiable, Sendable, Hashable {
 public final class InboxStore {
     public private(set) var threads: [ThreadRow] = []
     public var selectedThreadID: String?
-    public var filter: ThreadFilter = .all
-    public var activeFolder: String = "inbox" {
-        didSet {
-            if oldValue != activeFolder { startObserving() }
-        }
+    public var filter: ThreadFilter = .all {
+        didSet { if oldValue != filter { startObserving() } }
     }
 
+    public var selection: SidebarSelection = .default {
+        didSet { if oldValue != selection { startObserving() } }
+    }
+
+    public private(set) var folderCounts: [FolderID: Int] = [:]
+
     public var filteredThreads: [ThreadRow] {
-        guard filter != .all else { return threads }
-        return threads.filter { thread in
-            switch filter {
-            case .all: return true
-            case .needsReply: return false // TODO(§15-step-4): drive from AIKit brief
-            case .hasDeadline: return false // TODO(§15-step-4): drive from AIKit brief
-            case .hasAttachment: return thread.attachmentCount > 0
-            case .aiHandled: return false // TODO(§15-step-4): drive from AIKit brief
+        threads
+    }
+
+    public var needsReplyCount: Int {
+        folderCounts[.needsReply] ?? 0
+    }
+
+    // Legacy compat
+    public var activeFolder: String {
+        get {
+            if case .folder(let fid) = selection { return fid.rawValue }
+            return "inbox"
+        }
+        set {
+            if let fid = FolderID(rawValue: newValue) {
+                selection = .folder(fid)
             }
         }
     }
 
-    public var needsReplyCount: Int {
-        // TODO(§15-step-4): drive from AIKit brief
-        0
-    }
-
     private let db: AppDatabase
     private var observationTask: Task<Void, Never>?
+    private var countsTask: Task<Void, Never>?
 
     public init(db: AppDatabase) {
         self.db = db
     }
 
+    public func setSelection(_ sel: SidebarSelection) {
+        selection = sel
+    }
+
     public func startObserving() {
         observationTask?.cancel()
-        let folder = activeFolder
+        let currentSelection = selection
+        let currentFilter = filter
         observationTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db in
-                let threads: [ThreadRecord]
-                if folder == "sent" {
-                    // Only threads containing at least one sent message
-                    threads = try ThreadRecord
-                        .filter(sql: """
-                            id IN (
-                                SELECT DISTINCT thread_id FROM message
-                                WHERE (flags & ?) != 0
-                            )
-                            """, arguments: [MessageRecord.sentByMe])
-                        .order(Column("last_message_at").desc)
-                        .fetchAll(db)
-                } else {
-                    threads = try ThreadRecord
-                        .order(Column("last_message_at").desc)
-                        .fetchAll(db)
-                }
-
-                // Batch query: latest from_addr per thread
-                let senderRows = try Row.fetchAll(
-                    db,
-                    sql: """
-                        SELECT m.thread_id, m.from_addr
-                        FROM message m
-                        INNER JOIN (
-                            SELECT thread_id, MAX(sent_at) AS max_sent
-                            FROM message
-                            GROUP BY thread_id
-                        ) latest ON m.thread_id = latest.thread_id
-                            AND m.sent_at = latest.max_sent
-                        """
-                )
-                var senderByThread: [String: String] = [:]
-                for row in senderRows {
-                    let tid: String = row["thread_id"]
-                    let from: String? = row["from_addr"]
-                    senderByThread[tid] = from ?? ""
-                }
-
-                // Batch query: attachment count per thread
-                let attRows = try Row.fetchAll(
-                    db,
-                    sql: """
-                        SELECT m.thread_id, COUNT(*) AS cnt
-                        FROM attachment a
-                        JOIN message m ON m.id = a.message_id
-                        GROUP BY m.thread_id
-                        """
-                )
-                var attByThread: [String: Int] = [:]
-                for row in attRows {
-                    let tid: String = row["thread_id"]
-                    let cnt: Int = row["cnt"]
-                    attByThread[tid] = cnt
-                }
-
-                return threads.map { thread -> (ThreadRecord, String?, Int) in
-                    (thread, senderByThread[thread.id], attByThread[thread.id] ?? 0)
-                }
+                try Self.queryThreads(db: db, selection: currentSelection, filter: currentFilter)
             }
             do {
                 for try await records in observation.values(in: db.dbQueue) {
@@ -179,10 +131,188 @@ public final class InboxStore {
                 // Observation ended
             }
         }
+        startCountsObservation()
     }
 
     public func stopObserving() {
         observationTask?.cancel()
         observationTask = nil
+        countsTask?.cancel()
+        countsTask = nil
+    }
+
+    // MARK: - Folder counts observation
+
+    private func startCountsObservation() {
+        countsTask?.cancel()
+        countsTask = Task { [weak self, db] in
+            let observation = ValueObservation.tracking { db -> [FolderID: Int] in
+                var counts: [FolderID: Int] = [:]
+
+                // Inbox count
+                let inboxCount = try Int.fetchOne(db, sql: """
+                    SELECT COUNT(DISTINCT tl.thread_id) FROM thread_label tl WHERE tl.label_id = 'INBOX'
+                    """) ?? 0
+                counts[.inbox] = inboxCount
+
+                // Starred count
+                let starredCount = try Int.fetchOne(db, sql: """
+                    SELECT COUNT(DISTINCT tl.thread_id) FROM thread_label tl WHERE tl.label_id = 'STARRED'
+                    """) ?? 0
+                counts[.starred] = starredCount
+
+                // Sent count
+                let sentCount = try Int.fetchOne(db, sql: """
+                    SELECT COUNT(DISTINCT tl.thread_id) FROM thread_label tl WHERE tl.label_id = 'SENT'
+                    """) ?? 0
+                counts[.sent] = sentCount
+
+                // Archive count (threads not in INBOX/TRASH/SPAM/SENT/DRAFT)
+                let archiveCount = try Int.fetchOne(db, sql: """
+                    SELECT COUNT(*) FROM thread t
+                    WHERE t.id NOT IN (
+                        SELECT thread_id FROM thread_label
+                        WHERE label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
+                    )
+                    """) ?? 0
+                counts[.archive] = archiveCount
+
+                // Attachments count
+                let attCount = try Int.fetchOne(db, sql: """
+                    SELECT COUNT(DISTINCT m.thread_id) FROM message m
+                    JOIN attachment a ON a.message_id = m.id
+                    """) ?? 0
+                counts[.attachments] = attCount
+
+                return counts
+            }
+            do {
+                for try await newCounts in observation.values(in: db.dbQueue) {
+                    guard !Task.isCancelled, let self else { return }
+                    self.folderCounts = newCounts
+                }
+            } catch {
+                // Observation ended
+            }
+        }
+    }
+
+    // MARK: - Query building
+
+    private nonisolated static func queryThreads(
+        db: Database,
+        selection: SidebarSelection,
+        filter: ThreadFilter
+    ) throws -> [(ThreadRecord, String?, Int)] {
+        var conditions: [String] = []
+        var arguments: [DatabaseValueConvertible] = []
+
+        switch selection {
+        case .folder(let folderID):
+            switch folderID {
+            case .inbox:
+                conditions.append("""
+                    t.id IN (SELECT thread_id FROM thread_label WHERE label_id = ?)
+                    """)
+                arguments.append("INBOX")
+            case .starred:
+                conditions.append("""
+                    t.id IN (SELECT thread_id FROM thread_label WHERE label_id = ?)
+                    """)
+                arguments.append("STARRED")
+            case .sent:
+                conditions.append("""
+                    t.id IN (SELECT thread_id FROM thread_label WHERE label_id = ?)
+                    """)
+                arguments.append("SENT")
+            case .archive:
+                conditions.append("""
+                    t.id NOT IN (
+                        SELECT thread_id FROM thread_label
+                        WHERE label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
+                    )
+                    """)
+            case .attachments:
+                conditions.append("""
+                    EXISTS (SELECT 1 FROM message m2 JOIN attachment a ON a.message_id = m2.id WHERE m2.thread_id = t.id)
+                    """)
+            case .needsReply, .hasDeadline, .logged:
+                // Brief-driven filters — show all for now until thread_brief table exists
+                break
+            }
+
+        case .account(let accountId):
+            conditions.append("t.account_id = ?")
+            arguments.append(accountId)
+        }
+
+        // Chip filter as additional narrowing
+        switch filter {
+        case .all:
+            break
+        case .hasAttachment:
+            conditions.append("""
+                EXISTS (SELECT 1 FROM message m3 JOIN attachment a2 ON a2.message_id = m3.id WHERE m3.thread_id = t.id)
+                """)
+        case .needsReply, .hasDeadline, .aiHandled:
+            // Brief-driven — no-op for now
+            break
+        }
+
+        let whereClause = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
+
+        let threadSQL = """
+            SELECT t.* FROM thread t
+            \(whereClause)
+            ORDER BY t.last_message_at DESC
+            """
+
+        let threads = try ThreadRecord.fetchAll(
+            db,
+            sql: threadSQL,
+            arguments: StatementArguments(arguments)
+        )
+
+        // Batch query: latest from_addr per thread
+        let senderRows = try Row.fetchAll(
+            db,
+            sql: """
+                SELECT m.thread_id, m.from_addr
+                FROM message m
+                INNER JOIN (
+                    SELECT thread_id, MAX(sent_at) AS max_sent
+                    FROM message
+                    GROUP BY thread_id
+                ) latest ON m.thread_id = latest.thread_id
+                    AND m.sent_at = latest.max_sent
+                """
+        )
+        var senderByThread: [String: String] = [:]
+        for row in senderRows {
+            let tid: String = row["thread_id"]
+            let from: String? = row["from_addr"]
+            senderByThread[tid] = from ?? ""
+        }
+
+        // Batch query: attachment count per thread
+        let attRows = try Row.fetchAll(
+            db,
+            sql: """
+                SELECT m.thread_id, COUNT(*) AS cnt
+                FROM attachment a
+                JOIN message m ON m.id = a.message_id
+                GROUP BY m.thread_id
+                """
+        )
+        var attByThread: [String: Int] = [:]
+        for row in attRows {
+            let tid: String = row["thread_id"]
+            let cnt: Int = row["cnt"]
+            attByThread[tid] = cnt
+        }
+
+        return threads.map { thread in
+            (thread, senderByThread[thread.id], attByThread[thread.id] ?? 0)
+        }
     }
 }

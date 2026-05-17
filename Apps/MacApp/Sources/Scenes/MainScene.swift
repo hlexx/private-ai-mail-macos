@@ -13,7 +13,7 @@ struct MainScene: View {
 
     let composition: CompositionRoot
 
-    @State private var activeFolder: String = "inbox"
+    @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
     @Environment(\.openSettings) private var openSettings
 
@@ -44,7 +44,7 @@ struct MainScene: View {
                 RBSidebar(
                     folders: sidebarFolders,
                     accounts: accounts.map { AccountRow(account: $0) },
-                    activeFolder: $activeFolder
+                    selection: $sidebarSelection
                 )
                 .frame(
                     minWidth: 180,
@@ -117,8 +117,11 @@ struct MainScene: View {
                 )
             }
         }
-        .onChange(of: activeFolder) { _, newFolder in
-            inboxStore.activeFolder = newFolder
+        .onChange(of: sidebarSelection) { _, newSelection in
+            inboxStore.setSelection(newSelection)
+            if case .account(let accountId) = newSelection {
+                composition.activeAccountID = accountId
+            }
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             if let threadId = newValue,
@@ -142,9 +145,10 @@ struct MainScene: View {
 
     private var sidebarFolders: [FolderItem] {
         var folders = FolderItem.defaultFolders
-        let unreadCount = inboxStore.threads.filter(\.hasUnread).count
-        if let idx = folders.firstIndex(where: { $0.id == "inbox" }) {
-            folders[idx].count = unreadCount > 0 ? unreadCount : nil
+        let counts = inboxStore.folderCounts
+        for idx in folders.indices {
+            let c = counts[folders[idx].id]
+            folders[idx].count = (c ?? 0) > 0 ? c : nil
         }
         return folders
     }

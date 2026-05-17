@@ -284,7 +284,7 @@ Capture `labelIds` from API into the new tables, fetch user labels.
 
 Now make folder / account clicks change what's in the thread list.
 
-- [ ] Create `SidebarSelection` in `Apps/MacApp/Sources/Views/RBSidebar.swift`:
+- [x] Create `SidebarSelection` in `Apps/MacApp/Sources/Views/RBSidebar.swift`:
       ```swift
       enum SidebarSelection: Hashable {
           case folder(FolderID)
@@ -306,15 +306,15 @@ Now make folder / account clicks change what's in the thread list.
           }
       }
       ```
-- [ ] Extend `RBSidebar` view: add `@Binding var selection: SidebarSelection`.
+- [x] Extend `RBSidebar` view: add `@Binding var selection: SidebarSelection`.
       Each folder row + account row uses `.onTapGesture { selection =
       .folder(...)/.account(...) }`. Highlight the selected row with
       `rbAccentSoft` background.
-- [ ] In `MainScene.swift`: add `@State private var sidebarSelection:
+- [x] In `MainScene.swift`: add `@State private var sidebarSelection:
       SidebarSelection = .folder(.inbox)` and pass it to `RBSidebar`.
       On `.onChange(of: sidebarSelection)` call
       `inboxStore.setSelection(sidebarSelection)`.
-- [ ] In `InboxStore`: replace the existing `ValueObservation` request
+- [x] In `InboxStore`: replace the existing `ValueObservation` request
       with one that joins `thread` ⨝ `thread_label` filtered by:
       - if `selection.account != nil` → `WHERE thread.account_id = ?`
       - if `selection.folder.gmailLabel != nil` → `WHERE thread.id IN
@@ -328,21 +328,21 @@ Now make folder / account clicks change what's in the thread list.
       - if `.needsReply` / `.hasDeadline` / `.aiHandled` → JOIN to a new
         `thread_brief` table from Task 5's caching (or for now: filter
         by presence of brief row).
-- [ ] Folder counts: add `InboxStore.folderCounts: [FolderID: Int]`
+- [x] Folder counts: add `InboxStore.folderCounts: [FolderID: Int]`
       computed from the same observation, surfaced to `RBSidebar`.
-- [ ] Top-row filter chips (`InboxView.filterChips`): keep the chip UI,
+- [x] Top-row filter chips (`InboxView.filterChips`): keep the chip UI,
       but the chip selection is an **additional** narrowing over the
       sidebar selection (set intersection). The chip state lives in
       `InboxStore.chipFilter: ChipFilter?` and is OR'd / AND'd inside
       the SQL.
-- [ ] Account-click in `RBSidebar`: also updates `composition.activeAccountID`
+- [x] Account-click in `RBSidebar`: also updates `composition.activeAccountID`
       so newly-composed mail uses that account by default.
-- [ ] Add snapshot tests for `RBSidebar` with each selection state
+- [x] Add snapshot tests for `RBSidebar` with each selection state
       highlighted.
-- [ ] Add `InboxFeatureTests/InboxStoreFilterTests.swift`: seed 5 threads
+- [x] Add `InboxFeatureTests/InboxStoreFilterTests.swift`: seed 5 threads
       across 2 accounts with varying labels, assert `setSelection`
       produces the expected thread-ID set for each folder/account combo.
-- [ ] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
 
 ### Task 4: HTML body rendering
 
