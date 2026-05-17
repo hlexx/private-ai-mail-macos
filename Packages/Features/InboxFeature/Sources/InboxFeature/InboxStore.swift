@@ -87,19 +87,6 @@ public final class InboxStore {
         folderCounts[.needsReply] ?? 0
     }
 
-    // Legacy compat
-    public var activeFolder: String {
-        get {
-            if case .folder(let fid) = selection { return fid.rawValue }
-            return "inbox"
-        }
-        set {
-            if let fid = FolderID(rawValue: newValue) {
-                selection = .folder(fid)
-            }
-        }
-    }
-
     private let db: AppDatabase
     private var observationTask: Task<Void, Never>?
     private var countsTask: Task<Void, Never>?

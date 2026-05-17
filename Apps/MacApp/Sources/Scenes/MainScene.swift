@@ -16,7 +16,7 @@ struct MainScene: View {
 
     @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
-    @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = "en"
+    @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @Environment(\.openSettings) private var openSettings
 
@@ -100,6 +100,7 @@ struct MainScene: View {
                                 onSend: { bodyText in
                                     prefillComposeForReply()
                                     composition.composeViewModel.bodyText = bodyText
+                                    composition.showCompose = true
                                     composition.composeViewModel.requestSend()
                                 }
                             )
@@ -121,7 +122,7 @@ struct MainScene: View {
                             detectedLanguage: detectThreadLanguage(),
                             preferredLanguage: preferredLanguage,
                             autoTranslate: autoTranslate,
-                            messages: threadStore.messages.map { ($0.id, $0.bodyText) }
+                            messages: threadStore.messages.map { ($0.id, $0.bestPlainText) }
                         )
                     }
                 )
@@ -203,20 +204,20 @@ struct MainScene: View {
 
     // MARK: - Translation Helpers
 
-    private func detectThreadLanguage() -> String? {
-        guard let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) else {
-            return threadStore.messages.last.flatMap { translationStore.detect(text: $0.bodyText) }
+    private func lastIncomingText() -> String? {
+        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
+            return lastIncoming.bestPlainText
         }
-        return translationStore.detect(text: lastIncoming.bodyText)
+        return threadStore.messages.last?.bestPlainText
+    }
+
+    private func detectThreadLanguage() -> String? {
+        guard let text = lastIncomingText() else { return nil }
+        return translationStore.detect(text: text)
     }
 
     private func detectReplyLanguage() -> String? {
-        let text: String
-        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
-            text = lastIncoming.bodyText
-        } else if let last = threadStore.messages.last {
-            text = last.bodyText
-        } else {
+        guard let text = lastIncomingText(), !text.isEmpty else {
             return preferredLanguage.isEmpty ? nil : preferredLanguage
         }
         guard let result = translationStore.detectWithConfidence(text: text),
@@ -350,10 +351,11 @@ struct MainScene: View {
     }
 
     private func showToast(_ message: String, undo: ToastState.UndoAction?) {
-        composition.toastMessage = ToastState(message: message, undoAction: undo)
+        let toast = ToastState(message: message, undoAction: undo)
+        composition.toastMessage = toast
         Task {
             try? await Task.sleep(for: .seconds(8))
-            if composition.toastMessage?.message == message {
+            if composition.toastMessage == toast {
                 composition.toastMessage = nil
             }
         }
@@ -362,13 +364,17 @@ struct MainScene: View {
     private func handleUndo(_ action: ToastState.UndoAction) {
         composition.toastMessage = nil
         Task {
-            switch action {
-            case .unarchive(let threadId, let accountId):
-                try? await composition.mailMutator.unarchive(threadId, accountId: accountId)
-            case .unstar(let threadId, let accountId):
-                try? await composition.mailMutator.unstar(threadId, accountId: accountId)
-            case .untrash(let threadId, let accountId):
-                try? await composition.mailMutator.untrash(threadId, accountId: accountId)
+            do {
+                switch action {
+                case .unarchive(let threadId, let accountId):
+                    try await composition.mailMutator.unarchive(threadId, accountId: accountId)
+                case .unstar(let threadId, let accountId):
+                    try await composition.mailMutator.unstar(threadId, accountId: accountId)
+                case .untrash(let threadId, let accountId):
+                    try await composition.mailMutator.untrash(threadId, accountId: accountId)
+                }
+            } catch {
+                showToast("Undo failed", undo: nil)
             }
         }
     }

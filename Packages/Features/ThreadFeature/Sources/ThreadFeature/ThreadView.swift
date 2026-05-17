@@ -98,6 +98,12 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 .buttonStyle(.rbGhost)
                 .disabled(onArchive == nil)
 
+                Button { onStar?() } label: {
+                    Label(String(localized: "thread.action.star", defaultValue: "Star"), systemImage: "star")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(onStar == nil)
+
                 Button { /* Snooze stub */ } label: {
                     Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
                 }

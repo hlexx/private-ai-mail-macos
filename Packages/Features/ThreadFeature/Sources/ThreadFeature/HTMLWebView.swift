@@ -22,18 +22,6 @@ struct HTMLWebView: NSViewRepresentable {
         prefs.allowsContentJavaScript = false
         config.defaultWebpagePreferences = prefs
 
-        let controller = WKUserContentController()
-        let imgSrc = allowRemoteImages ? "img-src * cid: data: blob:;" : "img-src cid: data:;"
-        let csp = "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:;"
-        let meta = "<meta http-equiv=\"Content-Security-Policy\" content=\"\(csp)\">"
-        let injection = WKUserScript(
-            source: "document.head.insertAdjacentHTML('afterbegin', '\(meta)');",
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        )
-        controller.addUserScript(injection)
-        config.userContentController = controller
-
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
@@ -68,11 +56,14 @@ struct HTMLWebView: NSViewRepresentable {
     }
 
     private func wrapHTML(_ body: String) -> String {
-        """
+        let imgSrc = allowRemoteImages ? "img-src * cid: data: blob:;" : "img-src cid: data:;"
+        let csp = "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:;"
+        return """
         <!DOCTYPE html>
         <html>
         <head>
         <meta charset="utf-8">
+        <meta http-equiv="Content-Security-Policy" content="\(csp)">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
         body {

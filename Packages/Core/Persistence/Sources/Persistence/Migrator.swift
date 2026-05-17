@@ -84,29 +84,10 @@ enum M001_InitialSchema {
     }
 }
 
-enum M003_TrustedSender {
-    static func migrate(_ db: Database) throws {
-        try db.create(table: "trusted_sender") { t in
-            t.column("account_id", .text).notNull()
-                .references("account", onDelete: .cascade)
-            t.column("from_addr", .text).notNull()
-            t.primaryKey(["account_id", "from_addr"])
-        }
-    }
-}
-
-enum M004_TranslatedText {
-    static func migrate(_ db: Database) throws {
-        try db.alter(table: "message") { t in
-            t.add(column: "translated_text", .text)
-        }
-    }
-}
-
 enum M002_Labels {
     static func migrate(_ db: Database) throws {
         try db.create(table: "label") { t in
-            t.primaryKey("id", .text)
+            t.column("id", .text).notNull()
             t.column("account_id", .text).notNull()
                 .references("account", onDelete: .cascade)
             t.column("name", .text).notNull()
@@ -114,6 +95,7 @@ enum M002_Labels {
             t.column("color", .text)
             t.column("messages_unread_count", .integer).notNull().defaults(to: 0)
             t.column("messages_total_count", .integer).notNull().defaults(to: 0)
+            t.primaryKey(["account_id", "id"])
         }
 
         try db.create(table: "thread_label") { t in
@@ -132,5 +114,24 @@ enum M002_Labels {
             on: "thread_label",
             columns: ["thread_id"]
         )
+    }
+}
+
+enum M003_TrustedSender {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "trusted_sender") { t in
+            t.column("account_id", .text).notNull()
+                .references("account", onDelete: .cascade)
+            t.column("from_addr", .text).notNull()
+            t.primaryKey(["account_id", "from_addr"])
+        }
+    }
+}
+
+enum M004_TranslatedText {
+    static func migrate(_ db: Database) throws {
+        try db.alter(table: "message") { t in
+            t.add(column: "translated_text", .text)
+        }
     }
 }

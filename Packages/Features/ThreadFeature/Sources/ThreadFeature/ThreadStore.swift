@@ -19,6 +19,15 @@ public struct MessageRow: Identifiable, Sendable {
         (flags & MessageRecord.sentByMe) != 0
     }
 
+    /// Best available plain text for language detection and translation input.
+    /// Falls back: bodyText -> HTML-stripped -> snippet.
+    @MainActor public var bestPlainText: String {
+        if let text = bodyHtml, !text.isEmpty, bodyText == snippet || bodyText.isEmpty {
+            return MessageBodyView.htmlToPlainText(text) ?? bodyText
+        }
+        return bodyText
+    }
+
     public init(record: MessageRecord) {
         self.id = record.id
         self.threadId = record.threadId
