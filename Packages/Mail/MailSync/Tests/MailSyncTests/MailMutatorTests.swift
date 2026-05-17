@@ -52,7 +52,7 @@ struct MailMutatorTests {
             ).insert(dbConn)
 
             for labelId in activeLabels {
-                try ThreadLabelRecord(threadId: threadId, labelId: labelId).insert(dbConn)
+                try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: labelId).insert(dbConn)
             }
         }
     }

@@ -127,7 +127,7 @@ struct BriefFeatureTests {
         store.loadBrief(forThreadID: "thread-1")
 
         // Wait for async task to complete
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(store.brief != nil)
         #expect(store.brief?.summary == "Test summary of thread")

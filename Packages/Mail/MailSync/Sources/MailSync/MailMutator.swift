@@ -52,25 +52,25 @@ public actor MailMutator {
         // Optimistic local update: labels + flags in one transaction
         try await db.dbQueue.write { dbConn in
             if read {
-                try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD").delete(dbConn)
+                try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: "UNREAD").delete(dbConn)
             } else {
-                try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD")
+                try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: "UNREAD")
                     .insert(dbConn, onConflict: .ignore)
             }
             if read {
                 try dbConn.execute(
-                    sql: "UPDATE message SET flags = flags | ? WHERE thread_id = ?",
-                    arguments: [readFlag, threadId]
+                    sql: "UPDATE message SET flags = flags | ? WHERE account_id = ? AND thread_id = ?",
+                    arguments: [readFlag, accountId, threadId]
                 )
             } else {
                 try dbConn.execute(
-                    sql: "UPDATE message SET flags = flags & ~? WHERE thread_id = ?",
-                    arguments: [readFlag, threadId]
+                    sql: "UPDATE message SET flags = flags & ~? WHERE account_id = ? AND thread_id = ?",
+                    arguments: [readFlag, accountId, threadId]
                 )
             }
             try dbConn.execute(
-                sql: "UPDATE thread SET has_unread = ? WHERE id = ?",
-                arguments: [read ? 0 : 1, threadId]
+                sql: "UPDATE thread SET has_unread = ? WHERE account_id = ? AND id = ?",
+                arguments: [read ? 0 : 1, accountId, threadId]
             )
         }
 
@@ -86,25 +86,25 @@ public actor MailMutator {
             // Rollback all local changes on failure
             try? await db.dbQueue.write { dbConn in
                 if read {
-                    try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD")
+                    try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: "UNREAD")
                         .insert(dbConn, onConflict: .ignore)
                 } else {
-                    try ThreadLabelRecord(threadId: threadId, labelId: "UNREAD").delete(dbConn)
+                    try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: "UNREAD").delete(dbConn)
                 }
                 if read {
                     try dbConn.execute(
-                        sql: "UPDATE message SET flags = flags & ~? WHERE thread_id = ?",
-                        arguments: [readFlag, threadId]
+                        sql: "UPDATE message SET flags = flags & ~? WHERE account_id = ? AND thread_id = ?",
+                        arguments: [readFlag, accountId, threadId]
                     )
                 } else {
                     try dbConn.execute(
-                        sql: "UPDATE message SET flags = flags | ? WHERE thread_id = ?",
-                        arguments: [readFlag, threadId]
+                        sql: "UPDATE message SET flags = flags | ? WHERE account_id = ? AND thread_id = ?",
+                        arguments: [readFlag, accountId, threadId]
                     )
                 }
                 try dbConn.execute(
-                    sql: "UPDATE thread SET has_unread = ? WHERE id = ?",
-                    arguments: [read ? 1 : 0, threadId]
+                    sql: "UPDATE thread SET has_unread = ? WHERE account_id = ? AND id = ?",
+                    arguments: [read ? 1 : 0, accountId, threadId]
                 )
             }
             throw error
@@ -140,10 +140,10 @@ public actor MailMutator {
         // 1. Optimistic local update
         try await db.dbQueue.write { dbConn in
             for labelId in removeLabelIds {
-                try ThreadLabelRecord(threadId: threadId, labelId: labelId).delete(dbConn)
+                try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: labelId).delete(dbConn)
             }
             for labelId in addLabelIds {
-                let record = ThreadLabelRecord(threadId: threadId, labelId: labelId)
+                let record = ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: labelId)
                 try record.insert(dbConn, onConflict: .ignore)
             }
         }
@@ -160,10 +160,10 @@ public actor MailMutator {
             // 3. Rollback on failure
             try? await db.dbQueue.write { dbConn in
                 for labelId in addLabelIds {
-                    try ThreadLabelRecord(threadId: threadId, labelId: labelId).delete(dbConn)
+                    try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: labelId).delete(dbConn)
                 }
                 for labelId in removeLabelIds {
-                    let record = ThreadLabelRecord(threadId: threadId, labelId: labelId)
+                    let record = ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: labelId)
                     try record.insert(dbConn, onConflict: .ignore)
                 }
             }

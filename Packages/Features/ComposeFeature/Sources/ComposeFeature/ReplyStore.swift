@@ -35,6 +35,7 @@ public final class ReplyStore {
 
     public func generate(
         threadID: String,
+        accountId: String? = nil,
         tone: AIReplyTone,
         replyLanguage: String?,
         locale: Locale = .current
@@ -48,7 +49,7 @@ public final class ReplyStore {
             return
         }
 
-        let key = CacheKey(threadID: threadID, tone: tone, replyLanguage: replyLanguage ?? "")
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
         if let cached = replyCache[key] {
             reply = cached
             isLoading = false
@@ -61,7 +62,7 @@ public final class ReplyStore {
         inflightTask = Task {
             do {
                 let input = try await Task.detached {
-                    try self.fetchThreadInput(threadID: threadID, db: db)
+                    try self.fetchThreadInput(threadID: threadID, accountId: accountId, db: db)
                 }.value
 
                 try Task.checkCancellation()
@@ -89,13 +90,14 @@ public final class ReplyStore {
 
     public func regenerate(
         threadID: String,
+        accountId: String? = nil,
         tone: AIReplyTone,
         replyLanguage: String?,
         locale: Locale = .current
     ) {
-        let key = CacheKey(threadID: threadID, tone: tone, replyLanguage: replyLanguage ?? "")
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
         replyCache.removeValue(forKey: key)
-        generate(threadID: threadID, tone: tone, replyLanguage: replyLanguage, locale: locale)
+        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
     }
 
     public func invalidate(threadID: String) {
@@ -105,16 +107,28 @@ public final class ReplyStore {
 
     // MARK: - Private
 
-    private nonisolated func fetchThreadInput(threadID: String, db: AppDatabase) throws -> AIThreadInput {
+    private nonisolated func fetchThreadInput(threadID: String, accountId: String?, db: AppDatabase) throws -> AIThreadInput {
         let (messages, attachments) = try db.read { database in
-            let msgs = try MessageRecord
-                .filter(Column("thread_id") == threadID)
-                .order(Column("sent_at").asc)
-                .fetchAll(database)
+            let msgs: [MessageRecord]
+            if let accountId {
+                msgs = try MessageRecord
+                    .filter(Column("thread_id") == threadID && Column("account_id") == accountId)
+                    .order(Column("sent_at").asc)
+                    .fetchAll(database)
+            } else {
+                msgs = try MessageRecord
+                    .filter(Column("thread_id") == threadID)
+                    .order(Column("sent_at").asc)
+                    .fetchAll(database)
+            }
             let msgIDs = msgs.map(\.id)
             let atts: [AttachmentRecord]
             if msgIDs.isEmpty {
                 atts = []
+            } else if let accountId {
+                atts = try AttachmentRecord
+                    .filter(msgIDs.contains(Column("message_id")) && Column("account_id") == accountId)
+                    .fetchAll(database)
             } else {
                 atts = try AttachmentRecord
                     .filter(msgIDs.contains(Column("message_id")))
@@ -173,6 +187,7 @@ public final class ReplyStore {
 
 private struct CacheKey: Hashable {
     let threadID: String
+    let accountId: String
     let tone: AIReplyTone
     let replyLanguage: String
 }

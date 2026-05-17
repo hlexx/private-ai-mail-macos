@@ -113,12 +113,12 @@ enum IncrementalSync {
                 threadLabelIds.formUnion(labelIds)
             }
 
-            // Replace thread_label rows
+            // Replace thread_label rows for this thread+account
             try ThreadLabelRecord
-                .filter(Column("thread_id") == dto.id)
+                .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
                 .deleteAll(dbConn)
             for labelId in threadLabelIds {
-                try ThreadLabelRecord(threadId: dto.id, labelId: labelId)
+                try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
                     .save(dbConn, onConflict: .replace)
             }
         }
@@ -134,7 +134,7 @@ enum IncrementalSync {
             // Delete thread_label rows (no FK cascade from thread), messages (FK cascade
             // removes their attachments), then the thread record itself.
             try ThreadLabelRecord
-                .filter(Column("thread_id") == threadId)
+                .filter(Column("account_id") == accountId && Column("thread_id") == threadId)
                 .deleteAll(dbConn)
             try MessageRecord
                 .filter(Column("account_id") == accountId && Column("thread_id") == threadId)

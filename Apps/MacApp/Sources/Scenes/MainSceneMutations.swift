@@ -28,7 +28,7 @@ extension MainScene {
         let accountId = thread.accountId
         let isStarred = (try? composition.db.read { db in
             try ThreadLabelRecord
-                .filter(Column("thread_id") == threadId && Column("label_id") == "STARRED")
+                .filter(Column("account_id") == accountId && Column("thread_id") == threadId && Column("label_id") == "STARRED")
                 .fetchOne(db)
         }) != nil
         Task {

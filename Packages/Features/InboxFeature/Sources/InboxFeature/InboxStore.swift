@@ -132,43 +132,87 @@ public final class InboxStore {
 
     private func startCountsObservation() {
         countsTask?.cancel()
+        let currentSelection = selection
         countsTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db -> [FolderID: Int] in
                 var counts: [FolderID: Int] = [:]
 
+                // When an account is selected, scope counts to that account's threads
+                let accountFilter: String
+                let accountArgs: [DatabaseValueConvertible]
+                if case .account(let accountId) = currentSelection {
+                    accountFilter = " WHERE tl.account_id = ? AND"
+                    accountArgs = [accountId]
+                } else {
+                    accountFilter = " WHERE"
+                    accountArgs = []
+                }
+
                 // Inbox count
-                let inboxCount = try Int.fetchOne(db, sql: """
-                    SELECT COUNT(DISTINCT tl.thread_id) FROM thread_label tl WHERE tl.label_id = 'INBOX'
-                    """) ?? 0
+                let inboxCount = try Int.fetchOne(
+                    db,
+                    sql: "SELECT COUNT(*) FROM thread_label tl" + accountFilter + " tl.label_id = 'INBOX'",
+                    arguments: StatementArguments(accountArgs)
+                ) ?? 0
                 counts[.inbox] = inboxCount
 
                 // Starred count
-                let starredCount = try Int.fetchOne(db, sql: """
-                    SELECT COUNT(DISTINCT tl.thread_id) FROM thread_label tl WHERE tl.label_id = 'STARRED'
-                    """) ?? 0
+                let starredCount = try Int.fetchOne(
+                    db,
+                    sql: "SELECT COUNT(*) FROM thread_label tl" + accountFilter + " tl.label_id = 'STARRED'",
+                    arguments: StatementArguments(accountArgs)
+                ) ?? 0
                 counts[.starred] = starredCount
 
                 // Sent count
-                let sentCount = try Int.fetchOne(db, sql: """
-                    SELECT COUNT(DISTINCT tl.thread_id) FROM thread_label tl WHERE tl.label_id = 'SENT'
-                    """) ?? 0
+                let sentCount = try Int.fetchOne(
+                    db,
+                    sql: "SELECT COUNT(*) FROM thread_label tl" + accountFilter + " tl.label_id = 'SENT'",
+                    arguments: StatementArguments(accountArgs)
+                ) ?? 0
                 counts[.sent] = sentCount
 
                 // Archive count (threads not in INBOX/TRASH/SPAM/SENT/DRAFT)
-                let archiveCount = try Int.fetchOne(db, sql: """
-                    SELECT COUNT(*) FROM thread t
-                    WHERE t.id NOT IN (
-                        SELECT thread_id FROM thread_label
-                        WHERE label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
-                    )
-                    """) ?? 0
+                let archiveAccountFilter: String
+                let archiveArgs: [DatabaseValueConvertible]
+                if case .account(let accountId) = currentSelection {
+                    archiveAccountFilter = " AND t.account_id = ?"
+                    archiveArgs = [accountId]
+                } else {
+                    archiveAccountFilter = ""
+                    archiveArgs = []
+                }
+                let archiveCount = try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT COUNT(*) FROM thread t
+                        WHERE t.id NOT IN (
+                            SELECT thread_id FROM thread_label
+                            WHERE account_id = t.account_id AND label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
+                        )
+                        """ + archiveAccountFilter,
+                    arguments: StatementArguments(archiveArgs)
+                ) ?? 0
                 counts[.archive] = archiveCount
 
                 // Attachments count
-                let attCount = try Int.fetchOne(db, sql: """
-                    SELECT COUNT(DISTINCT m.thread_id) FROM message m
-                    JOIN attachment a ON a.message_id = m.id
-                    """) ?? 0
+                let attAccountFilter: String
+                let attArgs: [DatabaseValueConvertible]
+                if case .account(let accountId) = currentSelection {
+                    attAccountFilter = " WHERE m.account_id = ?"
+                    attArgs = [accountId]
+                } else {
+                    attAccountFilter = ""
+                    attArgs = []
+                }
+                let attCount = try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT COUNT(DISTINCT m.account_id || '/' || m.thread_id) FROM message m
+                        JOIN attachment a ON a.account_id = m.account_id AND a.message_id = m.id
+                        """ + attAccountFilter,
+                    arguments: StatementArguments(attArgs)
+                ) ?? 0
                 counts[.attachments] = attCount
 
                 return counts
@@ -199,33 +243,33 @@ public final class InboxStore {
             switch folderID {
             case .inbox:
                 conditions.append("""
-                    t.id IN (SELECT thread_id FROM thread_label WHERE label_id = ?)
+                    t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
                     """)
                 arguments.append("INBOX")
             case .starred:
                 conditions.append("""
-                    t.id IN (SELECT thread_id FROM thread_label WHERE label_id = ?)
+                    t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
                     """)
                 arguments.append("STARRED")
             case .sent:
                 conditions.append("""
-                    t.id IN (SELECT thread_id FROM thread_label WHERE label_id = ?)
+                    t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
                     """)
                 arguments.append("SENT")
             case .archive:
                 conditions.append("""
                     t.id NOT IN (
                         SELECT thread_id FROM thread_label
-                        WHERE label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
+                        WHERE account_id = t.account_id AND label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
                     )
                     """)
             case .attachments:
                 conditions.append("""
-                    EXISTS (SELECT 1 FROM message m2 JOIN attachment a ON a.message_id = m2.id WHERE m2.thread_id = t.id)
+                    EXISTS (SELECT 1 FROM message m2 JOIN attachment a ON a.account_id = m2.account_id AND a.message_id = m2.id WHERE m2.account_id = t.account_id AND m2.thread_id = t.id)
                     """)
             case .needsReply, .hasDeadline, .logged:
-                // Brief-driven filters — show all for now until thread_brief table exists
-                break
+                // Brief-driven filters — no thread_brief table yet, return empty
+                conditions.append("1 = 0")
             }
 
         case .account(let accountId):
@@ -239,11 +283,11 @@ public final class InboxStore {
             break
         case .hasAttachment:
             conditions.append("""
-                EXISTS (SELECT 1 FROM message m3 JOIN attachment a2 ON a2.message_id = m3.id WHERE m3.thread_id = t.id)
+                EXISTS (SELECT 1 FROM message m3 JOIN attachment a2 ON a2.account_id = m3.account_id AND a2.message_id = m3.id WHERE m3.account_id = t.account_id AND m3.thread_id = t.id)
                 """)
         case .needsReply, .hasDeadline, .aiHandled:
-            // Brief-driven — no-op for now
-            break
+            // Brief-driven — no thread_brief table yet, return empty
+            conditions.append("1 = 0")
         }
 
         let whereClause = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
@@ -265,56 +309,61 @@ public final class InboxStore {
             return threads.map { ($0, nil, 0) }
         }
 
-        let (senderByThread, attByThread) = try fetchThreadMetadata(db: db, threadIds: threadIds)
+        let (senderByThread, attByThread) = try fetchThreadMetadata(db: db, threads: threads)
         return threads.map { thread in
-            (thread, senderByThread[thread.id], attByThread[thread.id] ?? 0)
+            let key = "\(thread.accountId)/\(thread.id)"
+            return (thread, senderByThread[key], attByThread[key] ?? 0)
         }
     }
 
     private nonisolated static func fetchThreadMetadata(
         db: Database,
-        threadIds: [String]
+        threads: [ThreadRecord]
     ) throws -> (senders: [String: String], attachments: [String: Int]) {
+        let threadIds = threads.map(\.id)
         let placeholders = threadIds.map { _ in "?" }.joined(separator: ",")
 
         let senderRows = try Row.fetchAll(
             db,
             sql: """
-                SELECT m.thread_id, m.from_addr
+                SELECT m.account_id, m.thread_id, m.from_addr
                 FROM message m
                 INNER JOIN (
-                    SELECT thread_id, MAX(sent_at) AS max_sent
+                    SELECT account_id, thread_id, MAX(sent_at) AS max_sent
                     FROM message
                     WHERE thread_id IN (\(placeholders))
-                    GROUP BY thread_id
-                ) latest ON m.thread_id = latest.thread_id
+                    GROUP BY account_id, thread_id
+                ) latest ON m.account_id = latest.account_id
+                    AND m.thread_id = latest.thread_id
                     AND m.sent_at = latest.max_sent
                 """,
             arguments: StatementArguments(threadIds)
         )
         var senderByThread: [String: String] = [:]
         for row in senderRows {
+            let aid: String = row["account_id"]
             let tid: String = row["thread_id"]
             let from: String? = row["from_addr"]
-            senderByThread[tid] = from ?? ""
+            senderByThread["\(aid)/\(tid)"] = from ?? ""
         }
 
         let attRows = try Row.fetchAll(
             db,
             sql: """
-                SELECT m.thread_id, COUNT(*) AS cnt
+                SELECT m.account_id, m.thread_id, COUNT(*) AS cnt
                 FROM attachment a
-                JOIN message m ON m.id = a.message_id
+                JOIN message m ON m.account_id = a.account_id AND m.id = a.message_id
                 WHERE m.thread_id IN (\(placeholders))
-                GROUP BY m.thread_id
+                GROUP BY m.account_id, m.thread_id
                 """,
             arguments: StatementArguments(threadIds)
         )
         var attByThread: [String: Int] = [:]
         for row in attRows {
+            let aid: String = row["account_id"]
             let tid: String = row["thread_id"]
             let cnt: Int = row["cnt"]
-            attByThread[tid] = cnt
+            attByThread["\(aid)/\(tid)"] = cnt
         }
 
         return (senderByThread, attByThread)

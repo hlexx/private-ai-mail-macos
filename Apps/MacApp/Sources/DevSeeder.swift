@@ -317,13 +317,13 @@ enum DevSeeder {
             ).insert(db)
 
             // Add thread labels: all demo threads go to INBOX
-            try ThreadLabelRecord(threadId: seed.id, labelId: "INBOX").insert(db)
+            try ThreadLabelRecord(accountId: seed.accountID, threadId: seed.id, labelId: "INBOX").insert(db)
             if seed.hasUnread {
-                try ThreadLabelRecord(threadId: seed.id, labelId: "UNREAD").insert(db)
+                try ThreadLabelRecord(accountId: seed.accountID, threadId: seed.id, labelId: "UNREAD").insert(db)
             }
             // Star the first thread for testing
             if seed.id == "demo-t1" {
-                try ThreadLabelRecord(threadId: seed.id, labelId: "STARRED").insert(db)
+                try ThreadLabelRecord(accountId: seed.accountID, threadId: seed.id, labelId: "STARRED").insert(db)
             }
 
             for (index, msg) in seed.messages.enumerated() {

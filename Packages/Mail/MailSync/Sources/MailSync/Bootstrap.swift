@@ -164,12 +164,12 @@ enum Bootstrap {
                     threadLabelIds.formUnion(labelIds)
                 }
 
-                // Replace thread_label rows for this thread
+                // Replace thread_label rows for this thread+account
                 try ThreadLabelRecord
-                    .filter(Column("thread_id") == dto.id)
+                    .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
                     .deleteAll(dbConn)
                 for labelId in threadLabelIds {
-                    try ThreadLabelRecord(threadId: dto.id, labelId: labelId)
+                    try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
                         .save(dbConn, onConflict: .replace)
                 }
             }

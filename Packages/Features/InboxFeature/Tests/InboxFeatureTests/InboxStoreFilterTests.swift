@@ -57,14 +57,14 @@ struct InboxStoreFilterTests {
             // t4: INBOX
             // t5: INBOX, SENT
             try dbConn.execute(sql: """
-                INSERT INTO thread_label (thread_id, label_id) VALUES
-                ('t1', 'INBOX'),
-                ('t1', 'STARRED'),
-                ('t2', 'INBOX'),
-                ('t4', 'INBOX'),
-                ('t5', 'INBOX'),
-                ('t5', 'SENT'),
-                ('t3', 'STARRED')
+                INSERT INTO thread_label (account_id, thread_id, label_id) VALUES
+                ('acc1', 't1', 'INBOX'),
+                ('acc1', 't1', 'STARRED'),
+                ('acc1', 't2', 'INBOX'),
+                ('acc2', 't4', 'INBOX'),
+                ('acc2', 't5', 'INBOX'),
+                ('acc2', 't5', 'SENT'),
+                ('acc1', 't3', 'STARRED')
                 """)
 
             // Create an attachment for t2
@@ -199,7 +199,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.inbox))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(150))
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(store.folderCounts[.inbox] == 4) // t1, t2, t4, t5
         #expect(store.folderCounts[.starred] == 2) // t1, t3

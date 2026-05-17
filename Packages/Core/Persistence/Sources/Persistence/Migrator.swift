@@ -7,6 +7,7 @@ enum Migrator {
         migrator.registerMigration("M002_Labels", migrate: M002_Labels.migrate)
         migrator.registerMigration("M003_TrustedSender", migrate: M003_TrustedSender.migrate)
         migrator.registerMigration("M004_TranslatedText", migrate: M004_TranslatedText.migrate)
+        migrator.registerMigration("M005_ThreadLabelAccountId", migrate: M005_ThreadLabelAccountId.migrate)
         try migrator.migrate(db)
     }
 }
@@ -133,5 +134,41 @@ enum M004_TranslatedText {
         try db.alter(table: "message") { t in
             t.add(column: "translated_text", .text)
         }
+    }
+}
+
+enum M005_ThreadLabelAccountId {
+    static func migrate(_ db: Database) throws {
+        // Preserve existing thread-label data by migrating through a temp table
+        try db.execute(sql: """
+            CREATE TABLE thread_label_new (
+                account_id TEXT NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+                thread_id TEXT NOT NULL,
+                label_id TEXT NOT NULL,
+                PRIMARY KEY (account_id, thread_id, label_id)
+            )
+            """)
+        // Migrate existing rows, deriving account_id from thread.
+        // Gmail thread IDs are globally unique, so thread alone suffices.
+        // No label join — orphaned thread_label rows (label deleted before
+        // migration) must be preserved; they are cleaned on next sync.
+        try db.execute(sql: """
+            INSERT OR IGNORE INTO thread_label_new (account_id, thread_id, label_id)
+            SELECT t.account_id, tl.thread_id, tl.label_id
+            FROM thread_label tl
+            JOIN thread t ON t.id = tl.thread_id
+            """)
+        try db.drop(table: "thread_label")
+        try db.rename(table: "thread_label_new", to: "thread_label")
+        try db.create(
+            index: "idx_thread_label_label",
+            on: "thread_label",
+            columns: ["account_id", "label_id"]
+        )
+        try db.create(
+            index: "idx_thread_label_thread",
+            on: "thread_label",
+            columns: ["account_id", "thread_id"]
+        )
     }
 }

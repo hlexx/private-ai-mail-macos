@@ -14,6 +14,7 @@ public struct InlineComposer: View {
     @State private var showLanguagePicker = false
 
     let threadID: String
+    let accountId: String?
     let replyLanguage: String?
     let replyStore: ReplyStore
     let onEditInFull: (String) -> Void
@@ -21,12 +22,14 @@ public struct InlineComposer: View {
 
     public init(
         threadID: String,
+        accountId: String? = nil,
         replyLanguage: String? = nil,
         replyStore: ReplyStore,
         onEditInFull: @escaping (String) -> Void = { _ in },
         onSend: @escaping (String) -> Void = { _ in }
     ) {
         self.threadID = threadID
+        self.accountId = accountId
         self.replyLanguage = replyLanguage
         self.replyStore = replyStore
         self.onEditInFull = onEditInFull
@@ -58,7 +61,7 @@ public struct InlineComposer: View {
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
         .task {
-            replyStore.generate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
+            replyStore.generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
         }
         .onChange(of: replyStore.reply) { _, newReply in
             if let newReply {
@@ -85,7 +88,7 @@ public struct InlineComposer: View {
                 selection: $tone
             )
             .onChange(of: tone) { _, newTone in
-                replyStore.generate(threadID: threadID, tone: newTone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
+                replyStore.generate(threadID: threadID, accountId: accountId, tone: newTone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
             }
         }
         .padding(.horizontal, 14)
@@ -144,7 +147,7 @@ public struct InlineComposer: View {
                     Button {
                         languageOverride = lang.code
                         showLanguagePicker = false
-                        replyStore.generate(threadID: threadID, tone: tone, replyLanguage: lang.code, locale: effectiveLocale)
+                        replyStore.generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: lang.code, locale: effectiveLocale)
                     } label: {
                         HStack {
                             Text(lang.name)
@@ -230,7 +233,7 @@ public struct InlineComposer: View {
                 Spacer(minLength: 0)
 
                 Button {
-                    replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
+                    replyStore.regenerate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
                 } label: {
                     Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
                         .lineLimit(1)

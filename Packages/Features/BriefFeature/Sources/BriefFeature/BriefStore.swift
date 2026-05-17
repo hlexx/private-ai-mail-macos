@@ -14,8 +14,9 @@ public final class BriefStore {
 
     private let aiService: (any AIService)?
     private let db: AppDatabase?
-    private var briefCache: [String: CacheEntry] = [:]
+    private var briefCache: [BriefCacheKey: CacheEntry] = [:]
     private var inflightTask: Task<Void, Never>?
+    private var activeAccountId: String?
 
     /// Production init with AI service and database.
     public init(aiService: any AIService, db: AppDatabase) {
@@ -36,10 +37,11 @@ public final class BriefStore {
         return store
     }
 
-    public func loadBrief(forThreadID threadID: String?) {
+    public func loadBrief(forThreadID threadID: String?, accountId: String? = nil) {
         inflightTask?.cancel()
         inflightTask = nil
         activeThreadID = threadID
+        activeAccountId = accountId
         error = nil
 
         guard let threadID else {
@@ -57,14 +59,16 @@ public final class BriefStore {
         isLoading = true
         brief = nil
 
+        let cacheKey = BriefCacheKey(threadID: threadID, accountId: accountId ?? "")
+
         inflightTask = Task {
             do {
                 let (input, latestMessageID) = try await Task.detached {
-                    try self.fetchThreadInput(threadID: threadID, db: db)
+                    try self.fetchThreadInput(threadID: threadID, accountId: accountId, db: db)
                 }.value
 
                 // Check cache with message-ID freshness
-                if let cached = briefCache[threadID], cached.latestMessageID == latestMessageID {
+                if let cached = briefCache[cacheKey], cached.latestMessageID == latestMessageID {
                     brief = cached.viewData
                     isLoading = false
                     return
@@ -75,7 +79,7 @@ public final class BriefStore {
                 try Task.checkCancellation()
 
                 let viewData = ThreadBriefViewData(from: aiBrief)
-                briefCache[threadID] = CacheEntry(viewData: viewData, latestMessageID: latestMessageID)
+                briefCache[cacheKey] = CacheEntry(viewData: viewData, latestMessageID: latestMessageID)
                 brief = viewData
                 isLoading = false
                 error = nil
@@ -95,22 +99,35 @@ public final class BriefStore {
 
     public func retry() {
         let id = activeThreadID
+        let account = activeAccountId
         activeThreadID = nil
-        loadBrief(forThreadID: id)
+        loadBrief(forThreadID: id, accountId: account)
     }
 
     // MARK: - Private
 
-    private nonisolated func fetchThreadInput(threadID: String, db: AppDatabase) throws -> (AIThreadInput, String) {
+    private nonisolated func fetchThreadInput(threadID: String, accountId: String?, db: AppDatabase) throws -> (AIThreadInput, String) {
         let (messages, attachments) = try db.read { database in
-            let msgs = try MessageRecord
-                .filter(Column("thread_id") == threadID)
-                .order(Column("sent_at").asc)
-                .fetchAll(database)
+            let msgs: [MessageRecord]
+            if let accountId {
+                msgs = try MessageRecord
+                    .filter(Column("thread_id") == threadID && Column("account_id") == accountId)
+                    .order(Column("sent_at").asc)
+                    .fetchAll(database)
+            } else {
+                msgs = try MessageRecord
+                    .filter(Column("thread_id") == threadID)
+                    .order(Column("sent_at").asc)
+                    .fetchAll(database)
+            }
             let msgIDs = msgs.map(\.id)
             let atts: [AttachmentRecord]
             if msgIDs.isEmpty {
                 atts = []
+            } else if let accountId {
+                atts = try AttachmentRecord
+                    .filter(msgIDs.contains(Column("message_id")) && Column("account_id") == accountId)
+                    .fetchAll(database)
             } else {
                 atts = try AttachmentRecord
                     .filter(msgIDs.contains(Column("message_id")))
@@ -176,6 +193,11 @@ extension BriefStore {
 }
 
 // MARK: - Cache
+
+private struct BriefCacheKey: Hashable {
+    let threadID: String
+    let accountId: String
+}
 
 private struct CacheEntry {
     let viewData: ThreadBriefViewData

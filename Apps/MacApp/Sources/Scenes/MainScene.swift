@@ -92,6 +92,7 @@ struct MainScene: View {
                         if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
                             InlineComposer(
                                 threadID: threadID,
+                                accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
                                 replyLanguage: detectReplyLanguage(),
                                 replyStore: composition.replyStore,
                                 onEditInFull: { draftText in
@@ -165,7 +166,7 @@ struct MainScene: View {
                 let accountEmail = accounts.first(where: { $0.id == thread.accountId })?.email ?? ""
                 threadStore.accountEmail = accountEmail
                 threadStore.observe(threadId: threadId, accountId: thread.accountId)
-                briefStore.loadBrief(forThreadID: threadId)
+                briefStore.loadBrief(forThreadID: threadId, accountId: thread.accountId)
             } else {
                 threadStore.stopObserving()
                 briefStore.loadBrief(forThreadID: nil)
