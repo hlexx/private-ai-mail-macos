@@ -98,7 +98,6 @@ enum M002_Labels {
         try db.create(table: "thread_label") { t in
             t.column("thread_id", .text).notNull()
             t.column("label_id", .text).notNull()
-                .references("label", onDelete: .cascade)
             t.primaryKey(["thread_id", "label_id"])
         }
 

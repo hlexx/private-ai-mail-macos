@@ -67,6 +67,10 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage {
         throw GmailAPIError.invalidResponse
     }
+
+    func listLabels() async throws -> [GmailDTO.Label] {
+        []
+    }
 }
 
 // MARK: - Helpers

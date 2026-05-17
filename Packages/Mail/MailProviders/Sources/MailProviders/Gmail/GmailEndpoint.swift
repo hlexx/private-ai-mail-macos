@@ -8,6 +8,7 @@ enum GmailEndpoint {
     case getThread(id: String, format: GmailMessageFormat)
     case listHistory(startHistoryId: String, pageToken: String?)
     case sendMessage(raw: String, threadId: String?)
+    case listLabels
 
     var url: URL {
         var components = URLComponents(string: Self.baseURL + path)!
@@ -27,6 +28,8 @@ enum GmailEndpoint {
             return "/history"
         case .sendMessage:
             return "/messages/send"
+        case .listLabels:
+            return "/labels"
         }
     }
 
@@ -38,12 +41,14 @@ enum GmailEndpoint {
         case .getThread: return 10
         case .listHistory: return 2
         case .sendMessage: return 100
+        case .listLabels: return 1
         }
     }
 
     var httpMethod: String {
         switch self {
         case .sendMessage: return "POST"
+        case .listLabels: return "GET"
         default: return "GET"
         }
     }
@@ -54,6 +59,8 @@ enum GmailEndpoint {
             var dict: [String: String] = ["raw": raw]
             if let threadId { dict["threadId"] = threadId }
             return try? JSONSerialization.data(withJSONObject: dict)
+        case .listLabels:
+            return nil
         default:
             return nil
         }
@@ -75,6 +82,8 @@ enum GmailEndpoint {
             if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
             return items
         case .sendMessage:
+            return []
+        case .listLabels:
             return []
         }
     }

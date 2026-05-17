@@ -6,6 +6,7 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     var getThreadResults: [String: Result<GmailDTO.Thread, Error>] = [:]
     var listHistoryResults: [Result<GmailDTO.HistoryResponse, Error>] = []
     var getMessageResults: [String: Result<GmailDTO.Message, Error>] = [:]
+    var listLabelsResult: Result<[GmailDTO.Label], Error> = .success([])
 
     private var listMessagesCallIndex = 0
     private var listHistoryCallIndex = 0
@@ -51,5 +52,9 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
 
     func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage {
         throw GmailAPIError.invalidResponse
+    }
+
+    func listLabels() async throws -> [GmailDTO.Label] {
+        try listLabelsResult.get()
     }
 }

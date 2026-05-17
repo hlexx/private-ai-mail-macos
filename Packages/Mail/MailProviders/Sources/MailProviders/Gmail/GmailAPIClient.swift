@@ -69,6 +69,12 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         return try await perform(endpoint)
     }
 
+    public func listLabels() async throws -> [GmailDTO.Label] {
+        let endpoint = GmailEndpoint.listLabels
+        let response: GmailDTO.LabelList = try await perform(endpoint)
+        return response.labels ?? []
+    }
+
     // MARK: - Request execution
 
     private func perform<T: Decodable & Sendable>(_ endpoint: GmailEndpoint) async throws -> T {

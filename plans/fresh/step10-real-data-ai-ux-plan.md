@@ -232,7 +232,7 @@ up `flags` once Task 2 is stable).
 
 Capture `labelIds` from API into the new tables, fetch user labels.
 
-- [ ] Add `GmailDTO.Label` in
+- [x] Add `GmailDTO.Label` in
       `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/GmailDTO.swift`:
       ```swift
       public struct Label: Decodable, Sendable {
@@ -248,19 +248,19 @@ Capture `labelIds` from API into the new tables, fetch user labels.
           }
       }
       ```
-- [ ] Add `GmailEndpoint.listLabels` + `GmailAPIClient.listLabels()` →
+- [x] Add `GmailEndpoint.listLabels` + `GmailAPIClient.listLabels()` →
       `[GmailDTO.Label]` (calls
       `GET /users/me/labels`).
-- [ ] In `Bootstrap.swift`: before the first `pages` loop, call
+- [x] In `Bootstrap.swift`: before the first `pages` loop, call
       `let labels = try await api.listLabels()`; UPSERT into `label`
       table (mapping `type: "system"` → `.system`,
       `name.hasPrefix("CATEGORY_")` → `.category`, else `.user`).
       Yield 0.02 progress for the labels-fetch phase.
-- [ ] Modify `GmailMapper.mapMessage()` to **return** `labelIds: [String]`
+- [x] Modify `GmailMapper.mapMessage()` to **return** `labelIds: [String]`
       alongside the existing `MailDomain.Message`. (Easiest: a new
       tuple-returning method `mapMessageWithLabels(_:)`; keep
       `mapMessage` for tests that don't need labels.)
-- [ ] In the bootstrap/incremental persister (find the `db.write` block
+- [x] In the bootstrap/incremental persister (find the `db.write` block
       that UPSERTs `MessageRecord` / `ThreadRecord`): for each message,
       after upserting, DELETE existing `thread_label` rows for this
       thread (only those from the labels we just observed — keep
@@ -268,17 +268,17 @@ Capture `labelIds` from API into the new tables, fetch user labels.
       new set. Use thread-level labels: a thread carries the union of
       labels from its messages, but Gmail returns labels per-message,
       so build the union: `labelIds = Set(messages.flatMap(\.labelIds))`.
-- [ ] In `IncrementalSync.swift`: when `history.list` returns
+- [x] In `IncrementalSync.swift`: when `history.list` returns
       `labelsAdded` / `labelsRemoved`, apply them to `thread_label`
       directly (do not re-fetch the whole thread for label changes
       alone). The history entries already include the threadId + label
       ids in the delta.
-- [ ] Add `Packages/Mail/MailSync/Tests/MailSyncTests/LabelRoundTripTests.swift`:
+- [x] Add `Packages/Mail/MailSync/Tests/MailSyncTests/LabelRoundTripTests.swift`:
       seed an account, run a fake `GmailAPI` returning a thread with
       labels `["INBOX","STARRED","Label_x"]` → assert 3 rows in
       `thread_label`, 3 rows in `label`. Run a second sync where
       `STARRED` is removed → assert only 2 rows in `thread_label`.
-- [ ] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
 
 ### Task 3: Sidebar wiring + label-driven filtering
 

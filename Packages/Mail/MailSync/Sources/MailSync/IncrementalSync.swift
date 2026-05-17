@@ -98,7 +98,10 @@ enum IncrementalSync {
                 .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
                 .deleteAll(dbConn)
 
-            for msg in mapped.messages {
+            var threadLabelIds = Set<String>()
+
+            for dtoMsg in dto.messages ?? [] {
+                let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
                 try makeMessageRecord(from: msg, accountId: accountId)
                     .save(dbConn, onConflict: .replace)
 
@@ -106,6 +109,17 @@ enum IncrementalSync {
                     try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
                         .save(dbConn, onConflict: .replace)
                 }
+
+                threadLabelIds.formUnion(labelIds)
+            }
+
+            // Replace thread_label rows
+            try ThreadLabelRecord
+                .filter(Column("thread_id") == dto.id)
+                .deleteAll(dbConn)
+            for labelId in threadLabelIds {
+                try ThreadLabelRecord(threadId: dto.id, labelId: labelId)
+                    .save(dbConn, onConflict: .replace)
             }
         }
     }

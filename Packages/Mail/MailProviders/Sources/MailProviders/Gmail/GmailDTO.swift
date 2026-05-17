@@ -113,6 +113,44 @@ public enum GmailDTO {
         }
     }
 
+    public struct Label: Decodable, Sendable {
+        public let id: String
+        public let name: String
+        public let type: String
+        public let color: ColorInfo?
+        public let messagesUnread: Int?
+        public let messagesTotal: Int?
+
+        public struct ColorInfo: Decodable, Sendable {
+            public let backgroundColor: String?
+            public let textColor: String?
+        }
+
+        public init(
+            id: String,
+            name: String,
+            type: String = "system",
+            color: ColorInfo? = nil,
+            messagesUnread: Int? = nil,
+            messagesTotal: Int? = nil
+        ) {
+            self.id = id
+            self.name = name
+            self.type = type
+            self.color = color
+            self.messagesUnread = messagesUnread
+            self.messagesTotal = messagesTotal
+        }
+    }
+
+    public struct LabelList: Decodable, Sendable {
+        public let labels: [Label]?
+
+        public init(labels: [Label]? = nil) {
+            self.labels = labels
+        }
+    }
+
     public struct SentMessage: Codable, Sendable {
         public let id: String
         public let threadId: String

@@ -7,6 +7,7 @@ public protocol GmailAPI: Sendable {
     func getThread(id: String, format: GmailMessageFormat) async throws -> GmailDTO.Thread
     func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse
     func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage
+    func listLabels() async throws -> [GmailDTO.Label]
 }
 
 public enum GmailMessageFormat: String, Sendable {

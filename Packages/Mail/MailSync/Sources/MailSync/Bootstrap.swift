@@ -12,6 +12,11 @@ enum Bootstrap {
         onProgress: @Sendable (Double) async -> Void,
         onThreadUpserted: @Sendable (String) async -> Void
     ) async throws {
+        // Step 0: Fetch and upsert labels
+        let labels = try await api.listLabels()
+        try await upsertLabels(labels, accountId: accountId, db: db)
+        await onProgress(0.02)
+
         // Step 1: Page through messages.list to collect unique thread IDs
         var threadIds = Set<String>()
         var pageToken: String?
@@ -102,6 +107,36 @@ enum Bootstrap {
     }
 
     @DatabaseActor
+    private static func upsertLabels(
+        _ labels: [GmailDTO.Label],
+        accountId: String,
+        db: AppDatabase
+    ) throws {
+        try db.write { dbConn in
+            for label in labels {
+                let labelType: LabelType
+                if label.name.hasPrefix("CATEGORY_") {
+                    labelType = .category
+                } else if label.type == "system" {
+                    labelType = .system
+                } else {
+                    labelType = .user
+                }
+                let record = LabelRecord(
+                    id: label.id,
+                    accountId: accountId,
+                    name: label.name,
+                    type: labelType,
+                    color: label.color?.backgroundColor,
+                    messagesUnreadCount: label.messagesUnread ?? 0,
+                    messagesTotalCount: label.messagesTotal ?? 0
+                )
+                try record.save(dbConn, onConflict: .replace)
+            }
+        }
+    }
+
+    @DatabaseActor
     private static func upsertThreads(
         _ dtoThreads: [GmailDTO.Thread],
         accountId: String,
@@ -113,7 +148,11 @@ enum Bootstrap {
                 try makeThreadRecord(from: mapped, accountId: accountId)
                     .save(dbConn, onConflict: .replace)
 
-                for msg in mapped.messages {
+                // Collect thread-level labels (union of all message labels)
+                var threadLabelIds = Set<String>()
+
+                for dtoMsg in dto.messages ?? [] {
+                    let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
                     try makeMessageRecord(from: msg, accountId: accountId)
                         .save(dbConn, onConflict: .replace)
 
@@ -121,6 +160,17 @@ enum Bootstrap {
                         try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
                             .save(dbConn, onConflict: .replace)
                     }
+
+                    threadLabelIds.formUnion(labelIds)
+                }
+
+                // Replace thread_label rows for this thread
+                try ThreadLabelRecord
+                    .filter(Column("thread_id") == dto.id)
+                    .deleteAll(dbConn)
+                for labelId in threadLabelIds {
+                    try ThreadLabelRecord(threadId: dto.id, labelId: labelId)
+                        .save(dbConn, onConflict: .replace)
                 }
             }
         }

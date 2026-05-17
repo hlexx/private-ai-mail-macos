@@ -37,6 +37,12 @@ public enum GmailMapper {
         )
     }
 
+    public static func mapMessageWithLabels(_ dto: GmailDTO.Message, accountId: String) -> (message: MailDomain.Message, labelIds: [String]) {
+        let message = mapMessage(dto, accountId: accountId)
+        let labelIds = dto.labelIds ?? []
+        return (message, labelIds)
+    }
+
     public static func mapThread(_ dto: GmailDTO.Thread, accountId: String) -> MailDomain.Thread {
         let messages = (dto.messages ?? []).map { mapMessage($0, accountId: accountId) }
         let lastMessageAt = messages.map(\.sentAt).max() ?? Date.distantPast

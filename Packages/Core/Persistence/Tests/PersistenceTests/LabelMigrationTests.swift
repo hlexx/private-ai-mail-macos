@@ -107,7 +107,7 @@ struct LabelMigrationTests {
         #expect(labels == 0)
     }
 
-    @Test func threadLabelCascadeDeleteOnLabelRemoval() async throws {
+    @Test func threadLabelPersistsAfterLabelRemoval() async throws {
         let db = try await DatabaseActor.shared.run {
             try AppDatabase.openInMemory()
         }
@@ -127,10 +127,11 @@ struct LabelMigrationTests {
             }
         }
 
+        // thread_label has no FK to label, so rows persist (cleaned on next sync)
         let count = try db.read { db in
             try ThreadLabelRecord.fetchCount(db)
         }
-        #expect(count == 0)
+        #expect(count == 1)
     }
 }
 
