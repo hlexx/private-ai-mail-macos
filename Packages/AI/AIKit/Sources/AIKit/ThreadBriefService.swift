@@ -3,8 +3,8 @@ import AIRuntime
 import Foundation
 
 /// Default `AIService` implementation that delegates thread brief generation
-/// to an `MLXBackend`. The indirection supports future routing to alternative
-/// backends (FoundationModels, llama.cpp).
+/// and reply drafting to an `MLXBackend`. The indirection supports future
+/// routing to alternative backends (FoundationModels, llama.cpp).
 public struct ThreadBriefService: AIService, Sendable {
     private let backend: MLXBackend
 
@@ -48,6 +48,49 @@ public struct ThreadBriefService: AIService, Sendable {
             risk: parsed.risk,
             nextStep: parsed.nextStep,
             evidence: parsed.evidence,
+            confidence: parsed.confidence
+        )
+    }
+
+    public func draftReply(
+        _ input: AIThreadInput,
+        tone: AIReplyTone,
+        locale: Locale,
+        replyLanguage: String?
+    ) async throws -> AIThreadReply {
+        let messages = input.messages.map { msg in
+            PromptMessage(from: msg.from, sentAt: msg.sentAt, bodyText: msg.bodyText)
+        }
+
+        do {
+            try await backend.loadModel()
+        } catch let error as MLXBackendError {
+            throw error.toAIError()
+        } catch is CancellationError {
+            throw AIError.cancelled
+        } catch {
+            throw AIError.modelLoadFailed(error)
+        }
+
+        let parsed: ParsedThreadReply
+        do {
+            parsed = try await backend.draftReply(
+                messages: messages,
+                tone: tone.rawValue,
+                replyLanguage: replyLanguage ?? locale.language.languageCode?.identifier ?? "en"
+            )
+        } catch let error as MLXBackendError {
+            throw error.toAIError()
+        } catch is CancellationError {
+            throw AIError.cancelled
+        } catch {
+            throw AIError.inferenceFailed(error)
+        }
+
+        return AIThreadReply(
+            body: parsed.body,
+            evidenceMessageIDs: parsed.evidenceMessageIDs,
+            detectedReplyLanguage: parsed.detectedReplyLanguage,
             confidence: parsed.confidence
         )
     }

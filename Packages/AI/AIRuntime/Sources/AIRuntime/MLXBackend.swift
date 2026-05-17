@@ -122,6 +122,72 @@ public actor MLXBackend {
         throw MLXBackendError.invalidStructuredOutput(diagnostic)
     }
 
+    /// Generate a draft reply from thread messages.
+    public func draftReply(
+        messages: [PromptMessage],
+        tone: String,
+        replyLanguage: String
+    ) async throws -> ParsedThreadReply {
+        try Task.checkCancellation()
+
+        let systemPrompt = DraftReplyPrompt.systemPrompt
+        let userPrompt = DraftReplyPrompt.taskPrompt(
+            messages: messages,
+            tone: tone,
+            replyLanguage: replyLanguage
+        )
+
+        let start = ContinuousClock.now
+        var lastError: (any Error)?
+
+        for attempt in 0 ... maxRetries {
+            try Task.checkCancellation()
+
+            do {
+                let rawOutput = try await runner.generate(
+                    systemPrompt: systemPrompt,
+                    userPrompt: userPrompt,
+                    maxTokens: maxOutputTokens,
+                    onToken: { _ in }
+                )
+
+                let parsed = try DraftReplyParser.parse(rawOutput)
+
+                let elapsed = ContinuousClock.now - start
+                Self.logger.info(
+                    "Draft reply generated in \(elapsed) (attempt \(attempt + 1))"
+                )
+                latencyRecorder?.record(label: "draftReply", duration: elapsed)
+
+                return parsed
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let parseError as DraftReplyParser.ParseError {
+                lastError = parseError
+                if attempt < maxRetries {
+                    Self.logger.warning(
+                        "Malformed reply output on attempt \(attempt + 1), retrying"
+                    )
+                    continue
+                }
+            } catch {
+                throw MLXBackendError.inferenceFailed(error)
+            }
+        }
+
+        let diagnostic: String
+        if let parseError = lastError as? DraftReplyParser.ParseError {
+            switch parseError {
+            case .invalidJSON(let raw): diagnostic = raw
+            case .schemaViolation(let msg): diagnostic = msg
+            }
+        } else {
+            diagnostic = String(describing: lastError)
+        }
+
+        throw MLXBackendError.invalidStructuredOutput(diagnostic)
+    }
+
     /// Eagerly load the model. Throws if weights are not installed.
     public func loadModel() async throws {
         guard !isModelLoaded else { return }

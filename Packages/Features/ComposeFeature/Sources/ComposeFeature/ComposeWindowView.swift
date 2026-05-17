@@ -174,7 +174,6 @@ public struct ComposeWindowView: View {
                     .buttonStyle(.rbGhost)
 
                 Button {
-                    // TODO(§15-step-4): replace with AIKit.rewrite()
                 } label: {
                     Label(String(localized: "compose.cta.rewrite", defaultValue: "Rewrite"), systemImage: "sparkle")
                 }

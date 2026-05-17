@@ -131,4 +131,71 @@ struct AIKitTests {
         #expect(result.risk == nil)
         #expect(result.confidence < 0.5)
     }
+
+    // MARK: - draftReply Tests
+
+    @Test func draftReplyHappyPath() async throws {
+        let expectedReply = AIThreadReply(
+            body: "Thanks, I'll review this by Friday.",
+            evidenceMessageIDs: ["msg_1"],
+            detectedReplyLanguage: "en",
+            confidence: 0.85
+        )
+        let mock = MockAIService(stubbedReply: expectedReply)
+        let input = AIThreadInput(messages: [
+            .init(from: "boss@example.com", sentAt: .now, bodyText: "Please review the doc by Friday"),
+        ])
+
+        let result = try await mock.draftReply(input, tone: .concise, locale: .current, replyLanguage: "en")
+        #expect(result == expectedReply)
+        #expect(result.body == "Thanks, I'll review this by Friday.")
+        #expect(result.detectedReplyLanguage == "en")
+        #expect(mock.draftReplyCallCount == 1)
+        #expect(mock.lastTone == .concise)
+        #expect(mock.lastReplyLanguage == "en")
+    }
+
+    @Test func draftReplyPassesLanguage() async throws {
+        let expectedReply = AIThreadReply(
+            body: "Спасибо, посмотрю к пятнице.",
+            evidenceMessageIDs: ["msg_1"],
+            detectedReplyLanguage: "ru",
+            confidence: 0.9
+        )
+        let mock = MockAIService(stubbedReply: expectedReply)
+        let input = AIThreadInput(messages: [
+            .init(from: "colleague@example.ru", sentAt: .now, bodyText: "Посмотри документ к пятнице"),
+        ])
+
+        let result = try await mock.draftReply(input, tone: .warm, locale: .current, replyLanguage: "ru")
+        #expect(result.detectedReplyLanguage == "ru")
+        #expect(mock.lastReplyLanguage == "ru")
+        #expect(mock.lastTone == .warm)
+    }
+
+    @Test func draftReplyError() async {
+        let mock = MockAIService(stubbedError: AIError.modelNotInstalled)
+        let input = AIThreadInput(messages: [])
+
+        do {
+            _ = try await mock.draftReply(input, tone: .direct, locale: .current, replyLanguage: nil)
+            Issue.record("Expected error")
+        } catch {
+            #expect(error is AIError)
+        }
+    }
+
+    @Test func aiReplyToneAllCases() {
+        #expect(AIReplyTone.allCases.count == 3)
+        #expect(AIReplyTone.allCases.map(\.rawValue) == ["concise", "warm", "direct"])
+    }
+
+    @Test func aiThreadReplyEquality() {
+        let a = AIThreadReply(body: "Hi", confidence: 0.8)
+        let b = AIThreadReply(body: "Hi", confidence: 0.8)
+        #expect(a == b)
+
+        let c = AIThreadReply(body: "Different", confidence: 0.8)
+        #expect(a != c)
+    }
 }

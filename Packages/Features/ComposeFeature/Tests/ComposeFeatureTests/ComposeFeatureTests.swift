@@ -1,3 +1,4 @@
+import AIKit
 import AppKit
 @testable import ComposeFeature
 import MailDomain
@@ -9,11 +10,6 @@ struct ComposeFeatureTests {
     @Test func moduleNameIsExported() {
         #expect(ComposeFeature.moduleName == "ComposeFeature")
     }
-
-    @Test func composeToneHasThreeCases() {
-        #expect(ComposeTone.allCases.count == 3)
-        #expect(ComposeTone.allCases.map(\.rawValue) == ["concise", "warm", "direct"])
-    }
 }
 
 // MARK: - InlineComposer Snapshot Tests
@@ -23,7 +19,7 @@ struct InlineComposerSnapshotTests {
 
     @MainActor
     @Test func inlineComposerDark() {
-        let view = InlineComposer()
+        let view = InlineComposer(threadID: "t1", replyStore: ReplyStore())
             .padding(24)
             .background(Color(.windowBackgroundColor))
             .preferredColorScheme(.dark)
@@ -35,7 +31,7 @@ struct InlineComposerSnapshotTests {
 
     @MainActor
     @Test func inlineComposerLight() {
-        let view = InlineComposer()
+        let view = InlineComposer(threadID: "t1", replyStore: ReplyStore())
             .padding(24)
             .background(Color(.windowBackgroundColor))
             .preferredColorScheme(.light)
@@ -46,8 +42,14 @@ struct InlineComposerSnapshotTests {
     }
 
     @MainActor
-    @Test func inlineComposerWithCustomEvidence() {
-        let view = InlineComposer(evidence: ["msg_2"])
+    @Test func inlineComposerWithReply() {
+        let store = ReplyStore.preview(reply: AIThreadReply(
+            body: "Thanks for the update, I'll review the document by Friday.",
+            evidenceMessageIDs: ["msg_1", "msg_2"],
+            detectedReplyLanguage: "en",
+            confidence: 0.9
+        ))
+        let view = InlineComposer(threadID: "t1", replyStore: store)
             .padding(24)
             .background(Color(.windowBackgroundColor))
             .preferredColorScheme(.dark)

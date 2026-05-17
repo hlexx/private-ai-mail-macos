@@ -28,6 +28,15 @@ final class MockAIServiceForBrief: AIService, @unchecked Sendable {
         }
         return brief
     }
+
+    func draftReply(
+        _ input: AIThreadInput,
+        tone: AIReplyTone,
+        locale: Locale,
+        replyLanguage: String?
+    ) async throws -> AIThreadReply {
+        AIThreadReply(body: "stub reply", confidence: 0.8)
+    }
 }
 
 private func makeTestDB() throws -> AppDatabase {

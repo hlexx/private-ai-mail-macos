@@ -66,17 +66,19 @@ struct MainScene: View {
                 ThreadView(
                     store: threadStore,
                     composer: {
-                        if briefStore.brief != nil {
+                        if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
                             InlineComposer(
-                                evidence: briefStore.brief?.evidence ?? [],
-                                onEditInFull: {
+                                threadID: threadID,
+                                replyStore: composition.replyStore,
+                                onEditInFull: { draftText in
                                     prefillComposeForReply()
+                                    composition.composeViewModel.bodyText = draftText
                                     composition.showCompose = true
                                 },
                                 onSend: { bodyText in
                                     prefillComposeForReply()
                                     composition.composeViewModel.bodyText = bodyText
-                                    composition.showCompose = true
+                                    composition.composeViewModel.requestSend()
                                 }
                             )
                         }

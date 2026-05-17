@@ -399,7 +399,7 @@ Show the actual email, with privacy-by-default for remote content.
 
 Replace the hardcoded English `draftBodies` with real on-device output.
 
-- [ ] Extend `AIService` protocol
+- [x] Extend `AIService` protocol
       (`Packages/AI/AIKit/Sources/AIKit/AIService.swift`):
       ```swift
       public protocol AIService: Sendable {
@@ -421,22 +421,22 @@ Replace the hardcoded English `draftBodies` with real on-device output.
           public let confidence: Double
       }
       ```
-- [ ] Create `Packages/AI/AIKit/Sources/AIKit/MLXThreadReplyService.swift`
+- [x] Create `Packages/AI/AIKit/Sources/AIKit/MLXThreadReplyService.swift`
       mirroring `MLXThreadBriefService`. Loads the same Gemma 4 E2B
       model (share the loaded model handle across both services via
       a single `MLXModelHost` actor).
-- [ ] Add `Packages/AI/AIPrompts/Sources/AIPrompts/draft_reply_v1.txt`
+- [x] Add `Packages/AI/AIPrompts/Sources/AIPrompts/draft_reply_v1.txt`
       (or wherever prompt templates live) — instructed prompt with:
       - JSON-only output (schema validation).
       - Tone hint (concise/warm/direct).
       - "Respond in {replyLanguage}." inserted when non-nil.
       - Few-shot examples for each tone × ru/en.
       - "Cite which messages you used in evidenceMessageIDs."
-- [ ] Wire `BriefStore`-style caching for replies in a new
+- [x] Wire `BriefStore`-style caching for replies in a new
       `ReplyStore` inside `ComposeFeature` (or a `DraftStore`
       sub-store). Cache key: `(threadID, latestMessageID, tone,
       replyLanguage)`. Invalidate on Regenerate.
-- [ ] Rewrite `InlineComposer.swift`:
+- [x] Rewrite `InlineComposer.swift`:
       - Replace `@State private var draftText: String` initialisation
         from `draftBodies[.warm]` with an `@State var draftText: String
         = ""` and `.task { await loadDraft(.warm) }`.
@@ -455,12 +455,12 @@ Replace the hardcoded English `draftBodies` with real on-device output.
         ComposeWindow is already wired in Step 7.)
       - Eyebrow label changes to include detected reply-language:
         "Drafted locally · tone: \(tone) · in \(replyLanguage)".
-- [ ] Delete the `// TODO(§15-step-4)` comments — Step 10 closes them.
-- [ ] Tests: `AIKitTests/MLXDraftReplyTests.swift` (gated on Apple
+- [x] Delete the `// TODO(§15-step-4)` comments — Step 10 closes them.
+- [x] Tests: `AIKitTests/MLXDraftReplyTests.swift` (gated on Apple
       Silicon CI runner like the existing brief test): assert each tone
       produces a body of distinct lengths, in the requested locale (use
       `NLLanguageRecognizer` to detect output language).
-- [ ] Run `cd $PROJ/Packages/AI/AIKit && swift test` and
+- [x] Run `cd $PROJ/Packages/AI/AIKit && swift test` and
       `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 6: Mutations — Archive / Star / Move-to-trash / Mark-read

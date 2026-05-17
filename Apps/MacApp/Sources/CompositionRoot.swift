@@ -19,6 +19,7 @@ final class CompositionRoot {
     let inboxStore: InboxStore
     let threadStore: ThreadStore
     let briefStore: BriefStore
+    let replyStore: ReplyStore
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
 
@@ -40,6 +41,7 @@ final class CompositionRoot {
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
         self.briefStore = BriefStore(aiService: aiService, db: db)
+        self.replyStore = ReplyStore(aiService: aiService, db: db)
 
         let tokenStore: any TokenStore = KeychainTokenStore()
         self.tokenStore = tokenStore

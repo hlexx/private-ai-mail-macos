@@ -1,39 +1,32 @@
+import AIKit
 import DesignSystem
 import SwiftUI
-
-// MARK: - Tone
-
-public enum ComposeTone: String, CaseIterable, Sendable {
-    case concise
-    case warm
-    case direct
-}
 
 // MARK: - InlineComposer
 
 public struct InlineComposer: View {
-    @State private var tone: ComposeTone = .warm
-    @State private var draftText: String
-    let evidence: [String]
-    let onEditInFull: () -> Void
+    @State private var tone: AIReplyTone = .warm
+    @State private var draftText: String = ""
+    @State private var detectedLanguage: String?
+
+    let threadID: String
+    let replyLanguage: String?
+    let replyStore: ReplyStore
+    let onEditInFull: (String) -> Void
     let onSend: (String) -> Void
 
-    // TODO(§15-step-4): replace with AIKit.draftReply(tone:)
-    private static let draftBodies: [ComposeTone: String] = [
-        .concise: "Hi Marta \u{2014} yes, I\u{2019}ll send a clean draft by Friday EOD. I\u{2019}ll match the pricing we agreed and flag the two clauses we discussed for your legal team. Stand by.",
-        .warm: "Hi Marta \u{2014} thanks for the nudge. I\u{2019}ll have a draft over by Friday EOD; the pricing matches what we agreed, and I\u{2019}ll mark up the two clauses your team raised so legal can move fast next week. Anything else you\u{2019}d like me to include?",
-        .direct: "Marta \u{2014} draft by Friday EOD. Pricing per proposal. Two clauses flagged for legal. Confirm if you want SLA terms attached too.",
-    ]
-
     public init(
-        evidence: [String] = ["msg_1", "msg_3", "contract.pdf p.2"],
-        onEditInFull: @escaping () -> Void = {},
+        threadID: String,
+        replyLanguage: String? = nil,
+        replyStore: ReplyStore,
+        onEditInFull: @escaping (String) -> Void = { _ in },
         onSend: @escaping (String) -> Void = { _ in }
     ) {
-        self.evidence = evidence
+        self.threadID = threadID
+        self.replyLanguage = replyLanguage
+        self.replyStore = replyStore
         self.onEditInFull = onEditInFull
         self.onSend = onSend
-        self._draftText = State(initialValue: Self.draftBodies[.warm] ?? "")
     }
 
     public var body: some View {
@@ -49,27 +42,35 @@ public struct InlineComposer: View {
         )
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
+        .task {
+            replyStore.generate(threadID: threadID, tone: tone, replyLanguage: replyLanguage)
+        }
+        .onChange(of: replyStore.reply) { _, newReply in
+            if let newReply {
+                draftText = newReply.body
+                detectedLanguage = newReply.detectedReplyLanguage
+            }
+        }
     }
 
     // MARK: - Header
 
     private var headerRow: some View {
         HStack {
-            EyebrowLabel(String(localized: "composer.inline.eyebrow", defaultValue: "Draft reply \u{00B7} local"))
+            eyebrowLabel
             Spacer()
             RBToneSegment(
-                segments: ComposeTone.allCases.map { t in
+                segments: AIReplyTone.allCases.map { t in
                     RBToneSegment.Segment(
                         id: t,
                         label: t.rawValue.capitalized,
-                        detail: Self.wordCount(for: t)
+                        detail: ""
                     )
                 },
                 selection: $tone
             )
             .onChange(of: tone) { _, newTone in
-                // TODO(§15-step-4): replace with AIKit.draftReply(tone:)
-                draftText = Self.draftBodies[newTone] ?? ""
+                replyStore.generate(threadID: threadID, tone: newTone, replyLanguage: replyLanguage)
             }
         }
         .padding(.horizontal, 14)
@@ -81,17 +82,40 @@ public struct InlineComposer: View {
         }
     }
 
+    private var eyebrowLabel: some View {
+        HStack(spacing: 4) {
+            EyebrowLabel(eyebrowText)
+        }
+    }
+
+    private var eyebrowText: String {
+        var parts = ["Draft reply", "local"]
+        if let lang = detectedLanguage {
+            parts.append("in \(lang.uppercased())")
+        }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
     // MARK: - Text Area
 
     private var textArea: some View {
-        TextEditor(text: $draftText)
-            .font(.rbGeist(14))
-            .foregroundStyle(Color.rbFg1)
-            .scrollContentBackground(.hidden)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
-            .frame(minHeight: 130, maxHeight: 260)
-            .background(Color.rbBgElev1)
+        ZStack {
+            TextEditor(text: $draftText)
+                .font(.rbGeist(14))
+                .foregroundStyle(Color.rbFg1)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .frame(minHeight: 130, maxHeight: 260)
+                .background(Color.rbBgElev1)
+                .opacity(replyStore.isLoading ? 0.4 : 1.0)
+
+            if replyStore.isLoading {
+                Text("Drafting\u{2026}")
+                    .font(.rbGeist(14))
+                    .foregroundStyle(Color.rbFg3)
+            }
+        }
     }
 
     // MARK: - Footer
@@ -116,7 +140,11 @@ public struct InlineComposer: View {
         HStack(spacing: 6) {
             Image(systemName: "lock.fill")
                 .font(.system(size: 11))
-            Text("\(evidence.count) citations \u{00B7} \(evidence.joined(separator: " \u{00B7} "))")
+            if let reply = replyStore.reply, !reply.evidenceMessageIDs.isEmpty {
+                Text("\(reply.evidenceMessageIDs.count) citations \u{00B7} \(reply.evidenceMessageIDs.joined(separator: " \u{00B7} "))")
+            } else {
+                Text("On-device AI")
+            }
         }
         .font(.rbMono(10.5))
         .foregroundStyle(Color.rbFg3)
@@ -125,14 +153,15 @@ public struct InlineComposer: View {
     private var ctaButtons: some View {
         HStack(spacing: RBSpace.s2) {
             Button {
-                // TODO(§15-step-4): replace with AIKit.draftReply(tone:)
-                draftText = Self.draftBodies[tone] ?? ""
+                replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: replyLanguage)
             } label: {
                 Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
             }
             .buttonStyle(.rbGhost)
 
-            Button(action: onEditInFull) {
+            Button {
+                onEditInFull(draftText)
+            } label: {
                 Text(String(localized: "composer.cta.editInFull", defaultValue: "Edit in full"))
             }
             .buttonStyle(.rbSecondary)
@@ -145,22 +174,17 @@ public struct InlineComposer: View {
             .buttonStyle(.rbPrimary)
         }
     }
-
-    // MARK: - Helpers
-
-    private static func wordCount(for tone: ComposeTone) -> String {
-        let text = draftBodies[tone] ?? ""
-        let count = text.split(separator: " ").count
-        return "\(count)w"
-    }
 }
 
 #if DEBUG
 #Preview("Inline Composer") {
-    InlineComposer()
-        .padding(24)
-        .background(Color.rbBgCanvas)
-        .frame(width: 600)
-        .preferredColorScheme(.dark)
+    InlineComposer(
+        threadID: "preview-thread",
+        replyStore: ReplyStore()
+    )
+    .padding(24)
+    .background(Color.rbBgCanvas)
+    .frame(width: 600)
+    .preferredColorScheme(.dark)
 }
 #endif
