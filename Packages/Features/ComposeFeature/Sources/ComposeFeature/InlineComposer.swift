@@ -8,6 +8,8 @@ public struct InlineComposer: View {
     @State private var tone: AIReplyTone = .warm
     @State private var draftText: String = ""
     @State private var detectedLanguage: String?
+    @State private var languageOverride: String?
+    @State private var showLanguagePicker = false
 
     let threadID: String
     let replyLanguage: String?
@@ -29,6 +31,10 @@ public struct InlineComposer: View {
         self.onSend = onSend
     }
 
+    private var effectiveLanguage: String? {
+        languageOverride ?? replyLanguage
+    }
+
     public var body: some View {
         VStack(spacing: 0) {
             headerRow
@@ -43,7 +49,7 @@ public struct InlineComposer: View {
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
         .task {
-            replyStore.generate(threadID: threadID, tone: tone, replyLanguage: replyLanguage)
+            replyStore.generate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage)
         }
         .onChange(of: replyStore.reply) { _, newReply in
             if let newReply {
@@ -70,7 +76,7 @@ public struct InlineComposer: View {
                 selection: $tone
             )
             .onChange(of: tone) { _, newTone in
-                replyStore.generate(threadID: threadID, tone: newTone, replyLanguage: replyLanguage)
+                replyStore.generate(threadID: threadID, tone: newTone, replyLanguage: effectiveLanguage)
             }
         }
         .padding(.horizontal, 14)
@@ -85,16 +91,103 @@ public struct InlineComposer: View {
     private var eyebrowLabel: some View {
         HStack(spacing: 4) {
             EyebrowLabel(eyebrowText)
+            if displayLanguage != nil {
+                languageChevron
+            }
         }
+    }
+
+    private var displayLanguage: String? {
+        detectedLanguage ?? effectiveLanguage
     }
 
     private var eyebrowText: String {
         var parts = ["Draft reply", "local"]
-        if let lang = detectedLanguage {
+        if let lang = displayLanguage {
             parts.append("in \(lang.uppercased())")
         }
         return parts.joined(separator: " \u{00B7} ")
     }
+
+    private var languageChevron: some View {
+        Button {
+            showLanguagePicker.toggle()
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(Color.rbFg3)
+        }
+        .buttonStyle(.plain)
+        .help(String(localized: "composer.languagePicker.tooltip", defaultValue: "Change reply language"))
+        .popover(isPresented: $showLanguagePicker, arrowEdge: .bottom) {
+            languagePickerContent
+        }
+    }
+
+    private var languagePickerContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Self.commonLanguages, id: \.code) { lang in
+                    Button {
+                        languageOverride = lang.code
+                        showLanguagePicker = false
+                        replyStore.generate(threadID: threadID, tone: tone, replyLanguage: lang.code)
+                    } label: {
+                        HStack {
+                            Text(lang.name)
+                                .font(.rbGeist(13))
+                                .foregroundStyle(Color.rbFg1)
+                            Spacer()
+                            if (displayLanguage ?? "") == lang.code {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.rbAccent)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        .frame(width: 200, height: 320)
+    }
+
+    static let commonLanguages: [(code: String, name: String)] = [
+        ("en", "English"),
+        ("ru", "Русский"),
+        ("de", "Deutsch"),
+        ("fr", "Français"),
+        ("es", "Español"),
+        ("it", "Italiano"),
+        ("pt", "Português"),
+        ("zh", "中文"),
+        ("ja", "日本語"),
+        ("ko", "한국어"),
+        ("ar", "العربية"),
+        ("hi", "हिन्दी"),
+        ("tr", "Türkçe"),
+        ("pl", "Polski"),
+        ("nl", "Nederlands"),
+        ("uk", "Українська"),
+        ("cs", "Čeština"),
+        ("sv", "Svenska"),
+        ("da", "Dansk"),
+        ("fi", "Suomi"),
+        ("no", "Norsk"),
+        ("he", "עברית"),
+        ("th", "ไทย"),
+        ("vi", "Tiếng Việt"),
+        ("id", "Bahasa Indonesia"),
+        ("ms", "Bahasa Melayu"),
+        ("ro", "Română"),
+        ("hu", "Magyar"),
+        ("el", "Ελληνικά"),
+        ("bg", "Български"),
+    ]
 
     // MARK: - Text Area
 
@@ -153,7 +246,7 @@ public struct InlineComposer: View {
     private var ctaButtons: some View {
         HStack(spacing: RBSpace.s2) {
             Button {
-                replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: replyLanguage)
+                replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage)
             } label: {
                 Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
             }

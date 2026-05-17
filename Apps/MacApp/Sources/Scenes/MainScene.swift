@@ -89,6 +89,7 @@ struct MainScene: View {
                         if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
                             InlineComposer(
                                 threadID: threadID,
+                                replyLanguage: detectReplyLanguage(),
                                 replyStore: composition.replyStore,
                                 onEditInFull: { draftText in
                                     prefillComposeForReply()
@@ -205,6 +206,22 @@ struct MainScene: View {
             return threadStore.messages.last.flatMap { translationStore.detect(text: $0.bodyText) }
         }
         return translationStore.detect(text: lastIncoming.bodyText)
+    }
+
+    private func detectReplyLanguage() -> String? {
+        let text: String
+        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
+            text = lastIncoming.bodyText
+        } else if let last = threadStore.messages.last {
+            text = last.bodyText
+        } else {
+            return preferredLanguage.isEmpty ? nil : preferredLanguage
+        }
+        guard let result = translationStore.detectWithConfidence(text: text),
+              result.confidence >= 0.5 else {
+            return preferredLanguage.isEmpty ? nil : preferredLanguage
+        }
+        return result.language
     }
 
     // MARK: - Compose Helpers

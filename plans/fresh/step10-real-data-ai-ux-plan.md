@@ -543,23 +543,23 @@ On-device, no network. macOS 15+ availability.
 
 Make sure replies go out in the right language without user thinking.
 
-- [ ] In `ComposeFeature.InlineComposer`: when entering a thread,
+- [x] In `ComposeFeature.InlineComposer`: when entering a thread,
       compute `replyLanguage` from the **last incoming** message body
       via `TranslationStore.detect(text:)` (Task 7 dep). Default to
       `settings.preferredLanguage` if detection confidence is low /
       message is too short.
-- [ ] Pass `replyLanguage` to every `AIService.draftReply(...)` call.
-- [ ] Eyebrow in InlineComposer: show "Drafted in 🇷🇺 RU" (or just
+- [x] Pass `replyLanguage` to every `AIService.draftReply(...)` call.
+- [x] Eyebrow in InlineComposer: show "Drafted in 🇷🇺 RU" (or just
       "in RU" if emoji-flag is too cute). Hovering shows full name.
-- [ ] User override: small popup chevron next to eyebrow → list of
+- [x] User override: small popup chevron next to eyebrow → list of
       languages from `Locale.availableIdentifiers` (filtered to the
       ~30 most common). Picking one re-runs `draftReply` with new
       language.
-- [ ] Tests: `ComposeFeatureTests/ReplyLanguageRoutingTests.swift`:
+- [x] Tests: `ComposeFeatureTests/ReplyLanguageRoutingTests.swift`:
       fake `AIService` that records the `replyLanguage` argument, assert
       RU thread → "ru" passed, EN thread → "en" passed, mixed thread
       with last message in DE → "de" passed.
-- [ ] Run `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 9: Right-pane layout fixes
 

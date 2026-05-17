@@ -35,4 +35,8 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     func listLabels() async throws -> [GmailDTO.Label] {
         []
     }
+
+    func modifyThread(id: String, addLabelIds: [String], removeLabelIds: [String]) async throws -> GmailDTO.Thread {
+        throw GmailAPIError.invalidResponse
+    }
 }
