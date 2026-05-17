@@ -111,6 +111,7 @@ public struct TranslationToggleView: View {
             translationConfig = TranslationSession.Configuration(source: source, target: target)
         } else {
             translationConfig?.invalidate()
+            translationConfig = TranslationSession.Configuration(source: source, target: target)
         }
     }
 
