@@ -109,9 +109,17 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
         var retainedSession: ASWebAuthenticationSession?
 
         return try await withCheckedThrowingContinuation { continuation in
+            // Derive the URL scheme from the configured redirect URI (the
+            // part before `:`). Decouples from the previous bundle-id scheme
+            // so changing GmailOAuthConfig.default also moves the callback
+            // matcher without touching this file.
+            let callbackScheme = config.redirectURI
+                .split(separator: ":", maxSplits: 1)
+                .first
+                .map(String.init) ?? GmailOAuthConfig.reversedClientIDScheme
             let session = ASWebAuthenticationSession(
                 url: url,
-                callbackURLScheme: "com.hlexx.privateaimail"
+                callbackURLScheme: callbackScheme
             ) { callbackURL, error in
                 // The completion is invoked on the XPC reply queue, but this
                 // closure captures `retainedSession` from a `@MainActor` scope.
