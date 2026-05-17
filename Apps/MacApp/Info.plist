@@ -57,10 +57,15 @@
 	<true/>
 	<key>NSSupportsSuddenTermination</key>
 	<true/>
-	<key>SUEnableDownloaderService</key>
-	<true/>
-	<key>SUEnableInstallerLauncherService</key>
-	<true/>
+	<!--
+	NOTE — `SUEnableDownloaderService` / `SUEnableInstallerLauncherService`
+	intentionally NOT set. Both opt the app into Sparkle XPC helpers that
+	are only useful when the app is sandboxed. We ship the SPM distribution
+	of Sparkle (no `InstallerLauncher.xpc` bundled) and have disabled the
+	sandbox for alpha builds (see PrivateAIMail.entitlements). With those
+	keys absent, Sparkle uses the default installer flow which works for
+	an unsandboxed app and does not need the missing XPC services.
+	-->
 	<key>SUFeedURL</key>
 	<string>https://github.com/hlexx/private-ai-mail-macos/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>

@@ -2,11 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>com.apple.security.app-sandbox</key>
-    <true/>
-    <key>com.apple.security.network.client</key>
-    <true/>
-    <key>com.apple.security.files.user-selected.read-only</key>
-    <true/>
+    <!--
+    NOTE — App Sandbox is intentionally disabled for the alpha track.
+
+    Sparkle 2's installer flow requires `InstallerLauncher.xpc` when the
+    host app is sandboxed. The Swift Package Manager distribution of
+    Sparkle (`Sparkle-for-Swift-Package-Manager.zip`) does NOT include
+    that helper, so a sandboxed app cannot perform auto-updates — the
+    installer aborts with "An error occurred while launching the
+    installer" (observed in 0.1.2-alpha).
+
+    Alpha builds are ad-hoc signed and distributed via GitHub Releases,
+    not the Mac App Store, so the sandbox brings no distribution
+    requirement. Hardened Runtime stays enabled (see Project.swift) for
+    notarization-readiness later. Sandbox will be re-introduced together
+    with the non-SPM Sparkle distribution (which ships
+    `InstallerLauncher.xpc`) once we move to Developer ID + notarization.
+    -->
 </dict>
 </plist>
