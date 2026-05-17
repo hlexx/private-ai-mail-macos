@@ -18,9 +18,10 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
     public var snippet: String?
     public var bodyHtml: String?
     public var bodyText: String?
+    public var translatedText: String?
     public var flags: Int
 
-    public init(id: String, threadId: String, accountId: String, messageIdHeader: String? = nil, fromAddr: String? = nil, toAddr: String? = nil, ccAddr: String? = nil, sentAt: Int, snippet: String? = nil, bodyHtml: String? = nil, bodyText: String? = nil, flags: Int = 0) {
+    public init(id: String, threadId: String, accountId: String, messageIdHeader: String? = nil, fromAddr: String? = nil, toAddr: String? = nil, ccAddr: String? = nil, sentAt: Int, snippet: String? = nil, bodyHtml: String? = nil, bodyText: String? = nil, translatedText: String? = nil, flags: Int = 0) {
         self.id = id
         self.threadId = threadId
         self.accountId = accountId
@@ -32,6 +33,7 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
         self.snippet = snippet
         self.bodyHtml = bodyHtml
         self.bodyText = bodyText
+        self.translatedText = translatedText
         self.flags = flags
     }
 
@@ -47,6 +49,7 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
         case snippet
         case bodyHtml = "body_html"
         case bodyText = "body_text"
+        case translatedText = "translated_text"
         case flags
     }
 }

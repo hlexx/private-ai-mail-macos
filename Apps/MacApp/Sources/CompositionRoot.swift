@@ -10,6 +10,7 @@ import Persistence
 import SettingsFeature
 import SwiftUI
 import ThreadFeature
+import TranslationFeature
 
 struct ToastState: Equatable {
     let message: String
@@ -34,6 +35,7 @@ final class CompositionRoot {
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
     let mailMutator: MailMutator
+    let translationStore: TranslationStore
 
     var activeAccountID: String?
     var toastMessage: ToastState?
@@ -78,6 +80,7 @@ final class CompositionRoot {
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
         self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
+        self.translationStore = TranslationStore(db: db)
 
         let capturedFactory = apiFactory
         let capturedDB = db

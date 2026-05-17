@@ -1,10 +1,11 @@
 import DesignSystem
 import SwiftUI
 
-public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
+public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationHeader: View>: View {
     let store: ThreadStore
     let composerContent: ComposerContent
     let briefContent: BriefContent
+    let translationHeader: TranslationHeader
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
 
@@ -13,13 +14,15 @@ public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
         @ViewBuilder composer: () -> ComposerContent,
-        @ViewBuilder briefRail: () -> BriefContent = { EmptyView() }
+        @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
+        @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
     ) {
         self.store = store
         self.onArchive = onArchive
         self.onStar = onStar
         self.composerContent = composer()
         self.briefContent = briefRail()
+        self.translationHeader = translationHeader()
     }
 
     public var body: some View {
@@ -32,6 +35,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
                 //   head spans the whole pane; body splits 1fr / 340px.
                 VStack(spacing: 0) {
                     headSection
+                    translationHeader
                     HStack(spacing: 0) {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
@@ -208,13 +212,14 @@ public struct ThreadView<ComposerContent: View, BriefContent: View>: View {
     }
 }
 
-extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView {
+extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView, TranslationHeader == EmptyView {
     public init(store: ThreadStore, onArchive: (() -> Void)? = nil, onStar: (() -> Void)? = nil) {
         self.store = store
         self.onArchive = onArchive
         self.onStar = onStar
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
+        self.translationHeader = EmptyView()
     }
 }
 

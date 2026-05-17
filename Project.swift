@@ -34,6 +34,7 @@ private let localPackages: [Package] = [
     .local(path: "Packages/Features/BriefFeature"),
     .local(path: "Packages/Features/ActionsFeature"),
     .local(path: "Packages/Features/SettingsFeature"),
+    .local(path: "Packages/Features/TranslationFeature"),
 ]
 
 // Features linked into the MacApp target. Core/Mail/AI/etc are pulled in transitively.
@@ -46,6 +47,7 @@ private let appFeatureDeps: [TargetDependency] = [
     .package(product: "SettingsFeature"),
     .package(product: "DesignSystem"),
     .package(product: "AIRuntime"),
+    .package(product: "TranslationFeature"),
 ]
 
 // MARK: - Project

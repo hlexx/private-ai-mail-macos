@@ -8,6 +8,7 @@ import MailDomain
 import Persistence
 import SwiftUI
 import ThreadFeature
+import TranslationFeature
 
 struct MainScene: View {
 
@@ -15,11 +16,13 @@ struct MainScene: View {
 
     @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
+    @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = "en"
     @Environment(\.openSettings) private var openSettings
 
     private var inboxStore: InboxStore { composition.inboxStore }
     private var threadStore: ThreadStore { composition.threadStore }
     private var briefStore: BriefStore { composition.briefStore }
+    private var translationStore: TranslationStore { composition.translationStore }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -109,6 +112,14 @@ struct MainScene: View {
                         BriefRail(store: briefStore)
                             .frame(width: RBLayout.briefRailWidth)
                             .frame(maxHeight: .infinity, alignment: .top)
+                    },
+                    translationHeader: {
+                        TranslationToggleView(
+                            store: translationStore,
+                            detectedLanguage: detectThreadLanguage(),
+                            preferredLanguage: preferredLanguage,
+                            messages: threadStore.messages.map { ($0.id, $0.bodyText) }
+                        )
                     }
                 )
                 .frame(
@@ -143,6 +154,7 @@ struct MainScene: View {
             }
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
+            translationStore.clearCache()
             if let threadId = newValue,
                let thread = inboxStore.threads.first(where: { $0.id == threadId }) {
                 let accountEmail = accounts.first(where: { $0.id == thread.accountId })?.email ?? ""
@@ -184,6 +196,15 @@ struct MainScene: View {
             folders[idx].count = (c ?? 0) > 0 ? c : nil
         }
         return folders
+    }
+
+    // MARK: - Translation Helpers
+
+    private func detectThreadLanguage() -> String? {
+        guard let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) else {
+            return threadStore.messages.last.flatMap { translationStore.detect(text: $0.bodyText) }
+        }
+        return translationStore.detect(text: lastIncoming.bodyText)
     }
 
     // MARK: - Compose Helpers

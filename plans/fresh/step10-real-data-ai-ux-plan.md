@@ -512,16 +512,16 @@ Optimistic-then-server, label-driven, idempotent.
 
 On-device, no network. macOS 15+ availability.
 
-- [ ] New package `Packages/Features/TranslationFeature` — `Package.swift`
+- [x] New package `Packages/Features/TranslationFeature` — `Package.swift`
       + `TranslationStore.swift` + `TranslationView.swift`.
-- [ ] `TranslationStore.detect(text:) async throws -> Locale.Language`
+- [x] `TranslationStore.detect(text:) async throws -> Locale.Language`
       using `NLLanguageRecognizer.dominantLanguage(for:)`.
-- [ ] `TranslationStore.translate(text:to:) async throws -> String`
+- [x] `TranslationStore.translate(text:to:) async throws -> String`
       using `import Translation` + `TranslationSession`. First call
       may prompt the user to download the language pair — that's
       expected behaviour; surface a one-shot "Language pack required"
       alert from the existing AI panel.
-- [ ] In `ThreadView`: above the message stack, render a
+- [x] In `ThreadView`: above the message stack, render a
       `RBSegmentedControl` with `Original / Translated` **only if**
       detected language ≠ `settings.preferredLanguage`. When
       Translated is selected, swap each message's body to its
@@ -529,15 +529,15 @@ On-device, no network. macOS 15+ availability.
       `MessageRecord.translatedText` (one-language-at-a-time per
       message; Phase 2 adds multi-language cache table). Add to
       migration v2.
-- [ ] AI inputs: when generating brief/reply, do NOT translate the
+- [x] AI inputs: when generating brief/reply, do NOT translate the
       input — feed the original body to the model. The model's prompt
       asks it to respond in `replyLanguage`. Translation is purely a
       reading affordance.
-- [ ] Tests: `TranslationFeatureTests` with a Russian fixture string,
+- [x] Tests: `TranslationFeatureTests` with a Russian fixture string,
       assert `detect()` returns `ru` and `translate(to: "en")` returns
       a non-empty string containing some English-letter content.
       Skipped on macOS < 15.
-- [ ] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`.
 
 ### Task 8: Reply-language detection routing
 
