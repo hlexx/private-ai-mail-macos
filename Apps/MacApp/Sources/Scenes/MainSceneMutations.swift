@@ -46,6 +46,21 @@ extension MainScene {
         }
     }
 
+    func markReadSelectedThread() {
+        guard let threadId = inboxStore.selectedThreadID,
+              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
+        let accountId = thread.accountId
+        let markAsRead = thread.hasUnread
+        Task {
+            do {
+                try await composition.mailMutator.markRead(threadId, accountId: accountId, read: markAsRead)
+                showToast(markAsRead ? "Marked read" : "Marked unread", undo: nil)
+            } catch {
+                showToast("Mark read failed", undo: nil)
+            }
+        }
+    }
+
     func trashThread(_ threadId: String, accountId: String) {
         Task {
             do {

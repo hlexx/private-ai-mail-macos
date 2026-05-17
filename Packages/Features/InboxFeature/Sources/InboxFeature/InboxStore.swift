@@ -281,6 +281,11 @@ public final class InboxStore {
                     WHERE account_id = t.account_id AND label_id IN ('TRASH','SPAM','DRAFT')
                 )
                 """)
+
+        case .allAccountsAllFolders:
+            conditions.append("""
+                t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = 'INBOX')
+                """)
         }
 
         // Chip filter as additional narrowing

@@ -5,6 +5,6 @@ public enum AppConstants {
     public static let productName = "PrivateAIMail"
     public static let displayName = "Private AI Mail"
     public static let macOSDeploymentTarget: DeploymentTargets = .macOS("15.0")
-    public static let marketingVersion = "0.1.0"
-    public static let projectVersion = "1"
+    public static let marketingVersion = "0.1.5-alpha"
+    public static let projectVersion = "105"
 }

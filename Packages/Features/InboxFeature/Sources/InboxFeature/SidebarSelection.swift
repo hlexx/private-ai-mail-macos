@@ -3,6 +3,7 @@ import Foundation
 public enum SidebarSelection: Hashable, Sendable {
     case folder(FolderID)
     case account(String)
+    case allAccountsAllFolders
 
     public static let `default`: SidebarSelection = .folder(.inbox)
 }

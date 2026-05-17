@@ -60,7 +60,7 @@ public struct InlineComposer: View {
         )
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
-        .task {
+        .task(id: "\(threadID)_\(effectiveLanguage ?? "")") {
             replyStore.generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
         }
         .onChange(of: replyStore.reply) { _, newReply in

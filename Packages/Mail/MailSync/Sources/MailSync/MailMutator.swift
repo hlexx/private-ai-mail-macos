@@ -49,6 +49,15 @@ public actor MailMutator {
 
     public func markRead(_ threadId: String, accountId: String, read: Bool) async throws {
         let readFlag = MessageRecord.read
+        // Capture original has_unread before optimistic update for correct rollback
+        let originalHasUnread: Int = (try? await db.dbQueue.read { dbConn in
+            try Int.fetchOne(
+                dbConn,
+                sql: "SELECT has_unread FROM thread WHERE account_id = ? AND id = ?",
+                arguments: [accountId, threadId]
+            )
+        }) ?? (read ? 1 : 0)
+
         // Optimistic local update: labels + flags in one transaction
         try await db.dbQueue.write { dbConn in
             if read {
@@ -83,7 +92,7 @@ public actor MailMutator {
                 removeLabelIds: read ? ["UNREAD"] : []
             )
         } catch {
-            // Rollback all local changes on failure
+            // Rollback all local changes on failure, restoring original has_unread
             try? await db.dbQueue.write { dbConn in
                 if read {
                     try ThreadLabelRecord(accountId: accountId, threadId: threadId, labelId: "UNREAD")
@@ -104,7 +113,7 @@ public actor MailMutator {
                 }
                 try dbConn.execute(
                     sql: "UPDATE thread SET has_unread = ? WHERE account_id = ? AND id = ?",
-                    arguments: [read ? 1 : 0, accountId, threadId]
+                    arguments: [originalHasUnread, accountId, threadId]
                 )
             }
             throw error

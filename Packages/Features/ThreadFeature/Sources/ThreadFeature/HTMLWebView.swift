@@ -68,6 +68,9 @@ struct HTMLWebView: NSViewRepresentable {
         // Remove </head> and <head> tags that could break out of the body
         let headPattern = #"</?head\s*>"#
         result = result.replacingOccurrences(of: headPattern, with: "", options: [.regularExpression, .caseInsensitive])
+        // Remove <html>, </html>, <body>, </body> to prevent template structure escape
+        let htmlBodyPattern = #"</?(?:html|body)\s*[^>]*>"#
+        result = result.replacingOccurrences(of: htmlBodyPattern, with: "", options: [.regularExpression, .caseInsensitive])
         return result
     }
 

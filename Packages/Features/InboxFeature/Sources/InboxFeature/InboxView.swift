@@ -57,6 +57,8 @@ public struct InboxView: View {
             }
         case .account:
             return String(localized: "inbox.header.account", defaultValue: "Account")
+        case .allAccountsAllFolders:
+            return String(localized: "inbox.header.allAccounts", defaultValue: "All Accounts")
         }
     }
 
@@ -259,7 +261,6 @@ private struct ThreadRowView: View {
 
     private func deriveChips() -> [SignalChip.Kind] {
         var chips: [SignalChip.Kind] = []
-        // TODO(§15-step-4): drive chips from AIKit brief
         if thread.attachmentCount > 0 {
             chips.append(.att(pages: nil))
         }

@@ -147,7 +147,6 @@ struct MainScene: View {
                 ActionSheetView(
                     threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
                     onAction: { _ in
-                        // TODO(§15-step-4): handle selected action
                         composition.showActionSheet = false
                     }
                 )
@@ -183,6 +182,9 @@ struct MainScene: View {
         }
         .keyboardShortcut(key: "s", modifiers: .control) {
             starSelectedThread()
+        }
+        .keyboardShortcut(key: "k", modifiers: .control) {
+            markReadSelectedThread()
         }
         .overlay(alignment: .bottom) {
             if let toast = composition.toastMessage {

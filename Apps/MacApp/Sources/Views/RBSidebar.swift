@@ -88,6 +88,9 @@ struct RBSidebar: View {
                     .padding(.top, RBSpace.s2)
 
                     if !accountsCollapsed {
+                        if accounts.count > 1 {
+                            allAccountsRow
+                        }
                         ForEach(accounts) { account in
                             accountRow(account)
                         }
@@ -187,6 +190,37 @@ struct RBSidebar: View {
                         .padding(.vertical, 6)
                 }
             }
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - All Accounts row
+
+    private var allAccountsRow: some View {
+        let isActive: Bool = {
+            if case .allAccountsAllFolders = selection { return true }
+            if case .folder = selection { return false }
+            return false
+        }()
+        return Button {
+            selection = .allAccountsAllFolders
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "person.2")
+                    .font(.system(size: 12))
+                    .frame(width: 16)
+                Text(String(localized: "sidebar.allAccounts", defaultValue: "All Accounts"))
+                    .font(.rbGeist(12))
+                    .foregroundStyle(isActive ? Color.rbFg1 : Color.rbFg2)
+                    .lineLimit(1)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: RBRadius.sm)
+                    .fill(isActive ? Color.rbCobalt400.opacity(0.12) : Color.clear)
+            )
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
