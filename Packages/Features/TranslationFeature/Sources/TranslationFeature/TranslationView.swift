@@ -6,6 +6,7 @@ public struct TranslationToggleView: View {
     @Bindable var store: TranslationStore
     let detectedLanguage: String?
     let preferredLanguage: String
+    let autoTranslate: Bool
     let messages: [(id: String, text: String)]
 
     @State private var translationConfig: TranslationSession.Configuration?
@@ -14,11 +15,13 @@ public struct TranslationToggleView: View {
         store: TranslationStore,
         detectedLanguage: String?,
         preferredLanguage: String,
+        autoTranslate: Bool = false,
         messages: [(id: String, text: String)]
     ) {
         self.store = store
         self.detectedLanguage = detectedLanguage
         self.preferredLanguage = preferredLanguage
+        self.autoTranslate = autoTranslate
         self.messages = messages
     }
 
@@ -40,6 +43,11 @@ public struct TranslationToggleView: View {
             .padding(.vertical, 8)
             .translationTask(translationConfig) { session in
                 await translateAll(session: session)
+            }
+            .onAppear {
+                if autoTranslate && !store.showTranslated {
+                    triggerTranslation()
+                }
             }
         }
     }

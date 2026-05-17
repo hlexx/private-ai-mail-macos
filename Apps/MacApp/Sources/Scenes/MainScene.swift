@@ -17,6 +17,7 @@ struct MainScene: View {
     @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
     @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = "en"
+    @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @Environment(\.openSettings) private var openSettings
 
     private var inboxStore: InboxStore { composition.inboxStore }
@@ -119,6 +120,7 @@ struct MainScene: View {
                             store: translationStore,
                             detectedLanguage: detectThreadLanguage(),
                             preferredLanguage: preferredLanguage,
+                            autoTranslate: autoTranslate,
                             messages: threadStore.messages.map { ($0.id, $0.bodyText) }
                         )
                     }

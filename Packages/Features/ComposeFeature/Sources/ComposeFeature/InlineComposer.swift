@@ -5,7 +5,10 @@ import SwiftUI
 // MARK: - InlineComposer
 
 public struct InlineComposer: View {
+    @AppStorage("pam.defaultTone") private var defaultToneRaw: String = "warm"
+    @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
     @State private var tone: AIReplyTone = .warm
+    @State private var toneInitialized = false
     @State private var draftText: String = ""
     @State private var detectedLanguage: String?
     @State private var languageOverride: String?
@@ -35,6 +38,10 @@ public struct InlineComposer: View {
         languageOverride ?? replyLanguage
     }
 
+    private var effectiveLocale: Locale {
+        preferredLanguage.isEmpty ? .current : Locale(identifier: preferredLanguage)
+    }
+
     public var body: some View {
         VStack(spacing: 0) {
             headerRow
@@ -49,7 +56,13 @@ public struct InlineComposer: View {
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
         .task {
-            replyStore.generate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage)
+            if !toneInitialized {
+                toneInitialized = true
+                if let stored = AIReplyTone(rawValue: defaultToneRaw) {
+                    tone = stored
+                }
+            }
+            replyStore.generate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
         }
         .onChange(of: replyStore.reply) { _, newReply in
             if let newReply {
@@ -76,7 +89,7 @@ public struct InlineComposer: View {
                 selection: $tone
             )
             .onChange(of: tone) { _, newTone in
-                replyStore.generate(threadID: threadID, tone: newTone, replyLanguage: effectiveLanguage)
+                replyStore.generate(threadID: threadID, tone: newTone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
             }
         }
         .padding(.horizontal, 14)
@@ -131,7 +144,7 @@ public struct InlineComposer: View {
                     Button {
                         languageOverride = lang.code
                         showLanguagePicker = false
-                        replyStore.generate(threadID: threadID, tone: tone, replyLanguage: lang.code)
+                        replyStore.generate(threadID: threadID, tone: tone, replyLanguage: lang.code, locale: effectiveLocale)
                     } label: {
                         HStack {
                             Text(lang.name)
@@ -250,7 +263,7 @@ public struct InlineComposer: View {
                 Spacer(minLength: 0)
 
                 Button {
-                    replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage)
+                    replyStore.regenerate(threadID: threadID, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
                 } label: {
                     Label(String(localized: "composer.cta.regenerate", defaultValue: "Regenerate"), systemImage: "sparkle")
                         .lineLimit(1)

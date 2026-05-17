@@ -582,7 +582,7 @@ Pixel-level. Test in both 1200pt and 1600pt window widths.
 
 ### Task 10: Settings — language, default tone, auto-translate
 
-- [ ] Add a **General** tab to `SettingsScene` (place it first, before
+- [x] Add a **General** tab to `SettingsScene` (place it first, before
       Accounts). It contains:
       - `Preferred language` — `Picker("Preferred language",
         selection: $locale)`. Options: System default, English,
@@ -597,13 +597,13 @@ Pixel-level. Test in both 1200pt and 1600pt window widths.
       - `Auto-translate foreign threads` — `Toggle`. When ON, the
         Translation tab from Task 7 defaults to "Translated" instead
         of "Original" when the detected language differs.
-- [ ] Plumb the language preference through `CompositionRoot` into
+- [x] Plumb the language preference through `CompositionRoot` into
       `ComposeViewModel`, `BriefStore`, `InlineComposer`, and the new
       `TranslationStore`. All `AIService` calls receive the explicit
       Locale.
-- [ ] Tests: `SettingsFeatureTests/PreferencesPersistenceTests.swift`
+- [x] Tests: `SettingsFeatureTests/PreferencesPersistenceTests.swift`
       — set values via the store, restart, assert read.
-- [ ] Run `cd $PROJ/Packages/Features/SettingsFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/SettingsFeature && swift test`.
 
 ---
 

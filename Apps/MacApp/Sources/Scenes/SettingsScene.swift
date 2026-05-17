@@ -8,6 +8,14 @@ struct SettingsScene: View {
 
     var body: some View {
         TabView {
+            GeneralTab()
+                .tabItem {
+                    Label(
+                        String(localized: "settings.tab.general", defaultValue: "General"),
+                        systemImage: "gearshape"
+                    )
+                }
+
             AccountsTab(store: composition.accountsTabStore)
                 .tabItem {
                     Label(
