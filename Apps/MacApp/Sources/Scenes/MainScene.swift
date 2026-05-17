@@ -291,7 +291,8 @@ struct MainScene: View {
     private func extractEmail(from addr: String?) -> String {
         guard let addr else { return "" }
         if let open = addr.firstIndex(of: "<"),
-           let close = addr.firstIndex(of: ">") {
+           let close = addr.firstIndex(of: ">"),
+           close > open {
             return String(addr[addr.index(after: open)..<close])
         }
         return addr.trimmingCharacters(in: .whitespaces)

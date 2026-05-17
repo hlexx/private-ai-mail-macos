@@ -47,7 +47,7 @@ struct ThreadFeatureTests {
 
     // MARK: - HTML to Plain Text
 
-    @Test func htmlToPlainTextExtractsContent() {
+    @MainActor @Test func htmlToPlainTextExtractsContent() {
         let html = "<html><body><p>Hello <b>World</b></p><p>Second paragraph</p></body></html>"
         let plain = MessageBodyView.htmlToPlainText(html)
         #expect(plain != nil)
@@ -56,7 +56,7 @@ struct ThreadFeatureTests {
         #expect(plain!.contains("Second paragraph"))
     }
 
-    @Test func htmlToPlainTextStripsExcessiveNewlines() {
+    @MainActor @Test func htmlToPlainTextStripsExcessiveNewlines() {
         let html = "<p>A</p><br><br><br><br><p>B</p>"
         let plain = MessageBodyView.htmlToPlainText(html)
         #expect(plain != nil)
@@ -64,7 +64,7 @@ struct ThreadFeatureTests {
         #expect(!plain!.contains("\n\n\n"))
     }
 
-    @Test func htmlToPlainTextReturnsNilForEmpty() {
+    @MainActor @Test func htmlToPlainTextReturnsNilForEmpty() {
         let result = MessageBodyView.htmlToPlainText("")
         // Empty HTML may return nil or empty string
         #expect(result == nil || result!.isEmpty)

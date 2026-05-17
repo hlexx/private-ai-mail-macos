@@ -15,6 +15,7 @@ extension MainScene {
         Task {
             do {
                 try await composition.mailMutator.archive(threadId, accountId: accountId)
+                inboxStore.selectedThreadID = nil
                 showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
             } catch {
                 showToast("Archive failed", undo: nil)
@@ -65,6 +66,9 @@ extension MainScene {
         Task {
             do {
                 try await composition.mailMutator.trash(threadId, accountId: accountId)
+                if inboxStore.selectedThreadID == threadId {
+                    inboxStore.selectedThreadID = nil
+                }
                 showToast("Trashed", undo: .untrash(threadId: threadId, accountId: accountId))
             } catch {
                 showToast("Trash failed", undo: nil)

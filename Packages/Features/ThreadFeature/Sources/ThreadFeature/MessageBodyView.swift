@@ -78,7 +78,8 @@ struct MessageBodyView: View {
 
 extension MessageBodyView {
     /// Convert HTML to plain text using NSAttributedString. Used by AI input pipeline.
-    nonisolated static func htmlToPlainText(_ html: String) -> String? {
+    /// Must run on main thread (NSAttributedString with .html requires it).
+    @MainActor static func htmlToPlainText(_ html: String) -> String? {
         guard let data = html.data(using: .utf8) else { return nil }
         let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
             .documentType: NSAttributedString.DocumentType.html,

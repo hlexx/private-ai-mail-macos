@@ -186,9 +186,9 @@ public final class InboxStore {
                     db,
                     sql: """
                         SELECT COUNT(*) FROM thread t
-                        WHERE t.id NOT IN (
-                            SELECT thread_id FROM thread_label
-                            WHERE account_id = t.account_id AND label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM thread_label tl_ex
+                            WHERE tl_ex.account_id = t.account_id AND tl_ex.thread_id = t.id AND tl_ex.label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
                         )
                         """ + archiveAccountFilter,
                     arguments: StatementArguments(archiveArgs)
@@ -258,9 +258,9 @@ public final class InboxStore {
                 arguments.append("SENT")
             case .archive:
                 conditions.append("""
-                    t.id NOT IN (
-                        SELECT thread_id FROM thread_label
-                        WHERE account_id = t.account_id AND label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
+                    NOT EXISTS (
+                        SELECT 1 FROM thread_label tl_ex
+                        WHERE tl_ex.account_id = t.account_id AND tl_ex.thread_id = t.id AND tl_ex.label_id IN ('INBOX','TRASH','SPAM','SENT','DRAFT')
                     )
                     """)
             case .attachments:
@@ -276,9 +276,9 @@ public final class InboxStore {
             conditions.append("t.account_id = ?")
             arguments.append(accountId)
             conditions.append("""
-                t.id NOT IN (
-                    SELECT thread_id FROM thread_label
-                    WHERE account_id = t.account_id AND label_id IN ('TRASH','SPAM','DRAFT')
+                NOT EXISTS (
+                    SELECT 1 FROM thread_label tl_ex
+                    WHERE tl_ex.account_id = t.account_id AND tl_ex.thread_id = t.id AND tl_ex.label_id IN ('TRASH','SPAM','DRAFT')
                 )
                 """)
 
