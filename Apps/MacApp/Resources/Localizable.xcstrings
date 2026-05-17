@@ -1,22 +1,262 @@
 {
-  "sourceLanguage" : "en",
-  "version" : "1.0",
-  "strings" : {
-    "app.title" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Private AI Mail" } } } },
-    "menu.compose.new" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "New Message" } } } },
-    "sidebar.section.unified" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unified" } } } },
-    "sidebar.section.accounts" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accounts" } } } },
-    "sidebar.inbox" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Inbox" } } } },
-    "sidebar.starred" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Starred" } } } },
-    "sidebar.sent" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Sent" } } } },
-    "sidebar.no_accounts" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No accounts connected" } } } },
-    "threads.empty.title" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No threads yet" } } } },
-    "threads.empty.description" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Connect a Gmail or Microsoft 365 account to get started." } } } },
-    "reading.empty.title" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select a thread" } } } },
-    "reading.empty.description" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pick a conversation to see the AI brief and reply options." } } } },
-    "settings.tab.accounts" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accounts" } } } },
-    "settings.tab.privacy" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Privacy" } } } },
-    "settings.tab.ai" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "AI" } } } },
-    "settings.placeholder.description" : { "extractionState" : "manual", "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Coming soon." } } } }
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "app.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Private AI Mail" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Private AI Mail" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Private AI Mail" } }
+      }
+    },
+    "menu.compose.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "New Message" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Новое письмо" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Neue Nachricht" } }
+      }
+    },
+    "menu.refresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Refresh" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Обновить" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Aktualisieren" } }
+      }
+    },
+    "sidebar.section.unified": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Unified" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Все аккаунты" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Vereinheitlicht" } }
+      }
+    },
+    "sidebar.section.accounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Accounts" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Аккаунты" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konten" } }
+      }
+    },
+    "sidebar.section.mail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Mail" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Почта" } },
+        "de": { "stringUnit": { "state": "translated", "value": "E-Mail" } }
+      }
+    },
+    "sidebar.section.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Privacy" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Конфиденциальность" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Datenschutz" } }
+      }
+    },
+    "sidebar.inbox": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Inbox" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Входящие" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Posteingang" } }
+      }
+    },
+    "sidebar.starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Starred" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отмеченные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Markiert" } }
+      }
+    },
+    "sidebar.sent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sent" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отправленные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Gesendet" } }
+      }
+    },
+    "sidebar.no_accounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No accounts connected" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Нет подключённых аккаунтов" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Keine Konten verbunden" } }
+      }
+    },
+    "sidebar.folder.inbox": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Inbox" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Входящие" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Posteingang" } }
+      }
+    },
+    "sidebar.folder.needsReply": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Needs reply" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Нужен ответ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Antwort nötig" } }
+      }
+    },
+    "sidebar.folder.hasDeadline": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Has deadline" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Есть дедлайн" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Hat Frist" } }
+      }
+    },
+    "sidebar.folder.attachments": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Attachments" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Вложения" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anhänge" } }
+      }
+    },
+    "sidebar.folder.logged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Logged" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Записано" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Protokolliert" } }
+      }
+    },
+    "sidebar.folder.starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Starred" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отмеченные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Markiert" } }
+      }
+    },
+    "sidebar.folder.sent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sent" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отправленные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Gesendet" } }
+      }
+    },
+    "sidebar.folder.archive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Archive" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Архив" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Archiv" } }
+      }
+    },
+    "threads.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No threads yet" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Пока нет писем" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Noch keine Konversationen" } }
+      }
+    },
+    "threads.empty.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Connect a Gmail or Microsoft 365 account to get started." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Подключите Gmail или Microsoft 365, чтобы начать." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verbinden Sie ein Gmail- oder Microsoft 365-Konto, um zu starten." } }
+      }
+    },
+    "reading.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Select a thread" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Выберите письмо" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konversation auswählen" } }
+      }
+    },
+    "reading.empty.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pick a conversation to see the AI brief and reply options." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Выберите переписку, чтобы увидеть сводку ИИ и варианты ответа." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wählen Sie eine Konversation, um die KI-Zusammenfassung und Antwortoptionen zu sehen." } }
+      }
+    },
+    "settings.tab.general": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "General" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Основные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Allgemein" } }
+      }
+    },
+    "settings.tab.accounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Accounts" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Аккаунты" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konten" } }
+      }
+    },
+    "settings.tab.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Privacy" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Конфиденциальность" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Datenschutz" } }
+      }
+    },
+    "settings.tab.ai": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "AI" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "ИИ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "KI" } }
+      }
+    },
+    "settings.placeholder.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Coming soon." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Скоро." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Kommt bald." } }
+      }
+    },
+    "action.fallbackSubject": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Selected thread" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Выбранное письмо" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Ausgewählte Konversation" } }
+      }
+    },
+    "toolbar.filter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Filter" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Фильтр" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Filter" } }
+      }
+    },
+    "toolbar.settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Settings" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Настройки" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Einstellungen" } }
+      }
+    },
+    "toolbar.compose": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Compose" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Написать" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verfassen" } }
+      }
+    }
   }
 }

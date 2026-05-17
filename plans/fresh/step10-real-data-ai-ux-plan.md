@@ -609,18 +609,18 @@ Pixel-level. Test in both 1200pt and 1600pt window widths.
 
 ## Cross-cutting tasks
 
-- [ ] Replace every remaining hardcoded English UI string (sidebar
+- [x] Replace every remaining hardcoded English UI string (sidebar
       folders, filter chips, brief rail CTAs, action sheet tiles) with
       `String(localized: ..., bundle: .module)` calls and add Russian
       + German translations to the relevant `.xcstrings` catalogs as
       a sanity check that the i18n plumbing works end-to-end.
-- [ ] Update `release-notes/v0.1.5-alpha.md` covering the visible
+- [x] Update `release-notes/v0.1.5-alpha.md` covering the visible
       changes (HTML rendering, real AI in composer, folder filters,
       archive, translation, multi-language). Include "How to test"
       checklist that maps 1:1 to the Success Criteria above.
-- [ ] Bump `MARKETING_VERSION` to `0.1.5-alpha`, build to `105` in
+- [x] Bump `MARKETING_VERSION` to `0.1.5-alpha`, build to `105` in
       `Project.swift`.
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 10 ✅
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 10 ✅
       with the merge commit, copy this plan to `plans/fresh/completed/`.
 
 ## Critical files to read or modify

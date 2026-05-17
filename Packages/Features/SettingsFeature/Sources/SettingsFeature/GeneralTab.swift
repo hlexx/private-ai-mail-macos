@@ -26,9 +26,9 @@ public struct GeneralTab: View {
                     String(localized: "general.defaultTone", defaultValue: "Default reply tone"),
                     selection: $defaultTone
                 ) {
-                    Text("Concise").tag("concise")
-                    Text("Warm").tag("warm")
-                    Text("Direct").tag("direct")
+                    Text(String(localized: "general.tone.concise", defaultValue: "Concise")).tag("concise")
+                    Text(String(localized: "general.tone.warm", defaultValue: "Warm")).tag("warm")
+                    Text(String(localized: "general.tone.direct", defaultValue: "Direct")).tag("direct")
                 }
 
                 Toggle(

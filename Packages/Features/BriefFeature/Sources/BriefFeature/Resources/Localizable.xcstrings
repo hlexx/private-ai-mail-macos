@@ -1,5 +1,126 @@
 {
   "sourceLanguage": "en",
-  "strings": {},
-  "version": "1.0"
+  "version": "1.0",
+  "strings": {
+    "brief.eyebrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "\u25C6 RE:BOX BRIEF \u00B7 LOCAL" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "\u25C6 RE:BOX СВОДКА \u00B7 ЛОКАЛЬНО" } },
+        "de": { "stringUnit": { "state": "translated", "value": "\u25C6 RE:BOX ZUSAMMENFASSUNG \u00B7 LOKAL" } }
+      }
+    },
+    "brief.field.request": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "REQUEST" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "ЗАПРОС" } },
+        "de": { "stringUnit": { "state": "translated", "value": "ANFRAGE" } }
+      }
+    },
+    "brief.field.deadline": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "DEADLINE" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "ДЕДЛАЙН" } },
+        "de": { "stringUnit": { "state": "translated", "value": "FRIST" } }
+      }
+    },
+    "brief.field.risk": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "RISK" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "РИСК" } },
+        "de": { "stringUnit": { "state": "translated", "value": "RISIKO" } }
+      }
+    },
+    "brief.field.nextStep": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "NEXT STEP" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "СЛЕДУЮЩИЙ ШАГ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "NÄCHSTER SCHRITT" } }
+      }
+    },
+    "brief.cta.draftReply": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Draft reply" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Черновик ответа" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Antwort entwerfen" } }
+      }
+    },
+    "brief.cta.snooze": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Snooze to Fri AM" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отложить до пт утра" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Bis Fr. Morgen zurückstellen" } }
+      }
+    },
+    "brief.cta.logCRM": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Log to CRM" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Записать в CRM" } },
+        "de": { "stringUnit": { "state": "translated", "value": "In CRM erfassen" } }
+      }
+    },
+    "brief.loading.eyebrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "\u25C6 THINKING LOCALLY" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "\u25C6 АНАЛИЗИРУЮ ЛОКАЛЬНО" } },
+        "de": { "stringUnit": { "state": "translated", "value": "\u25C6 LOKAL ANALYSIEREN" } }
+      }
+    },
+    "brief.error.eyebrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Re:Box brief" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Сводка Re:Box" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Re:Box Zusammenfassung" } }
+      }
+    },
+    "brief.error.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Brief generation failed" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Не удалось создать сводку" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Zusammenfassung fehlgeschlagen" } }
+      }
+    },
+    "brief.error.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Retry" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Повторить" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wiederholen" } }
+      }
+    },
+    "brief.empty.eyebrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Re:Box brief" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Сводка Re:Box" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Re:Box Zusammenfassung" } }
+      }
+    },
+    "brief.empty.status": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "no action found" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "действий не найдено" } },
+        "de": { "stringUnit": { "state": "translated", "value": "keine Aktion gefunden" } }
+      }
+    },
+    "brief.empty.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Nothing to summarize here \u2014 informational thread." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Нечего подытоживать \u2014 информационное письмо." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nichts zusammenzufassen \u2014 informative Konversation." } }
+      }
+    }
+  }
 }

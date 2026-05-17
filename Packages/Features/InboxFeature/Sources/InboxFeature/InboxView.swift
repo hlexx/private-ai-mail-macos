@@ -139,7 +139,7 @@ public struct InboxView: View {
                             Button {
                                 onArchive(thread.id, thread.accountId)
                             } label: {
-                                Label("Archive", systemImage: "archivebox")
+                                Label(String(localized: "inbox.swipe.archive", defaultValue: "Archive"), systemImage: "archivebox")
                             }
                             .tint(.orange)
                         }
@@ -149,7 +149,7 @@ public struct InboxView: View {
                             Button(role: .destructive) {
                                 onTrash(thread.id, thread.accountId)
                             } label: {
-                                Label("Trash", systemImage: "trash")
+                                Label(String(localized: "inbox.swipe.trash", defaultValue: "Trash"), systemImage: "trash")
                             }
                         }
                     }

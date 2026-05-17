@@ -1,5 +1,70 @@
 {
   "sourceLanguage": "en",
-  "strings": {},
-  "version": "1.0"
+  "version": "1.0",
+  "strings": {
+    "composer.eyebrow.draftReply": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Draft reply" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Черновик ответа" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Antwortentwurf" } }
+      }
+    },
+    "composer.eyebrow.local": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "local" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "локально" } },
+        "de": { "stringUnit": { "state": "translated", "value": "lokal" } }
+      }
+    },
+    "composer.eyebrow.inLanguage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "in" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "на" } },
+        "de": { "stringUnit": { "state": "translated", "value": "in" } }
+      }
+    },
+    "composer.loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Drafting\u2026" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Составляю\u2026" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Entwurf wird erstellt\u2026" } }
+      }
+    },
+    "composer.languagePicker.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Change reply language" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Сменить язык ответа" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Antwortsprache ändern" } }
+      }
+    },
+    "composer.cta.regenerate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Regenerate" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Сгенерировать заново" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Neu generieren" } }
+      }
+    },
+    "composer.cta.editInFull": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Edit in full" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Редактировать" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Vollständig bearbeiten" } }
+      }
+    },
+    "composer.cta.send": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Send" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отправить" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Senden" } }
+      }
+    }
+  }
 }

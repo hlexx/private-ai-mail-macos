@@ -1,5 +1,62 @@
 {
   "sourceLanguage": "en",
-  "strings": {},
-  "version": "1.0"
+  "version": "1.0",
+  "strings": {
+    "general.defaultTone": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Default reply tone" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Тон ответа по умолчанию" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Standard-Antwortton" } }
+      }
+    },
+    "general.tone.concise": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Concise" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Кратко" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Knapp" } }
+      }
+    },
+    "general.tone.warm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Warm" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Тепло" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Herzlich" } }
+      }
+    },
+    "general.tone.direct": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Direct" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Прямо" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Direkt" } }
+      }
+    },
+    "general.autoTranslate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Auto-translate foreign threads" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Автоперевод иностранных писем" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Fremdsprachige Konversationen automatisch übersetzen" } }
+      }
+    },
+    "general.section.language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Language & AI" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Язык и ИИ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sprache & KI" } }
+      }
+    },
+    "general.section.language.footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "When auto-translate is on, threads in a foreign language show the translated version by default." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Когда автоперевод включён, письма на иностранном языке показываются в переведённом виде." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wenn die automatische Übersetzung aktiviert ist, werden fremdsprachige Konversationen standardmäßig übersetzt angezeigt." } }
+      }
+    }
+  }
 }

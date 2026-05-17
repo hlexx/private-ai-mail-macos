@@ -165,7 +165,7 @@ Add label graph to `Persistence`. Migration is idempotent + reversible
 within the same DB session (don't drop columns yet — Phase 2 can clean
 up `flags` once Task 2 is stable).
 
-- [ ] Create `Packages/Core/Persistence/Sources/Persistence/Records/LabelRecord.swift`:
+- [x] Create `Packages/Core/Persistence/Sources/Persistence/Records/LabelRecord.swift`:
       ```swift
       public struct LabelRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
           public static let databaseTableName = "label"
@@ -186,7 +186,7 @@ up `flags` once Task 2 is stable).
           case system, user, category
       }
       ```
-- [ ] Create `Packages/Core/Persistence/Sources/Persistence/Records/ThreadLabelRecord.swift`:
+- [x] Create `Packages/Core/Persistence/Sources/Persistence/Records/ThreadLabelRecord.swift`:
       ```swift
       public struct ThreadLabelRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
           public static let databaseTableName = "thread_label"
@@ -197,7 +197,7 @@ up `flags` once Task 2 is stable).
           }
       }
       ```
-- [ ] Open `Packages/Core/Persistence/Sources/Persistence/Migrator.swift`
+- [x] Open `Packages/Core/Persistence/Sources/Persistence/Migrator.swift`
       and add a `v2` migration after the existing `v1`:
       ```swift
       migrator.registerMigration("v2_labels") { db in
@@ -223,16 +223,16 @@ up `flags` once Task 2 is stable).
           // fine — we'll insert per-account on labels.list.
       }
       ```
-- [ ] Add `Packages/Core/Persistence/Tests/PersistenceTests/LabelMigrationTests.swift`:
+- [x] Add `Packages/Core/Persistence/Tests/PersistenceTests/LabelMigrationTests.swift`:
       open empty DB, run migrator, assert tables `label` + `thread_label`
       exist, assert v2 idempotent on second run.
-- [ ] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
+- [x] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 2: Label-aware Gmail sync
 
 Capture `labelIds` from API into the new tables, fetch user labels.
 
-- [ ] Add `GmailDTO.Label` in
+- [x] Add `GmailDTO.Label` in
       `Packages/Mail/MailProviders/Sources/MailProviders/Gmail/GmailDTO.swift`:
       ```swift
       public struct Label: Decodable, Sendable {
@@ -248,19 +248,19 @@ Capture `labelIds` from API into the new tables, fetch user labels.
           }
       }
       ```
-- [ ] Add `GmailEndpoint.listLabels` + `GmailAPIClient.listLabels()` →
+- [x] Add `GmailEndpoint.listLabels` + `GmailAPIClient.listLabels()` →
       `[GmailDTO.Label]` (calls
       `GET /users/me/labels`).
-- [ ] In `Bootstrap.swift`: before the first `pages` loop, call
+- [x] In `Bootstrap.swift`: before the first `pages` loop, call
       `let labels = try await api.listLabels()`; UPSERT into `label`
       table (mapping `type: "system"` → `.system`,
       `name.hasPrefix("CATEGORY_")` → `.category`, else `.user`).
       Yield 0.02 progress for the labels-fetch phase.
-- [ ] Modify `GmailMapper.mapMessage()` to **return** `labelIds: [String]`
+- [x] Modify `GmailMapper.mapMessage()` to **return** `labelIds: [String]`
       alongside the existing `MailDomain.Message`. (Easiest: a new
       tuple-returning method `mapMessageWithLabels(_:)`; keep
       `mapMessage` for tests that don't need labels.)
-- [ ] In the bootstrap/incremental persister (find the `db.write` block
+- [x] In the bootstrap/incremental persister (find the `db.write` block
       that UPSERTs `MessageRecord` / `ThreadRecord`): for each message,
       after upserting, DELETE existing `thread_label` rows for this
       thread (only those from the labels we just observed — keep
@@ -268,23 +268,23 @@ Capture `labelIds` from API into the new tables, fetch user labels.
       new set. Use thread-level labels: a thread carries the union of
       labels from its messages, but Gmail returns labels per-message,
       so build the union: `labelIds = Set(messages.flatMap(\.labelIds))`.
-- [ ] In `IncrementalSync.swift`: when `history.list` returns
+- [x] In `IncrementalSync.swift`: when `history.list` returns
       `labelsAdded` / `labelsRemoved`, apply them to `thread_label`
       directly (do not re-fetch the whole thread for label changes
       alone). The history entries already include the threadId + label
       ids in the delta.
-- [ ] Add `Packages/Mail/MailSync/Tests/MailSyncTests/LabelRoundTripTests.swift`:
+- [x] Add `Packages/Mail/MailSync/Tests/MailSyncTests/LabelRoundTripTests.swift`:
       seed an account, run a fake `GmailAPI` returning a thread with
       labels `["INBOX","STARRED","Label_x"]` → assert 3 rows in
       `thread_label`, 3 rows in `label`. Run a second sync where
       `STARRED` is removed → assert only 2 rows in `thread_label`.
-- [ ] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
 
 ### Task 3: Sidebar wiring + label-driven filtering
 
 Now make folder / account clicks change what's in the thread list.
 
-- [ ] Create `SidebarSelection` in `Apps/MacApp/Sources/Views/RBSidebar.swift`:
+- [x] Create `SidebarSelection` in `Apps/MacApp/Sources/Views/RBSidebar.swift`:
       ```swift
       enum SidebarSelection: Hashable {
           case folder(FolderID)
@@ -306,15 +306,15 @@ Now make folder / account clicks change what's in the thread list.
           }
       }
       ```
-- [ ] Extend `RBSidebar` view: add `@Binding var selection: SidebarSelection`.
+- [x] Extend `RBSidebar` view: add `@Binding var selection: SidebarSelection`.
       Each folder row + account row uses `.onTapGesture { selection =
       .folder(...)/.account(...) }`. Highlight the selected row with
       `rbAccentSoft` background.
-- [ ] In `MainScene.swift`: add `@State private var sidebarSelection:
+- [x] In `MainScene.swift`: add `@State private var sidebarSelection:
       SidebarSelection = .folder(.inbox)` and pass it to `RBSidebar`.
       On `.onChange(of: sidebarSelection)` call
       `inboxStore.setSelection(sidebarSelection)`.
-- [ ] In `InboxStore`: replace the existing `ValueObservation` request
+- [x] In `InboxStore`: replace the existing `ValueObservation` request
       with one that joins `thread` ⨝ `thread_label` filtered by:
       - if `selection.account != nil` → `WHERE thread.account_id = ?`
       - if `selection.folder.gmailLabel != nil` → `WHERE thread.id IN
@@ -328,34 +328,34 @@ Now make folder / account clicks change what's in the thread list.
       - if `.needsReply` / `.hasDeadline` / `.aiHandled` → JOIN to a new
         `thread_brief` table from Task 5's caching (or for now: filter
         by presence of brief row).
-- [ ] Folder counts: add `InboxStore.folderCounts: [FolderID: Int]`
+- [x] Folder counts: add `InboxStore.folderCounts: [FolderID: Int]`
       computed from the same observation, surfaced to `RBSidebar`.
-- [ ] Top-row filter chips (`InboxView.filterChips`): keep the chip UI,
+- [x] Top-row filter chips (`InboxView.filterChips`): keep the chip UI,
       but the chip selection is an **additional** narrowing over the
       sidebar selection (set intersection). The chip state lives in
       `InboxStore.chipFilter: ChipFilter?` and is OR'd / AND'd inside
       the SQL.
-- [ ] Account-click in `RBSidebar`: also updates `composition.activeAccountID`
+- [x] Account-click in `RBSidebar`: also updates `composition.activeAccountID`
       so newly-composed mail uses that account by default.
-- [ ] Add snapshot tests for `RBSidebar` with each selection state
+- [x] Add snapshot tests for `RBSidebar` with each selection state
       highlighted.
-- [ ] Add `InboxFeatureTests/InboxStoreFilterTests.swift`: seed 5 threads
+- [x] Add `InboxFeatureTests/InboxStoreFilterTests.swift`: seed 5 threads
       across 2 accounts with varying labels, assert `setSelection`
       produces the expected thread-ID set for each folder/account combo.
-- [ ] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
 
 ### Task 4: HTML body rendering
 
 Show the actual email, with privacy-by-default for remote content.
 
-- [ ] Create `Packages/Features/ThreadFeature/Sources/ThreadFeature/MessageBodyView.swift`:
+- [x] Create `Packages/Features/ThreadFeature/Sources/ThreadFeature/MessageBodyView.swift`:
       a SwiftUI view that takes `MessageRecord` + `[AttachmentRecord]`.
       - If `bodyHtml != nil` → render via `HTMLWebView` (new
         `NSViewRepresentable` wrapper around `WKWebView`).
       - Else if `bodyText != nil` → render as
         `Text(message.bodyText)` styled per Re:Box.
       - Else snippet fallback as today.
-- [ ] Create `HTMLWebView` (`NSViewRepresentable`):
+- [x] Create `HTMLWebView` (`NSViewRepresentable`):
       - `WKWebViewConfiguration` with `preferences.javaScriptEnabled = false`
         (default), `defaultWebpagePreferences.allowsContentJavaScript =
         false`.
@@ -372,15 +372,15 @@ Show the actual email, with privacy-by-default for remote content.
         2000pt, with internal scrolling above that).
       - Resolve `cid:` references in `src=` to the corresponding
         `attachment` row, encode as `data:` URL inline.
-- [ ] Add `MessageBodyView.allowRemoteImages: Bool` + UI control in
+- [x] Add `MessageBodyView.allowRemoteImages: Bool` + UI control in
       `ThreadView`'s head: an inline pill "Remote images blocked · Show
       images" that flips the flag for the open thread. Persist this
       decision per `from` address (new `trusted_sender(account_id,
       from_addr)` table — Task 1 migration follow-up: add to v2 or v3).
-- [ ] Update `ThreadView.swift:234` site: replace
+- [x] Update `ThreadView.swift:234` site: replace
       `Text(message.bodyText)` with `MessageBodyView(message:
       message, attachments: ...)`.
-- [ ] In `BriefStore.fetchThreadInput()` (line ~104): change
+- [x] In `BriefStore.fetchThreadInput()` (line ~104): change
       `bodyText: msg.bodyText ?? msg.snippet ?? ""` to use a helper
       `Message.bestPlainText` that returns `bodyText ?? htmlToPlain
       (bodyHtml) ?? snippet ?? ""`. Add `htmlToPlain` helper in
@@ -388,18 +388,18 @@ Show the actual email, with privacy-by-default for remote content.
       `NSAttributedString(data: htmlData, options:
       [.documentType: .html])` then `.string`. Strip URLs / repeated
       blank lines.
-- [ ] Add snapshot tests in `ThreadFeatureTests`: a fixture HTML email
+- [x] Add snapshot tests in `ThreadFeatureTests`: a fixture HTML email
       with inline cid: image renders without remote loads; same email
       with `allowRemoteImages=true` does not change the snapshot
       (because the fixture has no remote imgs) but assert the WKWebView
       config differs.
-- [ ] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 5: AIService.draftReply + InlineComposer wired
 
 Replace the hardcoded English `draftBodies` with real on-device output.
 
-- [ ] Extend `AIService` protocol
+- [x] Extend `AIService` protocol
       (`Packages/AI/AIKit/Sources/AIKit/AIService.swift`):
       ```swift
       public protocol AIService: Sendable {
@@ -421,22 +421,22 @@ Replace the hardcoded English `draftBodies` with real on-device output.
           public let confidence: Double
       }
       ```
-- [ ] Create `Packages/AI/AIKit/Sources/AIKit/MLXThreadReplyService.swift`
+- [x] Create `Packages/AI/AIKit/Sources/AIKit/MLXThreadReplyService.swift`
       mirroring `MLXThreadBriefService`. Loads the same Gemma 4 E2B
       model (share the loaded model handle across both services via
       a single `MLXModelHost` actor).
-- [ ] Add `Packages/AI/AIPrompts/Sources/AIPrompts/draft_reply_v1.txt`
+- [x] Add `Packages/AI/AIPrompts/Sources/AIPrompts/draft_reply_v1.txt`
       (or wherever prompt templates live) — instructed prompt with:
       - JSON-only output (schema validation).
       - Tone hint (concise/warm/direct).
       - "Respond in {replyLanguage}." inserted when non-nil.
       - Few-shot examples for each tone × ru/en.
       - "Cite which messages you used in evidenceMessageIDs."
-- [ ] Wire `BriefStore`-style caching for replies in a new
+- [x] Wire `BriefStore`-style caching for replies in a new
       `ReplyStore` inside `ComposeFeature` (or a `DraftStore`
       sub-store). Cache key: `(threadID, latestMessageID, tone,
       replyLanguage)`. Invalidate on Regenerate.
-- [ ] Rewrite `InlineComposer.swift`:
+- [x] Rewrite `InlineComposer.swift`:
       - Replace `@State private var draftText: String` initialisation
         from `draftBodies[.warm]` with an `@State var draftText: String
         = ""` and `.task { await loadDraft(.warm) }`.
@@ -455,23 +455,23 @@ Replace the hardcoded English `draftBodies` with real on-device output.
         ComposeWindow is already wired in Step 7.)
       - Eyebrow label changes to include detected reply-language:
         "Drafted locally · tone: \(tone) · in \(replyLanguage)".
-- [ ] Delete the `// TODO(§15-step-4)` comments — Step 10 closes them.
-- [ ] Tests: `AIKitTests/MLXDraftReplyTests.swift` (gated on Apple
+- [x] Delete the `// TODO(§15-step-4)` comments — Step 10 closes them.
+- [x] Tests: `AIKitTests/MLXDraftReplyTests.swift` (gated on Apple
       Silicon CI runner like the existing brief test): assert each tone
       produces a body of distinct lengths, in the requested locale (use
       `NLLanguageRecognizer` to detect output language).
-- [ ] Run `cd $PROJ/Packages/AI/AIKit && swift test` and
+- [x] Run `cd $PROJ/Packages/AI/AIKit && swift test` and
       `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 6: Mutations — Archive / Star / Move-to-trash / Mark-read
 
 Optimistic-then-server, label-driven, idempotent.
 
-- [ ] Add `GmailAPIClient.modifyThread(id:addLabelIds:removeLabelIds:)
+- [x] Add `GmailAPIClient.modifyThread(id:addLabelIds:removeLabelIds:)
       async throws -> GmailDTO.Thread` — `POST
       /users/me/threads/{id}/modify` body `{ addLabelIds:[],
       removeLabelIds:[] }`.
-- [ ] Add `MailMutator` actor in `MailSync`:
+- [x] Add `MailMutator` actor in `MailSync`:
       ```swift
       public actor MailMutator {
           public func archive(_ threadId: String, accountId: String) async throws
@@ -491,7 +491,7 @@ Optimistic-then-server, label-driven, idempotent.
          addLabelIds=["STARRED"], trash = addLabelIds=["TRASH"]).
       3. On API success: no-op (already applied locally).
       4. On API failure: rollback the local change, surface a toast.
-- [ ] Wire to UI:
+- [x] Wire to UI:
       - `ThreadView.head` Archive button: `Task { try await
         mutator.archive(threadId, accountId: ...) }`. Snooze stays
         stub for now (out of scope), Send-to stays stub.
@@ -503,25 +503,25 @@ Optimistic-then-server, label-driven, idempotent.
       - Add a brief toast bar at the bottom of MainWindow: "Archived
         — Undo". Undo within 8 s reverts the operation
         (`mutator.unarchive(...)`).
-- [ ] Tests: `MailSyncTests/MailMutatorTests.swift` with a fake
+- [x] Tests: `MailSyncTests/MailMutatorTests.swift` with a fake
       `GmailAPI` that records add/remove pairs, assert each method
       produces the correct payload + reverts on simulated 5xx.
-- [ ] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
 
 ### Task 7: Translation tab (Apple Translation framework)
 
 On-device, no network. macOS 15+ availability.
 
-- [ ] New package `Packages/Features/TranslationFeature` — `Package.swift`
+- [x] New package `Packages/Features/TranslationFeature` — `Package.swift`
       + `TranslationStore.swift` + `TranslationView.swift`.
-- [ ] `TranslationStore.detect(text:) async throws -> Locale.Language`
+- [x] `TranslationStore.detect(text:) async throws -> Locale.Language`
       using `NLLanguageRecognizer.dominantLanguage(for:)`.
-- [ ] `TranslationStore.translate(text:to:) async throws -> String`
+- [x] `TranslationStore.translate(text:to:) async throws -> String`
       using `import Translation` + `TranslationSession`. First call
       may prompt the user to download the language pair — that's
       expected behaviour; surface a one-shot "Language pack required"
       alert from the existing AI panel.
-- [ ] In `ThreadView`: above the message stack, render a
+- [x] In `ThreadView`: above the message stack, render a
       `RBSegmentedControl` with `Original / Translated` **only if**
       detected language ≠ `settings.preferredLanguage`. When
       Translated is selected, swap each message's body to its
@@ -529,60 +529,60 @@ On-device, no network. macOS 15+ availability.
       `MessageRecord.translatedText` (one-language-at-a-time per
       message; Phase 2 adds multi-language cache table). Add to
       migration v2.
-- [ ] AI inputs: when generating brief/reply, do NOT translate the
+- [x] AI inputs: when generating brief/reply, do NOT translate the
       input — feed the original body to the model. The model's prompt
       asks it to respond in `replyLanguage`. Translation is purely a
       reading affordance.
-- [ ] Tests: `TranslationFeatureTests` with a Russian fixture string,
+- [x] Tests: `TranslationFeatureTests` with a Russian fixture string,
       assert `detect()` returns `ru` and `translate(to: "en")` returns
       a non-empty string containing some English-letter content.
       Skipped on macOS < 15.
-- [ ] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`.
 
 ### Task 8: Reply-language detection routing
 
 Make sure replies go out in the right language without user thinking.
 
-- [ ] In `ComposeFeature.InlineComposer`: when entering a thread,
+- [x] In `ComposeFeature.InlineComposer`: when entering a thread,
       compute `replyLanguage` from the **last incoming** message body
       via `TranslationStore.detect(text:)` (Task 7 dep). Default to
       `settings.preferredLanguage` if detection confidence is low /
       message is too short.
-- [ ] Pass `replyLanguage` to every `AIService.draftReply(...)` call.
-- [ ] Eyebrow in InlineComposer: show "Drafted in 🇷🇺 RU" (or just
+- [x] Pass `replyLanguage` to every `AIService.draftReply(...)` call.
+- [x] Eyebrow in InlineComposer: show "Drafted in 🇷🇺 RU" (or just
       "in RU" if emoji-flag is too cute). Hovering shows full name.
-- [ ] User override: small popup chevron next to eyebrow → list of
+- [x] User override: small popup chevron next to eyebrow → list of
       languages from `Locale.availableIdentifiers` (filtered to the
       ~30 most common). Picking one re-runs `draftReply` with new
       language.
-- [ ] Tests: `ComposeFeatureTests/ReplyLanguageRoutingTests.swift`:
+- [x] Tests: `ComposeFeatureTests/ReplyLanguageRoutingTests.swift`:
       fake `AIService` that records the `replyLanguage` argument, assert
       RU thread → "ru" passed, EN thread → "en" passed, mixed thread
       with last message in DE → "de" passed.
-- [ ] Run `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 9: Right-pane layout fixes
 
 Pixel-level. Test in both 1200pt and 1600pt window widths.
 
-- [ ] `BriefRail.swift` CTAs: wrap each `Button { ... } label: { Label(...) }`
+- [x] `BriefRail.swift` CTAs: wrap each `Button { ... } label: { Label(...) }`
       in `.lineLimit(1)` + `.minimumScaleFactor(0.82)` +
       `.fixedSize(horizontal: false, vertical: true)`. Stack three
       buttons vertically on widths < 360pt (use a `ViewThatFits` or
       a `@Environment(\.horizontalSizeClass)` check; for macOS use
       `GeometryReader` to read the rail's width).
-- [ ] `InlineComposer.ctaButtons`: same `.lineLimit(1) +
+- [x] `InlineComposer.ctaButtons`: same `.lineLimit(1) +
       .minimumScaleFactor(0.85)`. If composer width < 400pt, collapse
       "Edit in full" label to just an `pencil` icon (`RBIconButton`
       style), keep tooltip.
-- [ ] Add a snapshot test row for each at 280pt / 340pt / 480pt
+- [x] Add a snapshot test row for each at 280pt / 340pt / 480pt
       widths in dark and light.
-- [ ] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
       and `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 10: Settings — language, default tone, auto-translate
 
-- [ ] Add a **General** tab to `SettingsScene` (place it first, before
+- [x] Add a **General** tab to `SettingsScene` (place it first, before
       Accounts). It contains:
       - `Preferred language` — `Picker("Preferred language",
         selection: $locale)`. Options: System default, English,
@@ -597,13 +597,13 @@ Pixel-level. Test in both 1200pt and 1600pt window widths.
       - `Auto-translate foreign threads` — `Toggle`. When ON, the
         Translation tab from Task 7 defaults to "Translated" instead
         of "Original" when the detected language differs.
-- [ ] Plumb the language preference through `CompositionRoot` into
+- [x] Plumb the language preference through `CompositionRoot` into
       `ComposeViewModel`, `BriefStore`, `InlineComposer`, and the new
       `TranslationStore`. All `AIService` calls receive the explicit
       Locale.
-- [ ] Tests: `SettingsFeatureTests/PreferencesPersistenceTests.swift`
+- [x] Tests: `SettingsFeatureTests/PreferencesPersistenceTests.swift`
       — set values via the store, restart, assert read.
-- [ ] Run `cd $PROJ/Packages/Features/SettingsFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/SettingsFeature && swift test`.
 
 ---
 

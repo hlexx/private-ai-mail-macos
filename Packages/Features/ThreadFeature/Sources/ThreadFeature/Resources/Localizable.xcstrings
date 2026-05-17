@@ -1,5 +1,86 @@
 {
   "sourceLanguage": "en",
-  "strings": {},
-  "version": "1.0"
+  "version": "1.0",
+  "strings": {
+    "thread.body.imagesLoaded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Remote images loaded" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Внешние изображения загружены" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Externe Bilder geladen" } }
+      }
+    },
+    "thread.body.imagesBlocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Remote images blocked" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Внешние изображения заблокированы" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Externe Bilder blockiert" } }
+      }
+    },
+    "thread.body.showImages": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Show images" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Показать изображения" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Bilder anzeigen" } }
+      }
+    },
+    "reading.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Select a thread" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Выберите письмо" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konversation auswählen" } }
+      }
+    },
+    "reading.empty.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Re:Box will brief you the moment you open it." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Re:Box подготовит сводку, как только вы откроете письмо." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Re:Box erstellt eine Zusammenfassung, sobald Sie es öffnen." } }
+      }
+    },
+    "thread.action.archive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Archive" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Архивировать" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Archivieren" } }
+      }
+    },
+    "thread.action.snooze": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Snooze" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отложить" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Zurückstellen" } }
+      }
+    },
+    "thread.action.sendTo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Send to \u2197" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Переслать \u2197" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Weiterleiten \u2197" } }
+      }
+    },
+    "thread.attachment.preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Preview" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Просмотр" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Vorschau" } }
+      }
+    },
+    "thread.attachment.summarize": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Summarize" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Подытожить" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Zusammenfassen" } }
+      }
+    }
+  }
 }

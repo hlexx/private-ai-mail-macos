@@ -1,5 +1,150 @@
 {
   "sourceLanguage": "en",
-  "strings": {},
-  "version": "1.0"
+  "version": "1.0",
+  "strings": {
+    "filter.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Все" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Alle" } }
+      }
+    },
+    "filter.needsReply": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Needs reply" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Нужен ответ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Antwort nötig" } }
+      }
+    },
+    "filter.hasDeadline": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Has deadline" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Есть дедлайн" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Hat Frist" } }
+      }
+    },
+    "filter.attachments": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Attachments" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Вложения" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anhänge" } }
+      }
+    },
+    "filter.aiHandled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "AI handled" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Обработано ИИ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "KI bearbeitet" } }
+      }
+    },
+    "inbox.header.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Inbox" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Входящие" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Posteingang" } }
+      }
+    },
+    "inbox.header.needsReply": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Needs reply" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Нужен ответ" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Antwort nötig" } }
+      }
+    },
+    "inbox.header.hasDeadline": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Has deadline" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Есть дедлайн" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Hat Frist" } }
+      }
+    },
+    "inbox.header.attachments": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Attachments" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Вложения" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anhänge" } }
+      }
+    },
+    "inbox.header.logged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Logged" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Записано" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Protokolliert" } }
+      }
+    },
+    "inbox.header.starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Starred" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отмеченные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Markiert" } }
+      }
+    },
+    "inbox.header.sent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sent" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отправленные" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Gesendet" } }
+      }
+    },
+    "inbox.header.archive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Archive" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Архив" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Archiv" } }
+      }
+    },
+    "inbox.header.account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Account" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Аккаунт" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konto" } }
+      }
+    },
+    "threads.filter.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No matching threads" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Нет подходящих писем" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Keine passenden Konversationen" } }
+      }
+    },
+    "threads.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No threads yet" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Пока нет писем" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Noch keine Konversationen" } }
+      }
+    },
+    "inbox.swipe.archive": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Archive" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Архивировать" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Archivieren" } }
+      }
+    },
+    "inbox.swipe.trash": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Trash" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Удалить" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Löschen" } }
+      }
+    }
+  }
 }

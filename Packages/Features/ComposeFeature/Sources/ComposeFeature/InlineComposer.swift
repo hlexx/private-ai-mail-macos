@@ -115,9 +115,13 @@ public struct InlineComposer: View {
     }
 
     private var eyebrowText: String {
-        var parts = ["Draft reply", "local"]
+        var parts = [
+            String(localized: "composer.eyebrow.draftReply", defaultValue: "Draft reply"),
+            String(localized: "composer.eyebrow.local", defaultValue: "local")
+        ]
         if let lang = displayLanguage {
-            parts.append("in \(lang.uppercased())")
+            let prefix = String(localized: "composer.eyebrow.inLanguage", defaultValue: "in")
+            parts.append("\(prefix) \(lang.uppercased())")
         }
         return parts.joined(separator: " \u{00B7} ")
     }
@@ -217,7 +221,7 @@ public struct InlineComposer: View {
                 .opacity(replyStore.isLoading ? 0.4 : 1.0)
 
             if replyStore.isLoading {
-                Text("Drafting\u{2026}")
+                Text(String(localized: "composer.loading", defaultValue: "Drafting\u{2026}"))
                     .font(.rbGeist(14))
                     .foregroundStyle(Color.rbFg3)
             }
