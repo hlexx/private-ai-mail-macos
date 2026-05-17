@@ -103,7 +103,7 @@ struct MainScene: View {
                                 onSend: { bodyText in
                                     prefillComposeForReply()
                                     composition.composeViewModel.bodyText = bodyText
-                                    composition.showCompose = true
+                                    composition.composeViewModel.requestSend()
                                 }
                             )
                         }

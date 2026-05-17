@@ -61,7 +61,7 @@ struct HTMLWebView: NSViewRepresentable {
         var result = body
         // Remove any <meta http-equiv=...> tags that could override our CSP
         let metaPattern = #"<meta\s+[^>]*http-equiv\s*=[^>]*>"#
-        result = result.replacingOccurrences(of: metaPattern, with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: metaPattern, with: "", options: [.regularExpression, .caseInsensitive])
         // Remove <base> tags that could redirect relative URLs to an attacker domain
         let basePattern = #"<base\s[^>]*>"#
         result = result.replacingOccurrences(of: basePattern, with: "", options: [.regularExpression, .caseInsensitive])

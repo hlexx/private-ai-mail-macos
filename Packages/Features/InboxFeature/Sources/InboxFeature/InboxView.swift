@@ -134,7 +134,7 @@ public struct InboxView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing) {
+                    .swipeActions(edge: .leading) {
                         if let onArchive {
                             Button {
                                 onArchive(thread.id, thread.accountId)
@@ -144,7 +144,7 @@ public struct InboxView: View {
                             .tint(.orange)
                         }
                     }
-                    .swipeActions(edge: .leading) {
+                    .swipeActions(edge: .trailing) {
                         if let onTrash {
                             Button(role: .destructive) {
                                 onTrash(thread.id, thread.accountId)
