@@ -12,6 +12,7 @@ public struct MessageRow: Identifiable, Sendable {
     public let sentAt: Date
     public let snippet: String
     public let bodyText: String
+    public let bodyHtml: String?
     public let flags: Int
 
     public var isSentByMe: Bool {
@@ -27,6 +28,7 @@ public struct MessageRow: Identifiable, Sendable {
         self.sentAt = Date(timeIntervalSince1970: TimeInterval(record.sentAt))
         self.snippet = record.snippet ?? ""
         self.bodyText = record.bodyText ?? record.snippet ?? ""
+        self.bodyHtml = record.bodyHtml
         self.flags = record.flags
     }
 

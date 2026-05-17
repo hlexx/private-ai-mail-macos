@@ -26,6 +26,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature"]),
+        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "Persistence"]),
     ]
 )

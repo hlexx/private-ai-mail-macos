@@ -5,6 +5,7 @@ enum Migrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("M001_InitialSchema", migrate: M001_InitialSchema.migrate)
         migrator.registerMigration("M002_Labels", migrate: M002_Labels.migrate)
+        migrator.registerMigration("M003_TrustedSender", migrate: M003_TrustedSender.migrate)
         try migrator.migrate(db)
     }
 }
@@ -78,6 +79,17 @@ enum M001_InitialSchema {
             t.column("size_bytes", .integer)
             t.primaryKey(["account_id", "message_id", "id"])
             t.foreignKey(["account_id", "message_id"], references: "message", columns: ["account_id", "id"], onDelete: .cascade)
+        }
+    }
+}
+
+enum M003_TrustedSender {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "trusted_sender") { t in
+            t.column("account_id", .text).notNull()
+                .references("account", onDelete: .cascade)
+            t.column("from_addr", .text).notNull()
+            t.primaryKey(["account_id", "from_addr"])
         }
     }
 }

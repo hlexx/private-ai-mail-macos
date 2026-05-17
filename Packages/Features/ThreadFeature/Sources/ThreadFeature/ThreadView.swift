@@ -231,11 +231,12 @@ private struct MessageCardView: View {
                     .font(.rbMono(11))
                     .foregroundStyle(Color.rbFg3)
             }
-            Text(message.bodyText)
-                .font(.rbGeist(14))
-                .foregroundStyle(Color.rbFg2)
-                .lineSpacing(4)
-                .textSelection(.enabled)
+            MessageBodyView(
+                bodyHtml: message.bodyHtml,
+                bodyText: message.bodyText,
+                snippet: message.snippet,
+                attachments: []
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

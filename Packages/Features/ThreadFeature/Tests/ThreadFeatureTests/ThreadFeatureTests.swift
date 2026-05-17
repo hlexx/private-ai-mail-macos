@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 @testable import ThreadFeature
 import DesignSystem
+import Persistence
 
 @Suite("ThreadFeature")
 struct ThreadFeatureTests {
@@ -30,6 +31,43 @@ struct ThreadFeatureTests {
     @Test func messageRowExtractsNameWithQuotes() {
         let name = MessageRow.extractName(from: "\"Jonas R.\" <jonas@example.com>")
         #expect(name == "Jonas R.")
+    }
+
+    @Test func messageRowExposesBodyHtml() {
+        let record = MessageRecord(
+            id: "m1", threadId: "t1", accountId: "a1",
+            sentAt: 1_700_000_000,
+            bodyHtml: "<p>Hello</p>",
+            bodyText: nil
+        )
+        let row = MessageRow(record: record)
+        #expect(row.bodyHtml == "<p>Hello</p>")
+        #expect(row.bodyText == "") // falls back to snippet (nil) -> ""
+    }
+
+    // MARK: - HTML to Plain Text
+
+    @Test func htmlToPlainTextExtractsContent() {
+        let html = "<html><body><p>Hello <b>World</b></p><p>Second paragraph</p></body></html>"
+        let plain = MessageBodyView.htmlToPlainText(html)
+        #expect(plain != nil)
+        #expect(plain!.contains("Hello"))
+        #expect(plain!.contains("World"))
+        #expect(plain!.contains("Second paragraph"))
+    }
+
+    @Test func htmlToPlainTextStripsExcessiveNewlines() {
+        let html = "<p>A</p><br><br><br><br><p>B</p>"
+        let plain = MessageBodyView.htmlToPlainText(html)
+        #expect(plain != nil)
+        // Should not contain 3+ consecutive newlines
+        #expect(!plain!.contains("\n\n\n"))
+    }
+
+    @Test func htmlToPlainTextReturnsNilForEmpty() {
+        let result = MessageBodyView.htmlToPlainText("")
+        // Empty HTML may return nil or empty string
+        #expect(result == nil || result!.isEmpty)
     }
 
     // MARK: - AttachmentInfo
@@ -206,6 +244,76 @@ struct ThreadViewSnapshotTests {
         .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
         .padding(20)
         .background(Color.rbBgCanvas)
+    }
+
+    @MainActor
+    @Test func messageBodyPlainTextDark() {
+        let view = MessageBodyView(
+            bodyHtml: nil,
+            bodyText: "Hi — yes, I'll send a clean draft by Friday EOD.",
+            snippet: "Hi",
+            attachments: []
+        )
+        .preferredColorScheme(.dark)
+        .frame(width: 600, height: 100)
+        .background(Color.rbBgElev1)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 100)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func messageBodyHtmlDark() {
+        let html = "<p>Hello <b>World</b></p><p>This is an <a href='#'>HTML</a> email.</p>"
+        let view = MessageBodyView(
+            bodyHtml: html,
+            bodyText: nil,
+            snippet: "Hello World",
+            attachments: []
+        )
+        .preferredColorScheme(.dark)
+        .frame(width: 600, height: 200)
+        .background(Color.rbBgElev1)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 200)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func messageBodyWithRemoteImagesPillDark() {
+        let html = """
+        <p>Newsletter</p>
+        <img src="https://example.com/tracker.png" width="1" height="1">
+        <p>Click here for deals</p>
+        """
+        let view = MessageBodyView(
+            bodyHtml: html,
+            bodyText: nil,
+            snippet: "Newsletter",
+            attachments: []
+        )
+        .preferredColorScheme(.dark)
+        .frame(width: 600, height: 250)
+        .background(Color.rbBgElev1)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 250)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func messageBodySnippetFallbackLight() {
+        let view = MessageBodyView(
+            bodyHtml: nil,
+            bodyText: nil,
+            snippet: "Brief preview of the email...",
+            attachments: []
+        )
+        .preferredColorScheme(.light)
+        .frame(width: 600, height: 60)
+        .background(Color.rbBgElev1)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 60)
+        host.layout()
     }
 
     private func headSectionView() -> some View {

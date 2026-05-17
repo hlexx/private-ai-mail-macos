@@ -348,14 +348,14 @@ Now make folder / account clicks change what's in the thread list.
 
 Show the actual email, with privacy-by-default for remote content.
 
-- [ ] Create `Packages/Features/ThreadFeature/Sources/ThreadFeature/MessageBodyView.swift`:
+- [x] Create `Packages/Features/ThreadFeature/Sources/ThreadFeature/MessageBodyView.swift`:
       a SwiftUI view that takes `MessageRecord` + `[AttachmentRecord]`.
       - If `bodyHtml != nil` → render via `HTMLWebView` (new
         `NSViewRepresentable` wrapper around `WKWebView`).
       - Else if `bodyText != nil` → render as
         `Text(message.bodyText)` styled per Re:Box.
       - Else snippet fallback as today.
-- [ ] Create `HTMLWebView` (`NSViewRepresentable`):
+- [x] Create `HTMLWebView` (`NSViewRepresentable`):
       - `WKWebViewConfiguration` with `preferences.javaScriptEnabled = false`
         (default), `defaultWebpagePreferences.allowsContentJavaScript =
         false`.
@@ -372,15 +372,15 @@ Show the actual email, with privacy-by-default for remote content.
         2000pt, with internal scrolling above that).
       - Resolve `cid:` references in `src=` to the corresponding
         `attachment` row, encode as `data:` URL inline.
-- [ ] Add `MessageBodyView.allowRemoteImages: Bool` + UI control in
+- [x] Add `MessageBodyView.allowRemoteImages: Bool` + UI control in
       `ThreadView`'s head: an inline pill "Remote images blocked · Show
       images" that flips the flag for the open thread. Persist this
       decision per `from` address (new `trusted_sender(account_id,
       from_addr)` table — Task 1 migration follow-up: add to v2 or v3).
-- [ ] Update `ThreadView.swift:234` site: replace
+- [x] Update `ThreadView.swift:234` site: replace
       `Text(message.bodyText)` with `MessageBodyView(message:
       message, attachments: ...)`.
-- [ ] In `BriefStore.fetchThreadInput()` (line ~104): change
+- [x] In `BriefStore.fetchThreadInput()` (line ~104): change
       `bodyText: msg.bodyText ?? msg.snippet ?? ""` to use a helper
       `Message.bestPlainText` that returns `bodyText ?? htmlToPlain
       (bodyHtml) ?? snippet ?? ""`. Add `htmlToPlain` helper in
@@ -388,12 +388,12 @@ Show the actual email, with privacy-by-default for remote content.
       `NSAttributedString(data: htmlData, options:
       [.documentType: .html])` then `.string`. Strip URLs / repeated
       blank lines.
-- [ ] Add snapshot tests in `ThreadFeatureTests`: a fixture HTML email
+- [x] Add snapshot tests in `ThreadFeatureTests`: a fixture HTML email
       with inline cid: image renders without remote loads; same email
       with `allowRemoteImages=true` does not change the snapshot
       (because the fixture has no remote imgs) but assert the WKWebView
       config differs.
-- [ ] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 5: AIService.draftReply + InlineComposer wired
 

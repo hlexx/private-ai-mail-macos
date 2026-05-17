@@ -1,4 +1,5 @@
 import AIKit
+import AppKit
 import Foundation
 import GRDB
 import Observation
@@ -123,7 +124,7 @@ public final class BriefStore {
             AIThreadInput.Message(
                 from: msg.fromAddr ?? "Unknown",
                 sentAt: Date(timeIntervalSince1970: TimeInterval(msg.sentAt)),
-                bodyText: msg.bodyText ?? msg.snippet ?? ""
+                bodyText: Self.bestPlainText(msg)
             )
         }
         let aiAttachments = attachments.map { att in
@@ -134,6 +135,36 @@ public final class BriefStore {
         }
         let latestMessageID = messages.last?.id ?? ""
         return (AIThreadInput(messages: aiMessages, attachments: aiAttachments), latestMessageID)
+    }
+}
+
+// MARK: - Plain Text Extraction
+
+extension BriefStore {
+    /// Best-effort plain text: prefer bodyText, fall back to HTML-to-plain, then snippet.
+    static nonisolated func bestPlainText(_ msg: MessageRecord) -> String {
+        if let text = msg.bodyText, !text.isEmpty { return text }
+        if let html = msg.bodyHtml, !html.isEmpty {
+            return htmlToPlainText(html) ?? msg.snippet ?? ""
+        }
+        return msg.snippet ?? ""
+    }
+
+    /// Convert HTML to plain text using NSAttributedString.
+    private static nonisolated func htmlToPlainText(_ html: String) -> String? {
+        guard let data = html.data(using: .utf8) else { return nil }
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue,
+        ]
+        guard let attributed = try? NSAttributedString(data: data, options: options, documentAttributes: nil) else {
+            return nil
+        }
+        var text = attributed.string
+        while text.contains("\n\n\n") {
+            text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
