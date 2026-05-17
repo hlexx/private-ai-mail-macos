@@ -104,9 +104,13 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
 
     @MainActor
     private func startWebAuthSession(url: URL) async throws -> URL {
-        // Retain the session outside the continuation closure so ARC does not
-        // deallocate it before the callback fires.
-        var retainedSession: ASWebAuthenticationSession?
+        // Retain the session in a Sendable box so the completion handler can
+        // be `@Sendable` and avoid inheriting `@MainActor` isolation from
+        // this function. ASWebAuthenticationSession invokes the completion
+        // from an XPC reply queue; if the closure were @MainActor-inferred,
+        // Swift 6 runtime check `_swift_task_checkIsolatedSwift` would trip
+        // on closure entry and SIGTRAP the process (observed in 0.1.1-alpha).
+        let box = SessionBox()
 
         return try await withCheckedThrowingContinuation { continuation in
             // Derive the URL scheme from the configured redirect URI (the
@@ -120,37 +124,32 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
             let session = ASWebAuthenticationSession(
                 url: url,
                 callbackURLScheme: callbackScheme
-            ) { callbackURL, error in
-                // The completion is invoked on the XPC reply queue, but this
-                // closure captures `retainedSession` from a `@MainActor` scope.
-                // Hop to MainActor explicitly to satisfy Swift 6 isolation
-                // checking — without this, `_swift_task_checkIsolatedSwift`
-                // trips and the process crashes with SIGTRAP.
-                Task { @MainActor in
-                    // Break the intentional retain cycle now that the callback fired.
-                    retainedSession = nil
+            ) { @Sendable [box] callbackURL, error in
+                // Release session via the Sendable box. No @MainActor state
+                // captured here — `box` is @unchecked Sendable, `continuation`
+                // is Sendable. Safe to invoke from any queue.
+                box.session = nil
 
-                    if let error {
-                        if (error as NSError).code
-                            == ASWebAuthenticationSessionError.canceledLogin.rawValue {
-                            continuation.resume(throwing: AuthError.cancelled)
-                        } else {
-                            continuation.resume(throwing: AuthError.network(error))
-                        }
-                        return
+                if let error {
+                    if (error as NSError).code
+                        == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                        continuation.resume(throwing: AuthError.cancelled)
+                    } else {
+                        continuation.resume(throwing: AuthError.network(error))
                     }
-                    guard let callbackURL else {
-                        continuation.resume(throwing: AuthError.invalidResponse)
-                        return
-                    }
-                    continuation.resume(returning: callbackURL)
+                    return
                 }
+                guard let callbackURL else {
+                    continuation.resume(throwing: AuthError.invalidResponse)
+                    return
+                }
+                continuation.resume(returning: callbackURL)
             }
-            retainedSession = session
+            box.session = session
             session.presentationContextProvider = WebAuthContextProvider.shared
             session.prefersEphemeralWebBrowserSession = false
             if !session.start() {
-                retainedSession = nil
+                box.session = nil
                 continuation.resume(throwing: AuthError.network(
                     NSError(domain: "AuthKit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to start web auth session"])
                 ))
@@ -211,6 +210,16 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
             )
         )
     }
+}
+
+/// Sendable wrapper around `ASWebAuthenticationSession` so we can keep the
+/// session alive across the suspended `withCheckedThrowingContinuation`
+/// without capturing a `@MainActor` local var inside the completion handler.
+/// Marked `@unchecked Sendable` because access is single-writer (the
+/// continuation closure on MainActor, then the completion on XPC queue),
+/// never concurrent.
+private final class SessionBox: @unchecked Sendable {
+    var session: ASWebAuthenticationSession?
 }
 
 #if canImport(AppKit)
