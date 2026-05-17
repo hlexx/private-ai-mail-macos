@@ -165,7 +165,7 @@ Add label graph to `Persistence`. Migration is idempotent + reversible
 within the same DB session (don't drop columns yet — Phase 2 can clean
 up `flags` once Task 2 is stable).
 
-- [ ] Create `Packages/Core/Persistence/Sources/Persistence/Records/LabelRecord.swift`:
+- [x] Create `Packages/Core/Persistence/Sources/Persistence/Records/LabelRecord.swift`:
       ```swift
       public struct LabelRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
           public static let databaseTableName = "label"
@@ -186,7 +186,7 @@ up `flags` once Task 2 is stable).
           case system, user, category
       }
       ```
-- [ ] Create `Packages/Core/Persistence/Sources/Persistence/Records/ThreadLabelRecord.swift`:
+- [x] Create `Packages/Core/Persistence/Sources/Persistence/Records/ThreadLabelRecord.swift`:
       ```swift
       public struct ThreadLabelRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
           public static let databaseTableName = "thread_label"
@@ -197,7 +197,7 @@ up `flags` once Task 2 is stable).
           }
       }
       ```
-- [ ] Open `Packages/Core/Persistence/Sources/Persistence/Migrator.swift`
+- [x] Open `Packages/Core/Persistence/Sources/Persistence/Migrator.swift`
       and add a `v2` migration after the existing `v1`:
       ```swift
       migrator.registerMigration("v2_labels") { db in
@@ -223,10 +223,10 @@ up `flags` once Task 2 is stable).
           // fine — we'll insert per-account on labels.list.
       }
       ```
-- [ ] Add `Packages/Core/Persistence/Tests/PersistenceTests/LabelMigrationTests.swift`:
+- [x] Add `Packages/Core/Persistence/Tests/PersistenceTests/LabelMigrationTests.swift`:
       open empty DB, run migrator, assert tables `label` + `thread_label`
       exist, assert v2 idempotent on second run.
-- [ ] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
+- [x] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 2: Label-aware Gmail sync
 

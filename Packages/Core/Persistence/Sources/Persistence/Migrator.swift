@@ -4,6 +4,7 @@ enum Migrator {
     static func migrate(_ db: DatabaseQueue) throws {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("M001_InitialSchema", migrate: M001_InitialSchema.migrate)
+        migrator.registerMigration("M002_Labels", migrate: M002_Labels.migrate)
         try migrator.migrate(db)
     }
 }
@@ -78,5 +79,38 @@ enum M001_InitialSchema {
             t.primaryKey(["account_id", "message_id", "id"])
             t.foreignKey(["account_id", "message_id"], references: "message", columns: ["account_id", "id"], onDelete: .cascade)
         }
+    }
+}
+
+enum M002_Labels {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "label") { t in
+            t.primaryKey("id", .text)
+            t.column("account_id", .text).notNull()
+                .references("account", onDelete: .cascade)
+            t.column("name", .text).notNull()
+            t.column("type", .text).notNull()
+            t.column("color", .text)
+            t.column("messages_unread_count", .integer).notNull().defaults(to: 0)
+            t.column("messages_total_count", .integer).notNull().defaults(to: 0)
+        }
+
+        try db.create(table: "thread_label") { t in
+            t.column("thread_id", .text).notNull()
+            t.column("label_id", .text).notNull()
+                .references("label", onDelete: .cascade)
+            t.primaryKey(["thread_id", "label_id"])
+        }
+
+        try db.create(
+            index: "idx_thread_label_label",
+            on: "thread_label",
+            columns: ["label_id"]
+        )
+        try db.create(
+            index: "idx_thread_label_thread",
+            on: "thread_label",
+            columns: ["thread_id"]
+        )
     }
 }
