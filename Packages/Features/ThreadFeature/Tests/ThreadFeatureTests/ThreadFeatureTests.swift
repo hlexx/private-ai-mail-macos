@@ -339,4 +339,177 @@ struct ThreadViewSnapshotTests {
         .padding(.vertical, 18)
         .background(Color.rbBgCanvas)
     }
+
+    private func starButtonView(isStarred: Bool) -> some View {
+        HStack(spacing: 8) {
+            Spacer()
+            Button {} label: { Label("Archive", systemImage: "archivebox") }.buttonStyle(.rbGhost)
+            Button {} label: {
+                Label(
+                    isStarred ? "Unstar" : "Star",
+                    systemImage: isStarred ? "star.fill" : "star"
+                )
+            }.buttonStyle(.rbGhost)
+            Button {} label: { Label("Snooze", systemImage: "clock") }.buttonStyle(.rbGhost)
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 18)
+        .background(Color.rbBgCanvas)
+    }
+
+    @MainActor
+    @Test func starButtonUnstarredDark() {
+        let view = starButtonView(isStarred: false)
+            .preferredColorScheme(.dark)
+            .frame(width: 600, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 60)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func starButtonUnstarredLight() {
+        let view = starButtonView(isStarred: false)
+            .preferredColorScheme(.light)
+            .frame(width: 600, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 60)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func starButtonStarredDark() {
+        let view = starButtonView(isStarred: true)
+            .preferredColorScheme(.dark)
+            .frame(width: 600, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 60)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func starButtonStarredLight() {
+        let view = starButtonView(isStarred: true)
+            .preferredColorScheme(.light)
+            .frame(width: 600, height: 60)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 60)
+        host.layout()
+    }
+}
+
+// MARK: - ThreadStore isStarred Tests
+
+@Suite("ThreadStore Star State")
+@MainActor
+struct ThreadStoreStarTests {
+
+    private func makeDB() throws -> AppDatabase {
+        try AppDatabase.openInMemorySync()
+    }
+
+    private func seedThread(db: AppDatabase, starred: Bool) throws {
+        try db.dbQueue.write { dbConn in
+            try dbConn.execute(sql: """
+                INSERT INTO account (id, email, display_name, provider, created_at) VALUES
+                ('acc1', 'user@example.com', 'User', 'gmail', 1000)
+                """)
+            try dbConn.execute(sql: """
+                INSERT INTO thread (id, account_id, subject, snippet, last_message_at, message_count, has_unread) VALUES
+                ('t1', 'acc1', 'Test Subject', 'snippet', 1000, 1, 0)
+                """)
+            try dbConn.execute(sql: """
+                INSERT INTO message (id, thread_id, account_id, from_addr, to_addr, sent_at, flags) VALUES
+                ('m1', 't1', 'acc1', 'sender@example.com', 'user@example.com', 1000, 0)
+                """)
+            try dbConn.execute(sql: """
+                INSERT INTO label (id, account_id, name, type, messages_unread_count, messages_total_count) VALUES
+                ('INBOX', 'acc1', 'Inbox', 'system', 0, 0),
+                ('STARRED', 'acc1', 'Starred', 'system', 0, 0)
+                """)
+            try dbConn.execute(sql: """
+                INSERT INTO thread_label (account_id, thread_id, label_id) VALUES
+                ('acc1', 't1', 'INBOX')
+                """)
+            if starred {
+                try dbConn.execute(sql: """
+                    INSERT INTO thread_label (account_id, thread_id, label_id) VALUES
+                    ('acc1', 't1', 'STARRED')
+                    """)
+            }
+        }
+    }
+
+    /// Poll until a condition becomes true, or fail after timeout.
+    private func waitUntil(timeout: Duration = .seconds(3), _ condition: @MainActor () -> Bool) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while !condition() {
+            if ContinuousClock.now >= deadline {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
+    @Test func isStarredTrueWhenSTARREDLabelPresent() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, starred: true)
+        let store = ThreadStore(db: db)
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { store.isStarred }
+        #expect(store.isStarred == true)
+        store.stopObserving()
+    }
+
+    @Test func isStarredFalseWhenNoSTARREDLabel() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, starred: false)
+        let store = ThreadStore(db: db)
+        store.observe(threadId: "t1", accountId: "acc1")
+        // Wait for messages to load (proves observation fired), then assert not starred
+        try await waitUntil { !store.messages.isEmpty }
+        #expect(store.isStarred == false)
+        store.stopObserving()
+    }
+
+    @Test func isStarredUpdatesReactivelyOnLabelChange() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, starred: false)
+        let store = ThreadStore(db: db)
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty }
+        #expect(store.isStarred == false)
+
+        // Add STARRED label
+        try await db.dbQueue.write { dbConn in
+            try dbConn.execute(sql: """
+                INSERT INTO thread_label (account_id, thread_id, label_id) VALUES
+                ('acc1', 't1', 'STARRED')
+                """)
+        }
+        try await waitUntil { store.isStarred }
+        #expect(store.isStarred == true)
+
+        // Remove STARRED label
+        try await db.dbQueue.write { dbConn in
+            try dbConn.execute(sql: """
+                DELETE FROM thread_label WHERE account_id = 'acc1' AND thread_id = 't1' AND label_id = 'STARRED'
+                """)
+        }
+        try await waitUntil { !store.isStarred }
+        #expect(store.isStarred == false)
+
+        store.stopObserving()
+    }
+
+    @Test func stopObservingResetsIsStarred() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, starred: true)
+        let store = ThreadStore(db: db)
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { store.isStarred }
+        #expect(store.isStarred == true)
+        store.stopObserving()
+        #expect(store.isStarred == false)
+    }
 }

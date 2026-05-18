@@ -344,11 +344,11 @@ account is selected in the sidebar. Fix.
 
 Reflect the current `STARRED`-label state of the open thread.
 
-- [ ] Add `isStarred: Bool` to `ThreadView.swift`'s init (pass from
+- [x] Add `isStarred: Bool` to `ThreadView.swift`'s init (pass from
       `MainScene.swift` derived from `thread_label` query —
       `EXISTS (SELECT 1 FROM thread_label WHERE thread_id = ? AND
       label_id = 'STARRED')`).
-- [ ] Modify line 108 to use the bound state:
+- [x] Modify line 108 to use the bound state:
       ```swift
       Button { onStar?() } label: {
           Label(
@@ -359,13 +359,13 @@ Reflect the current `STARRED`-label state of the open thread.
           )
       }
       ```
-- [ ] Wire `MainScene` to recompute `isStarred` whenever
+- [x] Wire `MainScene` to recompute `isStarred` whenever
       `inboxStore.selectedThreadID` changes — use the existing
       `ValueObservation` infrastructure on `thread_label` so the icon
       updates in real-time after the mutation lands.
-- [ ] Snapshot tests in `ThreadFeatureTests` for both states in dark +
+- [x] Snapshot tests in `ThreadFeatureTests` for both states in dark +
       light.
-- [ ] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 7: Inline CID image resolution in HTML body
 

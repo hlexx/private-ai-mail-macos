@@ -105,7 +105,12 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 .disabled(onArchive == nil)
 
                 Button { onStar?() } label: {
-                    Label(String(localized: "thread.action.star", defaultValue: "Star"), systemImage: "star")
+                    Label(
+                        store.isStarred
+                            ? String(localized: "thread.action.unstar", defaultValue: "Unstar")
+                            : String(localized: "thread.action.star", defaultValue: "Star"),
+                        systemImage: store.isStarred ? "star.fill" : "star"
+                    )
                 }
                 .buttonStyle(.rbGhost)
                 .disabled(onStar == nil)

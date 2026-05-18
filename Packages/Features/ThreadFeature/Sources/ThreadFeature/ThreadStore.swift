@@ -96,6 +96,7 @@ public final class ThreadStore {
     public private(set) var subject: String = ""
     public private(set) var messageCount: Int = 0
     public private(set) var attachments: [AttachmentInfo] = []
+    public private(set) var isStarred: Bool = false
     public var accountEmail: String = ""
 
     public var hasAttachment: Bool { !attachments.isEmpty }
@@ -124,6 +125,10 @@ public final class ThreadStore {
                     .order(Column("sent_at").asc)
                     .fetchAll(db)
 
+                let isStarred = try ThreadLabelRecord
+                    .filter(Column("account_id") == accountId && Column("thread_id") == threadId && Column("label_id") == "STARRED")
+                    .fetchOne(db) != nil
+
                 let messageIds = messages.map(\.id)
                 let attachments: [AttachmentRecord]
                 if messageIds.isEmpty {
@@ -134,15 +139,16 @@ public final class ThreadStore {
                         .fetchAll(db)
                 }
 
-                return (thread, messages, attachments)
+                return (thread, messages, attachments, isStarred)
             }
             do {
-                for try await (thread, records, attRecords) in observation.values(in: db.dbQueue) {
+                for try await (thread, records, attRecords, starred) in observation.values(in: db.dbQueue) {
                     guard !Task.isCancelled, let self else { return }
                     self.messages = records.map(MessageRow.init)
                     self.subject = thread?.subject ?? "(no subject)"
                     self.messageCount = thread?.messageCount ?? records.count
                     self.attachments = attRecords.map(AttachmentInfo.init)
+                    self.isStarred = starred
                 }
             } catch {
                 // Observation ended
@@ -157,5 +163,6 @@ public final class ThreadStore {
         subject = ""
         messageCount = 0
         attachments = []
+        isStarred = false
     }
 }
