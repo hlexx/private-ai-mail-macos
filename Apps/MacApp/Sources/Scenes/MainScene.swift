@@ -16,10 +16,13 @@ struct MainScene: View {
 
     @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
-    @State private var threadScrollProxy: ScrollViewProxy?
-    @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
+    // NOTE — these three were declared `private` initially; relaxed to
+    // internal so MainSceneMutations (separate file in same target)
+    // can read them when dispatching mutations.
+    @State var threadScrollProxy: ScrollViewProxy?
+    @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
-    @AppStorage("pam.defaultTone") private var defaultToneRaw: String = "warm"
+    @AppStorage("pam.defaultTone") var defaultToneRaw: String = "warm"
     @AppStorage("pam.layout.sidebar") private var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
     @AppStorage("pam.layout.threadlist") private var threadlistWidth: Double = Double(RBLayout.threadListWidth)
     @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
@@ -90,9 +93,6 @@ struct MainScene: View {
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.translatedNodes,
-                        onScrollProxy: { proxy in
-                            threadScrollProxy = proxy
-                        },
                         onTextNodesExtracted: { messageId, nodes in
                             _ = translationStore.nextGeneration(for: messageId)
                             // Clear stale node translations so re-extraction
@@ -108,6 +108,9 @@ struct MainScene: View {
                             if translationStore.showTranslated {
                                 translationStore.needsRetranslation = true
                             }
+                        },
+                        onScrollProxy: { proxy in
+                            threadScrollProxy = proxy
                         },
                         composer: {
                             if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
