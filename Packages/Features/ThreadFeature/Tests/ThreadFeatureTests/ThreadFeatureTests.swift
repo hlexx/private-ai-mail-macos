@@ -615,3 +615,65 @@ struct CIDImageResolutionTests {
         #expect(!attData.data.isEmpty)
     }
 }
+
+// MARK: - Translation JS Script Tests
+
+@Suite("HTMLWebView Translation Scripts")
+struct HTMLWebViewTranslationScriptTests {
+
+    @Test func extractionJSContainsTreeWalker() {
+        let js = HTMLWebView.extractionJS
+        #expect(js.contains("createTreeWalker"))
+        #expect(js.contains("SHOW_TEXT"))
+        #expect(js.contains("txId"))
+        #expect(js.contains("txOrig"))
+        #expect(js.contains("2000"))
+    }
+
+    @Test func extractionJSSkipsStyleAndScriptNodes() {
+        let js = HTMLWebView.extractionJS
+        #expect(js.contains("SCRIPT"))
+        #expect(js.contains("STYLE"))
+        #expect(js.contains("NOSCRIPT"))
+    }
+
+    @Test func applyTranslationsJSProducesValidScript() {
+        let map = ["n0": "Hello", "n1": "World"]
+        let js = HTMLWebView.applyTranslationsJS(map: map)
+        #expect(!js.isEmpty)
+        #expect(js.contains("data-tx-id"))
+        #expect(js.contains("textContent"))
+        // The map should be serialized as JSON inside the script
+        #expect(js.contains("n0"))
+        #expect(js.contains("Hello"))
+        #expect(js.contains("n1"))
+        #expect(js.contains("World"))
+    }
+
+    @Test func applyTranslationsJSHandlesEmptyMap() {
+        let map: [String: String] = [:]
+        let js = HTMLWebView.applyTranslationsJS(map: map)
+        #expect(!js.isEmpty)
+    }
+
+    @Test func applyTranslationsJSHandlesSpecialCharacters() {
+        let map = ["n0": "He said \"hello\" & goodbye", "n1": "Line1\nLine2"]
+        let js = HTMLWebView.applyTranslationsJS(map: map)
+        #expect(!js.isEmpty)
+        // JSON should properly escape the quotes and newlines
+        #expect(js.contains("n0"))
+    }
+
+    @Test func restoreOriginalsJSUsesDataAttribute() {
+        let js = HTMLWebView.restoreOriginalsJS
+        #expect(js.contains("data-tx-id"))
+        #expect(js.contains("txOrig"))
+        #expect(js.contains("textContent"))
+    }
+
+    @Test func textNodeStructure() {
+        let node = TranslationTextNode(id: "n42", text: "Summer Sale")
+        #expect(node.id == "n42")
+        #expect(node.text == "Summer Sale")
+    }
+}

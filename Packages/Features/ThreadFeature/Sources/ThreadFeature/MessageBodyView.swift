@@ -10,6 +10,8 @@ struct MessageBodyView: View {
     let bodyText: String?
     let snippet: String
     let attachments: [HTMLWebView.AttachmentData]
+    var translatedNodes: [String: String]?
+    var onTextNodesExtracted: (([TranslationTextNode]) -> Void)?
     @State private var allowRemoteImages = false
     @State private var webViewHeight: CGFloat = 100
 
@@ -23,7 +25,9 @@ struct MessageBodyView: View {
                     html: html,
                     attachments: attachments,
                     allowRemoteImages: allowRemoteImages,
-                    contentHeight: $webViewHeight
+                    contentHeight: $webViewHeight,
+                    translatedNodes: translatedNodes,
+                    onTextNodesExtracted: onTextNodesExtracted
                 )
                 .frame(height: min(webViewHeight, 2000))
                 .clipShape(RoundedRectangle(cornerRadius: 4))

@@ -10,6 +10,8 @@ public final class TranslationStore {
     public private(set) var error: (any Error)?
     public var showTranslated = false
     public private(set) var translatedTexts: [String: String] = [:]
+    public private(set) var translatedNodes: [String: [String: String]] = [:]
+    public private(set) var translationGeneration: [String: Int] = [:]
 
     private let db: AppDatabase?
 
@@ -41,7 +43,7 @@ public final class TranslationStore {
         return (language.rawValue, confidence)
     }
 
-    // MARK: - Translation Cache
+    // MARK: - Translation Cache (plain text fallback)
 
     public func setTranslation(for messageId: String, text: String) {
         translatedTexts[messageId] = text
@@ -50,6 +52,36 @@ public final class TranslationStore {
     public func translatedText(for messageId: String) -> String? {
         translatedTexts[messageId]
     }
+
+    // MARK: - Translation Cache (per-node HTML)
+
+    public func setNodeTranslations(for messageId: String, nodes: [String: String]) {
+        translatedNodes[messageId] = nodes
+    }
+
+    public func nodeTranslations(for messageId: String) -> [String: String]? {
+        translatedNodes[messageId]
+    }
+
+    public func nextGeneration(for messageId: String) -> Int {
+        let gen = (translationGeneration[messageId] ?? 0) + 1
+        translationGeneration[messageId] = gen
+        return gen
+    }
+
+    public func currentGeneration(for messageId: String) -> Int {
+        translationGeneration[messageId] ?? 0
+    }
+
+    // MARK: - Extracted Nodes (pending translation)
+
+    public private(set) var extractedNodes: [String: [(id: String, text: String)]] = [:]
+
+    public func setExtractedNodes(for messageId: String, nodes: [(id: String, text: String)]) {
+        extractedNodes[messageId] = nodes
+    }
+
+    // MARK: - State Management
 
     public func setTranslating(_ value: Bool) {
         isTranslating = value
@@ -61,6 +93,9 @@ public final class TranslationStore {
 
     public func clearCache() {
         translatedTexts.removeAll()
+        translatedNodes.removeAll()
+        extractedNodes.removeAll()
+        translationGeneration.removeAll()
         showTranslated = false
     }
 }

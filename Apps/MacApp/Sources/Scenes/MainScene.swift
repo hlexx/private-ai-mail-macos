@@ -88,6 +88,14 @@ struct MainScene: View {
                     onStar: { starSelectedThread() },
                     showTranslated: translationStore.showTranslated,
                     translatedTexts: translationStore.translatedTexts,
+                    translatedNodes: translationStore.translatedNodes,
+                    onTextNodesExtracted: { messageId, nodes in
+                        _ = translationStore.nextGeneration(for: messageId)
+                        translationStore.setExtractedNodes(
+                            for: messageId,
+                            nodes: nodes.map { ($0.id, $0.text) }
+                        )
+                    },
                     composer: {
                         if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
                             InlineComposer(
@@ -124,7 +132,8 @@ struct MainScene: View {
                             detectedLanguage: detectThreadLanguage(),
                             preferredLanguage: preferredLanguage,
                             autoTranslate: autoTranslate,
-                            messages: threadStore.messages.map { ($0.id, $0.bestPlainText) }
+                            messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
+                            htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
                         )
                     }
                 )

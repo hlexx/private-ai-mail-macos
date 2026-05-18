@@ -1,6 +1,17 @@
 import SwiftUI
 import WebKit
 
+/// A text node extracted from the HTML DOM for translation.
+public struct TranslationTextNode: Sendable {
+    public let id: String
+    public let text: String
+
+    public init(id: String, text: String) {
+        self.id = id
+        self.text = text
+    }
+}
+
 /// NSViewRepresentable wrapper around WKWebView for rendering HTML email bodies.
 /// JavaScript is disabled. Remote resource loading is blocked by default via CSP
 /// and navigation policy; flip `allowRemoteImages` to permit remote `<img>` loads.
@@ -9,6 +20,8 @@ struct HTMLWebView: NSViewRepresentable {
     let attachments: [AttachmentData]
     let allowRemoteImages: Bool
     @Binding var contentHeight: CGFloat
+    var translatedNodes: [String: String]?
+    var onTextNodesExtracted: (([TranslationTextNode]) -> Void)?
 
     struct AttachmentData {
         let contentId: String
@@ -32,12 +45,25 @@ struct HTMLWebView: NSViewRepresentable {
         let coordinator = context.coordinator
         let processed = resolvedHTML()
 
-        guard processed != coordinator.lastHTML || allowRemoteImages != coordinator.lastAllowRemote else { return }
-        coordinator.lastHTML = processed
-        coordinator.lastAllowRemote = allowRemoteImages
-        coordinator.heightBinding = $contentHeight
+        let needsReload = processed != coordinator.lastHTML || allowRemoteImages != coordinator.lastAllowRemote
+        let translationsChanged = translatedNodes != coordinator.lastTranslatedNodes
 
-        webView.loadHTMLString(wrapHTML(processed), baseURL: nil)
+        if needsReload {
+            coordinator.lastHTML = processed
+            coordinator.lastAllowRemote = allowRemoteImages
+            coordinator.heightBinding = $contentHeight
+            coordinator.onTextNodesExtracted = onTextNodesExtracted
+            coordinator.pendingTranslations = translatedNodes
+            coordinator.lastTranslatedNodes = translatedNodes
+            webView.loadHTMLString(wrapHTML(processed), baseURL: nil)
+        } else if translationsChanged {
+            coordinator.lastTranslatedNodes = translatedNodes
+            if let nodes = translatedNodes, !nodes.isEmpty {
+                coordinator.applyTranslations(nodes, in: webView)
+            } else if translatedNodes == nil && coordinator.hasExtracted {
+                coordinator.restoreOriginals(in: webView)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -119,14 +145,78 @@ struct HTMLWebView: NSViewRepresentable {
         """
     }
 
+    // MARK: - JavaScript for DOM-walk Translation
+
+    static let extractionJS = """
+    (function () {
+        var out = [];
+        var w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_TEXT,
+            { acceptNode: function(n) {
+                if (!n.parentNode) return NodeFilter.FILTER_REJECT;
+                var tag = n.parentNode.nodeName;
+                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return NodeFilter.FILTER_REJECT;
+                if (n.nodeValue.trim().length === 0) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }}
+        );
+        var i = 0;
+        while (w.nextNode()) {
+            var node = w.currentNode;
+            var span = document.createElement('span');
+            span.dataset.txId = 'n' + i;
+            span.dataset.txOrig = node.nodeValue;
+            span.textContent = node.nodeValue;
+            node.parentNode.replaceChild(span, node);
+            out.push({id: 'n' + i, text: span.textContent});
+            i++;
+            if (i >= 2000) break;
+        }
+        return JSON.stringify(out);
+    })();
+    """
+
+    static func applyTranslationsJS(map: [String: String]) -> String {
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: map),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return ""
+        }
+        return """
+        (function () {
+            var map = \(jsonString);
+            var spans = document.querySelectorAll('[data-tx-id]');
+            for (var i = 0; i < spans.length; i++) {
+                var span = spans[i];
+                var id = span.dataset.txId;
+                if (map[id] !== undefined) span.textContent = map[id];
+            }
+        })();
+        """
+    }
+
+    static let restoreOriginalsJS = """
+    (function () {
+        var spans = document.querySelectorAll('[data-tx-id]');
+        for (var i = 0; i < spans.length; i++) {
+            var span = spans[i];
+            span.textContent = span.dataset.txOrig;
+        }
+    })();
+    """
+
     // MARK: - Coordinator
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         var lastHTML: String?
         var lastAllowRemote: Bool = false
         var heightBinding: Binding<CGFloat>?
+        var onTextNodesExtracted: (([TranslationTextNode]) -> Void)?
+        var pendingTranslations: [String: String]?
+        var lastTranslatedNodes: [String: String]?
+        var hasExtracted = false
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Measure height
             webView.evaluateJavaScript("document.body.scrollHeight") { [weak self] result, _ in
                 if let height = result as? Double {
                     Task { @MainActor in
@@ -134,6 +224,38 @@ struct HTMLWebView: NSViewRepresentable {
                     }
                 }
             }
+
+            // Extract text nodes if callback is set
+            if onTextNodesExtracted != nil {
+                webView.evaluateJavaScript(HTMLWebView.extractionJS) { [weak self] result, _ in
+                    guard let self, let jsonString = result as? String else { return }
+                    self.hasExtracted = true
+                    guard let data = jsonString.data(using: .utf8),
+                          let array = try? JSONSerialization.jsonObject(with: data) as? [[String: String]] else { return }
+                    let nodes = array.compactMap { dict -> TranslationTextNode? in
+                        guard let id = dict["id"], let text = dict["text"] else { return nil }
+                        return TranslationTextNode(id: id, text: text)
+                    }
+                    Task { @MainActor [weak self] in
+                        self?.onTextNodesExtracted?(nodes)
+                        // Apply pending translations if available
+                        if let pending = self?.pendingTranslations, !pending.isEmpty {
+                            self?.applyTranslations(pending, in: webView)
+                            self?.pendingTranslations = nil
+                        }
+                    }
+                }
+            }
+        }
+
+        func applyTranslations(_ map: [String: String], in webView: WKWebView) {
+            let js = HTMLWebView.applyTranslationsJS(map: map)
+            guard !js.isEmpty else { return }
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func restoreOriginals(in webView: WKWebView) {
+            webView.evaluateJavaScript(HTMLWebView.restoreOriginalsJS, completionHandler: nil)
         }
 
         func webView(

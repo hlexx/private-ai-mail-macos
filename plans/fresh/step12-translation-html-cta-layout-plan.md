@@ -322,7 +322,7 @@ no WebView is mounted for text-only emails.
 
 **Tasks:**
 
-- [ ] Extend `HTMLWebView` (`MessageBodyView.swift`) with:
+- [x] Extend `HTMLWebView` (`MessageBodyView.swift`) with:
       - New init parameter `translatedNodes: [String: String]?`
         (default `nil`). When `nil` → render original. When non-nil
         → render with translations applied.
@@ -376,7 +376,7 @@ no WebView is mounted for text-only emails.
           }
         })();
         ```
-- [ ] Refactor `TranslationStore`:
+- [x] Refactor `TranslationStore`:
       - Replace `translatedTexts: [messageId: String]` with
         `translatedNodes: [messageId: [String: String]]`.
       - New method `applyTranslations(messageId:, nodes:[(id, text)], source:, target:) async`
@@ -386,7 +386,7 @@ no WebView is mounted for text-only emails.
       - Listen for `Settings.preferredLanguage` change via
         `@AppStorage` Combine publisher (or `NotificationCenter`),
         wipe `translatedNodes` on change.
-- [ ] In `ThreadView.MessageCardView` (line 276):
+- [x] In `ThreadView.MessageCardView` (line 276):
       ```swift
       if showTranslated, let bodyHtml = message.bodyHtml {
           MessageBodyView(
@@ -407,27 +407,27 @@ no WebView is mounted for text-only emails.
           MessageBodyView(bodyHtml: message.bodyHtml, ...)  // original
       }
       ```
-- [ ] Wire extraction → translation in `TranslationView` /
+- [x] Wire extraction → translation in `TranslationView` /
       `TranslationStore`: when user clicks **Translated** AND a
       message has `bodyHtml != nil`, the `MessageBodyView` returns
       its extracted nodes via the new callback; the store batch-
       translates; result cached; toggle re-renders with
       `translatedNodes` non-nil.
-- [ ] Edge case: re-extraction race. If the user clicks
+- [x] Edge case: re-extraction race. If the user clicks
       Translated → Original → Translated rapidly, ensure only the
       latest extraction's translation is applied. Use a token /
       generation counter per (messageId, languagePair).
-- [ ] Tests in `TranslationFeatureTests`:
+- [x] Tests in `TranslationFeatureTests`:
       - Fixture HTML with `<h1>Hello</h1><p>World</p>` + a
         `<style>` block → after extraction, expect exactly 2 text
         nodes (`"Hello"`, `"World"`), zero style content leakage.
       - Apply translation map `{n0: "Привет", n1: "Мир"}` →
         resulting HTML still contains `<h1>` and `<p>` with
         translated text.
-- [ ] Tests in `ThreadFeatureTests`: snapshot of `MessageCardView`
+- [x] Tests in `ThreadFeatureTests`: snapshot of `MessageCardView`
       with translated HTML email shows preserved layout (use a
       fixture HTML with a colored `<h1>` — the color must survive).
-- [ ] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`
       and `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 4: Wire Brief Rail CTAs

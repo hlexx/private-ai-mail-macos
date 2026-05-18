@@ -10,6 +10,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     var onStar: (() -> Void)?
     var showTranslated: Bool
     var translatedTexts: [String: String]
+    var translatedNodes: [String: [String: String]]
+    var onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)?
 
     public init(
         store: ThreadStore,
@@ -17,6 +19,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         onStar: (() -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
+        translatedNodes: [String: [String: String]] = [:],
+        onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)? = nil,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
@@ -26,6 +30,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.onStar = onStar
         self.showTranslated = showTranslated
         self.translatedTexts = translatedTexts
+        self.translatedNodes = translatedNodes
+        self.onTextNodesExtracted = onTextNodesExtracted
         self.composerContent = composer()
         self.briefContent = briefRail()
         self.translationHeader = translationHeader()
@@ -168,7 +174,12 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         ForEach(store.messages) { message in
             MessageCardView(
                 message: message,
-                translatedText: showTranslated ? translatedTexts[message.id] : nil
+                showTranslated: showTranslated,
+                translatedText: showTranslated ? translatedTexts[message.id] : nil,
+                translatedNodes: showTranslated ? translatedNodes[message.id] : nil,
+                onTextNodesExtracted: onTextNodesExtracted.map { callback in
+                    { nodes in callback(message.id, nodes) }
+                }
             )
             .padding(.bottom, 12)
         }
@@ -239,6 +250,8 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.onStar = onStar
         self.showTranslated = false
         self.translatedTexts = [:]
+        self.translatedNodes = [:]
+        self.onTextNodesExtracted = nil
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()
@@ -249,16 +262,28 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
 
 private struct MessageCardView: View {
     let message: MessageRow
+    let showTranslated: Bool
     let translatedText: String?
+    let translatedNodes: [String: String]?
+    var onTextNodesExtracted: (([TranslationTextNode]) -> Void)?
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEE HH:mm"
         return f
     }()
 
-    init(message: MessageRow, translatedText: String? = nil) {
+    init(
+        message: MessageRow,
+        showTranslated: Bool = false,
+        translatedText: String? = nil,
+        translatedNodes: [String: String]? = nil,
+        onTextNodesExtracted: (([TranslationTextNode]) -> Void)? = nil
+    ) {
         self.message = message
+        self.showTranslated = showTranslated
         self.translatedText = translatedText
+        self.translatedNodes = translatedNodes
+        self.onTextNodesExtracted = onTextNodesExtracted
     }
 
     var body: some View {
@@ -273,7 +298,25 @@ private struct MessageCardView: View {
                     .font(.rbMono(11))
                     .foregroundStyle(Color.rbFg3)
             }
-            if let translated = translatedText {
+            // When showing translated for HTML messages, render via HTMLWebView
+            // with translatedNodes injected (preserves layout).
+            // For plain-text-only messages, fall back to Text(translated).
+            if showTranslated, message.bodyHtml != nil, translatedNodes != nil || onTextNodesExtracted != nil {
+                MessageBodyView(
+                    bodyHtml: message.bodyHtml,
+                    bodyText: message.bodyText,
+                    snippet: message.snippet,
+                    attachments: message.inlineAttachments.map { att in
+                        HTMLWebView.AttachmentData(
+                            contentId: att.contentId,
+                            mime: att.mime,
+                            data: Data(base64Encoded: att.dataBase64, options: .ignoreUnknownCharacters) ?? Data()
+                        )
+                    },
+                    translatedNodes: translatedNodes,
+                    onTextNodesExtracted: onTextNodesExtracted
+                )
+            } else if let translated = translatedText, message.bodyHtml == nil {
                 Text(translated)
                     .font(.rbGeist(14))
                     .foregroundStyle(Color.rbFg2)

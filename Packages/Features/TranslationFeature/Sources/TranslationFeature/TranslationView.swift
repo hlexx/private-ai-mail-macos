@@ -8,6 +8,7 @@ public struct TranslationToggleView: View {
     let preferredLanguage: String
     let autoTranslate: Bool
     let messages: [(id: String, text: String)]
+    let htmlMessageIds: Set<String>
 
     @State private var translationConfig: TranslationSession.Configuration?
 
@@ -16,13 +17,15 @@ public struct TranslationToggleView: View {
         detectedLanguage: String?,
         preferredLanguage: String,
         autoTranslate: Bool = false,
-        messages: [(id: String, text: String)]
+        messages: [(id: String, text: String)],
+        htmlMessageIds: Set<String> = []
     ) {
         self.store = store
         self.detectedLanguage = detectedLanguage
         self.preferredLanguage = preferredLanguage
         self.autoTranslate = autoTranslate
         self.messages = messages
+        self.htmlMessageIds = htmlMessageIds
     }
 
     private var effectivePreferredLanguage: String {
@@ -99,7 +102,13 @@ public struct TranslationToggleView: View {
     private func triggerTranslation() {
         store.showTranslated = true
 
-        let allCached = messages.allSatisfy { store.translatedText(for: $0.id) != nil }
+        // Check if all messages are cached (either as text or nodes)
+        let allCached = messages.allSatisfy { msg in
+            if htmlMessageIds.contains(msg.id) {
+                return store.nodeTranslations(for: msg.id) != nil
+            }
+            return store.translatedText(for: msg.id) != nil
+        }
         if allCached { return }
 
         guard let detected = detectedLanguage else { return }
@@ -120,20 +129,28 @@ public struct TranslationToggleView: View {
         store.setTranslating(true)
         defer { store.setTranslating(false) }
 
-        // Collect pending message ids and texts
-        var pending: [(id: String, text: String)] = []
-        for msg in messages where store.translatedText(for: msg.id) == nil {
-            pending.append((msg.id, msg.text))
-        }
-        guard !pending.isEmpty else { return }
-
         do {
-            // Use the batch API via sequence to translate all at once.
-            // The .translationTask closure runs on the main actor; session
-            // methods are nonisolated but accept sending parameters.
-            for item in pending {
-                let translated = try await session.translate(item.text)
-                store.setTranslation(for: item.id, text: translated.targetText)
+            // Translate plain-text-only messages (no HTML body)
+            for msg in messages where !htmlMessageIds.contains(msg.id) {
+                guard store.translatedText(for: msg.id) == nil else { continue }
+                let translated = try await session.translate(msg.text)
+                store.setTranslation(for: msg.id, text: translated.targetText)
+            }
+
+            // For HTML messages, translate extracted nodes from the store
+            for msgId in htmlMessageIds {
+                guard store.nodeTranslations(for: msgId) == nil else { continue }
+                guard let nodes = store.extractedNodes[msgId], !nodes.isEmpty else { continue }
+                let generation = store.currentGeneration(for: msgId)
+
+                var result: [String: String] = [:]
+                for node in nodes {
+                    guard store.currentGeneration(for: msgId) == generation else { break }
+                    let translated = try await session.translate(node.text)
+                    result[node.id] = translated.targetText
+                }
+                guard store.currentGeneration(for: msgId) == generation else { continue }
+                store.setNodeTranslations(for: msgId, nodes: result)
             }
         } catch {
             store.setError(error)
