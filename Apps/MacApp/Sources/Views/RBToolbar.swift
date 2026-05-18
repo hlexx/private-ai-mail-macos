@@ -13,6 +13,8 @@ struct RBToolbar: View {
     let onOpenActionSheet: () -> Void
     var onToggleSidebar: (() -> Void)?
     var onToggleBrief: (() -> Void)?
+    var sidebarWidth: CGFloat = RBLayout.sidebarWidth
+    var sidebarCollapsed: Bool = false
 
     @State private var searchText: String = ""
 
@@ -31,7 +33,7 @@ struct RBToolbar: View {
     var body: some View {
         HStack(spacing: 0) {
             leadingSection
-                .frame(width: RBLayout.sidebarWidth, alignment: .leading)
+                .frame(width: sidebarCollapsed ? 68 : sidebarWidth, alignment: .leading)
 
             trailingSection
         }

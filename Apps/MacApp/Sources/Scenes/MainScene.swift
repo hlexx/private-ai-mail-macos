@@ -46,7 +46,9 @@ struct MainScene: View {
                 },
                 onOpenActionSheet: { composition.showActionSheet = true },
                 onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
-                onToggleBrief: { withAnimation { briefCollapsed.toggle() } }
+                onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
+                sidebarWidth: CGFloat(sidebarWidth),
+                sidebarCollapsed: sidebarCollapsed
             )
 
             MainSplitController(
