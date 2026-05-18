@@ -70,6 +70,37 @@ struct ThreadFeatureTests {
         #expect(result == nil || result!.isEmpty)
     }
 
+    @MainActor @Test func htmlToPlainTextStripsStyleBlocks() {
+        let html = """
+        <html><head><style type="text/css">
+        body, table, td { font-family: Arial, Helvetica, sans-serif !important; }
+        .mso-line-height-rule { mso-line-height-rule: exactly; }
+        </style></head><body><h1>Summer Sale</h1><p>20% off all items</p></body></html>
+        """
+        let plain = MessageBodyView.htmlToPlainText(html)
+        #expect(plain != nil)
+        #expect(plain!.contains("Summer Sale"))
+        #expect(plain!.contains("20% off"))
+        #expect(!plain!.contains("font-family"))
+        #expect(!plain!.contains("mso-line-height-rule"))
+        #expect(!plain!.contains("Arial"))
+    }
+
+    @MainActor @Test func htmlToPlainTextStripsScriptBlocks() {
+        let html = """
+        <html><body>
+        <script>var tracking = { id: "abc123" };</script>
+        <p>Hello World</p>
+        <script type="text/javascript">console.log("track");</script>
+        </body></html>
+        """
+        let plain = MessageBodyView.htmlToPlainText(html)
+        #expect(plain != nil)
+        #expect(plain!.contains("Hello World"))
+        #expect(!plain!.contains("tracking"))
+        #expect(!plain!.contains("console.log"))
+    }
+
     // MARK: - AttachmentInfo
 
     @Test func attachmentFormattedSizeKB() {

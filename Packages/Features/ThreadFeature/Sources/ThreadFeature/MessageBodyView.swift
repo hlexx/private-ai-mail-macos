@@ -1,5 +1,6 @@
 import AppKit
 import DesignSystem
+import Persistence
 import SwiftUI
 
 /// Renders a single email message body: HTML if available, otherwise plain text, else snippet.
@@ -80,7 +81,8 @@ extension MessageBodyView {
     /// Convert HTML to plain text using NSAttributedString. Used by AI input pipeline.
     /// Must run on main thread (NSAttributedString with .html requires it).
     @MainActor static func htmlToPlainText(_ html: String) -> String? {
-        guard let data = html.data(using: .utf8) else { return nil }
+        let stripped = HTMLSanitizer.stripStyleAndScript(html)
+        guard let data = stripped.data(using: .utf8) else { return nil }
         let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
             .documentType: NSAttributedString.DocumentType.html,
             .characterEncoding: String.Encoding.utf8.rawValue,

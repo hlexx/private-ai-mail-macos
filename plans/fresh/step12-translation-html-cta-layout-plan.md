@@ -227,7 +227,7 @@ Re-run backfill to catch threads that have SOME labels but not INBOX.
 
 Stop CSS bleeding into AI input + Translation input.
 
-- [ ] In `MessageBodyView.htmlToPlainText` (line 82): before passing
+- [x] In `MessageBodyView.htmlToPlainText` (line 82): before passing
       to `NSAttributedString(html:)`, strip `<style>...</style>` and
       `<script>...</script>` blocks (case-insensitive, multi-line).
       Simplest: a regex pre-pass.
@@ -241,15 +241,15 @@ Stop CSS bleeding into AI input + Translation input.
                                 options: [.regularExpression, .caseInsensitive])
       ```
       Then proceed with NSAttributedString on `stripped`.
-- [ ] Apply same strip in `MessageRecord.htmlToPlainText`
+- [x] Apply same strip in `MessageRecord.htmlToPlainText`
       (Packages/Core/Persistence/.../MessageRecord.swift:69) — that's
       the path AI brief + ReplyStore use. Keep the two implementations
       in sync; ideally factor into one helper exported from
       `Persistence` and reused by both.
-- [ ] Tests: a fixture HTML email containing a `<style>` block with
+- [x] Tests: a fixture HTML email containing a `<style>` block with
       CSS rules → assert plainText does NOT contain `font-family`
       and IS just the body text.
-- [ ] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`
       and `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 3: Translation preserves HTML — DOM walk in WKWebView

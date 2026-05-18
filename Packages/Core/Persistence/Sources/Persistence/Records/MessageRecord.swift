@@ -67,7 +67,7 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
     /// MessageBodyView.htmlToPlainText uses NSAttributedString for higher fidelity UI display
     /// but requires MainActor — this regex variant is preferred for background/batch processing.
     public static func htmlToPlainText(_ html: String) -> String? {
-        var text = html
+        var text = HTMLSanitizer.stripStyleAndScript(html)
         text = text.replacingOccurrences(of: "<br[^>]*>", with: "\n", options: .regularExpression)
         text = text.replacingOccurrences(of: "</p>", with: "\n\n", options: .caseInsensitive)
         text = text.replacingOccurrences(of: "</div>", with: "\n", options: .caseInsensitive)
