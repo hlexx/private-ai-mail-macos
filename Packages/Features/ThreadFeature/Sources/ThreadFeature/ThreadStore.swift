@@ -153,7 +153,10 @@ public final class ThreadStore {
                 for try await (thread, records, attRecords, starred) in observation.values(in: db.dbQueue) {
                     guard !Task.isCancelled, let self else { return }
                     let inlineByMessage = Dictionary(
-                        grouping: attRecords.filter { $0.contentId != nil && $0.dataBase64 != nil },
+                        grouping: attRecords.filter {
+                            $0.contentId != nil && $0.dataBase64 != nil
+                                && ($0.mime ?? "").hasPrefix("image/")
+                        },
                         by: \.messageId
                     )
                     self.messages = records.map { rec in
