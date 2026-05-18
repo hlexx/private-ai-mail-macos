@@ -63,6 +63,10 @@ public final class TranslationStore {
         translatedNodes[messageId]
     }
 
+    public func clearNodeTranslations(for messageId: String) {
+        translatedNodes.removeValue(forKey: messageId)
+    }
+
     public func nextGeneration(for messageId: String) -> Int {
         let gen = (translationGeneration[messageId] ?? 0) + 1
         translationGeneration[messageId] = gen

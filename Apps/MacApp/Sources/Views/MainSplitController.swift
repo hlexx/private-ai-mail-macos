@@ -95,23 +95,19 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         // Set initial widths from stored values
         DispatchQueue.main.async {
             let splitView = controller.splitView
-            if !sidebarCollapsed {
-                splitView.setPosition(CGFloat(sidebarWidth.wrappedValue), ofDividerAt: 0)
-            }
-            if !sidebarCollapsed {
-                splitView.setPosition(
-                    CGFloat(sidebarWidth.wrappedValue + threadlistWidth.wrappedValue),
-                    ofDividerAt: 1
-                )
-            } else {
-                splitView.setPosition(CGFloat(threadlistWidth.wrappedValue), ofDividerAt: 0)
+            let sWidth = sidebarCollapsed ? 0.0 : sidebarWidth.wrappedValue
+            splitView.setPosition(CGFloat(sWidth), ofDividerAt: 0)
+            splitView.setPosition(CGFloat(sWidth + threadlistWidth.wrappedValue), ofDividerAt: 1)
+            if !briefCollapsed {
+                let totalWidth = Double(splitView.frame.width)
+                splitView.setPosition(CGFloat(totalWidth - briefWidth.wrappedValue), ofDividerAt: 2)
             }
         }
 
         context.coordinator.onWidthsChanged = { sWidth, tWidth, bWidth in
-            sidebarWidth.wrappedValue = sWidth
-            threadlistWidth.wrappedValue = tWidth
-            briefWidth.wrappedValue = bWidth
+            if sWidth > 0 { sidebarWidth.wrappedValue = sWidth }
+            if tWidth > 0 { threadlistWidth.wrappedValue = tWidth }
+            if bWidth > 0 { briefWidth.wrappedValue = bWidth }
         }
 
         return controller
@@ -151,9 +147,9 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             let tWidth = splitView.subviews[1].frame.width
             let bWidth = splitView.subviews[3].frame.width
 
-            if sWidth > 0, tWidth > 0, bWidth > 0 {
-                onWidthsChanged?(Double(sWidth), Double(tWidth), Double(bWidth))
-            }
+            // Persist each pane width independently; collapsed panes report 0
+            // and are filtered by the callback consumer.
+            onWidthsChanged?(Double(sWidth), Double(tWidth), Double(bWidth))
         }
     }
 }

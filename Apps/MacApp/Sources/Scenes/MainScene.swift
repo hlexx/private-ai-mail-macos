@@ -93,6 +93,9 @@ struct MainScene: View {
                         },
                         onTextNodesExtracted: { messageId, nodes in
                             _ = translationStore.nextGeneration(for: messageId)
+                            // Clear stale node translations so re-extraction
+                            // (e.g. after toggling remote images) triggers fresh translation
+                            translationStore.clearNodeTranslations(for: messageId)
                             translationStore.setExtractedNodes(
                                 for: messageId,
                                 nodes: nodes.map { ($0.id, $0.text) }
@@ -157,6 +160,9 @@ struct MainScene: View {
             if case .account(let accountId) = newSelection {
                 composition.activeAccountID = accountId
             }
+        }
+        .onChange(of: preferredLanguage) { _, _ in
+            translationStore.clearCache()
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             translationStore.clearCache()
