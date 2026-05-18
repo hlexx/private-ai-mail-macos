@@ -104,12 +104,24 @@ extension InboxStore {
                       AND tb.request IS NOT NULL AND TRIM(tb.request) <> ''
                 )
                 """)
+            cond.sql.append("""
+                EXISTS (
+                    SELECT 1 FROM thread_label tl_inbox
+                    WHERE tl_inbox.account_id = t.account_id AND tl_inbox.thread_id = t.id AND tl_inbox.label_id = 'INBOX'
+                )
+                """)
         case .hasDeadline:
             cond.sql.append("""
                 EXISTS (
                     SELECT 1 FROM thread_brief tb
                     WHERE tb.account_id = t.account_id AND tb.thread_id = t.id
                       AND tb.deadline IS NOT NULL AND TRIM(tb.deadline) <> ''
+                )
+                """)
+            cond.sql.append("""
+                EXISTS (
+                    SELECT 1 FROM thread_label tl_inbox
+                    WHERE tl_inbox.account_id = t.account_id AND tl_inbox.thread_id = t.id AND tl_inbox.label_id = 'INBOX'
                 )
                 """)
         case .logged:
