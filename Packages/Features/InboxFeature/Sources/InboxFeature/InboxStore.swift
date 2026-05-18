@@ -248,7 +248,6 @@ public final class InboxStore {
                 ) ?? 0
                 counts[.hasDeadline] = hasDeadlineCount
 
-
                 return counts
             }
             do {

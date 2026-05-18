@@ -157,6 +157,8 @@ final class CompositionRoot {
                     self.debouncedEnqueue(accountId: accountId, threadId: threadId)
                 }
             }
+            // Clean up so re-subscribing works if the account is re-added
+            self?.syncEventTasks.removeValue(forKey: accountId)
         }
     }
 

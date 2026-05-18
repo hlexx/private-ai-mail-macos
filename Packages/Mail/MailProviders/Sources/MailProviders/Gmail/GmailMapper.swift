@@ -103,8 +103,7 @@ public enum GmailMapper {
 
     private static func collectAttachments(part: GmailDTO.MessagePart, messageId: String, result: inout [Attachment]) {
         let partContentId = part.headers?.first {
-            $0.name.caseInsensitiveCompare("Content-Id") == .orderedSame
-                || $0.name.caseInsensitiveCompare("Content-ID") == .orderedSame
+            $0.name.caseInsensitiveCompare("Content-ID") == .orderedSame
         }?.value
         let normalizedCid = partContentId?
             .trimmingCharacters(in: .whitespaces)

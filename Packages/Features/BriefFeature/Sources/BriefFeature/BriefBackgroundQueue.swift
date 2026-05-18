@@ -83,8 +83,14 @@ public final class BriefBackgroundQueue {
         Task {
             let counts = try? await Task.detached { [db] in
                 try db.dbQueue.read { database -> (total: Int, generated: Int) in
-                    let total = try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM thread") ?? 0
-                    let generated = try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM thread_brief") ?? 0
+                    let total = try Int.fetchOne(database, sql: """
+                        SELECT COUNT(*) FROM thread t
+                        JOIN thread_label tl ON tl.account_id = t.account_id AND tl.thread_id = t.id AND tl.label_id = 'INBOX'
+                        """) ?? 0
+                    let generated = try Int.fetchOne(database, sql: """
+                        SELECT COUNT(*) FROM thread_brief tb
+                        JOIN thread_label tl ON tl.account_id = tb.account_id AND tl.thread_id = tb.thread_id AND tl.label_id = 'INBOX'
+                        """) ?? 0
                     return (total, generated)
                 }
             }.value
