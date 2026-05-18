@@ -215,38 +215,39 @@ public final class InboxStore {
                 ) ?? 0
                 counts[.attachments] = attCount
 
-                // Brief-driven counts (needsReply, hasDeadline)
+                // Brief-driven counts scoped to INBOX threads
                 let briefAccountFilter: String
                 let briefArgs: [DatabaseValueConvertible]
                 if case .account(let accountId) = currentSelection {
-                    briefAccountFilter = " WHERE tb.account_id = ?"
+                    briefAccountFilter = " AND tb.account_id = ?"
                     briefArgs = [accountId]
                 } else {
                     briefAccountFilter = ""
                     briefArgs = []
                 }
 
+                let inboxBriefBase = """
+                    SELECT COUNT(*) FROM thread_brief tb
+                    JOIN thread_label tl ON tl.account_id = tb.account_id AND tl.thread_id = tb.thread_id AND tl.label_id = 'INBOX'
+                    WHERE 1=1
+                    """
+
                 let needsReplyCount = try Int.fetchOne(
                     db,
-                    sql: """
-                        SELECT COUNT(*) FROM thread_brief tb
-                        """ + briefAccountFilter
-                        + (briefArgs.isEmpty ? " WHERE" : " AND")
-                        + " tb.request IS NOT NULL AND TRIM(tb.request) <> ''",
+                    sql: inboxBriefBase + briefAccountFilter
+                        + " AND tb.request IS NOT NULL AND TRIM(tb.request) <> ''",
                     arguments: StatementArguments(briefArgs)
                 ) ?? 0
                 counts[.needsReply] = needsReplyCount
 
                 let hasDeadlineCount = try Int.fetchOne(
                     db,
-                    sql: """
-                        SELECT COUNT(*) FROM thread_brief tb
-                        """ + briefAccountFilter
-                        + (briefArgs.isEmpty ? " WHERE" : " AND")
-                        + " tb.deadline IS NOT NULL AND TRIM(tb.deadline) <> ''",
+                    sql: inboxBriefBase + briefAccountFilter
+                        + " AND tb.deadline IS NOT NULL AND TRIM(tb.deadline) <> ''",
                     arguments: StatementArguments(briefArgs)
                 ) ?? 0
                 counts[.hasDeadline] = hasDeadlineCount
+
 
                 return counts
             }

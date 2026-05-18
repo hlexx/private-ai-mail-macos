@@ -524,12 +524,8 @@ struct CIDImageResolutionTests {
         let pngBytes = Data([0x89, 0x50, 0x4E, 0x47]) // tiny fake PNG header
         let html = "<html><body><img src=\"cid:\(cid)\"></body></html>"
         let attachments = [HTMLWebView.AttachmentData(contentId: cid, mime: "image/png", data: pngBytes)]
-        let webView = HTMLWebView(html: html, attachments: attachments, allowRemoteImages: false, contentHeight: .constant(100))
-        // Access the resolved HTML via the internal method indirectly by checking the view creates
-        // We test the logic by verifying the replacement pattern
-        let expected = "data:image/png;base64,\(pngBytes.base64EncodedString())"
-        let resolved = html.replacingOccurrences(of: "cid:\(cid)", with: expected)
-        #expect(resolved.contains("data:image/png;base64,"))
+        let resolved = HTMLWebView.resolveCIDReferences(in: html, attachments: attachments)
+        #expect(resolved.contains("data:image/png;base64,\(pngBytes.base64EncodedString())"))
         #expect(!resolved.contains("cid:logo@example.com"))
     }
 
@@ -537,12 +533,20 @@ struct CIDImageResolutionTests {
         let cid = "logo@1.2.3"
         let pngBytes = Data([0x89, 0x50, 0x4E, 0x47])
         let html = "<img src=\"cid:<\(cid)>\">"
-        let dataURL = "data:image/png;base64,\(pngBytes.base64EncodedString())"
-        var resolved = html
-        resolved = resolved.replacingOccurrences(of: "cid:\(cid)", with: dataURL)
-        resolved = resolved.replacingOccurrences(of: "cid:<\(cid)>", with: dataURL)
+        let attachments = [HTMLWebView.AttachmentData(contentId: cid, mime: "image/png", data: pngBytes)]
+        let resolved = HTMLWebView.resolveCIDReferences(in: html, attachments: attachments)
         #expect(resolved.contains("data:image/png;base64,"))
         #expect(!resolved.contains("cid:"))
+    }
+
+    @Test func resolvedHTMLIsCaseInsensitive() {
+        let cid = "Logo@Example.COM"
+        let pngBytes = Data([0x89, 0x50])
+        let html = "<img src=\"CID:\(cid)\">"
+        let attachments = [HTMLWebView.AttachmentData(contentId: cid, mime: "image/png", data: pngBytes)]
+        let resolved = HTMLWebView.resolveCIDReferences(in: html, attachments: attachments)
+        #expect(resolved.contains("data:image/png;base64,"))
+        #expect(!resolved.contains("CID:"))
     }
 
     @Test func inlineAttachmentInfoCreation() {

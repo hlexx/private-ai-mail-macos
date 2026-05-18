@@ -113,11 +113,9 @@ extension MainScene {
     func toastBar(_ toast: ToastState) -> some View {
         HStack(spacing: RBSpace.s2) {
             RBToast(toast.message, systemImage: "checkmark.circle.fill")
-            if toast.undoAction != nil {
+            if let action = toast.undoAction {
                 Button("Undo") {
-                    if let action = toast.undoAction {
-                        handleUndo(action)
-                    }
+                    handleUndo(action)
                 }
                 .buttonStyle(.rbGhost)
             }

@@ -46,11 +46,16 @@ struct HTMLWebView: NSViewRepresentable {
 
     /// Replace cid: references with inline data: URLs from attachments.
     private func resolvedHTML() -> String {
+        Self.resolveCIDReferences(in: html, attachments: attachments)
+    }
+
+    /// Testable CID resolution: replaces `cid:` references with inline `data:` URLs.
+    static func resolveCIDReferences(in html: String, attachments: [AttachmentData]) -> String {
         var result = html
         for att in attachments {
             let dataURL = "data:\(att.mime);base64,\(att.data.base64EncodedString())"
-            result = result.replacingOccurrences(of: "cid:\(att.contentId)", with: dataURL)
-            result = result.replacingOccurrences(of: "cid:<\(att.contentId)>", with: dataURL)
+            result = result.replacingOccurrences(of: "cid:\(att.contentId)", with: dataURL, options: .caseInsensitive)
+            result = result.replacingOccurrences(of: "cid:<\(att.contentId)>", with: dataURL, options: .caseInsensitive)
         }
         return result
     }

@@ -175,15 +175,6 @@ enum M005_ThreadLabelAccountId {
     }
 }
 
-enum M007_AttachmentCID {
-    static func migrate(_ db: Database) throws {
-        try db.alter(table: "attachment") { t in
-            t.add(column: "content_id", .text)
-            t.add(column: "data_base64", .text)
-        }
-    }
-}
-
 enum M006_ThreadBrief {
     static func migrate(_ db: Database) throws {
         try db.create(table: "thread_brief") { t in
@@ -217,5 +208,14 @@ enum M006_ThreadBrief {
             on: "thread_brief",
             columns: ["account_id", "deadline"]
         )
+    }
+}
+
+enum M007_AttachmentCID {
+    static func migrate(_ db: Database) throws {
+        try db.alter(table: "attachment") { t in
+            t.add(column: "content_id", .text)
+            t.add(column: "data_base64", .text)
+        }
     }
 }

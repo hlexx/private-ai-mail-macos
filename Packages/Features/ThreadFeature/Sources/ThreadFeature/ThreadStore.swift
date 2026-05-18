@@ -165,7 +165,9 @@ public final class ThreadStore {
                     }
                     self.subject = thread?.subject ?? "(no subject)"
                     self.messageCount = thread?.messageCount ?? records.count
-                    self.attachments = attRecords.map(AttachmentInfo.init)
+                    self.attachments = attRecords
+                        .filter { $0.contentId == nil || $0.dataBase64 == nil }
+                        .map(AttachmentInfo.init)
                     self.isStarred = starred
                 }
             } catch {

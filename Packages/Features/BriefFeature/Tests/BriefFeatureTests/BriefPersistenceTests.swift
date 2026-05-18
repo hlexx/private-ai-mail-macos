@@ -153,34 +153,6 @@ struct BriefPersistenceTests {
     }
 
     @MainActor
-    @Test func briefForReturnsDBData() async throws {
-        let fake = FakeAIService()
-        fake.stubbedBrief = sampleBrief
-        let db = try makeTestDB()
-        let store = BriefStore(aiService: fake, db: db)
-
-        // Generate and persist
-        store.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(500))
-
-        // Synchronous accessor
-        let result = store.briefFor(threadID: "thread-1", accountId: "acc1")
-        #expect(result != nil)
-        #expect(result?.summary == "Discussion about seating")
-        #expect(result?.request == "Confirm seat count")
-    }
-
-    @MainActor
-    @Test func briefForReturnsNilWhenNoBrief() throws {
-        let fake = FakeAIService()
-        let db = try makeTestDB()
-        let store = BriefStore(aiService: fake, db: db)
-
-        let result = store.briefFor(threadID: "thread-1", accountId: "acc1")
-        #expect(result == nil)
-    }
-
-    @MainActor
     @Test func languageIsDetectedAndStored() async throws {
         let fake = FakeAIService()
         fake.stubbedBrief = sampleBrief

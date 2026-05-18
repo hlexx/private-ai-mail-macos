@@ -143,15 +143,6 @@ public final class BriefStore {
         loadBrief(forThreadID: id, accountId: account)
     }
 
-    /// Synchronous DB read accessor for use by InboxStore chip/folder filters.
-    public func briefFor(threadID: String, accountId: String) -> ThreadBriefViewData? {
-        guard let db else { return nil }
-        guard let row = try? Self.fetchBriefRecord(accountId: accountId, threadId: threadID, db: db) else {
-            return nil
-        }
-        return ThreadBriefViewData(from: row)
-    }
-
     // MARK: - Private
 
     private nonisolated static func fetchBriefRecord(accountId: String, threadId: String, db: AppDatabase) throws -> ThreadBriefRecord? {

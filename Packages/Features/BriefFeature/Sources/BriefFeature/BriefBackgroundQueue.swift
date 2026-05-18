@@ -52,7 +52,7 @@ public final class BriefBackgroundQueue {
         }
     }
 
-    /// Enqueue all inbox threads that don't have a brief yet, capped at `limit` per account.
+    /// Enqueue all inbox threads that don't have a brief yet, capped at `limit` globally.
     public func backfillMissing(limit: Int = 200) {
         Task {
             let keys = try? await Task.detached { [db] in
@@ -60,6 +60,7 @@ public final class BriefBackgroundQueue {
                     let rows = try Row.fetchAll(database, sql: """
                         SELECT t.account_id, t.id
                         FROM thread t
+                        JOIN thread_label tl ON tl.account_id = t.account_id AND tl.thread_id = t.id AND tl.label_id = 'INBOX'
                         LEFT JOIN thread_brief tb ON tb.account_id = t.account_id AND tb.thread_id = t.id
                         WHERE tb.thread_id IS NULL
                         ORDER BY t.last_message_at DESC
@@ -169,7 +170,7 @@ public final class BriefBackgroundQueue {
                 }
             }.value
         } catch is CancellationError {
-            // re-enqueue on cancellation
+            // Dropped — will be re-queued by backfillMissing on next launch
         } catch let err as AIError {
             switch err {
             case .cancelled:

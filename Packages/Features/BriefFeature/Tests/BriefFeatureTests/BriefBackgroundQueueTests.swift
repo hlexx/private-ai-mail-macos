@@ -48,6 +48,10 @@ private func makeQueueTestDB(threadCount: Int = 5) throws -> AppDatabase {
                 INSERT INTO message (id, thread_id, account_id, from_addr, sent_at, body_text, flags)
                 VALUES ('msg-\(i)', 'thread-\(i)', 'acc1', 'sender@example.com', \(1000 + i * 100), 'Body of thread \(i)', 0)
             """)
+            try database.execute(sql: """
+                INSERT INTO thread_label (account_id, thread_id, label_id)
+                VALUES ('acc1', 'thread-\(i)', 'INBOX')
+            """)
         }
     }
     return db
@@ -183,7 +187,7 @@ struct BriefBackgroundQueueTests {
 
         let queue = BriefBackgroundQueue(aiService: fake, db: db)
         queue.refreshCounts()
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .seconds(1))
 
         #expect(queue.totalCount == 3)
         #expect(queue.generatedCount == 2)
