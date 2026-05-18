@@ -169,6 +169,7 @@ public struct TranslationToggleView: View {
             }
         } catch {
             store.setError(error)
+            store.showTranslated = false
         }
     }
 }

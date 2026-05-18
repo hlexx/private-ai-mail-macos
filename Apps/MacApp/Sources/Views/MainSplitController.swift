@@ -156,18 +156,16 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
                 return // Skip persisting during initial setup
             }
 
-            // Skip persisting widths when any pane is collapsed — the
-            // resize notification fires during collapse/expand animation
-            // with redistributed intermediate values that would overwrite
-            // the user's preferred widths.
-            if splitView.isSubviewCollapsed(splitView.subviews[0])
-                || splitView.isSubviewCollapsed(splitView.subviews[3]) {
-                return
-            }
+            // During collapse/expand animation, the collapsed pane's width
+            // is redistributed and would overwrite the user's stored value.
+            // Only skip persisting the collapsed pane; non-collapsed panes
+            // are still user-draggable and should persist.
+            let sidebarIsCollapsed = splitView.isSubviewCollapsed(splitView.subviews[0])
+            let briefIsCollapsed = splitView.isSubviewCollapsed(splitView.subviews[3])
 
-            let sWidth = Double(splitView.subviews[0].frame.width)
+            let sWidth = sidebarIsCollapsed ? 0.0 : Double(splitView.subviews[0].frame.width)
             let tWidth = Double(splitView.subviews[1].frame.width)
-            let bWidth = Double(splitView.subviews[3].frame.width)
+            let bWidth = briefIsCollapsed ? 0.0 : Double(splitView.subviews[3].frame.width)
 
             // Debounce writes to UserDefaults — splitViewDidResizeSubviews
             // fires on every frame during drag.
