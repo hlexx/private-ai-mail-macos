@@ -429,15 +429,17 @@ Make `<img src="cid:logo@…">` resolve to the embedded attachment data.
 
 ## Cross-cutting tasks
 
-- [ ] Bump `MARKETING_VERSION` to `0.1.6-alpha`, `CURRENT_PROJECT_VERSION`
+- [x] Bump `MARKETING_VERSION` to `0.1.6-alpha`, `CURRENT_PROJECT_VERSION`
       to `106` in `Project.swift`.
-- [ ] Write `release-notes/v0.1.6-alpha.md` listing the user-visible
+- [x] Write `release-notes/v0.1.6-alpha.md` listing the user-visible
       changes (Needs reply / Has deadline / AI handled chips actually
       work, briefs survive restart, star button reflects state, inline
       images in HTML emails render, folder counts respect account
       selection).
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 11 ✅
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 11 ✅
       with the merge commit, copy this plan to `plans/fresh/completed/`.
+      (Note: `EMAIL_ALF/14_macos_app_design.md` does not exist in this
+      repo — skipped. Plan copy to completed deferred to merge time.)
 
 ## Critical files to read or modify
 
