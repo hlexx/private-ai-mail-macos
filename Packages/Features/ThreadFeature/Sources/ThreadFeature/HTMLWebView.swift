@@ -97,7 +97,7 @@ struct HTMLWebView: NSViewRepresentable {
         let basePattern = #"<base\s[^>]*>"#
         result = result.replacingOccurrences(of: basePattern, with: "", options: [.regularExpression, .caseInsensitive])
         // Remove </head> and <head> tags that could break out of the body
-        let headPattern = #"</?head\s*>"#
+        let headPattern = #"</?head\s*[^>]*>"#
         result = result.replacingOccurrences(of: headPattern, with: "", options: [.regularExpression, .caseInsensitive])
         // Remove <html>, </html>, <body>, </body> to prevent template structure escape
         let htmlBodyPattern = #"</?(?:html|body)\s*[^>]*>"#
@@ -150,6 +150,7 @@ struct HTMLWebView: NSViewRepresentable {
     static let extractionJS = """
     (function () {
         var out = [];
+        var nodes = [];
         var w = document.createTreeWalker(
             document.body, NodeFilter.SHOW_TEXT,
             { acceptNode: function(n) {
@@ -160,17 +161,18 @@ struct HTMLWebView: NSViewRepresentable {
                 return NodeFilter.FILTER_ACCEPT;
             }}
         );
-        var i = 0;
         while (w.nextNode()) {
-            var node = w.currentNode;
+            nodes.push(w.currentNode);
+            if (nodes.length >= 2000) break;
+        }
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i];
             var span = document.createElement('span');
             span.dataset.txId = 'n' + i;
             span.dataset.txOrig = node.nodeValue;
             span.textContent = node.nodeValue;
             node.parentNode.replaceChild(span, node);
             out.push({id: 'n' + i, text: span.textContent});
-            i++;
-            if (i >= 2000) break;
         }
         return JSON.stringify(out);
     })();
@@ -227,7 +229,7 @@ struct HTMLWebView: NSViewRepresentable {
 
             // Extract text nodes if callback is set
             if onTextNodesExtracted != nil {
-                webView.evaluateJavaScript(HTMLWebView.extractionJS) { [weak self] result, _ in
+                webView.evaluateJavaScript(HTMLWebView.extractionJS) { [weak self, weak webView] result, _ in
                     guard let self, let jsonString = result as? String else { return }
                     self.hasExtracted = true
                     guard let data = jsonString.data(using: .utf8),
@@ -236,10 +238,10 @@ struct HTMLWebView: NSViewRepresentable {
                         guard let id = dict["id"], let text = dict["text"] else { return nil }
                         return TranslationTextNode(id: id, text: text)
                     }
-                    Task { @MainActor [weak self] in
+                    Task { @MainActor [weak self, weak webView] in
                         self?.onTextNodesExtracted?(nodes)
                         // Apply pending translations if available
-                        if let pending = self?.pendingTranslations, !pending.isEmpty {
+                        if let webView, let pending = self?.pendingTranslations, !pending.isEmpty {
                             self?.applyTranslations(pending, in: webView)
                             self?.pendingTranslations = nil
                         }
