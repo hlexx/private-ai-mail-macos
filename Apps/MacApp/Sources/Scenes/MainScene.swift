@@ -20,6 +20,11 @@ struct MainScene: View {
     @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage("pam.defaultTone") private var defaultToneRaw: String = "warm"
+    @AppStorage("pam.layout.sidebar") private var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
+    @AppStorage("pam.layout.threadlist") private var threadlistWidth: Double = Double(RBLayout.threadListWidth)
+    @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
+    @AppStorage("pam.layout.sidebarCollapsed") private var sidebarCollapsed: Bool = false
+    @AppStorage("pam.layout.briefCollapsed") private var briefCollapsed: Bool = false
     @Environment(\.openSettings) private var openSettings
 
     var inboxStore: InboxStore { composition.inboxStore }
@@ -39,116 +44,97 @@ struct MainScene: View {
                     prepareNewCompose()
                     composition.showCompose = true
                 },
-                onOpenActionSheet: { composition.showActionSheet = true }
+                onOpenActionSheet: { composition.showActionSheet = true },
+                onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
+                onToggleBrief: { withAnimation { briefCollapsed.toggle() } }
             )
 
-            // HSplitView gives draggable column dividers between the three
-            // panes (sidebar / threadlist / reading). Initial widths follow
-            // the design tokens but the user can resize at runtime; min
-            // values keep panes usable at small window sizes.
-            HSplitView {
-                RBSidebar(
-                    folders: sidebarFolders,
-                    accounts: accounts.map { AccountRow(account: $0) },
-                    selection: $sidebarSelection
-                )
-                .frame(
-                    minWidth: 180,
-                    idealWidth: RBLayout.sidebarWidth,
-                    maxWidth: 360,
-                    maxHeight: .infinity,
-                    alignment: .top
-                )
-
-                InboxView(
-                    store: inboxStore,
-                    onArchive: { threadId, accountId in
-                        Task {
-                            do {
-                                try await composition.mailMutator.archive(threadId, accountId: accountId)
-                                showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
-                            } catch {
-                                showToast("Archive failed", undo: nil)
-                            }
-                        }
-                    },
-                    onTrash: { threadId, accountId in
-                        trashThread(threadId, accountId: accountId)
-                    }
-                )
-                    .frame(
-                        minWidth: 280,
-                        idealWidth: RBLayout.threadListWidth,
-                        maxWidth: 480,
-                        maxHeight: .infinity,
-                        alignment: .top
+            MainSplitController(
+                sidebarCollapsed: $sidebarCollapsed,
+                briefCollapsed: $briefCollapsed,
+                sidebarWidth: $sidebarWidth,
+                threadlistWidth: $threadlistWidth,
+                briefWidth: $briefWidth,
+                sidebar: {
+                    RBSidebar(
+                        folders: sidebarFolders,
+                        accounts: accounts.map { AccountRow(account: $0) },
+                        selection: $sidebarSelection
                     )
-
-                ThreadView(
-                    store: threadStore,
-                    onArchive: { archiveSelectedThread() },
-                    onStar: { starSelectedThread() },
-                    showTranslated: translationStore.showTranslated,
-                    translatedTexts: translationStore.translatedTexts,
-                    translatedNodes: translationStore.translatedNodes,
-                    onScrollProxy: { proxy in
-                        threadScrollProxy = proxy
-                    },
-                    onTextNodesExtracted: { messageId, nodes in
-                        _ = translationStore.nextGeneration(for: messageId)
-                        translationStore.setExtractedNodes(
-                            for: messageId,
-                            nodes: nodes.map { ($0.id, $0.text) }
-                        )
-                    },
-                    composer: {
-                        if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
-                            InlineComposer(
-                                threadID: threadID,
-                                accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
-                                replyLanguage: detectReplyLanguage(),
-                                replyStore: composition.replyStore,
-                                onEditInFull: { draftText in
-                                    prefillComposeForReply()
-                                    composition.composeViewModel.bodyText = draftText
-                                    composition.showCompose = true
-                                },
-                                onSend: { bodyText in
-                                    prefillComposeForReply()
-                                    composition.composeViewModel.bodyText = bodyText
-                                    composition.composeViewModel.requestSend()
+                },
+                threadlist: {
+                    InboxView(
+                        store: inboxStore,
+                        onArchive: { threadId, accountId in
+                            Task {
+                                do {
+                                    try await composition.mailMutator.archive(threadId, accountId: accountId)
+                                    showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
+                                } catch {
+                                    showToast("Archive failed", undo: nil)
                                 }
+                            }
+                        },
+                        onTrash: { threadId, accountId in
+                            trashThread(threadId, accountId: accountId)
+                        }
+                    )
+                },
+                reading: {
+                    ThreadView(
+                        store: threadStore,
+                        onArchive: { archiveSelectedThread() },
+                        onStar: { starSelectedThread() },
+                        showTranslated: translationStore.showTranslated,
+                        translatedTexts: translationStore.translatedTexts,
+                        translatedNodes: translationStore.translatedNodes,
+                        onScrollProxy: { proxy in
+                            threadScrollProxy = proxy
+                        },
+                        onTextNodesExtracted: { messageId, nodes in
+                            _ = translationStore.nextGeneration(for: messageId)
+                            translationStore.setExtractedNodes(
+                                for: messageId,
+                                nodes: nodes.map { ($0.id, $0.text) }
+                            )
+                        },
+                        composer: {
+                            if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
+                                InlineComposer(
+                                    threadID: threadID,
+                                    accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
+                                    replyLanguage: detectReplyLanguage(),
+                                    replyStore: composition.replyStore,
+                                    onEditInFull: { draftText in
+                                        prefillComposeForReply()
+                                        composition.composeViewModel.bodyText = draftText
+                                        composition.showCompose = true
+                                    },
+                                    onSend: { bodyText in
+                                        prefillComposeForReply()
+                                        composition.composeViewModel.bodyText = bodyText
+                                        composition.composeViewModel.requestSend()
+                                    }
+                                )
+                            }
+                        },
+                        translationHeader: {
+                            TranslationToggleView(
+                                store: translationStore,
+                                detectedLanguage: detectThreadLanguage(),
+                                preferredLanguage: preferredLanguage,
+                                autoTranslate: autoTranslate,
+                                messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
+                                htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
                             )
                         }
-                    },
-                    briefRail: {
-                        // Brief rail lives *inside* the reading pane per
-                        // design/re-box/project/app/app.css `.rb-read-body`
-                        // (grid 1fr / 340px). It sits beside the thread
-                        // column, under the shared head — not as a 4th
-                        // top-level pane.
-                        BriefRail(store: briefStore, onDraftReply: { draftReply() })
-                            .frame(width: RBLayout.briefRailWidth)
-                            .frame(maxHeight: .infinity, alignment: .top)
-                    },
-                    translationHeader: {
-                        TranslationToggleView(
-                            store: translationStore,
-                            detectedLanguage: detectThreadLanguage(),
-                            preferredLanguage: preferredLanguage,
-                            autoTranslate: autoTranslate,
-                            messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
-                            htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
-                        )
-                    }
-                )
-                .frame(
-                    minWidth: 480,
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .topLeading
-                )
-            }
+                    )
+                },
+                brief: {
+                    BriefRail(store: briefStore, onDraftReply: { draftReply() })
+                        .frame(maxHeight: .infinity, alignment: .top)
+                }
+            )
         }
         // Extend our 56pt RBToolbar all the way to the top of the window,
         // under the (transparent) titlebar / traffic-light zone. Without

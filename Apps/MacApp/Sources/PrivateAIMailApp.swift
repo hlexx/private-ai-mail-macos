@@ -18,7 +18,7 @@ struct PrivateAIMailApp: App {
             Group {
                 if setupComplete {
                     MainScene(composition: composition)
-                        .frame(minWidth: 1000, minHeight: 640)
+                        .frame(minWidth: 980, minHeight: 720)
                         .task { composition.resumeExistingAccounts() }
                         .onAppear { configureMainWindow() }
                         .onChange(of: composition.showCompose) { _, show in

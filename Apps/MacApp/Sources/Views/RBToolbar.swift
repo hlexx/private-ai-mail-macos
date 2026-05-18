@@ -11,6 +11,8 @@ struct RBToolbar: View {
     let onOpenSettings: () -> Void
     let onCompose: () -> Void
     let onOpenActionSheet: () -> Void
+    var onToggleSidebar: (() -> Void)?
+    var onToggleBrief: (() -> Void)?
 
     @State private var searchText: String = ""
 
@@ -49,6 +51,14 @@ struct RBToolbar: View {
             Spacer()
                 .frame(width: 68)
 
+            if let toggle = onToggleSidebar {
+                RBIconButton(
+                    systemName: "sidebar.leading",
+                    accessibilityLabel: String(localized: "toolbar.toggleSidebar", defaultValue: "Toggle Sidebar"),
+                    action: toggle
+                )
+            }
+
             if let account = activeAccount {
                 AccountSwitcher(
                     dotColor: dotColor(for: account),
@@ -77,6 +87,14 @@ struct RBToolbar: View {
                     accessibilityLabel: themeAccessibilityLabel,
                     action: onToggleTheme
                 )
+
+                if let toggle = onToggleBrief {
+                    RBIconButton(
+                        systemName: "sidebar.trailing",
+                        accessibilityLabel: String(localized: "toolbar.toggleBrief", defaultValue: "Toggle Brief"),
+                        action: toggle
+                    )
+                }
 
                 RBIconButton(
                     systemName: "gearshape",

@@ -520,7 +520,7 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
 
 **Tasks:**
 
-- [ ] Replace the current layout in `MainScene.swift` with an
+- [x] Replace the current layout in `MainScene.swift` with an
       `NSSplitViewController` bridge. Create
       `Apps/MacApp/Sources/Views/MainSplitController.swift`:
       ```swift
@@ -540,7 +540,7 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
           //                          and writes back widths from delegate
       }
       ```
-- [ ] Each `NSSplitViewItem` configured:
+- [x] Each `NSSplitViewItem` configured:
       - **Sidebar item (index 0)**: `minimumThickness = 180`,
         `maximumThickness = 320`, `canCollapse = true`,
         `collapseBehavior = .preferResizingSplitViewWithFixedSiblings`,
@@ -553,37 +553,37 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
       - **Brief (index 3)**: `minimumThickness = 280`,
         `maximumThickness = 420`, `canCollapse = true`,
         `holdingPriority = .defaultLow + 1`.
-- [ ] Wire `sidebarCollapsed` + `briefCollapsed` `@State` bindings in
+- [x] Wire `sidebarCollapsed` + `briefCollapsed` `@State` bindings in
       `MainScene.swift`. Defaults read from `@AppStorage` bool flags
       `pam.layout.sidebarCollapsed` and `pam.layout.briefCollapsed`.
       When user toggles, write back.
-- [ ] **Toolbar item — Sidebar toggle.** Add to `RBToolbar.swift`:
+- [x] **Toolbar item — Sidebar toggle.** Add to `RBToolbar.swift`:
       `RBIconButton(systemImage: "sidebar.leading")` that flips
       `sidebarCollapsed`. Position: leading group, before the
       account switcher.
-- [ ] **Brief-rail collapse chevron.** When `briefCollapsed == false`,
+- [x] **Brief-rail collapse chevron.** When `briefCollapsed == false`,
       `BriefRail` shows a `chevron.right` button in its top-right
       corner. When `briefCollapsed == true`, the split-view item
       collapses to 0pt — there's no thin strip to click on (SwiftUI's
       collapse is binary). To re-open, add a **toolbar item**
       `RBIconButton(systemImage: "sidebar.trailing")` mirroring the
       sidebar toggle. This is simpler and matches macOS Mail behavior.
-- [ ] Persistence: `splitViewDidResizeSubviews(_:)` delegate writes
+- [x] Persistence: `splitViewDidResizeSubviews(_:)` delegate writes
       live widths into the `@AppStorage` bindings. On view reappear,
       `updateNSViewController` reads stored widths and sets each
       item's `preferredHoldingPriority` so the splitter snaps to
       them.
-- [ ] Window minimum size: 980×720pt (allows the 280+280+340 minimum
+- [x] Window minimum size: 980×720pt (allows the 280+280+340 minimum
       pane widths to coexist). Set in `PrivateAIMailApp.swift`'s
       `WindowGroup` via `.defaultSize` + `.minSize` (or via the
       window introspection helper).
-- [ ] Snapshot tests are hard for NSSplitViewController in a
+- [x] Snapshot tests are hard for NSSplitViewController in a
       unit-test context; add a `MacAppTests` UI-test that opens the
       window, asserts default widths, drags a splitter, quits and
       reopens, asserts width persisted.
-- [ ] Smoke-test manually on 1280/1440/1920 widths against the table
+- [x] Smoke-test manually on 1280/1440/1920 widths against the table
       above before merge.
-- [ ] Run full validation gate.
+- [x] Run full validation gate.
 
 ### Task 6: Release notes + clarify Apple Translation
 

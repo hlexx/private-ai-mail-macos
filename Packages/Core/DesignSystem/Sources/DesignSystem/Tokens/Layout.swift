@@ -11,11 +11,11 @@ public enum RBLayout {
     /// `.rb-window { grid-template-rows: 56px 1fr }`
     public static let toolbarHeight: CGFloat = 56
 
-    /// `.rb-window` min content width target.
-    public static let windowMinWidth: CGFloat = 1000
+    /// `.rb-window` min content width target (supports 4-pane layout: 180+280+480+0).
+    public static let windowMinWidth: CGFloat = 980
 
     /// `.rb-window` min content height target.
-    public static let windowMinHeight: CGFloat = 640
+    public static let windowMinHeight: CGFloat = 720
 
     // MARK: Three-pane layout
 
