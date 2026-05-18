@@ -11,6 +11,7 @@ enum Migrator {
         migrator.registerMigration("M006_ThreadBrief", migrate: M006_ThreadBrief.migrate)
         migrator.registerMigration("M007_AttachmentCID", migrate: M007_AttachmentCID.migrate)
         migrator.registerMigration("M008_BackfillInboxLabel", migrate: M008_BackfillInboxLabel.migrate)
+        migrator.registerMigration("M009_BackfillInboxLabelV2", migrate: M009_BackfillInboxLabelV2.migrate)
         try migrator.migrate(db)
     }
 }
@@ -258,6 +259,51 @@ enum M008_BackfillInboxLabel {
             WHERE NOT EXISTS (
                 SELECT 1 FROM thread_label tl
                 WHERE tl.account_id = t.account_id AND tl.thread_id = t.id
+            )
+            """)
+    }
+}
+
+/// Broader INBOX backfill: M008 only caught threads with **zero** label rows.
+/// Many legacy threads have UNREAD / CATEGORY_PROMOTIONS / IMPORTANT but never
+/// got an INBOX row. M009 inserts INBOX for any thread that:
+/// - does NOT already have INBOX
+/// - does NOT have TRASH, SPAM, or DRAFT (explicitly out-of-inbox)
+/// - is NOT sent-only (has SENT but no other non-meta labels)
+/// Idempotent: INSERT OR IGNORE prevents duplicates on re-run.
+enum M009_BackfillInboxLabelV2 {
+    static func migrate(_ db: Database) throws {
+        try db.execute(sql: """
+            INSERT OR IGNORE INTO label (id, account_id, name, type, color, messages_unread_count, messages_total_count)
+            SELECT 'INBOX', a.id, 'Inbox', 'system', NULL, 0, 0
+            FROM account a
+            """)
+
+        try db.execute(sql: """
+            INSERT OR IGNORE INTO thread_label (account_id, thread_id, label_id)
+            SELECT t.account_id, t.id, 'INBOX'
+            FROM thread t
+            WHERE NOT EXISTS (
+                SELECT 1 FROM thread_label tl_in
+                WHERE tl_in.account_id = t.account_id
+                  AND tl_in.thread_id = t.id
+                  AND tl_in.label_id = 'INBOX'
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM thread_label tl_out
+                WHERE tl_out.account_id = t.account_id
+                  AND tl_out.thread_id = t.id
+                  AND tl_out.label_id IN ('TRASH','SPAM','DRAFT')
+            )
+            AND NOT (
+                EXISTS (SELECT 1 FROM thread_label tl_sent
+                        WHERE tl_sent.account_id = t.account_id
+                          AND tl_sent.thread_id = t.id
+                          AND tl_sent.label_id = 'SENT')
+                AND NOT EXISTS (SELECT 1 FROM thread_label tl_any
+                                WHERE tl_any.account_id = t.account_id
+                                  AND tl_any.thread_id = t.id
+                                  AND tl_any.label_id NOT IN ('SENT','UNREAD','IMPORTANT'))
             )
             """)
     }

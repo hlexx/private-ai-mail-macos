@@ -163,7 +163,7 @@ cd $PROJ && ! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --includ
 
 Re-run backfill to catch threads that have SOME labels but not INBOX.
 
-- [ ] Add `M009_BackfillInboxLabelV2` in `Migrator.swift`. SQL:
+- [x] Add `M009_BackfillInboxLabelV2` in `Migrator.swift`. SQL:
       ```swift
       enum M009_BackfillInboxLabelV2 {
           static func migrate(_ db: Database) throws {
@@ -210,8 +210,8 @@ Re-run backfill to catch threads that have SOME labels but not INBOX.
           }
       }
       ```
-- [ ] Register in the migration list AFTER M008.
-- [ ] Tests in `PersistenceTests/LabelBackfillV2Tests.swift`:
+- [x] Register in the migration list AFTER M008.
+- [x] Tests in `PersistenceTests/LabelBackfillV2Tests.swift`:
       - Seed thread A with no labels → M009 inserts INBOX.
       - Seed thread B with `CATEGORY_PROMOTIONS` only → M009 inserts
         INBOX.
@@ -221,7 +221,7 @@ Re-run backfill to catch threads that have SOME labels but not INBOX.
       - Seed thread E with `SENT` + `UNREAD` + `CATEGORY_FORUMS`
         (sent to a mailing list) → M009 inserts INBOX (mixed).
       - Re-run M009 → no duplicate INBOX rows (idempotent).
-- [ ] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
+- [x] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 2: Strip `<style>` and `<script>` before plaintext extraction
 
