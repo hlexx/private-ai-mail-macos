@@ -23,6 +23,23 @@ struct AITab: View {
                     }
                 }
             }
+
+            Section(
+                String(localized: "settings.ai.howItWorks", defaultValue: "How it works")
+            ) {
+                LabeledContent(
+                    String(localized: "settings.ai.briefReply", defaultValue: "Brief + Reply")
+                ) {
+                    Text("Gemma 4 (on-device, MLX)")
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent(
+                    String(localized: "settings.ai.translation", defaultValue: "Translation")
+                ) {
+                    Text("Apple Translation framework (on-device)")
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
         .task {

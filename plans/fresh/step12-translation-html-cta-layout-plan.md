@@ -587,18 +587,18 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
 
 ### Task 6: Release notes + clarify Apple Translation
 
-- [ ] Bump `MARKETING_VERSION` to `0.1.8-alpha`,
+- [x] Bump `MARKETING_VERSION` to `0.1.8-alpha`,
       `CURRENT_PROJECT_VERSION` to `108`.
-- [ ] Write `release-notes/v0.1.8-alpha.md` covering: Inbox backfill
+- [x] Write `release-notes/v0.1.8-alpha.md` covering: Inbox backfill
       catches more threads (M009), translation preserves HTML
       layout, Brief Rail buttons work, layout is responsive and
       reading-first, **explicit note** that translation uses
       Apple's on-device `Translation` framework (independent of
       Gemma — Gemma stays in charge of brief + reply drafts).
-- [ ] Add a one-line "How it works" badge in Settings → AI tab:
+- [x] Add a one-line "How it works" badge in Settings → AI tab:
       "Brief + Reply: Gemma 4 (on-device, MLX). Translation: Apple
       Translation framework (on-device)."
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 12 ✅
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 12 ✅
       with merge commit, copy plan to `plans/fresh/completed/`.
 
 ---

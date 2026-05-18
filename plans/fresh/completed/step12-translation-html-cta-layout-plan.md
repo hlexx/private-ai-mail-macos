@@ -163,7 +163,7 @@ cd $PROJ && ! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --includ
 
 Re-run backfill to catch threads that have SOME labels but not INBOX.
 
-- [ ] Add `M009_BackfillInboxLabelV2` in `Migrator.swift`. SQL:
+- [x] Add `M009_BackfillInboxLabelV2` in `Migrator.swift`. SQL:
       ```swift
       enum M009_BackfillInboxLabelV2 {
           static func migrate(_ db: Database) throws {
@@ -210,8 +210,8 @@ Re-run backfill to catch threads that have SOME labels but not INBOX.
           }
       }
       ```
-- [ ] Register in the migration list AFTER M008.
-- [ ] Tests in `PersistenceTests/LabelBackfillV2Tests.swift`:
+- [x] Register in the migration list AFTER M008.
+- [x] Tests in `PersistenceTests/LabelBackfillV2Tests.swift`:
       - Seed thread A with no labels → M009 inserts INBOX.
       - Seed thread B with `CATEGORY_PROMOTIONS` only → M009 inserts
         INBOX.
@@ -221,13 +221,13 @@ Re-run backfill to catch threads that have SOME labels but not INBOX.
       - Seed thread E with `SENT` + `UNREAD` + `CATEGORY_FORUMS`
         (sent to a mailing list) → M009 inserts INBOX (mixed).
       - Re-run M009 → no duplicate INBOX rows (idempotent).
-- [ ] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
+- [x] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 2: Strip `<style>` and `<script>` before plaintext extraction
 
 Stop CSS bleeding into AI input + Translation input.
 
-- [ ] In `MessageBodyView.htmlToPlainText` (line 82): before passing
+- [x] In `MessageBodyView.htmlToPlainText` (line 82): before passing
       to `NSAttributedString(html:)`, strip `<style>...</style>` and
       `<script>...</script>` blocks (case-insensitive, multi-line).
       Simplest: a regex pre-pass.
@@ -241,15 +241,15 @@ Stop CSS bleeding into AI input + Translation input.
                                 options: [.regularExpression, .caseInsensitive])
       ```
       Then proceed with NSAttributedString on `stripped`.
-- [ ] Apply same strip in `MessageRecord.htmlToPlainText`
+- [x] Apply same strip in `MessageRecord.htmlToPlainText`
       (Packages/Core/Persistence/.../MessageRecord.swift:69) — that's
       the path AI brief + ReplyStore use. Keep the two implementations
       in sync; ideally factor into one helper exported from
       `Persistence` and reused by both.
-- [ ] Tests: a fixture HTML email containing a `<style>` block with
+- [x] Tests: a fixture HTML email containing a `<style>` block with
       CSS rules → assert plainText does NOT contain `font-family`
       and IS just the body text.
-- [ ] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`
       and `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 3: Translation preserves HTML — DOM walk in WKWebView
@@ -322,7 +322,7 @@ no WebView is mounted for text-only emails.
 
 **Tasks:**
 
-- [ ] Extend `HTMLWebView` (`MessageBodyView.swift`) with:
+- [x] Extend `HTMLWebView` (`MessageBodyView.swift`) with:
       - New init parameter `translatedNodes: [String: String]?`
         (default `nil`). When `nil` → render original. When non-nil
         → render with translations applied.
@@ -376,7 +376,7 @@ no WebView is mounted for text-only emails.
           }
         })();
         ```
-- [ ] Refactor `TranslationStore`:
+- [x] Refactor `TranslationStore`:
       - Replace `translatedTexts: [messageId: String]` with
         `translatedNodes: [messageId: [String: String]]`.
       - New method `applyTranslations(messageId:, nodes:[(id, text)], source:, target:) async`
@@ -386,7 +386,7 @@ no WebView is mounted for text-only emails.
       - Listen for `Settings.preferredLanguage` change via
         `@AppStorage` Combine publisher (or `NotificationCenter`),
         wipe `translatedNodes` on change.
-- [ ] In `ThreadView.MessageCardView` (line 276):
+- [x] In `ThreadView.MessageCardView` (line 276):
       ```swift
       if showTranslated, let bodyHtml = message.bodyHtml {
           MessageBodyView(
@@ -407,27 +407,27 @@ no WebView is mounted for text-only emails.
           MessageBodyView(bodyHtml: message.bodyHtml, ...)  // original
       }
       ```
-- [ ] Wire extraction → translation in `TranslationView` /
+- [x] Wire extraction → translation in `TranslationView` /
       `TranslationStore`: when user clicks **Translated** AND a
       message has `bodyHtml != nil`, the `MessageBodyView` returns
       its extracted nodes via the new callback; the store batch-
       translates; result cached; toggle re-renders with
       `translatedNodes` non-nil.
-- [ ] Edge case: re-extraction race. If the user clicks
+- [x] Edge case: re-extraction race. If the user clicks
       Translated → Original → Translated rapidly, ensure only the
       latest extraction's translation is applied. Use a token /
       generation counter per (messageId, languagePair).
-- [ ] Tests in `TranslationFeatureTests`:
+- [x] Tests in `TranslationFeatureTests`:
       - Fixture HTML with `<h1>Hello</h1><p>World</p>` + a
         `<style>` block → after extraction, expect exactly 2 text
         nodes (`"Hello"`, `"World"`), zero style content leakage.
       - Apply translation map `{n0: "Привет", n1: "Мир"}` →
         resulting HTML still contains `<h1>` and `<p>` with
         translated text.
-- [ ] Tests in `ThreadFeatureTests`: snapshot of `MessageCardView`
+- [x] Tests in `ThreadFeatureTests`: snapshot of `MessageCardView`
       with translated HTML email shows preserved layout (use a
       fixture HTML with a colored `<h1>` — the color must survive).
-- [ ] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`
       and `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 4: Wire Brief Rail CTAs
@@ -438,10 +438,10 @@ a real scheduler / CRM integration would surprise the user (Snooze
 without auto-restore is just hidden mail; CRM without an integration
 is a nothing-burger).
 
-- [ ] Extend `BriefRail` view to take callback `onDraftReply: (() -> Void)?`
+- [x] Extend `BriefRail` view to take callback `onDraftReply: (() -> Void)?`
       (default `nil`). The other two buttons get `.disabled(true)` +
       `.help(...)` tooltips, no callbacks.
-- [ ] Add an `anchor` enum + named `id` for the inline composer in
+- [x] Add an `anchor` enum + named `id` for the inline composer in
       `ThreadView`:
       ```swift
       enum ThreadViewAnchor: Hashable { case head, composer }
@@ -449,7 +449,7 @@ is a nothing-burger).
       Wrap the entire reading-pane content in a `ScrollViewReader`
       (it's already inside a `ScrollView` per step 10). Tag the
       `InlineComposer` view with `.id(ThreadViewAnchor.composer)`.
-- [ ] Wire `MainScene` to:
+- [x] Wire `MainScene` to:
       ```swift
       BriefRail(
           store: briefStore,
@@ -470,29 +470,29 @@ is a nothing-burger).
       Where `composerFocus` is a `@FocusState<InlineComposer.Focus?>`
       bound through to InlineComposer (extend InlineComposer to
       expose a `focus` binding with cases `.body`, `.subject`, etc).
-- [ ] **Snooze** button: `.disabled(true)` with `.help("Coming in
+- [x] **Snooze** button: `.disabled(true)` with `.help("Coming in
       Phase 2 — needs an in-app scheduler")`. Visually keep the
       sf-symbol clock + label so layout doesn't shift.
-- [ ] **Log to CRM** button: `.disabled(true)` with `.help("Coming
+- [x] **Log to CRM** button: `.disabled(true)` with `.help("Coming
       in Phase 2 — connect a CRM in Settings → Integrations
       first.")` Same visual.
-- [ ] Keyboard shortcut `⌘⇧R` triggers `onDraftReply` from anywhere
+- [x] Keyboard shortcut `⌘⇧R` triggers `onDraftReply` from anywhere
       in MainWindow. Add a `Commands` block in
       `PrivateAIMailApp.swift` to register it (look for the existing
       `⌘N` compose shortcut for the pattern).
-- [ ] Update `ReplyStore` if `generateIfNeeded(...)` doesn't exist:
+- [x] Update `ReplyStore` if `generateIfNeeded(...)` doesn't exist:
       add it as a thin wrapper that checks the cache (Step 11's
       brief-cache pattern in `BriefStore`) and only calls
       `aiService.draftReply(...)` on miss.
-- [ ] Tests for `BriefRail`:
+- [x] Tests for `BriefRail`:
       - Snapshot with `onDraftReply` non-nil — Draft button is
         enabled.
       - Snapshot with `onDraftReply == nil` — Draft button is
         disabled too (preview / test affordance).
       - Snooze + Log to CRM always disabled, tooltips assertable.
-- [ ] Tests for the keyboard shortcut: a small AppKit-level test
+- [x] Tests for the keyboard shortcut: a small AppKit-level test
       that simulates `⌘⇧R` and asserts the binding is set.
-- [ ] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
       and `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 5: Layout — collapsible panes + reading-first defaults
@@ -520,7 +520,7 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
 
 **Tasks:**
 
-- [ ] Replace the current layout in `MainScene.swift` with an
+- [x] Replace the current layout in `MainScene.swift` with an
       `NSSplitViewController` bridge. Create
       `Apps/MacApp/Sources/Views/MainSplitController.swift`:
       ```swift
@@ -540,7 +540,7 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
           //                          and writes back widths from delegate
       }
       ```
-- [ ] Each `NSSplitViewItem` configured:
+- [x] Each `NSSplitViewItem` configured:
       - **Sidebar item (index 0)**: `minimumThickness = 180`,
         `maximumThickness = 320`, `canCollapse = true`,
         `collapseBehavior = .preferResizingSplitViewWithFixedSiblings`,
@@ -553,52 +553,52 @@ positions via `@AppStorage`. Use **`NSSplitViewController` wrapped in
       - **Brief (index 3)**: `minimumThickness = 280`,
         `maximumThickness = 420`, `canCollapse = true`,
         `holdingPriority = .defaultLow + 1`.
-- [ ] Wire `sidebarCollapsed` + `briefCollapsed` `@State` bindings in
+- [x] Wire `sidebarCollapsed` + `briefCollapsed` `@State` bindings in
       `MainScene.swift`. Defaults read from `@AppStorage` bool flags
       `pam.layout.sidebarCollapsed` and `pam.layout.briefCollapsed`.
       When user toggles, write back.
-- [ ] **Toolbar item — Sidebar toggle.** Add to `RBToolbar.swift`:
+- [x] **Toolbar item — Sidebar toggle.** Add to `RBToolbar.swift`:
       `RBIconButton(systemImage: "sidebar.leading")` that flips
       `sidebarCollapsed`. Position: leading group, before the
       account switcher.
-- [ ] **Brief-rail collapse chevron.** When `briefCollapsed == false`,
+- [x] **Brief-rail collapse chevron.** When `briefCollapsed == false`,
       `BriefRail` shows a `chevron.right` button in its top-right
       corner. When `briefCollapsed == true`, the split-view item
       collapses to 0pt — there's no thin strip to click on (SwiftUI's
       collapse is binary). To re-open, add a **toolbar item**
       `RBIconButton(systemImage: "sidebar.trailing")` mirroring the
       sidebar toggle. This is simpler and matches macOS Mail behavior.
-- [ ] Persistence: `splitViewDidResizeSubviews(_:)` delegate writes
+- [x] Persistence: `splitViewDidResizeSubviews(_:)` delegate writes
       live widths into the `@AppStorage` bindings. On view reappear,
       `updateNSViewController` reads stored widths and sets each
       item's `preferredHoldingPriority` so the splitter snaps to
       them.
-- [ ] Window minimum size: 980×720pt (allows the 280+280+340 minimum
+- [x] Window minimum size: 980×720pt (allows the 280+280+340 minimum
       pane widths to coexist). Set in `PrivateAIMailApp.swift`'s
       `WindowGroup` via `.defaultSize` + `.minSize` (or via the
       window introspection helper).
-- [ ] Snapshot tests are hard for NSSplitViewController in a
+- [x] Snapshot tests are hard for NSSplitViewController in a
       unit-test context; add a `MacAppTests` UI-test that opens the
       window, asserts default widths, drags a splitter, quits and
       reopens, asserts width persisted.
-- [ ] Smoke-test manually on 1280/1440/1920 widths against the table
+- [x] Smoke-test manually on 1280/1440/1920 widths against the table
       above before merge.
-- [ ] Run full validation gate.
+- [x] Run full validation gate.
 
 ### Task 6: Release notes + clarify Apple Translation
 
-- [ ] Bump `MARKETING_VERSION` to `0.1.8-alpha`,
+- [x] Bump `MARKETING_VERSION` to `0.1.8-alpha`,
       `CURRENT_PROJECT_VERSION` to `108`.
-- [ ] Write `release-notes/v0.1.8-alpha.md` covering: Inbox backfill
+- [x] Write `release-notes/v0.1.8-alpha.md` covering: Inbox backfill
       catches more threads (M009), translation preserves HTML
       layout, Brief Rail buttons work, layout is responsive and
       reading-first, **explicit note** that translation uses
       Apple's on-device `Translation` framework (independent of
       Gemma — Gemma stays in charge of brief + reply drafts).
-- [ ] Add a one-line "How it works" badge in Settings → AI tab:
+- [x] Add a one-line "How it works" badge in Settings → AI tab:
       "Brief + Reply: Gemma 4 (on-device, MLX). Translation: Apple
       Translation framework (on-device)."
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 12 ✅
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 12 ✅
       with merge commit, copy plan to `plans/fresh/completed/`.
 
 ---
