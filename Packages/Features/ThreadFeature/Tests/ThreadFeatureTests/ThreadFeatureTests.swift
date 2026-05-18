@@ -456,6 +456,8 @@ struct ThreadStoreStarTests {
         try seedThread(db: db, starred: true)
         let store = ThreadStore(db: db)
         store.observe(threadId: "t1", accountId: "acc1")
+        // Wait for the observation to deliver its first value (messages loaded)
+        try await waitUntil { !store.messages.isEmpty }
         try await waitUntil { store.isStarred }
         #expect(store.isStarred == true)
         store.stopObserving()
@@ -507,6 +509,7 @@ struct ThreadStoreStarTests {
         try seedThread(db: db, starred: true)
         let store = ThreadStore(db: db)
         store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty }
         try await waitUntil { store.isStarred }
         #expect(store.isStarred == true)
         store.stopObserving()

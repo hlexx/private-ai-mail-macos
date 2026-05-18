@@ -82,7 +82,7 @@ struct HTMLWebView: NSViewRepresentable {
     private func wrapHTML(_ body: String) -> String {
         let sanitized = sanitizeBody(body)
         let imgSrc = allowRemoteImages ? "img-src * cid: data: blob:;" : "img-src cid: data:;"
-        let csp = "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:; frame-src 'none';"
+        let csp = "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:; frame-src 'none'; form-action 'none';"
         return """
         <!DOCTYPE html>
         <html>

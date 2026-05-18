@@ -19,6 +19,9 @@ public final class BriefBackgroundQueue {
     private var workerTask: Task<Void, Never>?
     private var aiAvailable: Bool = true
     private var retryTask: Task<Void, Never>?
+    private var backfillTask: Task<Void, Never>?
+    private var retryCount: Int = 0
+    private static let maxRetries = 10
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -43,14 +46,18 @@ public final class BriefBackgroundQueue {
         workerTask = nil
         retryTask?.cancel()
         retryTask = nil
+        backfillTask?.cancel()
+        backfillTask = nil
         pending.removeAll()
         pendingSet.removeAll()
         isRunning = false
+        retryCount = 0
     }
 
     public func setAIAvailable(_ available: Bool) {
         aiAvailable = available
         if available {
+            retryCount = 0
             retryTask?.cancel()
             retryTask = nil
             startWorkerIfNeeded()
@@ -59,7 +66,8 @@ public final class BriefBackgroundQueue {
 
     /// Enqueue all inbox threads that don't have a brief yet, capped at `limit` globally.
     public func backfillMissing(limit: Int = 200) {
-        Task {
+        backfillTask?.cancel()
+        backfillTask = Task {
             let keys = try? await Task.detached { [db] in
                 try db.dbQueue.read { database -> [(accountId: String, threadId: String)] in
                     let rows = try Row.fetchAll(database, sql: """
@@ -75,6 +83,7 @@ public final class BriefBackgroundQueue {
                 }
             }.value
 
+            guard !Task.isCancelled else { return }
             if let keys, !keys.isEmpty {
                 enqueueMany(keys)
             }
@@ -203,11 +212,14 @@ public final class BriefBackgroundQueue {
             case .cancelled:
                 break
             case .modelNotInstalled:
-                // Re-enqueue the failed item so it's retried when the model loads
-                pending.insert(key, at: 0)
-                pendingSet.insert(key)
-                aiAvailable = false
-                scheduleRetry()
+                guard !Task.isCancelled else { break }
+                retryCount += 1
+                if retryCount <= Self.maxRetries {
+                    pending.insert(key, at: 0)
+                    pendingSet.insert(key)
+                    aiAvailable = false
+                    scheduleRetry()
+                }
             default:
                 break
             }
