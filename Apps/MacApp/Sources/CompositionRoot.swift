@@ -33,6 +33,7 @@ final class CompositionRoot {
     let inboxStore: InboxStore
     let threadStore: ThreadStore
     let briefStore: BriefStore
+    let briefBackgroundQueue: BriefBackgroundQueue
     let replyStore: ReplyStore
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
@@ -58,6 +59,7 @@ final class CompositionRoot {
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
         self.briefStore = BriefStore(aiService: aiService, db: db)
+        self.briefBackgroundQueue = BriefBackgroundQueue(aiService: aiService, db: db)
         self.replyStore = ReplyStore(aiService: aiService, db: db)
 
         let tokenStore: any TokenStore = KeychainTokenStore()
@@ -119,6 +121,9 @@ final class CompositionRoot {
             .path
     }
 
+    private var syncEventTasks: [String: Task<Void, Never>] = [:]
+    private var debounceTimers: [String: Task<Void, Never>] = [:]
+
     func resumeExistingAccounts() {
         #if DEBUG
         // Populate the DB with seven synthetic threads from the Re:Box
@@ -131,7 +136,35 @@ final class CompositionRoot {
             let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
             for account in accounts ?? [] {
                 await syncSupervisor.startIncremental(accountId: account.id)
+                subscribeSyncEvents(accountId: account.id)
             }
+
+            // Backfill briefs for threads that don't have one yet
+            briefBackgroundQueue.backfillMissing(limit: 200)
+        }
+    }
+
+    private func subscribeSyncEvents(accountId: String) {
+        guard syncEventTasks[accountId] == nil else { return }
+        syncEventTasks[accountId] = Task { [weak self] in
+            guard let events = await self?.syncSupervisor.events(for: accountId) else { return }
+            for await event in events {
+                guard let self, !Task.isCancelled else { break }
+                if case .threadUpserted(let threadId) = event {
+                    self.debouncedEnqueue(accountId: accountId, threadId: threadId)
+                }
+            }
+        }
+    }
+
+    private func debouncedEnqueue(accountId: String, threadId: String) {
+        let key = "\(accountId):\(threadId)"
+        debounceTimers[key]?.cancel()
+        debounceTimers[key] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, let self else { return }
+            self.briefBackgroundQueue.enqueue(accountId: accountId, threadId: threadId)
+            self.debounceTimers.removeValue(forKey: key)
         }
     }
 

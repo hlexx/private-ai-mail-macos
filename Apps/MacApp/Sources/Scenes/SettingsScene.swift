@@ -35,10 +35,7 @@ struct SettingsScene: View {
                 )
             }
 
-            placeholder(
-                title: String(localized: "settings.tab.ai", defaultValue: "AI"),
-                systemImage: "sparkles"
-            )
+            AITab(queue: composition.briefBackgroundQueue)
             .tabItem {
                 Label(
                     String(localized: "settings.tab.ai", defaultValue: "AI"),

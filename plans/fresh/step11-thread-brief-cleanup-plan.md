@@ -234,7 +234,7 @@ filters needing briefs to decide "Needs reply", we need briefs for
 every thread at some point. Generate in the background, throttled, on
 incoming-message events.
 
-- [ ] Create `Packages/Features/BriefFeature/Sources/BriefFeature/BriefBackgroundQueue.swift`:
+- [x] Create `Packages/Features/BriefFeature/Sources/BriefFeature/BriefBackgroundQueue.swift`:
       ```swift
       @MainActor
       public final class BriefBackgroundQueue {
@@ -250,31 +250,31 @@ incoming-message events.
           // writes thread_brief row, removes from pending. Repeats until empty.
       }
       ```
-- [ ] Wire into `CompositionRoot`: instantiate `BriefBackgroundQueue`
+- [x] Wire into `CompositionRoot`: instantiate `BriefBackgroundQueue`
       alongside `BriefStore`, share the same `aiService` + `db`.
-- [ ] Wire into `MailSyncEngine` event stream: subscribe to
+- [x] Wire into `MailSyncEngine` event stream: subscribe to
       `.threadUpserted(threadId)` events; for each, look up the thread's
       `accountId` and `enqueue(accountId, threadId)`. Use a debounce
       window of 1 s so a burst of messages on one thread generates only
       one brief.
-- [ ] First-time bootstrap: at the end of `MailSyncEngine.bootstrap()`,
+- [x] First-time bootstrap: at the end of `MailSyncEngine.bootstrap()`,
       enqueue all threads in `INBOX` that don't have a brief yet
       (`SELECT thread.id FROM thread LEFT JOIN thread_brief ON ... WHERE
       thread_brief.thread_id IS NULL AND thread.id IN (... INBOX ...)`).
       Cap the initial backfill at 200 threads per account per launch to
       avoid hammering MLX for half an hour on first run; log the rest
       to a deferred queue.
-- [ ] User-facing progress: extend `SettingsScene → AI` tab with a row
+- [x] User-facing progress: extend `SettingsScene → AI` tab with a row
       "Background briefs: X / Y generated" reading from
       `SELECT COUNT(*) FROM thread_brief vs SELECT COUNT(*) FROM thread`
       via `ValueObservation`.
-- [ ] Skip queue when `aiService` is unavailable (e.g. model not yet
+- [x] Skip queue when `aiService` is unavailable (e.g. model not yet
       downloaded). Resume automatically when model loads.
-- [ ] Tests: `BriefFeatureTests/BriefBackgroundQueueTests.swift` —
+- [x] Tests: `BriefFeatureTests/BriefBackgroundQueueTests.swift` —
       enqueue 5 threads → assert 5 thread_brief rows after worker
       drains → enqueue same thread twice → assert only one row +
       worker ran once.
-- [ ] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`.
 
 ### Task 4: Wire chip + folder filters to `thread_brief`
 
