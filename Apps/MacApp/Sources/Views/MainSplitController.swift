@@ -8,7 +8,6 @@ import SwiftUI
 /// - drag-end events via `splitViewDidResizeSubviews` for persisting widths
 /// - per-pane `holdingPriority` controlling resize behaviour
 /// - clean collapse/expand via `isCollapsed` on sidebar and brief items
-/// - built-in `autosaveName` for position persistence
 struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief: View>: NSViewControllerRepresentable {
 
     @Binding var sidebarCollapsed: Bool
@@ -49,7 +48,6 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         let controller = NSSplitViewController()
         controller.splitView.isVertical = true
         controller.splitView.dividerStyle = .thin
-        controller.splitView.autosaveName = "pam.mainSplit"
         controller.splitView.delegate = context.coordinator
 
         let sidebarItem = NSSplitViewItem(
@@ -92,16 +90,19 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         controller.addSplitViewItem(readingItem)
         controller.addSplitViewItem(briefItem)
 
-        // Set initial widths from stored values
-        DispatchQueue.main.async {
-            let splitView = controller.splitView
+        // Set initial widths from stored values once the split view
+        // has a valid frame (non-zero width). DispatchQueue.main.async
+        // may fire before the view is laid out, so guard on frame width.
+        context.coordinator.pendingInitialLayout = { [sidebarCollapsed, briefCollapsed] splitView in
             let sWidth = sidebarCollapsed ? 0.0 : sidebarWidth.wrappedValue
             splitView.setPosition(CGFloat(sWidth), ofDividerAt: 0)
             splitView.setPosition(CGFloat(sWidth + threadlistWidth.wrappedValue), ofDividerAt: 1)
             if !briefCollapsed {
                 let totalWidth = Double(splitView.frame.width)
+                guard totalWidth > 0 else { return false }
                 splitView.setPosition(CGFloat(totalWidth - briefWidth.wrappedValue), ofDividerAt: 2)
             }
+            return true
         }
 
         context.coordinator.onWidthsChanged = { sWidth, tWidth, bWidth in
@@ -138,11 +139,31 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
 
     class Coordinator: NSObject, NSSplitViewDelegate {
         var onWidthsChanged: ((Double, Double, Double) -> Void)?
+        /// Deferred initial layout closure. Returns `true` when layout succeeded
+        /// (frame had a valid non-zero width), `false` to retry on next resize.
+        var pendingInitialLayout: ((NSSplitView) -> Bool)?
         private var debounceWorkItem: DispatchWorkItem?
 
         func splitViewDidResizeSubviews(_ notification: Notification) {
             guard let splitView = notification.object as? NSSplitView,
                   splitView.subviews.count == 4 else { return }
+
+            // Apply deferred initial layout once the frame is valid.
+            if let layout = pendingInitialLayout {
+                if layout(splitView) {
+                    pendingInitialLayout = nil
+                }
+                return // Skip persisting during initial setup
+            }
+
+            // Skip persisting widths when any pane is collapsed — the
+            // resize notification fires during collapse/expand animation
+            // with redistributed intermediate values that would overwrite
+            // the user's preferred widths.
+            if splitView.isSubviewCollapsed(splitView.subviews[0])
+                || splitView.isSubviewCollapsed(splitView.subviews[3]) {
+                return
+            }
 
             let sWidth = Double(splitView.subviews[0].frame.width)
             let tWidth = Double(splitView.subviews[1].frame.width)
