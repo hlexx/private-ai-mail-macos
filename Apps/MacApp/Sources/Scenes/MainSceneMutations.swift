@@ -78,9 +78,11 @@ extension MainScene {
 
     func showToast(_ message: String, undo: ToastState.UndoAction?) {
         let toast = ToastState(message: message, undoAction: undo)
+        // Setting toastMessage cancels the previous dismiss task via didSet
         composition.toastMessage = toast
-        Task {
+        composition.toastDismissTask = Task {
             try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
             if composition.toastMessage?.id == toast.id {
                 composition.toastMessage = nil
             }

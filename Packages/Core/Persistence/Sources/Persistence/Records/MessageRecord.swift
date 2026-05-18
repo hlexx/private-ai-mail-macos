@@ -63,6 +63,9 @@ public struct MessageRecord: Codable, Sendable, FetchableRecord, PersistableReco
     }
 
     /// Convert HTML to plain text by stripping tags. Thread-safe (no WebKit dependency).
+    /// Used by BriefStore, BriefBackgroundQueue, and ReplyStore for AI input.
+    /// MessageBodyView.htmlToPlainText uses NSAttributedString for higher fidelity UI display
+    /// but requires MainActor — this regex variant is preferred for background/batch processing.
     public static func htmlToPlainText(_ html: String) -> String? {
         var text = html
         text = text.replacingOccurrences(of: "<br[^>]*>", with: "\n", options: .regularExpression)

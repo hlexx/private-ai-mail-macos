@@ -239,7 +239,7 @@ extension BriefStore {
         let latestMessageID = messages.last?.id ?? ""
 
         let incoming = messages.filter { $0.flags & MessageRecord.sentByMe == 0 }
-        let text = incoming.compactMap(\.bodyText).joined(separator: "\n")
+        let text = incoming.map(\.bestPlainText).filter { !$0.isEmpty }.joined(separator: "\n")
         var detectedLanguage: String?
         if !text.isEmpty {
             let recognizer = NLLanguageRecognizer()

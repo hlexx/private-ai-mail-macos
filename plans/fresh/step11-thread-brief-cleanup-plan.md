@@ -404,14 +404,14 @@ Make `<img src="cid:logo@…">` resolve to the embedded attachment data.
 
 ### Task 8: Misc cleanup — Undo toast timer + htmlToPlainText consistency
 
-- [ ] Find the Undo-toast implementation (likely in
+- [x] Find the Undo-toast implementation (likely in
       `MainSceneMutations.swift` or a `ToastStore` in the app target).
       Replace the orphan-task pattern with a proper `Task` reference
       stored on the store, cancelled on (a) Undo click, (b) new toast
       replacing this one. Snapshot the toast appearance + dismissal
       timing in a `MacAppTests` integration test if practical, else a
       unit test on the toast-store actor.
-- [ ] Verify `MessageRecord.bestPlainText` is the single source of
+- [x] Verify `MessageRecord.bestPlainText` is the single source of
       truth for plain-text extraction. Search for any remaining
       `NSAttributedString(html:` or regex-based html-strip in
       `BriefStore`, `ReplyStore`, `TranslationStore`. Route everything
@@ -422,7 +422,7 @@ Make `<img src="cid:logo@…">` resolve to the embedded attachment data.
       AI-input path while UI-display path keeps the rich
       `NSAttributedString` version. Document the trade-off in a
       comment.
-- [ ] Run `cd $PROJ/Packages/Features/ComposeFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/ComposeFeature && swift test`
       and `cd $PROJ/Packages/Features/BriefFeature && swift test`.
 
 ---

@@ -41,7 +41,9 @@ final class CompositionRoot {
     let translationStore: TranslationStore
 
     var activeAccountID: String?
-    var toastMessage: ToastState?
+    var toastMessage: ToastState? {
+        didSet { toastDismissTask?.cancel(); toastDismissTask = nil }
+    }
     var showActionSheet = false
     var showCompose = false
     let composeViewModel: ComposeViewModel
@@ -121,6 +123,7 @@ final class CompositionRoot {
             .path
     }
 
+    var toastDismissTask: Task<Void, Never>?
     private var syncEventTasks: [String: Task<Void, Never>] = [:]
     private var debounceTimers: [String: Task<Void, Never>] = [:]
 
