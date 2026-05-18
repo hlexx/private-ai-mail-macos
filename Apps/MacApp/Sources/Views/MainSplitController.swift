@@ -94,12 +94,12 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         // has a valid frame (non-zero width). DispatchQueue.main.async
         // may fire before the view is laid out, so guard on frame width.
         context.coordinator.pendingInitialLayout = { [sidebarCollapsed, briefCollapsed] splitView in
+            let totalWidth = Double(splitView.frame.width)
+            guard totalWidth > 0 else { return false }
             let sWidth = sidebarCollapsed ? 0.0 : sidebarWidth.wrappedValue
             splitView.setPosition(CGFloat(sWidth), ofDividerAt: 0)
             splitView.setPosition(CGFloat(sWidth + threadlistWidth.wrappedValue), ofDividerAt: 1)
             if !briefCollapsed {
-                let totalWidth = Double(splitView.frame.width)
-                guard totalWidth > 0 else { return false }
                 splitView.setPosition(CGFloat(totalWidth - briefWidth.wrappedValue), ofDividerAt: 2)
             }
             return true

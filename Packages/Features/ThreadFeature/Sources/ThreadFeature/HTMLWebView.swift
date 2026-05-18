@@ -55,6 +55,7 @@ struct HTMLWebView: NSViewRepresentable {
             coordinator.onTextNodesExtracted = onTextNodesExtracted
             coordinator.pendingTranslations = translatedNodes
             coordinator.lastTranslatedNodes = translatedNodes
+            coordinator.hasExtracted = false
             webView.loadHTMLString(wrapHTML(processed), baseURL: nil)
         } else if translationsChanged {
             coordinator.lastTranslatedNodes = translatedNodes
@@ -227,8 +228,8 @@ struct HTMLWebView: NSViewRepresentable {
                 }
             }
 
-            // Extract text nodes if callback is set
-            if onTextNodesExtracted != nil {
+            // Extract text nodes if callback is set (guard against double-firing)
+            if onTextNodesExtracted != nil && !hasExtracted {
                 webView.evaluateJavaScript(HTMLWebView.extractionJS) { [weak self, weak webView] result, _ in
                     guard let self, let jsonString = result as? String else { return }
                     self.hasExtracted = true
