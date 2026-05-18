@@ -13,7 +13,9 @@ public struct TranslationTextNode: Sendable {
 }
 
 /// NSViewRepresentable wrapper around WKWebView for rendering HTML email bodies.
-/// JavaScript is disabled. Remote resource loading is blocked by default via CSP
+/// Page-originated JavaScript is disabled (`allowsContentJavaScript = false`).
+/// Host-driven JS via `evaluateJavaScript` is used for translation DOM walks.
+/// Remote resource loading is blocked by default via CSP
 /// and navigation policy; flip `allowRemoteImages` to permit remote `<img>` loads.
 struct HTMLWebView: NSViewRepresentable {
     let html: String

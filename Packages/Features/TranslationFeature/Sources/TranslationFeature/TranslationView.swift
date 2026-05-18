@@ -152,17 +152,22 @@ public struct TranslationToggleView: View {
                 store.setTranslation(for: msg.id, text: translated.targetText)
             }
 
-            // For HTML messages, translate extracted nodes from the store
+            // For HTML messages, batch-translate extracted nodes from the store
             for msgId in htmlMessageIds {
                 guard store.nodeTranslations(for: msgId) == nil else { continue }
                 guard let nodes = store.extractedNodes[msgId], !nodes.isEmpty else { continue }
                 let generation = store.currentGeneration(for: msgId)
 
+                let requests = nodes.map {
+                    TranslationSession.Request(sourceText: $0.text, clientIdentifier: $0.id)
+                }
                 var result: [String: String] = [:]
-                for node in nodes {
+                let responses = session.translate(batch: requests)
+                for try await response in responses {
                     guard store.currentGeneration(for: msgId) == generation else { break }
-                    let translated = try await session.translate(node.text)
-                    result[node.id] = translated.targetText
+                    if let id = response.clientIdentifier {
+                        result[id] = response.targetText
+                    }
                 }
                 guard store.currentGeneration(for: msgId) == generation else { continue }
                 store.setNodeTranslations(for: msgId, nodes: result)

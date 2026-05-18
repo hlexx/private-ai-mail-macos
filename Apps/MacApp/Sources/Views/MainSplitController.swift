@@ -111,6 +111,15 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             if bWidth > 0 { briefWidth.wrappedValue = bWidth }
         }
 
+        context.coordinator.onCollapseChanged = { sidebarIsCollapsed, briefIsCollapsed in
+            if _sidebarCollapsed.wrappedValue != sidebarIsCollapsed {
+                _sidebarCollapsed.wrappedValue = sidebarIsCollapsed
+            }
+            if _briefCollapsed.wrappedValue != briefIsCollapsed {
+                _briefCollapsed.wrappedValue = briefIsCollapsed
+            }
+        }
+
         return controller
     }
 
@@ -139,6 +148,7 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
 
     class Coordinator: NSObject, NSSplitViewDelegate {
         var onWidthsChanged: ((Double, Double, Double) -> Void)?
+        var onCollapseChanged: ((Bool, Bool) -> Void)?
         /// Deferred initial layout closure. Returns `true` when layout succeeded
         /// (frame had a valid non-zero width), `false` to retry on next resize.
         var pendingInitialLayout: ((NSSplitView) -> Bool)?
@@ -172,6 +182,7 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             debounceWorkItem?.cancel()
             let work = DispatchWorkItem { [weak self] in
                 self?.onWidthsChanged?(sWidth, tWidth, bWidth)
+                self?.onCollapseChanged?(sidebarIsCollapsed, briefIsCollapsed)
             }
             debounceWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
