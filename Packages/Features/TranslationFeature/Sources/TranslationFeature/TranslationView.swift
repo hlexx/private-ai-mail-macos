@@ -12,6 +12,10 @@ public struct TranslationToggleView: View {
 
     @State private var translationConfig: TranslationSession.Configuration?
 
+    private var messageFingerprint: String {
+        messages.map(\.id).joined(separator: ",")
+    }
+
     public init(
         store: TranslationStore,
         detectedLanguage: String?,
@@ -55,6 +59,11 @@ public struct TranslationToggleView: View {
                 await translateAll(session: session)
             }
             .onAppear {
+                if autoTranslate && !store.showTranslated {
+                    triggerTranslation()
+                }
+            }
+            .onChange(of: messageFingerprint) { _, _ in
                 if autoTranslate && !store.showTranslated {
                     triggerTranslation()
                 }

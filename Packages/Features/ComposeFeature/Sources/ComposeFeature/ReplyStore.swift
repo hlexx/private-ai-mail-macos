@@ -10,6 +10,7 @@ public final class ReplyStore {
     public internal(set) var reply: AIThreadReply?
     public private(set) var isLoading = false
     public private(set) var error: (any Error)?
+    public private(set) var focusRequestCount: Int = 0
 
     private let aiService: (any AIService)?
     private let db: AppDatabase?
@@ -110,6 +111,7 @@ public final class ReplyStore {
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
         if let cached = replyCache[key] {
             reply = cached
+            focusRequestCount += 1
             return
         }
         generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)

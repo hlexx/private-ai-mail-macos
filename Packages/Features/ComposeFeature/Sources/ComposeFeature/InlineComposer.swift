@@ -12,6 +12,7 @@ public struct InlineComposer: View {
     @State private var detectedLanguage: String?
     @State private var languageOverride: String?
     @State private var showLanguagePicker = false
+    @FocusState private var isEditorFocused: Bool
 
     let threadID: String
     let accountId: String?
@@ -67,7 +68,11 @@ public struct InlineComposer: View {
             if let newReply {
                 draftText = newReply.body
                 detectedLanguage = newReply.detectedReplyLanguage
+                isEditorFocused = true
             }
+        }
+        .onChange(of: replyStore.focusRequestCount) { _, _ in
+            if replyStore.reply != nil { isEditorFocused = true }
         }
     }
 
@@ -177,6 +182,7 @@ public struct InlineComposer: View {
     private var textArea: some View {
         ZStack {
             TextEditor(text: $draftText)
+                .focused($isEditorFocused)
                 .font(.rbGeist(14))
                 .foregroundStyle(Color.rbFg1)
                 .scrollContentBackground(.hidden)
