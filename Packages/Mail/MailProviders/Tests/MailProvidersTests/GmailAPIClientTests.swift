@@ -335,4 +335,76 @@ struct GmailMapperTests {
         #expect(message.attachments[0].filename == "report.pdf")
         #expect(message.attachments[0].mimeType == "application/pdf")
     }
+
+    @Test func mapMessageWithInlineImage() async throws {
+        let dto = GmailDTO.Message(
+            id: "msg003",
+            threadId: "thread001",
+            labelIds: [],
+            internalDate: "1700000000000",
+            payload: GmailDTO.MessagePart(
+                mimeType: "multipart/related",
+                headers: [],
+                parts: [
+                    GmailDTO.MessagePart(
+                        partId: "0",
+                        mimeType: "text/html",
+                        body: GmailDTO.MessagePartBody(
+                            size: 50,
+                            data: "PGltZyBzcmM9ImNpZDpsb2dvQGV4YW1wbGUiPg"
+                        )
+                    ),
+                    GmailDTO.MessagePart(
+                        partId: "1",
+                        mimeType: "image/png",
+                        headers: [
+                            GmailDTO.MessagePartHeader(name: "Content-ID", value: "<logo@example>"),
+                        ],
+                        body: GmailDTO.MessagePartBody(
+                            size: 4,
+                            data: "iVBORw0KGg"
+                        )
+                    ),
+                ]
+            )
+        )
+
+        let message = GmailMapper.mapMessage(dto, accountId: accountId)
+
+        #expect(message.attachments.count == 1)
+        #expect(message.attachments[0].contentId == "logo@example")
+        #expect(message.attachments[0].inlineData != nil)
+        #expect(message.attachments[0].mimeType == "image/png")
+        #expect(message.attachments[0].id == "inline_logo@example")
+    }
+
+    @Test func mapMessageWithAttachmentIncludesContentId() async throws {
+        let dto = GmailDTO.Message(
+            id: "msg004",
+            threadId: "thread001",
+            labelIds: [],
+            internalDate: "1700000000000",
+            payload: GmailDTO.MessagePart(
+                mimeType: "multipart/mixed",
+                headers: [],
+                parts: [
+                    GmailDTO.MessagePart(
+                        partId: "1",
+                        mimeType: "image/jpeg",
+                        filename: "photo.jpg",
+                        headers: [
+                            GmailDTO.MessagePartHeader(name: "Content-Id", value: "<photo@mail>"),
+                        ],
+                        body: GmailDTO.MessagePartBody(attachmentId: "att002", size: 2048)
+                    ),
+                ]
+            )
+        )
+
+        let message = GmailMapper.mapMessage(dto, accountId: accountId)
+
+        #expect(message.attachments.count == 1)
+        #expect(message.attachments[0].contentId == "photo@mail")
+        #expect(message.attachments[0].filename == "photo.jpg")
+    }
 }

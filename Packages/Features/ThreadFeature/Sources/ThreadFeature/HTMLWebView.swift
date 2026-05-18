@@ -48,9 +48,9 @@ struct HTMLWebView: NSViewRepresentable {
     private func resolvedHTML() -> String {
         var result = html
         for att in attachments {
-            let cidRef = "cid:\(att.contentId)"
             let dataURL = "data:\(att.mime);base64,\(att.data.base64EncodedString())"
-            result = result.replacingOccurrences(of: cidRef, with: dataURL)
+            result = result.replacingOccurrences(of: "cid:\(att.contentId)", with: dataURL)
+            result = result.replacingOccurrences(of: "cid:<\(att.contentId)>", with: dataURL)
         }
         return result
     }

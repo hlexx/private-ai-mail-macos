@@ -50,6 +50,8 @@ func makeAttachmentRecord(from att: MailDomain.Attachment, messageId: String, ac
         accountId: accountId,
         filename: att.filename,
         mime: att.mimeType,
-        sizeBytes: att.sizeBytes
+        sizeBytes: att.sizeBytes,
+        contentId: att.contentId,
+        dataBase64: att.inlineData
     )
 }

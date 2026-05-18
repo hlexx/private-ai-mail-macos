@@ -9,6 +9,7 @@ enum Migrator {
         migrator.registerMigration("M004_TranslatedText", migrate: M004_TranslatedText.migrate)
         migrator.registerMigration("M005_ThreadLabelAccountId", migrate: M005_ThreadLabelAccountId.migrate)
         migrator.registerMigration("M006_ThreadBrief", migrate: M006_ThreadBrief.migrate)
+        migrator.registerMigration("M007_AttachmentCID", migrate: M007_AttachmentCID.migrate)
         try migrator.migrate(db)
     }
 }
@@ -171,6 +172,15 @@ enum M005_ThreadLabelAccountId {
             on: "thread_label",
             columns: ["account_id", "thread_id"]
         )
+    }
+}
+
+enum M007_AttachmentCID {
+    static func migrate(_ db: Database) throws {
+        try db.alter(table: "attachment") { t in
+            t.add(column: "content_id", .text)
+            t.add(column: "data_base64", .text)
+        }
     }
 }
 

@@ -102,18 +102,52 @@ public enum GmailMapper {
     }
 
     private static func collectAttachments(part: GmailDTO.MessagePart, messageId: String, result: inout [Attachment]) {
+        let partContentId = part.headers?.first {
+            $0.name.caseInsensitiveCompare("Content-Id") == .orderedSame
+                || $0.name.caseInsensitiveCompare("Content-ID") == .orderedSame
+        }?.value
+        let normalizedCid = partContentId?
+            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
+
         if let attachmentId = part.body?.attachmentId, let filename = part.filename, !filename.isEmpty {
             result.append(Attachment(
                 id: attachmentId,
                 messageId: messageId,
                 filename: filename,
                 mimeType: part.mimeType,
-                sizeBytes: part.body?.size
+                sizeBytes: part.body?.size,
+                contentId: normalizedCid
+            ))
+        } else if let cid = normalizedCid, !cid.isEmpty,
+                  let mime = part.mimeType, mime.hasPrefix("image/"),
+                  let bodyData = part.body?.data {
+            let id = "inline_\(cid)"
+            let base64 = base64URLToStandard(bodyData)
+            result.append(Attachment(
+                id: id,
+                messageId: messageId,
+                filename: nil,
+                mimeType: mime,
+                sizeBytes: part.body?.size,
+                contentId: cid,
+                inlineData: base64
             ))
         }
         for child in part.parts ?? [] {
             collectAttachments(part: child, messageId: messageId, result: &result)
         }
+    }
+
+    private static func base64URLToStandard(_ encoded: String) -> String {
+        var base64 = encoded
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = base64.count % 4
+        if remainder > 0 {
+            base64 += String(repeating: "=", count: 4 - remainder)
+        }
+        return base64
     }
 
     private static func decodeBase64URL(_ encoded: String) -> String? {

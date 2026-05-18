@@ -284,7 +284,13 @@ private struct MessageCardView: View {
                     bodyHtml: message.bodyHtml,
                     bodyText: message.bodyText,
                     snippet: message.snippet,
-                    attachments: []
+                    attachments: message.inlineAttachments.map { att in
+                        HTMLWebView.AttachmentData(
+                            contentId: att.contentId,
+                            mime: att.mime,
+                            data: Data(base64Encoded: att.dataBase64) ?? Data()
+                        )
+                    }
                 )
             }
         }

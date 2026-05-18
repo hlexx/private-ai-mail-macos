@@ -3,6 +3,12 @@ import GRDB
 import Observation
 import Persistence
 
+public struct InlineAttachment: Sendable {
+    public let contentId: String
+    public let mime: String
+    public let dataBase64: String
+}
+
 public struct MessageRow: Identifiable, Sendable {
     public let id: String
     public let threadId: String
@@ -14,6 +20,7 @@ public struct MessageRow: Identifiable, Sendable {
     public let bodyText: String
     public let bodyHtml: String?
     public let flags: Int
+    public let inlineAttachments: [InlineAttachment]
 
     public var isSentByMe: Bool {
         (flags & MessageRecord.sentByMe) != 0
@@ -28,7 +35,7 @@ public struct MessageRow: Identifiable, Sendable {
         return bodyText
     }
 
-    public init(record: MessageRecord) {
+    public init(record: MessageRecord, inlineAttachments: [InlineAttachment] = []) {
         self.id = record.id
         self.threadId = record.threadId
         self.messageIdHeader = record.messageIdHeader
@@ -39,6 +46,7 @@ public struct MessageRow: Identifiable, Sendable {
         self.bodyText = record.bodyText ?? record.snippet ?? ""
         self.bodyHtml = record.bodyHtml
         self.flags = record.flags
+        self.inlineAttachments = inlineAttachments
     }
 
     public var senderName: String {
@@ -144,7 +152,17 @@ public final class ThreadStore {
             do {
                 for try await (thread, records, attRecords, starred) in observation.values(in: db.dbQueue) {
                     guard !Task.isCancelled, let self else { return }
-                    self.messages = records.map(MessageRow.init)
+                    let inlineByMessage = Dictionary(
+                        grouping: attRecords.filter { $0.contentId != nil && $0.dataBase64 != nil },
+                        by: \.messageId
+                    )
+                    self.messages = records.map { rec in
+                        let inlines = (inlineByMessage[rec.id] ?? []).compactMap { att -> InlineAttachment? in
+                            guard let cid = att.contentId, let data = att.dataBase64 else { return nil }
+                            return InlineAttachment(contentId: cid, mime: att.mime ?? "image/png", dataBase64: data)
+                        }
+                        return MessageRow(record: rec, inlineAttachments: inlines)
+                    }
                     self.subject = thread?.subject ?? "(no subject)"
                     self.messageCount = thread?.messageCount ?? records.count
                     self.attachments = attRecords.map(AttachmentInfo.init)

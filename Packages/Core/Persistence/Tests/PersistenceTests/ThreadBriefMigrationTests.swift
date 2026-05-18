@@ -149,3 +149,78 @@ struct ThreadBriefMigrationTests {
         #expect(brief?.generatedAt == 4000)
     }
 }
+
+@Suite("Attachment CID Migration")
+struct AttachmentCIDMigrationTests {
+
+    @Test func m007AddsContentIdAndDataBase64Columns() async throws {
+        let db = try await DatabaseActor.shared.run {
+            try AppDatabase.openInMemory()
+        }
+        let columns = try db.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM pragma_table_info('attachment') ORDER BY name")
+        }
+        #expect(columns.contains("content_id"))
+        #expect(columns.contains("data_base64"))
+    }
+
+    @Test func attachmentRecordRoundTripWithCID() async throws {
+        let db = try await DatabaseActor.shared.run {
+            try AppDatabase.openInMemory()
+        }
+
+        try await DatabaseActor.shared.run {
+            try db.write { db in
+                try AccountRecord(id: "a1", email: "test@gmail.com", createdAt: 1000).insert(db)
+                try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 2000, messageCount: 1).insert(db)
+                try MessageRecord(id: "m1", threadId: "t1", accountId: "a1", sentAt: 2000).insert(db)
+                try AttachmentRecord(
+                    id: "inline_logo@ex",
+                    messageId: "m1",
+                    accountId: "a1",
+                    mime: "image/png",
+                    contentId: "logo@ex",
+                    dataBase64: "iVBORw0KGgo="
+                ).insert(db)
+            }
+        }
+
+        let att = try db.read { db in
+            try AttachmentRecord.fetchOne(db, sql: "SELECT * FROM attachment WHERE id = 'inline_logo@ex'")
+        }
+        #expect(att != nil)
+        #expect(att?.contentId == "logo@ex")
+        #expect(att?.dataBase64 == "iVBORw0KGgo=")
+        #expect(att?.mime == "image/png")
+    }
+
+    @Test func attachmentRecordWithoutCIDStillWorks() async throws {
+        let db = try await DatabaseActor.shared.run {
+            try AppDatabase.openInMemory()
+        }
+
+        try await DatabaseActor.shared.run {
+            try db.write { db in
+                try AccountRecord(id: "a1", email: "test@gmail.com", createdAt: 1000).insert(db)
+                try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 2000, messageCount: 1).insert(db)
+                try MessageRecord(id: "m1", threadId: "t1", accountId: "a1", sentAt: 2000).insert(db)
+                try AttachmentRecord(
+                    id: "att001",
+                    messageId: "m1",
+                    accountId: "a1",
+                    filename: "doc.pdf",
+                    mime: "application/pdf",
+                    sizeBytes: 1024
+                ).insert(db)
+            }
+        }
+
+        let att = try db.read { db in
+            try AttachmentRecord.fetchOne(db, sql: "SELECT * FROM attachment WHERE id = 'att001'")
+        }
+        #expect(att != nil)
+        #expect(att?.contentId == nil)
+        #expect(att?.dataBase64 == nil)
+        #expect(att?.filename == "doc.pdf")
+    }
+}

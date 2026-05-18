@@ -371,10 +371,10 @@ Reflect the current `STARRED`-label state of the open thread.
 
 Make `<img src="cid:logo@…">` resolve to the embedded attachment data.
 
-- [ ] In `ThreadView.swift:282`, replace `attachments: []` with the
+- [x] In `ThreadView.swift:282`, replace `attachments: []` with the
       actual per-message attachment list (it's already in
       `MessageRow`/`MessageRecord` join, just plumb it through).
-- [ ] In `MessageBodyView.HTMLWebView`, before `loadHTMLString`:
+- [x] In `MessageBodyView.HTMLWebView`, before `loadHTMLString`:
       ```swift
       var html = bodyHtml ?? ""
       for att in attachments where (att.mime ?? "").hasPrefix("image/") {
@@ -387,7 +387,7 @@ Make `<img src="cid:logo@…">` resolve to the embedded attachment data.
           html = html.replacingOccurrences(of: "cid:<\(normalised)>", with: dataURL)
       }
       ```
-- [ ] If `AttachmentRecord` doesn't currently expose `contentId` or
+- [x] If `AttachmentRecord` doesn't currently expose `contentId` or
       raw `dataBase64`, add the columns to `AttachmentRecord` + migration
       v4 (or fold into v3) and populate from `GmailMapper`'s
       `extractAttachments`. Gmail returns `body.attachmentId` for the
@@ -396,11 +396,11 @@ Make `<img src="cid:logo@…">` resolve to the embedded attachment data.
       cache, or whether inline-encoded attachments arrive in the
       original payload. Most inline images come in `body.data` directly
       when the message format is `full`.
-- [ ] CSP already allows `img-src data:` — no CSP change needed.
-- [ ] Tests: a fixture HTML email with a tiny PNG embedded as cid:logo
+- [x] CSP already allows `img-src data:` — no CSP change needed.
+- [x] Tests: a fixture HTML email with a tiny PNG embedded as cid:logo
       → assert the rendered HTML contains `data:image/png;base64,…` in
       place of `cid:logo`.
-- [ ] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 8: Misc cleanup — Undo toast timer + htmlToPlainText consistency
 
