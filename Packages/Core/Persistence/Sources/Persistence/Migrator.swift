@@ -8,6 +8,7 @@ enum Migrator {
         migrator.registerMigration("M003_TrustedSender", migrate: M003_TrustedSender.migrate)
         migrator.registerMigration("M004_TranslatedText", migrate: M004_TranslatedText.migrate)
         migrator.registerMigration("M005_ThreadLabelAccountId", migrate: M005_ThreadLabelAccountId.migrate)
+        migrator.registerMigration("M006_ThreadBrief", migrate: M006_ThreadBrief.migrate)
         try migrator.migrate(db)
     }
 }
@@ -169,6 +170,42 @@ enum M005_ThreadLabelAccountId {
             index: "idx_thread_label_thread",
             on: "thread_label",
             columns: ["account_id", "thread_id"]
+        )
+    }
+}
+
+enum M006_ThreadBrief {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "thread_brief") { t in
+            t.column("account_id", .text).notNull()
+                .references("account", onDelete: .cascade)
+            t.column("thread_id", .text).notNull()
+            t.column("latest_message_id", .text).notNull()
+            t.column("summary", .text)
+            t.column("request", .text)
+            t.column("deadline", .text)
+            t.column("risk", .text)
+            t.column("next_step", .text)
+            t.column("confidence", .double).notNull().defaults(to: 0)
+            t.column("evidence_json", .text).notNull().defaults(to: "[]")
+            t.column("language", .text)
+            t.column("generated_at", .integer).notNull()
+            t.primaryKey(["account_id", "thread_id"])
+        }
+        try db.create(
+            index: "idx_thread_brief_account",
+            on: "thread_brief",
+            columns: ["account_id"]
+        )
+        try db.create(
+            index: "idx_thread_brief_request",
+            on: "thread_brief",
+            columns: ["account_id", "request"]
+        )
+        try db.create(
+            index: "idx_thread_brief_deadline",
+            on: "thread_brief",
+            columns: ["account_id", "deadline"]
         )
     }
 }

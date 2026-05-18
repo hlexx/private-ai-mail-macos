@@ -129,7 +129,7 @@ cd $PROJ && ! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --includ
 Persistent storage for AI briefs. One row per `(account_id, thread_id)`.
 Invalidation key: `latest_message_id`.
 
-- [ ] Create `Packages/Core/Persistence/Sources/Persistence/Records/ThreadBriefRecord.swift`:
+- [x] Create `Packages/Core/Persistence/Sources/Persistence/Records/ThreadBriefRecord.swift`:
       ```swift
       public struct ThreadBriefRecord: Codable, Sendable, FetchableRecord, PersistableRecord {
           public static let databaseTableName = "thread_brief"
@@ -158,7 +158,7 @@ Invalidation key: `latest_message_id`.
           }
       }
       ```
-- [ ] Add `v3_thread_brief` migration to `Migrator.swift`:
+- [x] Add `v3_thread_brief` migration to `Migrator.swift`:
       ```swift
       migrator.registerMigration("v3_thread_brief") { db in
           try db.create(table: "thread_brief") { t in
@@ -182,10 +182,10 @@ Invalidation key: `latest_message_id`.
           try db.create(index: "idx_thread_brief_deadline", on: "thread_brief", columns: ["account_id", "deadline"])
       }
       ```
-- [ ] Tests in `PersistenceTests/ThreadBriefMigrationTests.swift`: open
+- [x] Tests in `PersistenceTests/ThreadBriefMigrationTests.swift`: open
       empty DB → run migrator → assert table + 3 indices exist →
       round-trip a sample `ThreadBriefRecord` (insert + fetchOne).
-- [ ] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
+- [x] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
 
 ### Task 2: BriefStore persists every generated brief
 
