@@ -138,18 +138,24 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
 
     class Coordinator: NSObject, NSSplitViewDelegate {
         var onWidthsChanged: ((Double, Double, Double) -> Void)?
+        private var debounceWorkItem: DispatchWorkItem?
 
         func splitViewDidResizeSubviews(_ notification: Notification) {
             guard let splitView = notification.object as? NSSplitView,
                   splitView.subviews.count == 4 else { return }
 
-            let sWidth = splitView.subviews[0].frame.width
-            let tWidth = splitView.subviews[1].frame.width
-            let bWidth = splitView.subviews[3].frame.width
+            let sWidth = Double(splitView.subviews[0].frame.width)
+            let tWidth = Double(splitView.subviews[1].frame.width)
+            let bWidth = Double(splitView.subviews[3].frame.width)
 
-            // Persist each pane width independently; collapsed panes report 0
-            // and are filtered by the callback consumer.
-            onWidthsChanged?(Double(sWidth), Double(tWidth), Double(bWidth))
+            // Debounce writes to UserDefaults — splitViewDidResizeSubviews
+            // fires on every frame during drag.
+            debounceWorkItem?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                self?.onWidthsChanged?(sWidth, tWidth, bWidth)
+            }
+            debounceWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
         }
     }
 }

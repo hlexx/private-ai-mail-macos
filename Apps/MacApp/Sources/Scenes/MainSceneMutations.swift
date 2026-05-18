@@ -6,6 +6,34 @@ import Persistence
 import SwiftUI
 import ThreadFeature
 
+// MARK: - Translation Helpers
+
+extension MainScene {
+
+    func lastIncomingText() -> String? {
+        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
+            return lastIncoming.bestPlainText
+        }
+        return threadStore.messages.last?.bestPlainText
+    }
+
+    func detectThreadLanguage() -> String? {
+        guard let text = lastIncomingText() else { return nil }
+        return translationStore.detect(text: text)
+    }
+
+    func detectReplyLanguage() -> String? {
+        guard let text = lastIncomingText(), !text.isEmpty else {
+            return preferredLanguage.isEmpty ? nil : preferredLanguage
+        }
+        guard let result = translationStore.detectWithConfidence(text: text),
+              result.confidence >= 0.5 else {
+            return preferredLanguage.isEmpty ? nil : preferredLanguage
+        }
+        return result.language
+    }
+}
+
 // MARK: - Mutation & Toast Helpers
 
 extension MainScene {

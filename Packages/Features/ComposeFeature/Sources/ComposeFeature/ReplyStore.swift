@@ -108,7 +108,10 @@ public final class ReplyStore {
         locale: Locale = .current
     ) {
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        if replyCache[key] != nil { return }
+        if let cached = replyCache[key] {
+            reply = cached
+            return
+        }
         generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
     }
 

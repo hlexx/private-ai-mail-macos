@@ -59,6 +59,12 @@ public struct TranslationToggleView: View {
                     triggerTranslation()
                 }
             }
+            .onChange(of: store.needsRetranslation) { _, needs in
+                if needs && store.showTranslated {
+                    store.needsRetranslation = false
+                    triggerTranslation()
+                }
+            }
         }
     }
 

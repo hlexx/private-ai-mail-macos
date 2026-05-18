@@ -113,49 +113,40 @@ public struct BriefRail: View {
     }
 
     private var ctaRow: some View {
-        GeometryReader { geo in
-            let narrow = geo.size.width < 360
-            let layout = narrow
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
-                : AnyLayout(HStackLayout(spacing: 6))
-            layout {
-                Button {
-                    onDraftReply?()
-                } label: {
-                    Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
-                .buttonStyle(.rbPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .disabled(onDraftReply == nil)
-
-                Button {
-                } label: {
-                    Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
-                .buttonStyle(.rbSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .disabled(true)
-                .help(String(localized: "brief.cta.snooze.phase2", defaultValue: "Coming in Phase 2 — needs an in-app scheduler"))
-
-                Button {
-                } label: {
-                    Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
-                .buttonStyle(.rbGhost)
-                .fixedSize(horizontal: false, vertical: true)
-                .disabled(true)
-                .help(String(localized: "brief.cta.logCRM.phase2", defaultValue: "Coming in Phase 2 — connect a CRM in Settings → Integrations first."))
-
-                if !narrow { Spacer() }
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                onDraftReply?()
+            } label: {
+                Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
+            .buttonStyle(.rbPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .disabled(onDraftReply == nil)
+
+            Button {
+            } label: {
+                Label(String(localized: "brief.cta.snooze", defaultValue: "Snooze to Fri AM"), systemImage: "clock")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .buttonStyle(.rbSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .disabled(true)
+            .help(String(localized: "brief.cta.snooze.phase2", defaultValue: "Coming in Phase 2 — needs an in-app scheduler"))
+
+            Button {
+            } label: {
+                Text(String(localized: "brief.cta.logCRM", defaultValue: "Log to CRM"))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .buttonStyle(.rbGhost)
+            .fixedSize(horizontal: false, vertical: true)
+            .disabled(true)
+            .help(String(localized: "brief.cta.logCRM.phase2", defaultValue: "Coming in Phase 2 — connect a CRM in Settings → Integrations first."))
         }
-        .frame(minHeight: 34, idealHeight: 120)
     }
 
     // MARK: - Loading State

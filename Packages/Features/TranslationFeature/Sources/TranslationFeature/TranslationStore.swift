@@ -87,6 +87,11 @@ public final class TranslationStore {
 
     // MARK: - State Management
 
+    /// Set by the extraction callback when nodes arrive after the initial
+    /// translation pass has already completed. TranslationToggleView observes
+    /// this flag to re-trigger translation for HTML messages.
+    public var needsRetranslation = false
+
     public func setTranslating(_ value: Bool) {
         isTranslating = value
     }
@@ -100,6 +105,7 @@ public final class TranslationStore {
         translatedNodes.removeAll()
         extractedNodes.removeAll()
         translationGeneration.removeAll()
+        needsRetranslation = false
         showTranslated = false
     }
 }

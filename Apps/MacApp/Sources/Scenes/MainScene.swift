@@ -100,6 +100,12 @@ struct MainScene: View {
                                 for: messageId,
                                 nodes: nodes.map { ($0.id, $0.text) }
                             )
+                            // Re-trigger translation if the toggle is already active.
+                            // translateAll may have run before extraction finished,
+                            // so newly extracted nodes need a fresh translation pass.
+                            if translationStore.showTranslated {
+                                translationStore.needsRetranslation = true
+                            }
                         },
                         composer: {
                             if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
@@ -213,31 +219,6 @@ struct MainScene: View {
             folders[idx].count = (c ?? 0) > 0 ? c : nil
         }
         return folders
-    }
-
-    // MARK: - Translation Helpers
-
-    private func lastIncomingText() -> String? {
-        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
-            return lastIncoming.bestPlainText
-        }
-        return threadStore.messages.last?.bestPlainText
-    }
-
-    private func detectThreadLanguage() -> String? {
-        guard let text = lastIncomingText() else { return nil }
-        return translationStore.detect(text: text)
-    }
-
-    private func detectReplyLanguage() -> String? {
-        guard let text = lastIncomingText(), !text.isEmpty else {
-            return preferredLanguage.isEmpty ? nil : preferredLanguage
-        }
-        guard let result = translationStore.detectWithConfidence(text: text),
-              result.confidence >= 0.5 else {
-            return preferredLanguage.isEmpty ? nil : preferredLanguage
-        }
-        return result.language
     }
 
     // MARK: - Compose Helpers
