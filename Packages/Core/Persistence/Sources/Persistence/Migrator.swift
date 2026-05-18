@@ -192,6 +192,12 @@ enum M006_ThreadBrief {
             t.column("language", .text)
             t.column("generated_at", .integer).notNull()
             t.primaryKey(["account_id", "thread_id"])
+            t.foreignKey(
+                ["account_id", "thread_id"],
+                references: "thread",
+                columns: ["account_id", "id"],
+                onDelete: .cascade
+            )
         }
         try db.create(
             index: "idx_thread_brief_account",
