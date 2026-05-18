@@ -143,7 +143,7 @@ public final class ThreadStore {
                     attachments = []
                 } else {
                     attachments = try AttachmentRecord
-                        .filter(messageIds.contains(Column("message_id")))
+                        .filter(messageIds.contains(Column("message_id")) && Column("account_id") == accountId)
                         .fetchAll(db)
                 }
 

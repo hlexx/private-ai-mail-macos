@@ -118,9 +118,9 @@ public final class BriefBackgroundQueue {
                 self.pendingSet.remove(key)
 
                 await self.processThread(key)
-                self.refreshCounts()
             }
             if let self {
+                self.refreshCounts()
                 self.isRunning = false
                 self.workerTask = nil
             }
