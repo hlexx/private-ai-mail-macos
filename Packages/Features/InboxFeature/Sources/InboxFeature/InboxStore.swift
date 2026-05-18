@@ -215,6 +215,39 @@ public final class InboxStore {
                 ) ?? 0
                 counts[.attachments] = attCount
 
+                // Brief-driven counts (needsReply, hasDeadline)
+                let briefAccountFilter: String
+                let briefArgs: [DatabaseValueConvertible]
+                if case .account(let accountId) = currentSelection {
+                    briefAccountFilter = " WHERE tb.account_id = ?"
+                    briefArgs = [accountId]
+                } else {
+                    briefAccountFilter = ""
+                    briefArgs = []
+                }
+
+                let needsReplyCount = try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT COUNT(*) FROM thread_brief tb
+                        """ + briefAccountFilter
+                        + (briefArgs.isEmpty ? " WHERE" : " AND")
+                        + " tb.request IS NOT NULL AND TRIM(tb.request) <> ''",
+                    arguments: StatementArguments(briefArgs)
+                ) ?? 0
+                counts[.needsReply] = needsReplyCount
+
+                let hasDeadlineCount = try Int.fetchOne(
+                    db,
+                    sql: """
+                        SELECT COUNT(*) FROM thread_brief tb
+                        """ + briefAccountFilter
+                        + (briefArgs.isEmpty ? " WHERE" : " AND")
+                        + " tb.deadline IS NOT NULL AND TRIM(tb.deadline) <> ''",
+                    arguments: StatementArguments(briefArgs)
+                ) ?? 0
+                counts[.hasDeadline] = hasDeadlineCount
+
                 return counts
             }
             do {
@@ -267,8 +300,24 @@ public final class InboxStore {
                 conditions.append("""
                     EXISTS (SELECT 1 FROM message m2 JOIN attachment a ON a.account_id = m2.account_id AND a.message_id = m2.id WHERE m2.account_id = t.account_id AND m2.thread_id = t.id)
                     """)
-            case .needsReply, .hasDeadline, .logged:
-                // Brief-driven filters — no thread_brief table yet, return empty
+            case .needsReply:
+                conditions.append("""
+                    EXISTS (
+                        SELECT 1 FROM thread_brief tb
+                        WHERE tb.account_id = t.account_id AND tb.thread_id = t.id
+                          AND tb.request IS NOT NULL AND TRIM(tb.request) <> ''
+                    )
+                    """)
+            case .hasDeadline:
+                conditions.append("""
+                    EXISTS (
+                        SELECT 1 FROM thread_brief tb
+                        WHERE tb.account_id = t.account_id AND tb.thread_id = t.id
+                          AND tb.deadline IS NOT NULL AND TRIM(tb.deadline) <> ''
+                    )
+                    """)
+            case .logged:
+                // Phase 2 — CRM integration. Keep returning empty for now.
                 conditions.append("1 = 0")
             }
 
@@ -296,9 +345,29 @@ public final class InboxStore {
             conditions.append("""
                 EXISTS (SELECT 1 FROM message m3 JOIN attachment a2 ON a2.account_id = m3.account_id AND a2.message_id = m3.id WHERE m3.account_id = t.account_id AND m3.thread_id = t.id)
                 """)
-        case .needsReply, .hasDeadline, .aiHandled:
-            // Brief-driven — no thread_brief table yet, return empty
-            conditions.append("1 = 0")
+        case .needsReply:
+            conditions.append("""
+                EXISTS (
+                    SELECT 1 FROM thread_brief tb
+                    WHERE tb.account_id = t.account_id AND tb.thread_id = t.id
+                      AND tb.request IS NOT NULL AND TRIM(tb.request) <> ''
+                )
+                """)
+        case .hasDeadline:
+            conditions.append("""
+                EXISTS (
+                    SELECT 1 FROM thread_brief tb
+                    WHERE tb.account_id = t.account_id AND tb.thread_id = t.id
+                      AND tb.deadline IS NOT NULL AND TRIM(tb.deadline) <> ''
+                )
+                """)
+        case .aiHandled:
+            conditions.append("""
+                EXISTS (
+                    SELECT 1 FROM thread_brief tb
+                    WHERE tb.account_id = t.account_id AND tb.thread_id = t.id
+                )
+                """)
         }
 
         let whereClause = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")

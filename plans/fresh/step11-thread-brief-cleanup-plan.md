@@ -280,7 +280,7 @@ incoming-message events.
 
 Replace `"1 = 0"` with real SQL predicates.
 
-- [ ] In `InboxStore.swift:270-273` (folder filters) and `:299-302`
+- [x] In `InboxStore.swift:270-273` (folder filters) and `:299-302`
       (chip filter), replace the empty-set placeholders with:
       ```swift
       case .needsReply:
@@ -310,20 +310,20 @@ Replace `"1 = 0"` with real SQL predicates.
           // Phase 2 — CRM integration. Keep returning empty for now.
           conditions.append("1 = 0")
       ```
-- [ ] Update `InboxStore.folderCounts` to count via the same predicates
+- [x] Update `InboxStore.folderCounts` to count via the same predicates
       (use one query that GROUPs on each folder via CASE WHEN, or run
       the count queries in parallel via `ValueObservation`).
-- [ ] Verify `InboxStore.observation` re-fires when `thread_brief`
+- [x] Verify `InboxStore.observation` re-fires when `thread_brief`
       changes (`ValueObservation.tracking` must include `thread_brief`
       as a tracked table). Add it explicitly to the
       `Database.regions` set if needed.
-- [ ] Tests: `InboxFeatureTests/ChipFilterTests.swift` — seed thread A
+- [x] Tests: `InboxFeatureTests/ChipFilterTests.swift` — seed thread A
       with brief that has `request = "approve invoice"` → assert
       `.needsReply` chip returns thread A. Seed thread B with
       `deadline = "Friday"` → assert `.hasDeadline` returns B. Seed
       thread C with no brief → assert it appears under no chip except
       `.all` and `.attachments` if applicable.
-- [ ] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
 
 ### Task 5: Folder counts scoped to selected account
 
