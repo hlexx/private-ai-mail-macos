@@ -438,10 +438,10 @@ a real scheduler / CRM integration would surprise the user (Snooze
 without auto-restore is just hidden mail; CRM without an integration
 is a nothing-burger).
 
-- [ ] Extend `BriefRail` view to take callback `onDraftReply: (() -> Void)?`
+- [x] Extend `BriefRail` view to take callback `onDraftReply: (() -> Void)?`
       (default `nil`). The other two buttons get `.disabled(true)` +
       `.help(...)` tooltips, no callbacks.
-- [ ] Add an `anchor` enum + named `id` for the inline composer in
+- [x] Add an `anchor` enum + named `id` for the inline composer in
       `ThreadView`:
       ```swift
       enum ThreadViewAnchor: Hashable { case head, composer }
@@ -449,7 +449,7 @@ is a nothing-burger).
       Wrap the entire reading-pane content in a `ScrollViewReader`
       (it's already inside a `ScrollView` per step 10). Tag the
       `InlineComposer` view with `.id(ThreadViewAnchor.composer)`.
-- [ ] Wire `MainScene` to:
+- [x] Wire `MainScene` to:
       ```swift
       BriefRail(
           store: briefStore,
@@ -470,29 +470,29 @@ is a nothing-burger).
       Where `composerFocus` is a `@FocusState<InlineComposer.Focus?>`
       bound through to InlineComposer (extend InlineComposer to
       expose a `focus` binding with cases `.body`, `.subject`, etc).
-- [ ] **Snooze** button: `.disabled(true)` with `.help("Coming in
+- [x] **Snooze** button: `.disabled(true)` with `.help("Coming in
       Phase 2 — needs an in-app scheduler")`. Visually keep the
       sf-symbol clock + label so layout doesn't shift.
-- [ ] **Log to CRM** button: `.disabled(true)` with `.help("Coming
+- [x] **Log to CRM** button: `.disabled(true)` with `.help("Coming
       in Phase 2 — connect a CRM in Settings → Integrations
       first.")` Same visual.
-- [ ] Keyboard shortcut `⌘⇧R` triggers `onDraftReply` from anywhere
+- [x] Keyboard shortcut `⌘⇧R` triggers `onDraftReply` from anywhere
       in MainWindow. Add a `Commands` block in
       `PrivateAIMailApp.swift` to register it (look for the existing
       `⌘N` compose shortcut for the pattern).
-- [ ] Update `ReplyStore` if `generateIfNeeded(...)` doesn't exist:
+- [x] Update `ReplyStore` if `generateIfNeeded(...)` doesn't exist:
       add it as a thin wrapper that checks the cache (Step 11's
       brief-cache pattern in `BriefStore`) and only calls
       `aiService.draftReply(...)` on miss.
-- [ ] Tests for `BriefRail`:
+- [x] Tests for `BriefRail`:
       - Snapshot with `onDraftReply` non-nil — Draft button is
         enabled.
       - Snapshot with `onDraftReply == nil` — Draft button is
         disabled too (preview / test affordance).
       - Snooze + Log to CRM always disabled, tooltips assertable.
-- [ ] Tests for the keyboard shortcut: a small AppKit-level test
+- [x] Tests for the keyboard shortcut: a small AppKit-level test
       that simulates `⌘⇧R` and asserts the binding is set.
-- [ ] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
+- [x] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`
       and `cd $PROJ/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 5: Layout — collapsible panes + reading-first defaults

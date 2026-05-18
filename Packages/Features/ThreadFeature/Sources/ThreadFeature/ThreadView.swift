@@ -1,6 +1,11 @@
 import DesignSystem
 import SwiftUI
 
+public enum ThreadViewAnchor: Hashable {
+    case head
+    case composer
+}
+
 public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationHeader: View>: View {
     let store: ThreadStore
     let composerContent: ComposerContent
@@ -12,6 +17,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     var translatedTexts: [String: String]
     var translatedNodes: [String: [String: String]]
     var onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)?
+    var onScrollProxy: ((ScrollViewProxy) -> Void)?
 
     public init(
         store: ThreadStore,
@@ -21,6 +27,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         translatedTexts: [String: String] = [:],
         translatedNodes: [String: [String: String]] = [:],
         onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)? = nil,
+        onScrollProxy: ((ScrollViewProxy) -> Void)? = nil,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
@@ -32,6 +39,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.translatedTexts = translatedTexts
         self.translatedNodes = translatedNodes
         self.onTextNodesExtracted = onTextNodesExtracted
+        self.onScrollProxy = onScrollProxy
         self.composerContent = composer()
         self.briefContent = briefRail()
         self.translationHeader = translationHeader()
@@ -49,17 +57,21 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     headSection
                     translationHeader
                     HStack(spacing: 0) {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 0) {
-                                threadColumn
-                                if store.hasAttachment {
-                                    attachmentBlock
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    threadColumn
+                                    if store.hasAttachment {
+                                        attachmentBlock
+                                    }
+                                    composerContent
+                                        .id(ThreadViewAnchor.composer)
                                 }
-                                composerContent
+                                .padding(.horizontal, 28)
+                                .padding(.top, 20)
+                                .padding(.bottom, 24)
                             }
-                            .padding(.horizontal, 28)
-                            .padding(.top, 20)
-                            .padding(.bottom, 24)
+                            .onAppear { onScrollProxy?(proxy) }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -252,6 +264,7 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.translatedTexts = [:]
         self.translatedNodes = [:]
         self.onTextNodesExtracted = nil
+        self.onScrollProxy = nil
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()

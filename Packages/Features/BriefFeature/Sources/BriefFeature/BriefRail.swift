@@ -5,9 +5,11 @@ import SwiftUI
 /// Shows a structured brief when available, or an empty state for informational threads.
 public struct BriefRail: View {
     @Bindable var store: BriefStore
+    var onDraftReply: (() -> Void)?
 
-    public init(store: BriefStore) {
+    public init(store: BriefStore, onDraftReply: (() -> Void)? = nil) {
         self.store = store
+        self.onDraftReply = onDraftReply
     }
 
     public var body: some View {
@@ -118,6 +120,7 @@ public struct BriefRail: View {
                 : AnyLayout(HStackLayout(spacing: 6))
             layout {
                 Button {
+                    onDraftReply?()
                 } label: {
                     Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
                         .lineLimit(1)
@@ -125,6 +128,7 @@ public struct BriefRail: View {
                 }
                 .buttonStyle(.rbPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+                .disabled(onDraftReply == nil)
 
                 Button {
                 } label: {
@@ -134,6 +138,8 @@ public struct BriefRail: View {
                 }
                 .buttonStyle(.rbSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .disabled(true)
+                .help(String(localized: "brief.cta.snooze.phase2", defaultValue: "Coming in Phase 2 — needs an in-app scheduler"))
 
                 Button {
                 } label: {
@@ -143,6 +149,8 @@ public struct BriefRail: View {
                 }
                 .buttonStyle(.rbGhost)
                 .fixedSize(horizontal: false, vertical: true)
+                .disabled(true)
+                .help(String(localized: "brief.cta.logCRM.phase2", defaultValue: "Coming in Phase 2 — connect a CRM in Settings → Integrations first."))
 
                 if !narrow { Spacer() }
             }

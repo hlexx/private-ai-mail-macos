@@ -1,7 +1,9 @@
 import AIKit
 import AppKit
 @testable import ComposeFeature
+import GRDB
 import MailDomain
+import Persistence
 import SwiftUI
 import Testing
 
@@ -9,6 +11,68 @@ import Testing
 struct ComposeFeatureTests {
     @Test func moduleNameIsExported() {
         #expect(ComposeFeature.moduleName == "ComposeFeature")
+    }
+}
+
+// MARK: - ReplyStore generateIfNeeded Tests
+
+@Suite("ReplyStore.generateIfNeeded")
+struct ReplyStoreGenerateIfNeededTests {
+
+    private final class CountingAIService: AIService, @unchecked Sendable {
+        private(set) var callCount = 0
+
+        func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+            AIThreadBrief(summary: "test", confidence: 0.9)
+        }
+
+        func draftReply(
+            _ input: AIThreadInput,
+            tone: AIReplyTone,
+            locale: Locale,
+            replyLanguage: String?
+        ) async throws -> AIThreadReply {
+            callCount += 1
+            return AIThreadReply(body: "Reply", confidence: 0.9)
+        }
+    }
+
+    @MainActor
+    @Test func generateIfNeededCallsGenerateOnCacheMiss() async throws {
+        let mock = CountingAIService()
+        let db = try AppDatabase.openInMemorySync()
+        try await db.dbQueue.write { database in
+            try database.execute(sql: """
+                INSERT INTO account (id, email, provider, display_name, created_at)
+                VALUES ('acc1', 'test@example.com', 'gmail', 'Test', 1000)
+            """)
+            try database.execute(sql: """
+                INSERT INTO thread (id, account_id, subject, snippet, last_message_at, message_count)
+                VALUES ('t1', 'acc1', 'Test', 'Hello', 1000, 1)
+            """)
+            try database.execute(sql: """
+                INSERT INTO message (id, thread_id, account_id, from_addr, sent_at, body_text, flags)
+                VALUES ('msg1', 't1', 'acc1', 'alice@test.com', 1000, 'Hello', 0)
+            """)
+        }
+        let store = ReplyStore(aiService: mock, db: db)
+
+        store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(mock.callCount == 1)
+
+        // Second call should be a no-op (cached)
+        store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(mock.callCount == 1) // Not called again
+    }
+
+    @MainActor
+    @Test func generateIfNeededSkipsWhenCached() async throws {
+        let store = ReplyStore()
+        // Preview store has no AI service, should not crash
+        store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
+        #expect(store.reply == nil)
     }
 }
 

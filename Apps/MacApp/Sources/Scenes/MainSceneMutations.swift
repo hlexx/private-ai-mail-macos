@@ -1,12 +1,29 @@
+import AIKit
 import DesignSystem
 import GRDB
 import InboxFeature
 import Persistence
 import SwiftUI
+import ThreadFeature
 
 // MARK: - Mutation & Toast Helpers
 
 extension MainScene {
+
+    func draftReply() {
+        guard let threadID = inboxStore.selectedThreadID else { return }
+        let accountId = inboxStore.threads.first(where: { $0.id == threadID })?.accountId
+        withAnimation {
+            threadScrollProxy?.scrollTo(ThreadViewAnchor.composer, anchor: .top)
+        }
+        let tone = AIReplyTone(rawValue: defaultToneRaw) ?? .warm
+        composition.replyStore.generateIfNeeded(
+            threadID: threadID,
+            accountId: accountId,
+            tone: tone,
+            replyLanguage: detectReplyLanguage()
+        )
+    }
 
     func archiveSelectedThread() {
         guard let threadId = inboxStore.selectedThreadID,

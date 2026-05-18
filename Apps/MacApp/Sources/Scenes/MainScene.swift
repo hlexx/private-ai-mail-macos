@@ -16,8 +16,10 @@ struct MainScene: View {
 
     @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
+    @State private var threadScrollProxy: ScrollViewProxy?
     @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
+    @AppStorage("pam.defaultTone") private var defaultToneRaw: String = "warm"
     @Environment(\.openSettings) private var openSettings
 
     var inboxStore: InboxStore { composition.inboxStore }
@@ -89,6 +91,9 @@ struct MainScene: View {
                     showTranslated: translationStore.showTranslated,
                     translatedTexts: translationStore.translatedTexts,
                     translatedNodes: translationStore.translatedNodes,
+                    onScrollProxy: { proxy in
+                        threadScrollProxy = proxy
+                    },
                     onTextNodesExtracted: { messageId, nodes in
                         _ = translationStore.nextGeneration(for: messageId)
                         translationStore.setExtractedNodes(
@@ -122,7 +127,7 @@ struct MainScene: View {
                         // (grid 1fr / 340px). It sits beside the thread
                         // column, under the shared head — not as a 4th
                         // top-level pane.
-                        BriefRail(store: briefStore)
+                        BriefRail(store: briefStore, onDraftReply: { draftReply() })
                             .frame(width: RBLayout.briefRailWidth)
                             .frame(maxHeight: .infinity, alignment: .top)
                     },
@@ -194,6 +199,9 @@ struct MainScene: View {
         }
         .keyboardShortcut(key: "k", modifiers: .control) {
             markReadSelectedThread()
+        }
+        .keyboardShortcut(key: "r", modifiers: [.command, .shift]) {
+            draftReply()
         }
         .overlay(alignment: .bottom) {
             if let toast = composition.toastMessage {

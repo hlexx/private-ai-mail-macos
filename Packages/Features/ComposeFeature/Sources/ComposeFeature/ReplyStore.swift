@@ -100,6 +100,18 @@ public final class ReplyStore {
         generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
     }
 
+    public func generateIfNeeded(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?,
+        locale: Locale = .current
+    ) {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        if replyCache[key] != nil { return }
+        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
+    }
+
     public func invalidate(threadID: String) {
         replyCache = replyCache.filter { $0.key.threadID != threadID }
         reply = nil
