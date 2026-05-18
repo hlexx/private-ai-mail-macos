@@ -1,6 +1,7 @@
 import AIKit
 import Foundation
 import GRDB
+import NaturalLanguage
 import Observation
 import Persistence
 
@@ -63,23 +64,61 @@ public final class BriefStore {
 
         inflightTask = Task {
             do {
-                let (input, latestMessageID) = try await Task.detached {
-                    try self.fetchThreadInput(threadID: threadID, accountId: accountId, db: db)
+                let fetchResult = try await Task.detached {
+                    try Self.fetchThreadData(threadID: threadID, accountId: accountId, db: db)
                 }.value
 
-                // Check cache with message-ID freshness
-                if let cached = briefCache[cacheKey], cached.latestMessageID == latestMessageID {
+                let resolvedAccountId = fetchResult.resolvedAccountId
+
+                // L1: in-memory cache
+                if let cached = briefCache[cacheKey], cached.latestMessageID == fetchResult.latestMessageID {
                     brief = cached.viewData
                     isLoading = false
                     return
                 }
 
+                // L2: DB cache
+                if let row = try Self.fetchBriefRecord(
+                    accountId: resolvedAccountId,
+                    threadId: threadID,
+                    db: db
+                ), row.latestMessageId == fetchResult.latestMessageID {
+                    let viewData = ThreadBriefViewData(from: row)
+                    briefCache[cacheKey] = CacheEntry(viewData: viewData, latestMessageID: fetchResult.latestMessageID)
+                    brief = viewData
+                    isLoading = false
+                    return
+                }
+
                 try Task.checkCancellation()
-                let aiBrief = try await aiService.threadBrief(input)
+                let aiBrief = try await aiService.threadBrief(fetchResult.input)
                 try Task.checkCancellation()
 
+                // Persist to DB on a detached task to avoid actor isolation issues
+                let language = fetchResult.detectedLanguage
+                let latestMessageID = fetchResult.latestMessageID
+                try await Task.detached {
+                    let record = ThreadBriefRecord(
+                        accountId: resolvedAccountId,
+                        threadId: threadID,
+                        latestMessageId: latestMessageID,
+                        summary: aiBrief.summary,
+                        request: aiBrief.request,
+                        deadline: aiBrief.deadline,
+                        risk: aiBrief.risk,
+                        nextStep: aiBrief.nextStep,
+                        confidence: aiBrief.confidence,
+                        evidenceJson: Self.encodeEvidence(aiBrief.evidence),
+                        language: language,
+                        generatedAt: Int(Date().timeIntervalSince1970)
+                    )
+                    try db.dbQueue.write { database in
+                        try record.save(database)
+                    }
+                }.value
+
                 let viewData = ThreadBriefViewData(from: aiBrief)
-                briefCache[cacheKey] = CacheEntry(viewData: viewData, latestMessageID: latestMessageID)
+                briefCache[cacheKey] = CacheEntry(viewData: viewData, latestMessageID: fetchResult.latestMessageID)
                 brief = viewData
                 isLoading = false
                 error = nil
@@ -104,9 +143,31 @@ public final class BriefStore {
         loadBrief(forThreadID: id, accountId: account)
     }
 
+    /// Synchronous DB read accessor for use by InboxStore chip/folder filters.
+    public func briefFor(threadID: String, accountId: String) -> ThreadBriefViewData? {
+        guard let db else { return nil }
+        guard let row = try? Self.fetchBriefRecord(accountId: accountId, threadId: threadID, db: db) else {
+            return nil
+        }
+        return ThreadBriefViewData(from: row)
+    }
+
     // MARK: - Private
 
-    private nonisolated func fetchThreadInput(threadID: String, accountId: String?, db: AppDatabase) throws -> (AIThreadInput, String) {
+    private nonisolated static func fetchBriefRecord(accountId: String, threadId: String, db: AppDatabase) throws -> ThreadBriefRecord? {
+        try db.read { database in
+            try ThreadBriefRecord.fetchOne(
+                database,
+                key: ["account_id": accountId, "thread_id": threadId]
+            )
+        }
+    }
+
+    private nonisolated static func fetchThreadData(
+        threadID: String,
+        accountId: String?,
+        db: AppDatabase
+    ) throws -> ThreadFetchResult {
         let (messages, attachments) = try db.read { database in
             let msgs: [MessageRecord]
             if let accountId {
@@ -150,12 +211,39 @@ public final class BriefStore {
             )
         }
         let latestMessageID = messages.last?.id ?? ""
-        return (AIThreadInput(messages: aiMessages, attachments: aiAttachments), latestMessageID)
+        let resolvedAccountId = accountId ?? messages.first?.accountId ?? ""
+
+        // Detect language from incoming messages
+        let incoming = messages.filter { $0.flags & MessageRecord.sentByMe == 0 }
+        let text = incoming.compactMap(\.bodyText).joined(separator: "\n")
+        var detectedLanguage: String?
+        if !text.isEmpty {
+            let recognizer = NLLanguageRecognizer()
+            recognizer.processString(text)
+            detectedLanguage = recognizer.dominantLanguage?.rawValue
+        }
+
+        return ThreadFetchResult(
+            input: AIThreadInput(messages: aiMessages, attachments: aiAttachments),
+            latestMessageID: latestMessageID,
+            resolvedAccountId: resolvedAccountId,
+            detectedLanguage: detectedLanguage
+        )
+    }
+
+    private nonisolated static func encodeEvidence(_ evidence: [String]) -> String {
+        (try? JSONEncoder().encode(evidence)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
     }
 }
 
+// MARK: - Internal types
 
-// MARK: - Cache
+private struct ThreadFetchResult: Sendable {
+    let input: AIThreadInput
+    let latestMessageID: String
+    let resolvedAccountId: String
+    let detectedLanguage: String?
+}
 
 private struct BriefCacheKey: Hashable {
     let threadID: String
@@ -179,6 +267,19 @@ extension ThreadBriefViewData {
             nextStep: brief.nextStep,
             confidence: brief.confidence,
             evidence: brief.evidence
+        )
+    }
+
+    init(from record: ThreadBriefRecord) {
+        let evidence = (try? JSONDecoder().decode([String].self, from: Data((record.evidenceJson).utf8))) ?? []
+        self.init(
+            summary: record.summary ?? "No summary available",
+            request: record.request,
+            deadline: record.deadline,
+            risk: record.risk,
+            nextStep: record.nextStep,
+            confidence: record.confidence,
+            evidence: evidence
         )
     }
 }

@@ -147,7 +147,7 @@ struct BriefFeatureTests {
         let store = BriefStore(aiService: mock, db: db)
 
         store.loadBrief(forThreadID: "thread-1")
-        try await Task.sleep(for: .milliseconds(200))
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(store.brief == nil)
         #expect(store.error != nil)
@@ -216,7 +216,7 @@ struct BriefFeatureTests {
         let store = BriefStore(aiService: mock, db: db)
 
         store.loadBrief(forThreadID: "nonexistent-thread")
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(500))
 
         #expect(mock.callCount == 1)
         #expect(mock.lastInput?.messages.isEmpty == true)

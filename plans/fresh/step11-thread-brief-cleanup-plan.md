@@ -193,7 +193,7 @@ Invalidation key: `latest_message_id`.
 writes through to `thread_brief` on each successful generation. On
 cache miss, first check the DB before invoking AIKit.
 
-- [ ] Modify `BriefStore.swift:`
+- [x] Modify `BriefStore.swift:`
       - Remove `briefCache: [String: CacheEntry]` in-memory dict
         OR keep it as a write-through L1 cache layered on the DB. (Pick
         whichever is cleaner; the DB is the source of truth.)
@@ -212,20 +212,20 @@ cache miss, first check the DB before invoking AIKit.
            `self.brief = ThreadBriefViewData(from: aiBrief)`.
       - Use the existing `bestPlainText` helper from `MessageRecord`
         (no changes there).
-- [ ] Detect source-language for the brief: feed the
+- [x] Detect source-language for the brief: feed the
       concatenation of incoming-message bodies to
       `NLLanguageRecognizer.dominantLanguage(for:)`. Store the BCP-47
       code in `thread_brief.language`. This unblocks the `replyLanguage`
       routing in `InlineComposer` reading from a stable source.
-- [ ] Add `BriefStore.briefFor(threadID:) -> ThreadBriefViewData?`
+- [x] Add `BriefStore.briefFor(threadID:) -> ThreadBriefViewData?`
       synchronous read-from-DB accessor for `InboxStore` to use in
       chip/folder filters (must be `@MainActor` but call into a
       `nonisolated db.read`).
-- [ ] Tests: `BriefFeatureTests/BriefPersistenceTests.swift` — fake
+- [x] Tests: `BriefFeatureTests/BriefPersistenceTests.swift` — fake
       `AIService`, generate once → assert DB row → reload store →
       assert no AI call on second `loadBrief(...)` for same thread →
       assert AI call DOES fire after `latest_message_id` changes.
-- [ ] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/BriefFeature && swift test`.
 
 ### Task 3: Background auto-brief generation queue
 
