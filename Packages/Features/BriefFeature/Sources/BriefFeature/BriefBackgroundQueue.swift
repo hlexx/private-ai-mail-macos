@@ -18,6 +18,7 @@ public final class BriefBackgroundQueue {
     private var pendingSet: Set<ThreadKey> = []
     private var workerTask: Task<Void, Never>?
     private var aiAvailable: Bool = true
+    private var retryTask: Task<Void, Never>?
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -40,6 +41,8 @@ public final class BriefBackgroundQueue {
     public func cancelAll() {
         workerTask?.cancel()
         workerTask = nil
+        retryTask?.cancel()
+        retryTask = nil
         pending.removeAll()
         pendingSet.removeAll()
         isRunning = false
@@ -48,6 +51,8 @@ public final class BriefBackgroundQueue {
     public func setAIAvailable(_ available: Bool) {
         aiAvailable = available
         if available {
+            retryTask?.cancel()
+            retryTask = nil
             startWorkerIfNeeded()
         }
     }
@@ -81,27 +86,42 @@ public final class BriefBackgroundQueue {
     /// Refresh the total/generated counts from DB.
     public func refreshCounts() {
         Task {
-            let counts = try? await Task.detached { [db] in
-                try db.dbQueue.read { database -> (total: Int, generated: Int) in
-                    let total = try Int.fetchOne(database, sql: """
-                        SELECT COUNT(*) FROM thread t
-                        JOIN thread_label tl ON tl.account_id = t.account_id AND tl.thread_id = t.id AND tl.label_id = 'INBOX'
-                        """) ?? 0
-                    let generated = try Int.fetchOne(database, sql: """
-                        SELECT COUNT(*) FROM thread_brief tb
-                        JOIN thread_label tl ON tl.account_id = tb.account_id AND tl.thread_id = tb.thread_id AND tl.label_id = 'INBOX'
-                        """) ?? 0
-                    return (total, generated)
-                }
-            }.value
-            if let counts {
-                totalCount = counts.total
-                generatedCount = counts.generated
+            await updateCounts()
+        }
+    }
+
+    private func updateCounts() async {
+        let counts = try? await Task.detached { [db] in
+            try db.dbQueue.read { database -> (total: Int, generated: Int) in
+                let total = try Int.fetchOne(database, sql: """
+                    SELECT COUNT(*) FROM thread t
+                    JOIN thread_label tl ON tl.account_id = t.account_id AND tl.thread_id = t.id AND tl.label_id = 'INBOX'
+                    """) ?? 0
+                let generated = try Int.fetchOne(database, sql: """
+                    SELECT COUNT(*) FROM thread_brief tb
+                    JOIN thread_label tl ON tl.account_id = tb.account_id AND tl.thread_id = tb.thread_id AND tl.label_id = 'INBOX'
+                    """) ?? 0
+                return (total, generated)
             }
+        }.value
+        if let counts {
+            totalCount = counts.total
+            generatedCount = counts.generated
         }
     }
 
     // MARK: - Private
+
+    private func scheduleRetry() {
+        guard retryTask == nil else { return }
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(30))
+            guard let self, !Task.isCancelled else { return }
+            self.retryTask = nil
+            self.aiAvailable = true
+            self.startWorkerIfNeeded()
+        }
+    }
 
     private func startWorkerIfNeeded() {
         guard workerTask == nil, !pending.isEmpty, aiAvailable else { return }
@@ -118,9 +138,10 @@ public final class BriefBackgroundQueue {
                 self.pendingSet.remove(key)
 
                 await self.processThread(key)
+                await self.updateCounts()
             }
             if let self {
-                self.refreshCounts()
+                await self.updateCounts()
                 self.isRunning = false
                 self.workerTask = nil
             }
@@ -182,7 +203,11 @@ public final class BriefBackgroundQueue {
             case .cancelled:
                 break
             case .modelNotInstalled:
+                // Re-enqueue the failed item so it's retried when the model loads
+                pending.insert(key, at: 0)
+                pendingSet.insert(key)
                 aiAvailable = false
+                scheduleRetry()
             default:
                 break
             }

@@ -28,6 +28,9 @@ public final class AccountsTabStore {
     private let syncSupervisor: SyncSupervisor
     private var observationTask: Task<Void, Never>?
 
+    /// Called after a new account is fully added and sync has started.
+    public var onAccountAdded: ((String) -> Void)?
+
     public init(
         db: AppDatabase,
         oauthClient: any OAuthClient,
@@ -109,6 +112,7 @@ public final class AccountsTabStore {
                 self.addPhase = .bootstrapping(0)
                 self.observeSyncEvents(for: accountId)
                 await self.syncSupervisor.start(accountId: accountId)
+                self.onAccountAdded?(accountId)
             } catch let error as AuthError where error.isCancelled {
                 self.addPhase = .idle
             } catch {

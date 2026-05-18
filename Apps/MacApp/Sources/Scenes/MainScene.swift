@@ -288,7 +288,12 @@ struct MainScene: View {
         }
     }
 
-    private func extractEmail(from addr: String?) -> String {
+}
+
+// MARK: - Helpers
+
+extension MainScene {
+    func extractEmail(from addr: String?) -> String {
         guard let addr else { return "" }
         if let open = addr.firstIndex(of: "<"),
            let close = addr.firstIndex(of: ">"),
@@ -298,7 +303,7 @@ struct MainScene: View {
         return addr.trimmingCharacters(in: .whitespaces)
     }
 
-    private func observeAccounts() async {
+    func observeAccounts() async {
         let observation = ValueObservation.tracking { db in
             try AccountRecord.fetchAll(db)
         }
@@ -313,7 +318,6 @@ struct MainScene: View {
             // Observation ended
         }
     }
-
 }
 
 // MARK: - Keyboard shortcut helper

@@ -110,6 +110,10 @@ final class CompositionRoot {
             tokenStore: tokenStore,
             syncSupervisor: syncSupervisor
         )
+
+        self.accountsTabStore.onAccountAdded = { [weak self] accountId in
+            self?.subscribeSyncEvents(accountId: accountId)
+        }
     }
 
     private static func defaultDBPath() -> String {

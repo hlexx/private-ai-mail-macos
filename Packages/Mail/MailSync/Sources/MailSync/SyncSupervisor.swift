@@ -58,8 +58,8 @@ public actor SyncSupervisor {
         engines.removeValue(forKey: accountId)
     }
 
-    public func events(for accountId: String) -> AsyncStream<SyncEvent>? {
-        engines[accountId]?.events
+    public func events(for accountId: String) async -> AsyncStream<SyncEvent>? {
+        await engines[accountId]?.makeEventStream()
     }
 
     public func state(for accountId: String) async -> SyncState? {

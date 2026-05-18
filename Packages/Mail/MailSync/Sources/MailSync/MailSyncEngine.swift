@@ -9,39 +9,60 @@ public actor MailSyncEngine {
     private let api: any GmailAPI
     private let db: AppDatabase
     private var currentState: SyncState = .idle
-    private let eventContinuation: AsyncStream<SyncEvent>.Continuation
-    public nonisolated let events: AsyncStream<SyncEvent>
+    private var continuations: [UUID: AsyncStream<SyncEvent>.Continuation] = [:]
     private var retryTask: Task<Void, Never>?
 
     public init(accountId: String, api: any GmailAPI, db: AppDatabase) {
         self.accountId = accountId
         self.api = api
         self.db = db
-        let (stream, continuation) = AsyncStream<SyncEvent>.makeStream(
-            bufferingPolicy: .bufferingNewest(64)
-        )
-        self.events = stream
-        self.eventContinuation = continuation
     }
 
     deinit {
         retryTask?.cancel()
-        eventContinuation.finish()
+        for continuation in continuations.values {
+            continuation.finish()
+        }
+    }
+
+    /// Creates a new event stream for this engine. Each caller gets its own
+    /// independent stream — multiple consumers can subscribe without splitting events.
+    public func makeEventStream() -> AsyncStream<SyncEvent> {
+        let id = UUID()
+        let (stream, continuation) = AsyncStream<SyncEvent>.makeStream(
+            bufferingPolicy: .bufferingNewest(64)
+        )
+        continuation.onTermination = { [weak self] _ in
+            Task { [weak self] in
+                await self?.removeContinuation(id)
+            }
+        }
+        continuations[id] = continuation
+        return stream
+    }
+
+    private func removeContinuation(_ id: UUID) {
+        continuations.removeValue(forKey: id)
+    }
+
+    private func broadcast(_ event: SyncEvent) {
+        for continuation in continuations.values {
+            continuation.yield(event)
+        }
     }
 
     public func bootstrap() async {
         transition(to: .bootstrapping)
-        let continuation = self.eventContinuation
         do {
             try await Bootstrap.run(
                 accountId: accountId,
                 api: api,
                 db: db,
-                onProgress: { progress in
-                    continuation.yield(.progress(progress))
+                onProgress: { [weak self] progress in
+                    await self?.broadcast(.progress(progress))
                 },
-                onThreadUpserted: { threadId in
-                    continuation.yield(.threadUpserted(threadId))
+                onThreadUpserted: { [weak self] threadId in
+                    await self?.broadcast(.threadUpserted(threadId))
                 }
             )
             transition(to: .live)
@@ -51,32 +72,31 @@ public actor MailSyncEngine {
                     await engine.bootstrap()
                 }
             } else {
-                continuation.yield(.error(.bootstrapFailed(error)))
+                broadcast(.error(.bootstrapFailed(error)))
                 transition(to: .degraded)
             }
         } catch {
-            continuation.yield(.error(.bootstrapFailed(error)))
+            broadcast(.error(.bootstrapFailed(error)))
             transition(to: .degraded)
         }
     }
 
     public func refresh() async {
         guard currentState == .live || currentState == .idle else { return }
-        let continuation = self.eventContinuation
         do {
             try await IncrementalSync.run(
                 accountId: accountId,
                 api: api,
                 db: db,
-                onThreadUpserted: { threadId in
-                    continuation.yield(.threadUpserted(threadId))
+                onThreadUpserted: { [weak self] threadId in
+                    await self?.broadcast(.threadUpserted(threadId))
                 }
             )
         } catch let syncError as SyncError {
             if case .historyExpired = syncError {
                 await bootstrap()
             } else {
-                continuation.yield(.error(syncError))
+                broadcast(.error(syncError))
             }
         } catch let error as GmailAPIError {
             if case .rateLimited(let retryAfter) = error {
@@ -84,32 +104,34 @@ public actor MailSyncEngine {
                     await engine.refresh()
                 }
             } else if case .serverError(statusCode: 404) = error {
-                // Gmail history expired (too old) — fall back to full bootstrap
                 await bootstrap()
             } else {
-                continuation.yield(.error(.incrementalFailed(error)))
+                broadcast(.error(.incrementalFailed(error)))
             }
         } catch {
-            continuation.yield(.error(.incrementalFailed(error)))
+            broadcast(.error(.incrementalFailed(error)))
         }
     }
 
     public func stop() {
         retryTask?.cancel()
         retryTask = nil
-        eventContinuation.finish()
+        for continuation in continuations.values {
+            continuation.finish()
+        }
+        continuations.removeAll()
     }
 
     public var state: SyncState { currentState }
 
     private func transition(to newState: SyncState) {
         currentState = newState
-        eventContinuation.yield(.state(newState))
+        broadcast(.state(newState))
     }
 
     private func handleRateLimited(retryAfter: TimeInterval, resumeWith operation: @Sendable @escaping (isolated MailSyncEngine) async -> Void) {
         let capped = min(retryAfter, 300)
-        eventContinuation.yield(.error(.rateLimited(retryAfter: capped)))
+        broadcast(.error(.rateLimited(retryAfter: capped)))
         transition(to: .paused)
         retryTask?.cancel()
         retryTask = Task { [weak self] in
