@@ -288,7 +288,7 @@ private struct MessageCardView: View {
                         HTMLWebView.AttachmentData(
                             contentId: att.contentId,
                             mime: att.mime,
-                            data: Data(base64Encoded: att.dataBase64) ?? Data()
+                            data: Data(base64Encoded: att.dataBase64, options: .ignoreUnknownCharacters) ?? Data()
                         )
                     }
                 )
