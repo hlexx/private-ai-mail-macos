@@ -206,4 +206,80 @@ struct InboxStoreFilterTests {
         #expect(store.folderCounts[.sent] == 1) // t5
         #expect(store.folderCounts[.attachments] == 1) // t2
     }
+
+    // MARK: - Account-scoped folder counts
+
+    @MainActor
+    @Test func folderCountsScopedToSingleAccount() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+        store.setSelection(.account("acc1"))
+        store.startObserving()
+
+        try await Task.sleep(for: .milliseconds(500))
+
+        // acc1 threads: t1 (INBOX, STARRED), t2 (INBOX), t3 (STARRED only)
+        #expect(store.folderCounts[.inbox] == 2) // t1, t2
+        #expect(store.folderCounts[.starred] == 2) // t1, t3
+        #expect(store.folderCounts[.sent] == 0)
+        #expect(store.folderCounts[.attachments] == 1) // t2
+    }
+
+    @MainActor
+    @Test func folderCountsScopedToSecondAccount() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+        store.setSelection(.account("acc2"))
+        store.startObserving()
+
+        try await Task.sleep(for: .milliseconds(500))
+
+        // acc2 threads: t4 (INBOX), t5 (INBOX, SENT)
+        #expect(store.folderCounts[.inbox] == 2) // t4, t5
+        #expect(store.folderCounts[.starred] == 0)
+        #expect(store.folderCounts[.sent] == 1) // t5
+        #expect(store.folderCounts[.attachments] == 0)
+    }
+
+    @MainActor
+    @Test func folderCountsAllAccountsShowGlobalTotals() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+        store.setSelection(.allAccountsAllFolders)
+        store.startObserving()
+
+        try await Task.sleep(for: .milliseconds(500))
+
+        // All threads across both accounts
+        #expect(store.folderCounts[.inbox] == 4) // t1, t2, t4, t5
+        #expect(store.folderCounts[.starred] == 2) // t1, t3
+        #expect(store.folderCounts[.sent] == 1) // t5
+        #expect(store.folderCounts[.attachments] == 1) // t2
+    }
+
+    @MainActor
+    @Test func folderCountsUpdateWhenSelectionChanges() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+
+        // Start with all accounts
+        store.setSelection(.allAccountsAllFolders)
+        store.startObserving()
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(store.folderCounts[.inbox] == 4)
+
+        // Switch to acc1 only
+        store.setSelection(.account("acc1"))
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(store.folderCounts[.inbox] == 2) // only acc1: t1, t2
+
+        // Switch to acc2 only
+        store.setSelection(.account("acc2"))
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(store.folderCounts[.inbox] == 2) // only acc2: t4, t5
+    }
 }

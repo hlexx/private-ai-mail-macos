@@ -330,15 +330,15 @@ Replace `"1 = 0"` with real SQL predicates.
 Today `folderCounts` shows totals across all accounts even when one
 account is selected in the sidebar. Fix.
 
-- [ ] In `InboxStore.swift`, find the `folderCounts` computation
+- [x] In `InboxStore.swift`, find the `folderCounts` computation
       block. Pass the current `SidebarSelection` (or specifically its
       account scope) into the count SQL: when `.account(let id)` →
       `WHERE thread.account_id = ?`; when `.allAccountsAllFolders` →
       no account predicate; when `.folder(_)` → the existing
       `selectedAccountId` (default = active account).
-- [ ] Snapshot tests in `InboxFeatureTests` covering single-account vs
+- [x] Snapshot tests in `InboxFeatureTests` covering single-account vs
       multi-account vs all-accounts folder counts.
-- [ ] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/InboxFeature && swift test`.
 
 ### Task 6: Star button visual state in ThreadView
 
