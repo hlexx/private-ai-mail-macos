@@ -293,12 +293,12 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 7: `⌘⏎` Send in composer
 
-- [ ] In `ComposeWindowView.swift`:
+- [x] In `ComposeWindowView.swift`:
       - Add `.keyboardShortcut(.return, modifiers: [.command])` to
         the Send button.
       - Same in `InlineComposer.swift` for its Send button.
       - Tooltip on Send: "Send (⌘⏎)".
-- [ ] If the send button is disabled (no body, no recipient),
+- [x] If the send button is disabled (no body, no recipient),
       `⌘⏎` is a no-op (don't show a beep).
 
 ### Task 8: `?` keyboard-shortcut help overlay

@@ -186,6 +186,8 @@ public struct ComposeWindowView: View {
                 }
                 .buttonStyle(.rbPrimary)
                 .disabled(!isSendEnabled)
+                .keyboardShortcut(.return, modifiers: [.command])
+                .help("Send (⌘⏎)")
             }
         }
         .padding(.horizontal, RBSpace.s5)
