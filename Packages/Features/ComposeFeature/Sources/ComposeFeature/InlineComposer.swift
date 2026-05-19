@@ -4,6 +4,7 @@ import SwiftUI
 
 // MARK: - InlineComposer
 
+// swiftlint:disable:next type_body_length
 public struct InlineComposer: View {
     @AppStorage("pam.defaultTone") private var defaultToneRaw: String = "warm"
     @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""

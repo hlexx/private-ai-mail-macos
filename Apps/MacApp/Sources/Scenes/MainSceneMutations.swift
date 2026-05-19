@@ -85,12 +85,13 @@ extension MainScene {
 
         // Collect all To and Cc addresses, then remove the sender (already in To:)
         // and the current user's own address to avoid duplicates.
+        // Compare bare emails (extractEmail) so "Name <x@y>" matches "x@y".
         let excludeAddrs = Set([replyToAddr.lowercased(), (replyAccountEmail ?? "").lowercased()]
             .filter { !$0.isEmpty })
         let allTo = parseAddressList(lastMessage.toAddr)
-            .filter { !excludeAddrs.contains($0.lowercased()) }
+            .filter { !excludeAddrs.contains(extractEmail(from: $0).lowercased()) }
         let allCc = parseAddressList(lastMessage.ccAddr)
-            .filter { !excludeAddrs.contains($0.lowercased()) }
+            .filter { !excludeAddrs.contains(extractEmail(from: $0).lowercased()) }
         let dedupCc = allTo.joined(separator: ", ")
         let dedupCcExtra = allCc.joined(separator: ", ")
 
@@ -115,7 +116,27 @@ extension MainScene {
 
     private func parseAddressList(_ raw: String?) -> [String] {
         guard let raw, !raw.isEmpty else { return [] }
-        return raw.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        // Split on commas, respecting quoted strings and angle brackets
+        // so that "Doe, John" <john@example.com> stays as one address.
+        var results: [String] = []
+        var current = ""
+        var inQuotes = false
+        var inAngle = false
+        for ch in raw {
+            switch ch {
+            case "\"": inQuotes.toggle(); current.append(ch)
+            case "<" where !inQuotes: inAngle = true; current.append(ch)
+            case ">" where !inQuotes: inAngle = false; current.append(ch)
+            case "," where !inQuotes && !inAngle:
+                let trimmed = current.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty { results.append(trimmed) }
+                current = ""
+            default: current.append(ch)
+            }
+        }
+        let trimmed = current.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty { results.append(trimmed) }
+        return results
     }
 
     private func prefillComposeForForward() {

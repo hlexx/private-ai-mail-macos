@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import ActionsFeature
 import BriefFeature
 import ComposeFeature
@@ -244,9 +245,12 @@ struct MainScene: View {
         return folders
     }
 
-    // MARK: - Compose Helpers
+}
 
-    private func prepareNewCompose() {
+// MARK: - Compose Helpers
+
+extension MainScene {
+    func prepareNewCompose() {
         let vm = composition.composeViewModel
         vm.reset()
         vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
@@ -256,14 +260,11 @@ struct MainScene: View {
         }
     }
 
-    private func prefillComposeForReply() {
+    func prefillComposeForReply() {
         let vm = composition.composeViewModel
         vm.reset()
         guard let lastMessage = threadStore.messages.last else { return }
 
-        // For To: field, find the last message NOT sent by the user so we
-        // reply to the other party. For sent-only threads, use the toAddr
-        // of the last message (the original recipient).
         let replyTarget = threadStore.messages.last(where: { !$0.isSentByMe })
         let replyToAddr: String
         if let target = replyTarget {
@@ -272,17 +273,9 @@ struct MainScene: View {
             replyToAddr = extractEmail(from: lastMessage.toAddr)
         }
 
-        // For In-Reply-To, always use the absolute last message in the
-        // thread so threading headers stay correct even when we send
-        // multiple replies in a row.
         let inReplyToID = lastMessage.messageIdHeader ?? lastMessage.id
-
-        // Build the References chain from all messages' Message-ID headers
-        // so the outgoing reply preserves the full thread ancestry.
         let referencesChain = threadStore.messages.compactMap(\.messageIdHeader)
 
-        // Bind to the thread's account, not the toolbar-global active account,
-        // so multi-account sessions always reply from the correct mailbox.
         let threadAccountId = inboxStore.threads.first(where: { $0.id == lastMessage.threadId })?.accountId
         let replyAccountId = threadAccountId ?? composition.activeAccountID
         let replyAccountEmail = accounts.first(where: { $0.id == replyAccountId })?.email
@@ -300,7 +293,6 @@ struct MainScene: View {
             vm.selectedAccountEmail = replyAccountEmail
         }
     }
-
 }
 
 // MARK: - Helpers
@@ -342,53 +334,33 @@ extension MainScene {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     private func handleAction(_ key: ActionKey) {
         switch key {
-        case .reply:
-            draftReply()
-        case .replyAll:
-            replyAll()
-        case .forward:
-            forwardThread()
-        case .archive:
-            archiveSelectedThread()
-        case .star:
-            starSelectedThread()
-        case .trash:
-            trashSelectedThread()
-        case .markRead:
-            markReadSelectedThread()
-        case .markUnread:
-            markUnreadSelectedThread()
-        case .threadNewer:
-            navigateThread(direction: .newer)
-        case .threadOlder:
-            navigateThread(direction: .older)
-        case .folderInbox:
-            jumpToFolder(.folder(.inbox))
-        case .folderStarred:
-            jumpToFolder(.folder(.starred))
-        case .folderSent:
-            jumpToFolder(.folder(.sent))
-        case .folderArchive:
-            jumpToFolder(.folder(.archive))
-        case .folderAll:
-            jumpToFolder(.allAccountsAllFolders)
-        case .pageDownOrNextUnread:
-            pageDownOrNextUnread()
-        case .focusSearch:
-            searchFocused = true
-        case .showHelp:
-            keyboardDispatcher.showKeyboardHelp.toggle()
-        case .sendCompose:
-            break // Handled by ComposeWindowView directly
+        case .reply:            draftReply()
+        case .replyAll:         replyAll()
+        case .forward:          forwardThread()
+        case .archive:          archiveSelectedThread()
+        case .star:             starSelectedThread()
+        case .trash:            trashSelectedThread()
+        case .markRead:         markReadSelectedThread()
+        case .markUnread:       markUnreadSelectedThread()
+        case .threadNewer:      navigateThread(direction: .newer)
+        case .threadOlder:      navigateThread(direction: .older)
+        case .folderInbox:      jumpToFolder(.folder(.inbox))
+        case .folderStarred:    jumpToFolder(.folder(.starred))
+        case .folderSent:       jumpToFolder(.folder(.sent))
+        case .folderArchive:    jumpToFolder(.folder(.archive))
+        case .folderAll:        jumpToFolder(.allAccountsAllFolders)
+        case .pageDownOrNextUnread: pageDownOrNextUnread()
+        case .focusSearch:      searchFocused = true
+        case .showHelp:         keyboardDispatcher.showKeyboardHelp.toggle()
+        case .sendCompose:      break // Handled by ComposeWindowView directly
+        case .refresh:          refreshCurrentAccount()
+        case .actionSheet:      composition.showActionSheet.toggle()
         case .newCompose:
             prepareNewCompose()
             composition.showCompose = true
-        case .refresh:
-            refreshCurrentAccount()
-        case .actionSheet:
-            composition.showActionSheet.toggle()
         }
     }
 

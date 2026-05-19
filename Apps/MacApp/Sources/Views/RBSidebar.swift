@@ -57,7 +57,7 @@ struct RBSidebar: View {
     let folders: [FolderItem]
     let accounts: [AccountRow]
     @Binding var selection: SidebarSelection
-    var jumpPulse: SidebarSelection? = nil
+    var jumpPulse: SidebarSelection?
 
     // Per-section collapse state. Persisted across launches so layout
     // memory survives quitting the app, matching Mail.app behavior.
