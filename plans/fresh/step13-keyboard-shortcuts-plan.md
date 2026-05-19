@@ -316,10 +316,10 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 9: Settings → Keyboard reference tab
 
-- [ ] New tab in `SettingsScene`, after AI: **Keyboard**.
-- [ ] Reuses the same grouped-list rendering as the help overlay
+- [x] New tab in `SettingsScene`, after AI: **Keyboard**.
+- [x] Reuses the same grouped-list rendering as the help overlay
       (factor `KeyboardCatalogList` into a shared view).
-- [ ] Footer note: "Customisable shortcuts coming in a future
+- [x] Footer note: "Customisable shortcuts coming in a future
       release. Open an issue to request specific bindings."
 
 ### Task 10: Help menu wiring

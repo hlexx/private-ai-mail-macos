@@ -42,6 +42,14 @@ struct SettingsScene: View {
                     systemImage: "sparkles"
                 )
             }
+
+            KeyboardSettingsTab()
+                .tabItem {
+                    Label(
+                        String(localized: "settings.tab.keyboard", defaultValue: "Keyboard"),
+                        systemImage: "keyboard"
+                    )
+                }
         }
         .frame(width: RBLayout.settingsWidth, height: RBLayout.settingsHeight)
     }
