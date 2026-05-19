@@ -1,11 +1,12 @@
 import AppKit
 import SwiftUI
 import Testing
-@testable import MacApp
+@testable import PrivateAIMail
 
 @Suite("RBToolbar — builds and lays out in both themes")
 struct RBToolbarTests {
 
+    @MainActor
     private func makeToolbar() -> some View {
         RBToolbar(
             accounts: [],

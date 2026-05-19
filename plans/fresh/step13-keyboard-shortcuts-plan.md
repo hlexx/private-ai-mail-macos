@@ -128,7 +128,7 @@ cd $PROJ && ! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --includ
 Centralise every shortcut into one type so adding/removing one is
 one-line and the help overlay + Settings reference are auto-generated.
 
-- [ ] Create `Apps/MacApp/Sources/Keyboard/KeyboardShortcut.swift`:
+- [x] Create `Apps/MacApp/Sources/Keyboard/KeyboardShortcut.swift`:
       ```swift
       enum KeyboardSection: String, CaseIterable {
           case mail, navigation, compose, view
@@ -155,9 +155,9 @@ one-line and the help overlay + Settings reference are auto-generated.
           case newCompose, refresh, actionSheet, draftReply
       }
       ```
-- [ ] Static `ShortcutSpec.all: [ShortcutSpec]` containing every
+- [x] Static `ShortcutSpec.all: [ShortcutSpec]` containing every
       entry from the table in Success Criteria (~22 specs).
-- [ ] Tests in `MacAppTests/KeyboardShortcutCatalogTests.swift`:
+- [x] Tests in `MacAppTests/KeyboardShortcutCatalogTests.swift`:
       - Every `ActionKey` case appears in `ShortcutSpec.all`.
       - No two specs share the same `(key, modifiers, scope)` triple.
 

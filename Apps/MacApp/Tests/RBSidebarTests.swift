@@ -2,7 +2,7 @@ import AppKit
 import InboxFeature
 import SwiftUI
 import Testing
-@testable import MacApp
+@testable import PrivateAIMail
 
 @Suite("RBSidebar — builds and lays out in both themes")
 struct RBSidebarTests {
