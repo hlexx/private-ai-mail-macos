@@ -48,7 +48,14 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         let controller = NSSplitViewController()
         controller.splitView.isVertical = true
         controller.splitView.dividerStyle = .thin
-        controller.splitView.delegate = context.coordinator
+        // NOTE — NSSplitViewController installs ITSELF as its splitView's
+        // delegate. Overwriting that throws an Obj-C exception at runtime
+        // on macOS 26+ (observed crashing v0.1.8-alpha at launch). Listen
+        // via NotificationCenter on `NSSplitView.didResizeSubviewsNotification`
+        // instead — it fires on the same events the delegate method would,
+        // and doesn't conflict with the controller's ownership of the
+        // delegate slot.
+        context.coordinator.observeSplitView(controller.splitView)
 
         let sidebarItem = NSSplitViewItem(
             sidebarWithViewController: NSHostingController(rootView: sidebar)
@@ -146,15 +153,42 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         Coordinator()
     }
 
-    class Coordinator: NSObject, NSSplitViewDelegate {
+    class Coordinator: NSObject {
         var onWidthsChanged: ((Double, Double, Double) -> Void)?
         var onCollapseChanged: ((Bool, Bool) -> Void)?
         /// Deferred initial layout closure. Returns `true` when layout succeeded
         /// (frame had a valid non-zero width), `false` to retry on next resize.
         var pendingInitialLayout: ((NSSplitView) -> Bool)?
         private var debounceWorkItem: DispatchWorkItem?
+        private weak var observedSplitView: NSSplitView?
 
-        func splitViewDidResizeSubviews(_ notification: Notification) {
+        /// Subscribe to `NSSplitView.didResizeSubviewsNotification` for the
+        /// given split view. Equivalent to being its delegate's
+        /// `splitViewDidResizeSubviews(_:)`, but works around the AppKit
+        /// rule that `NSSplitViewController.splitView.delegate` cannot be
+        /// reassigned (controller is the delegate; assigning anything else
+        /// throws on macOS 26+).
+        func observeSplitView(_ splitView: NSSplitView) {
+            observedSplitView = splitView
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleResize(_:)),
+                name: NSSplitView.didResizeSubviewsNotification,
+                object: splitView
+            )
+        }
+
+        deinit {
+            if let splitView = observedSplitView {
+                NotificationCenter.default.removeObserver(
+                    self,
+                    name: NSSplitView.didResizeSubviewsNotification,
+                    object: splitView
+                )
+            }
+        }
+
+        @objc private func handleResize(_ notification: Notification) {
             guard let splitView = notification.object as? NSSplitView,
                   splitView.subviews.count == 4 else { return }
 
