@@ -265,6 +265,71 @@ extension MainScene {
         }
     }
 
+    // MARK: - Thread Navigation (J/K)
+
+    enum ThreadNavDirection { case newer, older }
+
+    func navigateThread(direction: ThreadNavDirection) {
+        let ordered = inboxStore.threads
+        guard !ordered.isEmpty else { return }
+
+        guard let active = inboxStore.selectedThreadID,
+              let idx = ordered.firstIndex(where: { $0.id == active }) else {
+            // No selection — select the first thread
+            inboxStore.selectedThreadID = ordered.first?.id
+            return
+        }
+
+        let nextIdx: Int
+        switch direction {
+        case .older: nextIdx = (idx + 1) % ordered.count
+        case .newer: nextIdx = (idx - 1 + ordered.count) % ordered.count
+        }
+
+        // Wrap-around feedback
+        let didWrap = (direction == .older && nextIdx == 0) ||
+                      (direction == .newer && nextIdx == ordered.count - 1 && idx == 0)
+        if didWrap {
+            threadListWrapPulse = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                threadListWrapPulse = false
+            }
+        }
+
+        inboxStore.selectedThreadID = ordered[nextIdx].id
+    }
+
+    // MARK: - Space: Page Down / Next Unread
+
+    func pageDownOrNextUnread() {
+        // Try to scroll down in the reading pane first
+        if let proxy = threadScrollProxy {
+            // Scroll toward the composer anchor as a proxy for "page down".
+            // If we're already at the bottom (composer visible), advance to
+            // the next unread thread.
+            withAnimation(.easeOut(duration: 0.25)) {
+                proxy.scrollTo(ThreadViewAnchor.composer, anchor: .bottom)
+            }
+        }
+
+        // Find next unread thread after current selection
+        let ordered = inboxStore.threads
+        guard let active = inboxStore.selectedThreadID,
+              let idx = ordered.firstIndex(where: { $0.id == active }) else { return }
+
+        // Look for the next unread after the current position
+        let afterCurrent = ordered[(idx + 1)...]
+        let beforeCurrent = ordered[..<idx]
+        let nextUnread = afterCurrent.first(where: { $0.hasUnread })
+            ?? beforeCurrent.first(where: { $0.hasUnread })
+
+        if let next = nextUnread {
+            inboxStore.selectedThreadID = next.id
+        } else {
+            showToast("No more unread mail", undo: nil)
+        }
+    }
+
     func toggleTheme() {
         let raw = UserDefaults.standard.string(forKey: "rb-theme") ?? RBTheme.system.rawValue
         let current = RBTheme(rawValue: raw) ?? .system

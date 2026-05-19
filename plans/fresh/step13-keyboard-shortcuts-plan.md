@@ -231,7 +231,7 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 4: Thread navigation — J/K + Space-then-next-unread
 
-- [ ] Implement `ActionKey.threadNewer` / `.threadOlder` in
+- [x] Implement `ActionKey.threadNewer` / `.threadOlder` in
       `KeyboardDispatcher`:
       ```swift
       func navigateThread(direction: ThreadNavDirection) {
@@ -250,11 +250,11 @@ Move conflicting bindings, free up the standard slots.
       Gmail wires it the other way (`J` older, `K` newer). Pick
       Gmail's mapping since users coming from Gmail outnumber the
       vim-purists; document in the help overlay.
-- [ ] **Wrap-around feedback**: when the cursor wraps from top
+- [x] **Wrap-around feedback**: when the cursor wraps from top
       back to bottom (or vice versa), pulse a 1-frame
       `rbAccent` border around the threadlist (use
       `withAnimation(.easeOut(duration: 0.18))` on a state flag).
-- [ ] **`Space` page-down-then-next-unread**: in `ThreadView`, wrap
+- [x] **`Space` page-down-then-next-unread**: in `ThreadView`, wrap
       the message scroll content in a `ScrollViewReader`. Track
       `scrollPosition` via `.onScrollGeometryChange`. On `Space`:
       - If `scrollPosition.bottom > visibleBottom + 24pt`,
@@ -262,7 +262,7 @@ Move conflicting bindings, free up the standard slots.
       - Else find the next thread with `hasUnread == true` in
         `inboxStore.threads` after the current position; if found,
         switch to it. If not, show toast "No more unread mail."
-- [ ] Tests in `ThreadNavigationTests.swift` for J/K wrap and
+- [x] Tests in `ThreadNavigationTests.swift` for J/K wrap and
       Space progression with mock threads (no AppKit needed for
       the logic part).
 

@@ -16,6 +16,7 @@ struct MainScene: View {
     let keyboardDispatcher: KeyboardDispatcher
 
     @State private var sidebarSelection: SidebarSelection = .default
+    @State var threadListWrapPulse: Bool = false
     @State var accounts: [AccountRecord] = []
     // NOTE — these three were declared `private` initially; relaxed to
     // internal so MainSceneMutations (separate file in same target)
@@ -85,6 +86,11 @@ struct MainScene: View {
                             trashThread(threadId, accountId: accountId)
                         }
                     )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(Color.rbAccent.opacity(threadListWrapPulse ? 0.6 : 0), lineWidth: 2)
+                    )
+                    .animation(.easeOut(duration: 0.18), value: threadListWrapPulse)
                 },
                 reading: {
                     ThreadView(
@@ -339,8 +345,10 @@ extension MainScene {
             markReadSelectedThread()
         case .markUnread:
             markUnreadSelectedThread()
-        case .threadNewer, .threadOlder:
-            break // TODO: Task 4 will implement J/K navigation
+        case .threadNewer:
+            navigateThread(direction: .newer)
+        case .threadOlder:
+            navigateThread(direction: .older)
         case .folderInbox:
             sidebarSelection = .folder(.inbox)
         case .folderStarred:
@@ -352,7 +360,7 @@ extension MainScene {
         case .folderAll:
             sidebarSelection = .allAccountsAllFolders
         case .pageDownOrNextUnread:
-            break // TODO: Task 4 will implement Space navigation
+            pageDownOrNextUnread()
         case .focusSearch:
             break // TODO: Task 6 will implement search focus
         case .showHelp:
