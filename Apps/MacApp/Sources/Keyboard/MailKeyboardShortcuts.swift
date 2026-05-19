@@ -119,7 +119,11 @@ private final class BareKeyMonitorView: NSView {
     }
 
     private func isTextInputFirstResponder() -> Bool {
-        guard let responder = window?.firstResponder else { return false }
+        // Use NSApp.keyWindow (not self.window) because the local monitor is
+        // process-wide and intercepts events for ALL windows. If the user is
+        // typing in a compose window while the main window hosts this view,
+        // self.window would check the wrong window's first responder.
+        guard let responder = NSApp.keyWindow?.firstResponder else { return false }
         // NSTextView covers the common case (SwiftUI TextEditor / TextField field editor).
         // NSTextField covers the brief moment after click but before the field editor activates.
         return responder is NSTextView || responder is NSTextField
