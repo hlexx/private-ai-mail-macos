@@ -1,3 +1,4 @@
+import Foundation
 import GRDB
 
 enum Migrator {
@@ -12,6 +13,7 @@ enum Migrator {
         migrator.registerMigration("M007_AttachmentCID", migrate: M007_AttachmentCID.migrate)
         migrator.registerMigration("M008_BackfillInboxLabel", migrate: M008_BackfillInboxLabel.migrate)
         migrator.registerMigration("M009_BackfillInboxLabelV2", migrate: M009_BackfillInboxLabelV2.migrate)
+        migrator.registerMigration("M010_SignalLabelReconcile", migrate: M010_SignalLabelReconcile.migrate)
         try migrator.migrate(db)
     }
 }
@@ -306,5 +308,23 @@ enum M009_BackfillInboxLabelV2 {
                                   AND tl_any.label_id NOT IN ('SENT','UNREAD','IMPORTANT'))
             )
             """)
+    }
+}
+
+/// Signal to the app that a one-shot label reconciliation pass is
+/// needed on next launch. Does NOT modify schema or data — just flips
+/// the `pam.needsLabelReconcile` flag in UserDefaults so the running
+/// app picks it up post-launch and calls `LabelReconciler.reconcileInbox`
+/// per account.
+///
+/// The reason this migration is necessary: M008 + M009 (v0.1.7/v0.1.8)
+/// were too eager — they inferred `INBOX` for any thread that didn't
+/// explicitly carry `TRASH/SPAM/DRAFT`. Archived threads in Gmail look
+/// the same as "should-be-inbox" from that local view, so the backfill
+/// flooded Inbox with archived mail. This migration kicks off the
+/// authoritative re-check against `users.messages.list?q=label:INBOX`.
+enum M010_SignalLabelReconcile {
+    static func migrate(_ db: Database) throws {
+        UserDefaults.standard.set(true, forKey: "pam.needsLabelReconcile")
     }
 }
