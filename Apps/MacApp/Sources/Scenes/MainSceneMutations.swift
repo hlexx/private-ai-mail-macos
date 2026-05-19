@@ -335,20 +335,28 @@ extension MainScene {
     // MARK: - Space: Page Down / Next Unread
 
     func pageDownOrNextUnread() {
-        // Try to scroll down in the reading pane first.
-        // On the first press, scroll toward the composer anchor ("page down").
-        // Only advance to the next unread on a second press when already at bottom.
-        if let proxy = threadScrollProxy, !threadScrolledToBottom {
-            withAnimation(.easeOut(duration: 0.25)) {
-                proxy.scrollTo(ThreadViewAnchor.composer, anchor: .bottom)
+        // Scroll through messages one-by-one, then advance to next unread thread.
+        let messages = threadStore.messages
+        if let proxy = threadScrollProxy, !messages.isEmpty, !threadScrolledToBottom {
+            let nextIndex = lastScrolledMessageIndex + 1
+            if nextIndex < messages.count {
+                // Scroll to the next message in the thread
+                lastScrolledMessageIndex = nextIndex
+                withAnimation(.easeOut(duration: 0.25)) {
+                    proxy.scrollTo(messages[nextIndex].id, anchor: .top)
+                }
+                return
+            } else {
+                // Scrolled past last message — scroll to composer anchor
+                withAnimation(.easeOut(duration: 0.25)) {
+                    proxy.scrollTo(ThreadViewAnchor.composer, anchor: .top)
+                }
+                threadScrolledToBottom = true
+                return
             }
-            // Mark as scrolled-to-bottom so the next Space press advances.
-            // The flag resets when the selected thread changes.
-            threadScrolledToBottom = true
-            return
         }
 
-        // Find next unread thread after current selection
+        // At bottom or no scroll proxy — find next unread thread
         let ordered = inboxStore.threads
         guard let active = inboxStore.selectedThreadID,
               let idx = ordered.firstIndex(where: { $0.id == active }) else { return }

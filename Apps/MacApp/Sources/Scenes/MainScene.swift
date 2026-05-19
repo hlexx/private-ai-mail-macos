@@ -27,6 +27,7 @@ struct MainScene: View {
     // can read them when dispatching mutations.
     @State var threadScrollProxy: ScrollViewProxy?
     @State var threadScrolledToBottom: Bool = false
+    @State var lastScrolledMessageIndex: Int = 0
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage("pam.defaultTone") var defaultToneRaw: String = "warm"
@@ -199,6 +200,7 @@ struct MainScene: View {
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             threadScrolledToBottom = false
+            lastScrolledMessageIndex = 0
             translationStore.clearCache()
             if let threadId = newValue,
                let thread = inboxStore.threads.first(where: { $0.id == threadId }) {

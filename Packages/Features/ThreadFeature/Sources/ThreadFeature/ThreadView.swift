@@ -193,6 +193,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     { nodes in callback(message.id, nodes) }
                 }
             )
+            .id(message.id)
             .padding(.bottom, 12)
         }
     }

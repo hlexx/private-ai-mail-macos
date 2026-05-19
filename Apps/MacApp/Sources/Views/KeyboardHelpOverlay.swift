@@ -4,6 +4,7 @@ import SwiftUI
 struct KeyboardHelpOverlay: View {
 
     @Binding var isPresented: Bool
+    @FocusState private var overlayFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,6 +44,9 @@ struct KeyboardHelpOverlay: View {
                 .strokeBorder(Color.rbStroke2, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.3), radius: 20, y: 8)
+        .focusable()
+        .focused($overlayFocused)
+        .onAppear { overlayFocused = true }
         .onKeyPress(.escape) {
             isPresented = false
             return .handled

@@ -97,10 +97,10 @@ public final class ComposeViewModel {
         lastMessageID: String,
         referencesChain: [String] = []
     ) {
-        toField = fromAddr
-        ccField = [allToAddrs, allCcAddrs]
+        toField = [fromAddr, allToAddrs]
             .filter { !$0.isEmpty }
             .joined(separator: ", ")
+        ccField = allCcAddrs
         subjectField = Self.deduplicateRePrefix(subject)
         replyContext = ReplyContext(
             threadID: threadID,
