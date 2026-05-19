@@ -30,8 +30,19 @@ private struct ModifiedKeyShortcutsModifier: ViewModifier {
         }
     }
 
+    /// Specs handled by the CommandMenu in PrivateAIMailApp (already have
+    /// menu-level `.keyboardShortcut` registrations).
+    private static let menuHandledActions: Set<ActionKey> = [
+        .reply, .replyAll, .forward, .trash, .refresh, .showHelp, .newCompose,
+    ]
+
     private var modifiedSpecs: [ShortcutSpec] {
-        ShortcutSpec.all.filter { !$0.modifiers.isEmpty && !$0.requiresInputBlur }
+        ShortcutSpec.all.filter {
+            !$0.modifiers.isEmpty
+            && !$0.requiresInputBlur
+            && $0.scope != .compose
+            && !Self.menuHandledActions.contains($0.actionKey)
+        }
     }
 }
 
@@ -66,6 +77,8 @@ private final class BareKeyMonitorView: NSView {
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 self?.handleKeyEvent(event) ?? event
             }
+        } else if window == nil {
+            removeMonitor()
         }
     }
 
@@ -108,10 +121,8 @@ private final class BareKeyMonitorView: NSView {
     private func isTextInputFirstResponder() -> Bool {
         guard let responder = window?.firstResponder else { return false }
         // NSTextView is used by SwiftUI's TextEditor and TextField under the hood.
-        // NSTextField (non-editing) is NOT a text input, but its field editor
-        // (NSTextView) becomes first responder when editing.
-        if responder is NSTextView { return true }
-        if responder is NSTextField { return true }
-        return false
+        // When an NSTextField begins editing, its field editor (NSTextView) becomes
+        // first responder, so checking NSTextView alone is sufficient.
+        return responder is NSTextView
     }
 }

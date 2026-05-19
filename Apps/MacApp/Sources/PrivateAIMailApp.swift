@@ -104,7 +104,7 @@ struct PrivateAIMailApp: App {
                 Divider()
 
                 Button(String(localized: "menu.refresh", defaultValue: "Refresh")) {
-                    refreshCurrentAccount()
+                    keyboardDispatcher.handle(.refresh)
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
             }
@@ -127,16 +127,6 @@ struct PrivateAIMailApp: App {
         Settings {
             SettingsScene(composition: composition)
                 .rbTheme()
-        }
-    }
-
-    private func refreshCurrentAccount() {
-        let store = composition.inboxStore
-        if let selected = store.selectedThreadID,
-           let thread = store.threads.first(where: { $0.id == selected }) {
-            composition.refreshAccount(thread.accountId)
-        } else {
-            composition.refreshAllAccounts()
         }
     }
 

@@ -160,14 +160,14 @@ extension ShortcutSpec {
         ShortcutSpec(
             id: "mail.markRead",
             section: .mail, label: "Mark Read",
-            key: "I", modifiers: .shift,
+            key: "i", modifiers: .shift,
             requiresInputBlur: true,
             actionKey: .markRead
         ),
         ShortcutSpec(
             id: "mail.markUnread",
             section: .mail, label: "Mark Unread",
-            key: "U", modifiers: .shift,
+            key: "u", modifiers: .shift,
             requiresInputBlur: true,
             actionKey: .markUnread
         ),

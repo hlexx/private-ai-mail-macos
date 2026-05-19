@@ -28,20 +28,32 @@ final class KeyboardDispatcher {
     func bareKeyAction(for event: NSEvent) -> ActionKey? {
         guard event.type == .keyDown else { return nil }
 
-        let chars = event.charactersIgnoringModifiers ?? ""
-        guard let char = chars.first else { return nil }
-
-        // Only match specs that require input blur (bare-key Gmail-style)
-        // AND have no modifiers (or only shift for things like ? # I U).
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             .subtracting([.capsLock, .numericPad, .function])
 
-        for spec in ShortcutSpec.all where spec.requiresInputBlur {
-            let specChar = spec.key.character
-            if specChar == char && flagsMatch(flags, spec: spec) {
-                return spec.actionKey
+        // Two-pass matching:
+        // Pass 1: Use event.characters (includes shift effect, e.g. "?" from Shift+/).
+        //         Strip .shift from flags since it was consumed to produce the character.
+        // Pass 2: Use event.charactersIgnoringModifiers (e.g. "i" for Shift+I).
+        //         Keep .shift in flags so specs with .shift modifier match correctly.
+
+        if let produced = event.characters?.first {
+            let flagsShiftStripped = flags.subtracting(.shift)
+            for spec in ShortcutSpec.all where spec.requiresInputBlur {
+                if spec.key.character == produced && flagsMatch(flagsShiftStripped, spec: spec) {
+                    return spec.actionKey
+                }
             }
         }
+
+        if let base = event.charactersIgnoringModifiers?.first {
+            for spec in ShortcutSpec.all where spec.requiresInputBlur {
+                if spec.key.character == base && flagsMatch(flags, spec: spec) {
+                    return spec.actionKey
+                }
+            }
+        }
+
         return nil
     }
 

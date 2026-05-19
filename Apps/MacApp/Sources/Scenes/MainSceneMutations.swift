@@ -194,11 +194,10 @@ extension MainScene {
         guard let threadId = inboxStore.selectedThreadID,
               let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
         let accountId = thread.accountId
-        let markAsRead = thread.hasUnread
         Task {
             do {
-                try await composition.mailMutator.markRead(threadId, accountId: accountId, read: markAsRead)
-                showToast(markAsRead ? "Marked read" : "Marked unread", undo: nil)
+                try await composition.mailMutator.markRead(threadId, accountId: accountId, read: true)
+                showToast("Marked read", undo: nil)
             } catch {
                 showToast("Mark read failed", undo: nil)
             }
@@ -287,8 +286,8 @@ extension MainScene {
         }
 
         // Wrap-around feedback
-        let didWrap = (direction == .older && nextIdx == 0) ||
-                      (direction == .newer && nextIdx == ordered.count - 1 && idx == 0)
+        let didWrap = (direction == .older && idx == ordered.count - 1 && nextIdx == 0) ||
+                      (direction == .newer && idx == 0 && nextIdx == ordered.count - 1)
         if didWrap {
             threadListWrapPulse = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
@@ -302,14 +301,17 @@ extension MainScene {
     // MARK: - Space: Page Down / Next Unread
 
     func pageDownOrNextUnread() {
-        // Try to scroll down in the reading pane first
-        if let proxy = threadScrollProxy {
-            // Scroll toward the composer anchor as a proxy for "page down".
-            // If we're already at the bottom (composer visible), advance to
-            // the next unread thread.
+        // Try to scroll down in the reading pane first.
+        // On the first press, scroll toward the composer anchor ("page down").
+        // Only advance to the next unread on a second press when already at bottom.
+        if let proxy = threadScrollProxy, !threadScrolledToBottom {
             withAnimation(.easeOut(duration: 0.25)) {
                 proxy.scrollTo(ThreadViewAnchor.composer, anchor: .bottom)
             }
+            // Mark as scrolled-to-bottom so the next Space press advances.
+            // The flag resets when the selected thread changes.
+            threadScrolledToBottom = true
+            return
         }
 
         // Find next unread thread after current selection
@@ -317,7 +319,6 @@ extension MainScene {
         guard let active = inboxStore.selectedThreadID,
               let idx = ordered.firstIndex(where: { $0.id == active }) else { return }
 
-        // Look for the next unread after the current position
         let afterCurrent = ordered[(idx + 1)...]
         let beforeCurrent = ordered[..<idx]
         let nextUnread = afterCurrent.first(where: { $0.hasUnread })
