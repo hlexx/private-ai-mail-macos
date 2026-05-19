@@ -337,9 +337,9 @@ Move conflicting bindings, free up the standard slots.
 
 ## Cross-cutting tasks
 
-- [ ] Bump `MARKETING_VERSION` to `0.1.9-alpha`,
+- [x] Bump `MARKETING_VERSION` to `0.1.9-alpha`,
       `CURRENT_PROJECT_VERSION` to `109`.
-- [ ] Write `release-notes/v0.1.9-alpha.md`:
+- [x] Write `release-notes/v0.1.9-alpha.md`:
       - Reply / Reply All / Forward / Archive / Star / Trash /
         thread-nav / folder-jump / Send shortcuts now match Apple
         Mail + Gmail conventions.
@@ -348,9 +348,9 @@ Move conflicting bindings, free up the standard slots.
         `⌘⇧L`).
       - Single-letter shortcuts (`R`/`E`/`S`/`J`/`K`) only fire
         when no text field is focused.
-- [ ] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 13
+- [x] Update `EMAIL_ALF/14_macos_app_design.md` §15: mark step 13
       ✅, copy plan to `plans/fresh/completed/`.
-- [ ] Add to `NOTES.md` under "Keyboard": a one-line summary of
+- [x] Add to `NOTES.md` under "Keyboard": a one-line summary of
       the catalog location (`Apps/MacApp/Sources/Keyboard/`).
 
 ## Critical files to read or modify

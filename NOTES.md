@@ -446,3 +446,11 @@ See the "Sparkle EdDSA key management > Key rotation" section above.
 In short: ship a transitional release signed with the old key that
 contains the new public key, then switch to the new key for all
 subsequent releases.
+
+## Keyboard
+
+Keyboard shortcut catalog (single source of truth) lives in
+`Apps/MacApp/Sources/Keyboard/`. `KeyboardShortcut.swift` defines
+`ShortcutSpec.all` — the complete list of shortcuts used by the help
+overlay, Settings → Keyboard tab, Mail command menu, and the
+focus-aware dispatch layer (`KeyboardDispatcher.swift`).

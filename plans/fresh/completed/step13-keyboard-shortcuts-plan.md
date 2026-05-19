@@ -128,7 +128,7 @@ cd $PROJ && ! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --includ
 Centralise every shortcut into one type so adding/removing one is
 one-line and the help overlay + Settings reference are auto-generated.
 
-- [ ] Create `Apps/MacApp/Sources/Keyboard/KeyboardShortcut.swift`:
+- [x] Create `Apps/MacApp/Sources/Keyboard/KeyboardShortcut.swift`:
       ```swift
       enum KeyboardSection: String, CaseIterable {
           case mail, navigation, compose, view
@@ -155,9 +155,9 @@ one-line and the help overlay + Settings reference are auto-generated.
           case newCompose, refresh, actionSheet, draftReply
       }
       ```
-- [ ] Static `ShortcutSpec.all: [ShortcutSpec]` containing every
+- [x] Static `ShortcutSpec.all: [ShortcutSpec]` containing every
       entry from the table in Success Criteria (~22 specs).
-- [ ] Tests in `MacAppTests/KeyboardShortcutCatalogTests.swift`:
+- [x] Tests in `MacAppTests/KeyboardShortcutCatalogTests.swift`:
       - Every `ActionKey` case appears in `ShortcutSpec.all`.
       - No two specs share the same `(key, modifiers, scope)` triple.
 
@@ -167,14 +167,14 @@ SwiftUI's `.keyboardShortcut` doesn't know about `@FocusState`. We
 need a layer that consumes single-letter shortcuts ONLY when no
 text input is focused.
 
-- [ ] Create `Apps/MacApp/Sources/Keyboard/KeyboardDispatcher.swift`:
+- [x] Create `Apps/MacApp/Sources/Keyboard/KeyboardDispatcher.swift`:
       `@MainActor final class KeyboardDispatcher` with:
       - `@Observable` property `isTextInputFocused: Bool`
       - `func handle(_ key: ActionKey)` — calls the right method on
         `CompositionRoot` (or its scoped sub-stores).
       - Internal mapping `(key, modifiers) → ActionKey` derived from
         `ShortcutSpec.all`.
-- [ ] Create a view modifier
+- [x] Create a view modifier
       `View.mailKeyboardShortcuts(dispatcher:)` that:
       - For each `ShortcutSpec` with `modifiers != []`: attaches a
         standard `.keyboardShortcut(spec.key, modifiers: spec.modifiers)`-
@@ -187,15 +187,15 @@ text input is focused.
            consume** the event (lets it fall through to typing).
         2. Otherwise, matches against `ShortcutSpec.all`, calls
            `dispatcher.handle(...)`, returns nil to consume.
-- [ ] Wire `KeyboardDispatcher` into `MainScene` once; all action
+- [x] Wire `KeyboardDispatcher` into `MainScene` once; all action
       methods (`archiveSelectedThread`, `draftReply`, etc.) become
       `dispatcher.handle(.archive)` etc.
-- [ ] Update `MainScene` to bind `isTextInputFocused` via
+- [x] Update `MainScene` to bind `isTextInputFocused` via
       `@FocusState` observers around the search field + inline
       composer text editor (set true on focus, false on blur). This
       gives us a Swift-level signal in addition to the NSEvent
       firstResponder check.
-- [ ] Tests in `KeyboardDispatchTests.swift`:
+- [x] Tests in `KeyboardDispatchTests.swift`:
       - Fire `R` while `isTextInputFocused == true` → no action.
       - Fire `R` while focus is on the thread row → dispatcher
         receives `.reply`.
@@ -204,34 +204,34 @@ text input is focused.
 
 Move conflicting bindings, free up the standard slots.
 
-- [ ] **Refresh** moves from `⌘R` to `⌘⇧L` (Outlook convention) +
+- [x] **Refresh** moves from `⌘R` to `⌘⇧L` (Outlook convention) +
       `F5`. Update `PrivateAIMailApp.swift:66`.
-- [ ] **Reply** takes `⌘R` + bare `R` (Apple Mail + Gmail).
-- [ ] **Reply All** takes `⌘⇧R` + bare `A` (Apple Mail + Gmail).
+- [x] **Reply** takes `⌘R` + bare `R` (Apple Mail + Gmail).
+- [x] **Reply All** takes `⌘⇧R` + bare `A` (Apple Mail + Gmail).
       `⌘⇧R` previously was Draft Reply (step12) — Draft Reply
       becomes an *alias* for Reply (functionally identical since
       our Reply IS an AI-drafted reply opening the inline composer).
       Drop the separate `draftReply` action key; map both shortcuts
       to `ActionKey.reply`.
-- [ ] **Forward** takes `⌘⌥F` + bare `F`. New action;
+- [x] **Forward** takes `⌘⌥F` + bare `F`. New action;
       opens the full ComposeWindow with the thread quoted in body
       and an empty To: field. Implementation: extend
       `ComposeViewModel.prefillForward(thread:)`.
-- [ ] **Archive**: bare `E` + keep `⌃E` for one release as alias
+- [x] **Archive**: bare `E` + keep `⌃E` for one release as alias
       (mark `⌃E` as deprecated in the help overlay).
-- [ ] **Star**: bare `S` + keep `⌃S` as alias.
-- [ ] **Trash**: bare `#` (Gmail) + `⌘⌫` (Apple Mail). New action;
+- [x] **Star**: bare `S` + keep `⌃S` as alias.
+- [x] **Trash**: bare `#` (Gmail) + `⌘⌫` (Apple Mail). New action;
       wire to `MailMutator.trash`.
-- [ ] **Mark read/unread**: bare `Shift+I` (read) and `Shift+U`
+- [x] **Mark read/unread**: bare `Shift+I` (read) and `Shift+U`
       (unread) — Gmail convention.
-- [ ] Snapshot test in `KeyboardCatalogSnapshotTests`: the help
+- [x] Snapshot test in `KeyboardCatalogSnapshotTests`: the help
       overlay rendered with the new catalog matches a committed
       `.txt` baseline so future regressions to the catalog show up
       in code review.
 
 ### Task 4: Thread navigation — J/K + Space-then-next-unread
 
-- [ ] Implement `ActionKey.threadNewer` / `.threadOlder` in
+- [x] Implement `ActionKey.threadNewer` / `.threadOlder` in
       `KeyboardDispatcher`:
       ```swift
       func navigateThread(direction: ThreadNavDirection) {
@@ -250,11 +250,11 @@ Move conflicting bindings, free up the standard slots.
       Gmail wires it the other way (`J` older, `K` newer). Pick
       Gmail's mapping since users coming from Gmail outnumber the
       vim-purists; document in the help overlay.
-- [ ] **Wrap-around feedback**: when the cursor wraps from top
+- [x] **Wrap-around feedback**: when the cursor wraps from top
       back to bottom (or vice versa), pulse a 1-frame
       `rbAccent` border around the threadlist (use
       `withAnimation(.easeOut(duration: 0.18))` on a state flag).
-- [ ] **`Space` page-down-then-next-unread**: in `ThreadView`, wrap
+- [x] **`Space` page-down-then-next-unread**: in `ThreadView`, wrap
       the message scroll content in a `ScrollViewReader`. Track
       `scrollPosition` via `.onScrollGeometryChange`. On `Space`:
       - If `scrollPosition.bottom > visibleBottom + 24pt`,
@@ -262,13 +262,13 @@ Move conflicting bindings, free up the standard slots.
       - Else find the next thread with `hasUnread == true` in
         `inboxStore.threads` after the current position; if found,
         switch to it. If not, show toast "No more unread mail."
-- [ ] Tests in `ThreadNavigationTests.swift` for J/K wrap and
+- [x] Tests in `ThreadNavigationTests.swift` for J/K wrap and
       Space progression with mock threads (no AppKit needed for
       the logic part).
 
 ### Task 5: Folder jumps — `⌘1/2/3/4/5`
 
-- [ ] In `KeyboardDispatcher`:
+- [x] In `KeyboardDispatcher`:
       ```swift
       case folderInbox: sidebarSelection = .folder(.inbox)
       case folderStarred: sidebarSelection = .folder(.starred)
@@ -276,59 +276,59 @@ Move conflicting bindings, free up the standard slots.
       case folderArchive: sidebarSelection = .folder(.archive)
       case folderAll: sidebarSelection = .allAccountsAllFolders
       ```
-- [ ] Wire `⌘1..⌘5` via `ShortcutSpec`. These are `modifiers: [.command]`
+- [x] Wire `⌘1..⌘5` via `ShortcutSpec`. These are `modifiers: [.command]`
       so SwiftUI's native `.keyboardShortcut` handles them — no
       AppKit monitor needed.
-- [ ] Visual feedback: when the keyboard switches folders, briefly
+- [x] Visual feedback: when the keyboard switches folders, briefly
       highlight the destination row in `RBSidebar` (200ms `rbAccentSoft`
       pulse).
 
 ### Task 6: Search focus — `⌘L`
 
-- [ ] In `RBToolbar.swift` search field, add `@FocusState` binding
+- [x] In `RBToolbar.swift` search field, add `@FocusState` binding
       `searchFocused`. `⌘L` from `KeyboardDispatcher` flips it to
       `true`. `Esc` while focused flips back to `false`.
-- [ ] `Esc` also clears the search input if it had focus AND was
+- [x] `Esc` also clears the search input if it had focus AND was
       non-empty (first Esc clears, second blurs).
 
 ### Task 7: `⌘⏎` Send in composer
 
-- [ ] In `ComposeWindowView.swift`:
+- [x] In `ComposeWindowView.swift`:
       - Add `.keyboardShortcut(.return, modifiers: [.command])` to
         the Send button.
       - Same in `InlineComposer.swift` for its Send button.
       - Tooltip on Send: "Send (⌘⏎)".
-- [ ] If the send button is disabled (no body, no recipient),
+- [x] If the send button is disabled (no body, no recipient),
       `⌘⏎` is a no-op (don't show a beep).
 
 ### Task 8: `?` keyboard-shortcut help overlay
 
-- [ ] Create `Apps/MacApp/Sources/Views/KeyboardHelpOverlay.swift`:
+- [x] Create `Apps/MacApp/Sources/Views/KeyboardHelpOverlay.swift`:
       a centered modal sheet listing `ShortcutSpec.all` grouped by
       `KeyboardSection`, each entry rendered as
       `[key combo] · description`.
-- [ ] Mount it in `MainScene` as a `.sheet(isPresented: $showHelp)`.
-- [ ] Bind `?` (Shift+/) to toggle. Also bind via the **Help menu**:
+- [x] Mount it in `MainScene` as a `.sheet(isPresented: $showHelp)`.
+- [x] Bind `?` (Shift+/) to toggle. Also bind via the **Help menu**:
       Help → Keyboard Shortcuts (`⌘?` as the menu accelerator).
-- [ ] Style: monospace font for key combos, soft dividers between
+- [x] Style: monospace font for key combos, soft dividers between
       sections, fixed-width 480pt, dismissible by `?` again, `Esc`,
       or clicking outside.
 
 ### Task 9: Settings → Keyboard reference tab
 
-- [ ] New tab in `SettingsScene`, after AI: **Keyboard**.
-- [ ] Reuses the same grouped-list rendering as the help overlay
+- [x] New tab in `SettingsScene`, after AI: **Keyboard**.
+- [x] Reuses the same grouped-list rendering as the help overlay
       (factor `KeyboardCatalogList` into a shared view).
-- [ ] Footer note: "Customisable shortcuts coming in a future
+- [x] Footer note: "Customisable shortcuts coming in a future
       release. Open an issue to request specific bindings."
 
 ### Task 10: Help menu wiring
 
-- [ ] In `PrivateAIMailApp.swift`'s `Commands`, add a
+- [x] In `PrivateAIMailApp.swift`'s `Commands`, add a
       `CommandGroup(replacing: .help)` containing a single
       "Keyboard Shortcuts" item with `.keyboardShortcut("?", modifiers: [.command, .shift])`
       → opens the help overlay.
-- [ ] Remove `CommandGroup(after: .toolbar)` (the current Refresh
+- [x] Remove `CommandGroup(after: .toolbar)` (the current Refresh
       menu item) and re-add it under a new `CommandMenu("Mail")`
       with proper organisation: View / Mail / Compose / Help
       groupings matching the `KeyboardSection` enum.
