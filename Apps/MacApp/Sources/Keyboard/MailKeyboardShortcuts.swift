@@ -120,9 +120,8 @@ private final class BareKeyMonitorView: NSView {
 
     private func isTextInputFirstResponder() -> Bool {
         guard let responder = window?.firstResponder else { return false }
-        // NSTextView is used by SwiftUI's TextEditor and TextField under the hood.
-        // When an NSTextField begins editing, its field editor (NSTextView) becomes
-        // first responder, so checking NSTextView alone is sufficient.
-        return responder is NSTextView
+        // NSTextView covers the common case (SwiftUI TextEditor / TextField field editor).
+        // NSTextField covers the brief moment after click but before the field editor activates.
+        return responder is NSTextView || responder is NSTextField
     }
 }
