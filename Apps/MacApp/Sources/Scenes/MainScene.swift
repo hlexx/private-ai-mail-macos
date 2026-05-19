@@ -16,7 +16,7 @@ struct MainScene: View {
     let keyboardDispatcher: KeyboardDispatcher
 
     @State private var sidebarSelection: SidebarSelection = .default
-    @State private var accounts: [AccountRecord] = []
+    @State var accounts: [AccountRecord] = []
     // NOTE — these three were declared `private` initially; relaxed to
     // internal so MainSceneMutations (separate file in same target)
     // can read them when dispatching mutations.
@@ -326,9 +326,9 @@ extension MainScene {
         case .reply:
             draftReply()
         case .replyAll:
-            draftReply() // TODO: Task 3 will add replyAll-specific logic
+            replyAll()
         case .forward:
-            break // TODO: Task 3 will implement forward
+            forwardThread()
         case .archive:
             archiveSelectedThread()
         case .star:

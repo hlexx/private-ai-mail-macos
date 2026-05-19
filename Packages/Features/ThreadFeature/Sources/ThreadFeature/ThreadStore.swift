@@ -15,6 +15,7 @@ public struct MessageRow: Identifiable, Sendable {
     public let messageIdHeader: String?
     public let fromAddr: String
     public let toAddr: String?
+    public let ccAddr: String?
     public let sentAt: Date
     public let snippet: String
     public let bodyText: String
@@ -41,6 +42,7 @@ public struct MessageRow: Identifiable, Sendable {
         self.messageIdHeader = record.messageIdHeader
         self.fromAddr = record.fromAddr ?? "(unknown)"
         self.toAddr = record.toAddr
+        self.ccAddr = record.ccAddr
         self.sentAt = Date(timeIntervalSince1970: TimeInterval(record.sentAt))
         self.snippet = record.snippet ?? ""
         self.bodyText = record.bodyText ?? record.snippet ?? ""

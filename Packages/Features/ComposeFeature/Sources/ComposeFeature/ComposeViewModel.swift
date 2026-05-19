@@ -86,6 +86,48 @@ public final class ComposeViewModel {
         )
     }
 
+    // MARK: - Reply All Pre-fill
+
+    public func prefillReplyAll(
+        fromAddr: String,
+        allToAddrs: String,
+        allCcAddrs: String,
+        subject: String,
+        threadID: String,
+        lastMessageID: String,
+        referencesChain: [String] = []
+    ) {
+        toField = fromAddr
+        ccField = [allToAddrs, allCcAddrs]
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        subjectField = Self.deduplicateRePrefix(subject)
+        replyContext = ReplyContext(
+            threadID: threadID,
+            inReplyToMessageID: lastMessageID,
+            referencesChain: referencesChain
+        )
+    }
+
+    // MARK: - Forward Pre-fill
+
+    public func prefillForward(
+        subject: String,
+        quotedBody: String,
+        threadID: String,
+        lastMessageID: String,
+        referencesChain: [String] = []
+    ) {
+        toField = ""
+        subjectField = Self.deduplicateForwardPrefix(subject)
+        bodyText = quotedBody
+        replyContext = ReplyContext(
+            threadID: threadID,
+            inReplyToMessageID: lastMessageID,
+            referencesChain: referencesChain
+        )
+    }
+
     // MARK: - Send Flow
 
     public func requestSend() {
@@ -238,6 +280,14 @@ public final class ComposeViewModel {
             return trimmed
         }
         return "Re: \(trimmed)"
+    }
+
+    public nonisolated static func deduplicateForwardPrefix(_ subject: String) -> String {
+        let trimmed = subject.trimmingCharacters(in: .whitespaces)
+        if trimmed.lowercased().hasPrefix("fwd: ") {
+            return trimmed
+        }
+        return "Fwd: \(trimmed)"
     }
 }
 

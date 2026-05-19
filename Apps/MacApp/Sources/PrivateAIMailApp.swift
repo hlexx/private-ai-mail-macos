@@ -64,7 +64,7 @@ struct PrivateAIMailApp: App {
                 Button(String(localized: "menu.refresh", defaultValue: "Refresh")) {
                     refreshCurrentAccount()
                 }
-                .keyboardShortcut("r", modifiers: [.command])
+                .keyboardShortcut("l", modifiers: [.command, .shift])
             }
         }
 

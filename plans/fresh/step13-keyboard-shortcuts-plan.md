@@ -204,27 +204,27 @@ text input is focused.
 
 Move conflicting bindings, free up the standard slots.
 
-- [ ] **Refresh** moves from `⌘R` to `⌘⇧L` (Outlook convention) +
+- [x] **Refresh** moves from `⌘R` to `⌘⇧L` (Outlook convention) +
       `F5`. Update `PrivateAIMailApp.swift:66`.
-- [ ] **Reply** takes `⌘R` + bare `R` (Apple Mail + Gmail).
-- [ ] **Reply All** takes `⌘⇧R` + bare `A` (Apple Mail + Gmail).
+- [x] **Reply** takes `⌘R` + bare `R` (Apple Mail + Gmail).
+- [x] **Reply All** takes `⌘⇧R` + bare `A` (Apple Mail + Gmail).
       `⌘⇧R` previously was Draft Reply (step12) — Draft Reply
       becomes an *alias* for Reply (functionally identical since
       our Reply IS an AI-drafted reply opening the inline composer).
       Drop the separate `draftReply` action key; map both shortcuts
       to `ActionKey.reply`.
-- [ ] **Forward** takes `⌘⌥F` + bare `F`. New action;
+- [x] **Forward** takes `⌘⌥F` + bare `F`. New action;
       opens the full ComposeWindow with the thread quoted in body
       and an empty To: field. Implementation: extend
       `ComposeViewModel.prefillForward(thread:)`.
-- [ ] **Archive**: bare `E` + keep `⌃E` for one release as alias
+- [x] **Archive**: bare `E` + keep `⌃E` for one release as alias
       (mark `⌃E` as deprecated in the help overlay).
-- [ ] **Star**: bare `S` + keep `⌃S` as alias.
-- [ ] **Trash**: bare `#` (Gmail) + `⌘⌫` (Apple Mail). New action;
+- [x] **Star**: bare `S` + keep `⌃S` as alias.
+- [x] **Trash**: bare `#` (Gmail) + `⌘⌫` (Apple Mail). New action;
       wire to `MailMutator.trash`.
-- [ ] **Mark read/unread**: bare `Shift+I` (read) and `Shift+U`
+- [x] **Mark read/unread**: bare `Shift+I` (read) and `Shift+U`
       (unread) — Gmail convention.
-- [ ] Snapshot test in `KeyboardCatalogSnapshotTests`: the help
+- [x] Snapshot test in `KeyboardCatalogSnapshotTests`: the help
       overlay rendered with the new catalog matches a committed
       `.txt` baseline so future regressions to the catalog show up
       in code review.
