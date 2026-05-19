@@ -66,6 +66,12 @@ struct PrivateAIMailApp: App {
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
             }
+            CommandGroup(replacing: .help) {
+                Button(String(localized: "menu.keyboardShortcuts", defaultValue: "Keyboard Shortcuts")) {
+                    keyboardDispatcher.showKeyboardHelp.toggle()
+                }
+                .keyboardShortcut("/", modifiers: [.command, .shift])
+            }
         }
 
         WindowGroup(id: "compose") {

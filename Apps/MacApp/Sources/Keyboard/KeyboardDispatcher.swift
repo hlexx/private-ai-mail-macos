@@ -9,6 +9,7 @@ import SwiftUI
 final class KeyboardDispatcher {
 
     var isTextInputFocused: Bool = false
+    var showKeyboardHelp: Bool = false
 
     /// Set by MainScene so the dispatcher can call mutation methods.
     var actionHandler: ((ActionKey) -> Void)?

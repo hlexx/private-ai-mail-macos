@@ -303,14 +303,14 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 8: `?` keyboard-shortcut help overlay
 
-- [ ] Create `Apps/MacApp/Sources/Views/KeyboardHelpOverlay.swift`:
+- [x] Create `Apps/MacApp/Sources/Views/KeyboardHelpOverlay.swift`:
       a centered modal sheet listing `ShortcutSpec.all` grouped by
       `KeyboardSection`, each entry rendered as
       `[key combo] · description`.
-- [ ] Mount it in `MainScene` as a `.sheet(isPresented: $showHelp)`.
-- [ ] Bind `?` (Shift+/) to toggle. Also bind via the **Help menu**:
+- [x] Mount it in `MainScene` as a `.sheet(isPresented: $showHelp)`.
+- [x] Bind `?` (Shift+/) to toggle. Also bind via the **Help menu**:
       Help → Keyboard Shortcuts (`⌘?` as the menu accelerator).
-- [ ] Style: monospace font for key combos, soft dividers between
+- [x] Style: monospace font for key combos, soft dividers between
       sections, fixed-width 480pt, dismissible by `?` again, `Esc`,
       or clicking outside.
 

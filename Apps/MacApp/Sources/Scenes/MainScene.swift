@@ -18,6 +18,7 @@ struct MainScene: View {
     @State private var sidebarSelection: SidebarSelection = .default
     @State var threadListWrapPulse: Bool = false
     @State private var folderJumpPulse: SidebarSelection?
+    // keyboardDispatcher.showKeyboardHelp lives on keyboardDispatcher so the app-level Help menu can toggle it too
     @FocusState private var searchFocused: Bool
     @State var accounts: [AccountRecord] = []
     // NOTE — these three were declared `private` initially; relaxed to
@@ -175,6 +176,14 @@ struct MainScene: View {
                         composition.showActionSheet = false
                     }
                 )
+            }
+        }
+        .overlay {
+            if keyboardDispatcher.showKeyboardHelp {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture { keyboardDispatcher.showKeyboardHelp = false }
+                KeyboardHelpOverlay(isPresented: Bindable(keyboardDispatcher).showKeyboardHelp)
             }
         }
         .onChange(of: sidebarSelection) { _, newSelection in
@@ -368,7 +377,7 @@ extension MainScene {
         case .focusSearch:
             searchFocused = true
         case .showHelp:
-            break // TODO: Task 8 will implement help overlay
+            keyboardDispatcher.showKeyboardHelp.toggle()
         case .sendCompose:
             break // Handled by ComposeWindowView directly
         case .newCompose:
