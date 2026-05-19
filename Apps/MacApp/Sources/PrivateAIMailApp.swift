@@ -60,7 +60,49 @@ struct PrivateAIMailApp: App {
                 }
                 .disabled(!sparkleUpdater.canCheckForUpdates)
             }
-            CommandGroup(after: .toolbar) {
+            CommandMenu(String(localized: "menu.mail", defaultValue: "Mail")) {
+                Button(String(localized: "menu.mail.reply", defaultValue: "Reply")) {
+                    keyboardDispatcher.handle(.reply)
+                }
+                .keyboardShortcut("r", modifiers: .command)
+
+                Button(String(localized: "menu.mail.replyAll", defaultValue: "Reply All")) {
+                    keyboardDispatcher.handle(.replyAll)
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+
+                Button(String(localized: "menu.mail.forward", defaultValue: "Forward")) {
+                    keyboardDispatcher.handle(.forward)
+                }
+                .keyboardShortcut("f", modifiers: [.command, .option])
+
+                Divider()
+
+                Button(String(localized: "menu.mail.archive", defaultValue: "Archive")) {
+                    keyboardDispatcher.handle(.archive)
+                }
+
+                Button(String(localized: "menu.mail.star", defaultValue: "Star / Unstar")) {
+                    keyboardDispatcher.handle(.star)
+                }
+
+                Button(String(localized: "menu.mail.trash", defaultValue: "Move to Trash")) {
+                    keyboardDispatcher.handle(.trash)
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
+
+                Divider()
+
+                Button(String(localized: "menu.mail.markRead", defaultValue: "Mark as Read")) {
+                    keyboardDispatcher.handle(.markRead)
+                }
+
+                Button(String(localized: "menu.mail.markUnread", defaultValue: "Mark as Unread")) {
+                    keyboardDispatcher.handle(.markUnread)
+                }
+
+                Divider()
+
                 Button(String(localized: "menu.refresh", defaultValue: "Refresh")) {
                     refreshCurrentAccount()
                 }

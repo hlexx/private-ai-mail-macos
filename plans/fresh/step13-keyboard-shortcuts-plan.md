@@ -324,11 +324,11 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 10: Help menu wiring
 
-- [ ] In `PrivateAIMailApp.swift`'s `Commands`, add a
+- [x] In `PrivateAIMailApp.swift`'s `Commands`, add a
       `CommandGroup(replacing: .help)` containing a single
       "Keyboard Shortcuts" item with `.keyboardShortcut("?", modifiers: [.command, .shift])`
       → opens the help overlay.
-- [ ] Remove `CommandGroup(after: .toolbar)` (the current Refresh
+- [x] Remove `CommandGroup(after: .toolbar)` (the current Refresh
       menu item) and re-add it under a new `CommandMenu("Mail")`
       with proper organisation: View / Mail / Compose / Help
       groupings matching the `KeyboardSection` enum.
