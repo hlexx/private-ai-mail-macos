@@ -268,7 +268,7 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 5: Folder jumps — `⌘1/2/3/4/5`
 
-- [ ] In `KeyboardDispatcher`:
+- [x] In `KeyboardDispatcher`:
       ```swift
       case folderInbox: sidebarSelection = .folder(.inbox)
       case folderStarred: sidebarSelection = .folder(.starred)
@@ -276,10 +276,10 @@ Move conflicting bindings, free up the standard slots.
       case folderArchive: sidebarSelection = .folder(.archive)
       case folderAll: sidebarSelection = .allAccountsAllFolders
       ```
-- [ ] Wire `⌘1..⌘5` via `ShortcutSpec`. These are `modifiers: [.command]`
+- [x] Wire `⌘1..⌘5` via `ShortcutSpec`. These are `modifiers: [.command]`
       so SwiftUI's native `.keyboardShortcut` handles them — no
       AppKit monitor needed.
-- [ ] Visual feedback: when the keyboard switches folders, briefly
+- [x] Visual feedback: when the keyboard switches folders, briefly
       highlight the destination row in `RBSidebar` (200ms `rbAccentSoft`
       pulse).
 

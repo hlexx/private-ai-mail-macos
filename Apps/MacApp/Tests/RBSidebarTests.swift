@@ -21,7 +21,8 @@ struct RBSidebarTests {
         return RBSidebar(
             folders: folders,
             accounts: accounts,
-            selection: .constant(.folder(.inbox))
+            selection: .constant(.folder(.inbox)),
+            jumpPulse: nil
         )
         .frame(width: 240, height: 600)
         .background(Color.rbBgDeep)
@@ -116,7 +117,8 @@ struct RBSidebarTests {
         return RBSidebar(
             folders: folders,
             accounts: accounts,
-            selection: .constant(sel)
+            selection: .constant(sel),
+            jumpPulse: nil
         )
         .frame(width: 240, height: 600)
         .background(Color.rbBgDeep)

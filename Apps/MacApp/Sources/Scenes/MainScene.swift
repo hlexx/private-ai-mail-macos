@@ -17,6 +17,7 @@ struct MainScene: View {
 
     @State private var sidebarSelection: SidebarSelection = .default
     @State var threadListWrapPulse: Bool = false
+    @State private var folderJumpPulse: SidebarSelection?
     @State var accounts: [AccountRecord] = []
     // NOTE — these three were declared `private` initially; relaxed to
     // internal so MainSceneMutations (separate file in same target)
@@ -66,7 +67,8 @@ struct MainScene: View {
                     RBSidebar(
                         folders: sidebarFolders,
                         accounts: accounts.map { AccountRow(account: $0) },
-                        selection: $sidebarSelection
+                        selection: $sidebarSelection,
+                        jumpPulse: folderJumpPulse
                     )
                 },
                 threadlist: {
@@ -350,15 +352,15 @@ extension MainScene {
         case .threadOlder:
             navigateThread(direction: .older)
         case .folderInbox:
-            sidebarSelection = .folder(.inbox)
+            jumpToFolder(.folder(.inbox))
         case .folderStarred:
-            sidebarSelection = .folder(.starred)
+            jumpToFolder(.folder(.starred))
         case .folderSent:
-            sidebarSelection = .folder(.sent)
+            jumpToFolder(.folder(.sent))
         case .folderArchive:
-            sidebarSelection = .folder(.archive)
+            jumpToFolder(.folder(.archive))
         case .folderAll:
-            sidebarSelection = .allAccountsAllFolders
+            jumpToFolder(.allAccountsAllFolders)
         case .pageDownOrNextUnread:
             pageDownOrNextUnread()
         case .focusSearch:
@@ -374,6 +376,14 @@ extension MainScene {
             refreshCurrentAccount()
         case .actionSheet:
             composition.showActionSheet.toggle()
+        }
+    }
+
+    private func jumpToFolder(_ target: SidebarSelection) {
+        sidebarSelection = target
+        folderJumpPulse = target
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            folderJumpPulse = nil
         }
     }
 

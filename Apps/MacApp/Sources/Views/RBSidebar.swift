@@ -57,6 +57,7 @@ struct RBSidebar: View {
     let folders: [FolderItem]
     let accounts: [AccountRow]
     @Binding var selection: SidebarSelection
+    var jumpPulse: SidebarSelection? = nil
 
     // Per-section collapse state. Persisted across launches so layout
     // memory survives quitting the app, matching Mail.app behavior.
@@ -157,6 +158,10 @@ struct RBSidebar: View {
             if case .folder(let fid) = selection { return fid == folder.id }
             return false
         }()
+        let isPulsing: Bool = {
+            if case .folder(let fid) = jumpPulse { return fid == folder.id }
+            return false
+        }()
         return Button {
             selection = .folder(folder.id)
         } label: {
@@ -179,7 +184,7 @@ struct RBSidebar: View {
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
                     .fill(isActive
-                        ? Color.rbCitron500.opacity(0.12)
+                        ? Color.rbCitron500.opacity(isPulsing ? 0.28 : 0.12)
                         : Color.clear)
             )
             .overlay(alignment: .leading) {
@@ -190,6 +195,7 @@ struct RBSidebar: View {
                         .padding(.vertical, 6)
                 }
             }
+            .animation(.easeOut(duration: 0.18), value: isPulsing)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -201,6 +207,10 @@ struct RBSidebar: View {
         let isActive: Bool = {
             if case .allAccountsAllFolders = selection { return true }
             if case .folder = selection { return false }
+            return false
+        }()
+        let isPulsing: Bool = {
+            if case .allAccountsAllFolders = jumpPulse { return true }
             return false
         }()
         return Button {
@@ -219,8 +229,9 @@ struct RBSidebar: View {
             .padding(.horizontal, 10)
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
-                    .fill(isActive ? Color.rbCobalt400.opacity(0.12) : Color.clear)
+                    .fill(isActive ? Color.rbCobalt400.opacity(isPulsing ? 0.28 : 0.12) : Color.clear)
             )
+            .animation(.easeOut(duration: 0.18), value: isPulsing)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -290,7 +301,8 @@ struct RBSidebar: View {
             AccountRow(id: "g1", email: "alex@studio.eu", dotColor: .rbCobalt400),
             AccountRow(id: "m1", email: "a.chen@partners.io", dotColor: .rbViolet500),
         ],
-        selection: .constant(.folder(.inbox))
+        selection: .constant(.folder(.inbox)),
+        jumpPulse: nil
     )
     .background(Color.rbBgDeep)
     .preferredColorScheme(.dark)
@@ -306,7 +318,8 @@ struct RBSidebar: View {
         accounts: [
             AccountRow(id: "g1", email: "alex@studio.eu", dotColor: .rbCobalt400),
         ],
-        selection: .constant(.folder(.inbox))
+        selection: .constant(.folder(.inbox)),
+        jumpPulse: nil
     )
     .background(Color.rbBgDeep)
     .preferredColorScheme(.light)
