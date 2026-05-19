@@ -13,6 +13,7 @@ import TranslationFeature
 struct MainScene: View {
 
     let composition: CompositionRoot
+    let keyboardDispatcher: KeyboardDispatcher
 
     @State private var sidebarSelection: SidebarSelection = .default
     @State private var accounts: [AccountRecord] = []
@@ -191,20 +192,16 @@ struct MainScene: View {
         .task {
             await observeAccounts()
         }
-        .keyboardShortcut(key: "k", modifiers: .command) {
-            composition.showActionSheet.toggle()
+        .mailKeyboardShortcuts(dispatcher: keyboardDispatcher)
+        .onAppear { wireDispatcher() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            updateTextInputFocusState()
         }
-        .keyboardShortcut(key: "e", modifiers: .control) {
-            archiveSelectedThread()
+        .onReceive(NotificationCenter.default.publisher(for: NSTextView.didBeginEditingNotification)) { _ in
+            keyboardDispatcher.isTextInputFocused = true
         }
-        .keyboardShortcut(key: "s", modifiers: .control) {
-            starSelectedThread()
-        }
-        .keyboardShortcut(key: "k", modifiers: .control) {
-            markReadSelectedThread()
-        }
-        .keyboardShortcut(key: "r", modifiers: [.command, .shift]) {
-            draftReply()
+        .onReceive(NotificationCenter.default.publisher(for: NSTextView.didEndEditingNotification)) { _ in
+            updateTextInputFocusState()
         }
         .overlay(alignment: .bottom) {
             if let toast = composition.toastMessage {
@@ -315,16 +312,97 @@ extension MainScene {
     }
 }
 
-// MARK: - Keyboard shortcut helper
+// MARK: - Keyboard Dispatcher Wiring
 
-private extension View {
-    func keyboardShortcut(key: KeyEquivalent, modifiers: EventModifiers, action: @escaping () -> Void) -> some View {
-        self.background(
-            Button("") { action() }
-                .keyboardShortcut(key, modifiers: modifiers)
-                .frame(width: 0, height: 0)
-                .opacity(0)
-                .accessibilityHidden(true)
-        )
+extension MainScene {
+    func wireDispatcher() {
+        keyboardDispatcher.actionHandler = { [self] actionKey in
+            handleAction(actionKey)
+        }
+    }
+
+    private func handleAction(_ key: ActionKey) {
+        switch key {
+        case .reply:
+            draftReply()
+        case .replyAll:
+            draftReply() // TODO: Task 3 will add replyAll-specific logic
+        case .forward:
+            break // TODO: Task 3 will implement forward
+        case .archive:
+            archiveSelectedThread()
+        case .star:
+            starSelectedThread()
+        case .trash:
+            trashSelectedThread()
+        case .markRead:
+            markReadSelectedThread()
+        case .markUnread:
+            markUnreadSelectedThread()
+        case .threadNewer, .threadOlder:
+            break // TODO: Task 4 will implement J/K navigation
+        case .folderInbox:
+            sidebarSelection = .folder(.inbox)
+        case .folderStarred:
+            sidebarSelection = .folder(.starred)
+        case .folderSent:
+            sidebarSelection = .folder(.sent)
+        case .folderArchive:
+            sidebarSelection = .folder(.archive)
+        case .folderAll:
+            sidebarSelection = .allAccountsAllFolders
+        case .pageDownOrNextUnread:
+            break // TODO: Task 4 will implement Space navigation
+        case .focusSearch:
+            break // TODO: Task 6 will implement search focus
+        case .showHelp:
+            break // TODO: Task 8 will implement help overlay
+        case .sendCompose:
+            break // Handled by ComposeWindowView directly
+        case .newCompose:
+            prepareNewCompose()
+            composition.showCompose = true
+        case .refresh:
+            refreshCurrentAccount()
+        case .actionSheet:
+            composition.showActionSheet.toggle()
+        }
+    }
+
+    private func trashSelectedThread() {
+        guard let threadId = inboxStore.selectedThreadID,
+              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
+        trashThread(threadId, accountId: thread.accountId)
+    }
+
+    private func markUnreadSelectedThread() {
+        guard let threadId = inboxStore.selectedThreadID,
+              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
+        let accountId = thread.accountId
+        Task {
+            do {
+                try await composition.mailMutator.markRead(threadId, accountId: accountId, read: false)
+                showToast("Marked unread", undo: nil)
+            } catch {
+                showToast("Mark unread failed", undo: nil)
+            }
+        }
+    }
+
+    private func refreshCurrentAccount() {
+        if let selected = inboxStore.selectedThreadID,
+           let thread = inboxStore.threads.first(where: { $0.id == selected }) {
+            composition.refreshAccount(thread.accountId)
+        } else {
+            composition.refreshAllAccounts()
+        }
+    }
+
+    func updateTextInputFocusState() {
+        guard let responder = NSApp.keyWindow?.firstResponder else {
+            keyboardDispatcher.isTextInputFocused = false
+            return
+        }
+        keyboardDispatcher.isTextInputFocused = responder is NSTextView || responder is NSTextField
     }
 }

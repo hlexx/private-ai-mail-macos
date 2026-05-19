@@ -10,6 +10,7 @@ struct PrivateAIMailApp: App {
     @Environment(\.openWindow) private var openWindow
 
     private let composition = CompositionRoot()
+    private let keyboardDispatcher = KeyboardDispatcher()
     private let sparkleUpdater = SparkleUpdater()
     @State private var setupComplete = false
 
@@ -17,7 +18,7 @@ struct PrivateAIMailApp: App {
         WindowGroup(id: "main") {
             Group {
                 if setupComplete {
-                    MainScene(composition: composition)
+                    MainScene(composition: composition, keyboardDispatcher: keyboardDispatcher)
                         .frame(minWidth: 980, minHeight: 720)
                         .task { composition.resumeExistingAccounts() }
                         .onAppear { configureMainWindow() }

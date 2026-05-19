@@ -167,14 +167,14 @@ SwiftUI's `.keyboardShortcut` doesn't know about `@FocusState`. We
 need a layer that consumes single-letter shortcuts ONLY when no
 text input is focused.
 
-- [ ] Create `Apps/MacApp/Sources/Keyboard/KeyboardDispatcher.swift`:
+- [x] Create `Apps/MacApp/Sources/Keyboard/KeyboardDispatcher.swift`:
       `@MainActor final class KeyboardDispatcher` with:
       - `@Observable` property `isTextInputFocused: Bool`
       - `func handle(_ key: ActionKey)` — calls the right method on
         `CompositionRoot` (or its scoped sub-stores).
       - Internal mapping `(key, modifiers) → ActionKey` derived from
         `ShortcutSpec.all`.
-- [ ] Create a view modifier
+- [x] Create a view modifier
       `View.mailKeyboardShortcuts(dispatcher:)` that:
       - For each `ShortcutSpec` with `modifiers != []`: attaches a
         standard `.keyboardShortcut(spec.key, modifiers: spec.modifiers)`-
@@ -187,15 +187,15 @@ text input is focused.
            consume** the event (lets it fall through to typing).
         2. Otherwise, matches against `ShortcutSpec.all`, calls
            `dispatcher.handle(...)`, returns nil to consume.
-- [ ] Wire `KeyboardDispatcher` into `MainScene` once; all action
+- [x] Wire `KeyboardDispatcher` into `MainScene` once; all action
       methods (`archiveSelectedThread`, `draftReply`, etc.) become
       `dispatcher.handle(.archive)` etc.
-- [ ] Update `MainScene` to bind `isTextInputFocused` via
+- [x] Update `MainScene` to bind `isTextInputFocused` via
       `@FocusState` observers around the search field + inline
       composer text editor (set true on focus, false on blur). This
       gives us a Swift-level signal in addition to the NSEvent
       firstResponder check.
-- [ ] Tests in `KeyboardDispatchTests.swift`:
+- [x] Tests in `KeyboardDispatchTests.swift`:
       - Fire `R` while `isTextInputFocused == true` → no action.
       - Fire `R` while focus is on the thread row → dispatcher
         receives `.reply`.
