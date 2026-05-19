@@ -4,9 +4,11 @@ import SwiftUI
 public struct SearchField: View {
     @Binding public var text: String
     public let onCommit: () -> Void
+    var isFocused: FocusState<Bool>.Binding
 
-    public init(text: Binding<String>, onCommit: @escaping () -> Void = {}) {
+    public init(text: Binding<String>, isFocused: FocusState<Bool>.Binding, onCommit: @escaping () -> Void = {}) {
         self._text = text
+        self.isFocused = isFocused
         self.onCommit = onCommit
     }
 
@@ -23,9 +25,18 @@ public struct SearchField: View {
             .textFieldStyle(.plain)
             .font(.rbGeist(13))
             .foregroundStyle(Color.rbFg1)
+            .focused(isFocused)
             .onSubmit(onCommit)
+            .onKeyPress(.escape) {
+                if !text.isEmpty {
+                    text = ""
+                    return .handled
+                }
+                isFocused.wrappedValue = false
+                return .handled
+            }
 
-            Text("\u{2318}K")
+            Text("\u{2318}L")
                 .font(.rbMono(10))
                 .foregroundStyle(Color.rbFg3)
                 .padding(.horizontal, 6)
@@ -49,8 +60,9 @@ public struct SearchField: View {
 #if DEBUG
 struct SearchFieldPreview: View {
     @State private var text = ""
+    @FocusState private var focused: Bool
     var body: some View {
-        SearchField(text: $text)
+        SearchField(text: $text, isFocused: $focused)
             .frame(maxWidth: 480)
             .padding()
             .background(Color.rbBgCanvas)

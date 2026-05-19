@@ -285,10 +285,10 @@ Move conflicting bindings, free up the standard slots.
 
 ### Task 6: Search focus — `⌘L`
 
-- [ ] In `RBToolbar.swift` search field, add `@FocusState` binding
+- [x] In `RBToolbar.swift` search field, add `@FocusState` binding
       `searchFocused`. `⌘L` from `KeyboardDispatcher` flips it to
       `true`. `Esc` while focused flips back to `false`.
-- [ ] `Esc` also clears the search input if it had focus AND was
+- [x] `Esc` also clears the search input if it had focus AND was
       non-empty (first Esc clears, second blurs).
 
 ### Task 7: `⌘⏎` Send in composer

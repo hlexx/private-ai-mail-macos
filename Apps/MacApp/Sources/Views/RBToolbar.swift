@@ -15,6 +15,7 @@ struct RBToolbar: View {
     var onToggleBrief: (() -> Void)?
     var sidebarWidth: CGFloat = RBLayout.sidebarWidth
     var sidebarCollapsed: Bool = false
+    var searchFocused: FocusState<Bool>.Binding
 
     @State private var searchText: String = ""
 
@@ -73,7 +74,7 @@ struct RBToolbar: View {
 
     private var trailingSection: some View {
         HStack(spacing: RBSpace.s2) {
-            SearchField(text: $searchText, onCommit: { onOpenActionSheet() })
+            SearchField(text: $searchText, isFocused: searchFocused, onCommit: { onOpenActionSheet() })
                 .frame(maxWidth: 480)
 
             Spacer(minLength: RBSpace.s2)
@@ -136,16 +137,24 @@ struct RBToolbar: View {
 }
 
 #if DEBUG
+struct RBToolbarPreview: View {
+    @FocusState private var focused: Bool
+    var body: some View {
+        RBToolbar(
+            accounts: [],
+            activeAccountID: nil,
+            onCycleAccount: {},
+            onToggleTheme: {},
+            onOpenSettings: {},
+            onCompose: {},
+            onOpenActionSheet: {},
+            searchFocused: $focused
+        )
+        .preferredColorScheme(.dark)
+    }
+}
+
 #Preview("RBToolbar - Dark") {
-    RBToolbar(
-        accounts: [],
-        activeAccountID: nil,
-        onCycleAccount: {},
-        onToggleTheme: {},
-        onOpenSettings: {},
-        onCompose: {},
-        onOpenActionSheet: {}
-    )
-    .preferredColorScheme(.dark)
+    RBToolbarPreview()
 }
 #endif

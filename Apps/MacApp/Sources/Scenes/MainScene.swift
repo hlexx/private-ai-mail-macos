@@ -18,6 +18,7 @@ struct MainScene: View {
     @State private var sidebarSelection: SidebarSelection = .default
     @State var threadListWrapPulse: Bool = false
     @State private var folderJumpPulse: SidebarSelection?
+    @FocusState private var searchFocused: Bool
     @State var accounts: [AccountRecord] = []
     // NOTE — these three were declared `private` initially; relaxed to
     // internal so MainSceneMutations (separate file in same target)
@@ -54,7 +55,8 @@ struct MainScene: View {
                 onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
                 onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
                 sidebarWidth: CGFloat(sidebarWidth),
-                sidebarCollapsed: sidebarCollapsed
+                sidebarCollapsed: sidebarCollapsed,
+                searchFocused: $searchFocused
             )
 
             MainSplitController(
@@ -364,7 +366,7 @@ extension MainScene {
         case .pageDownOrNextUnread:
             pageDownOrNextUnread()
         case .focusSearch:
-            break // TODO: Task 6 will implement search focus
+            searchFocused = true
         case .showHelp:
             break // TODO: Task 8 will implement help overlay
         case .sendCompose:

@@ -3,6 +3,14 @@ import SwiftUI
 import AppKit
 @testable import DesignSystem
 
+/// Wrapper that owns the @FocusState needed by SearchField.
+private struct SearchFieldTestHost: View {
+    @FocusState private var focused: Bool
+    var body: some View {
+        SearchField(text: .constant(""), isFocused: $focused)
+    }
+}
+
 @Suite("Atoms — all components build in both themes")
 struct AtomsTests {
 
@@ -171,7 +179,7 @@ struct AtomsTests {
 
     @MainActor
     @Test func searchFieldDark() {
-        let view = SearchField(text: .constant(""))
+        let view = SearchFieldTestHost()
             .frame(maxWidth: 480)
             .padding()
             .background(Color.rbBgCanvas)
@@ -184,7 +192,7 @@ struct AtomsTests {
 
     @MainActor
     @Test func searchFieldLight() {
-        let view = SearchField(text: .constant(""))
+        let view = SearchFieldTestHost()
             .frame(maxWidth: 480)
             .padding()
             .background(Color.rbBgCanvas)

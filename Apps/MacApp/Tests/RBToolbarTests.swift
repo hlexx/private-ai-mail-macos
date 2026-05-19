@@ -3,11 +3,10 @@ import SwiftUI
 import Testing
 @testable import PrivateAIMail
 
-@Suite("RBToolbar — builds and lays out in both themes")
-struct RBToolbarTests {
-
-    @MainActor
-    private func makeToolbar() -> some View {
+/// Wrapper that owns the @FocusState needed by RBToolbar.
+private struct ToolbarTestHost: View {
+    @FocusState private var searchFocused: Bool
+    var body: some View {
         RBToolbar(
             accounts: [],
             activeAccountID: nil,
@@ -15,9 +14,19 @@ struct RBToolbarTests {
             onToggleTheme: {},
             onOpenSettings: {},
             onCompose: {},
-            onOpenActionSheet: {}
+            onOpenActionSheet: {},
+            searchFocused: $searchFocused
         )
         .frame(width: 1200, height: 56)
+    }
+}
+
+@Suite("RBToolbar — builds and lays out in both themes")
+struct RBToolbarTests {
+
+    @MainActor
+    private func makeToolbar() -> some View {
+        ToolbarTestHost()
     }
 
     @MainActor
