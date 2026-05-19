@@ -251,6 +251,7 @@ extension ShortcutSpec {
             id: "view.refresh",
             section: .view, label: "Refresh",
             key: KeyEquivalent(Character(UnicodeScalar(NSF5FunctionKey)!)),
+            requiresInputBlur: true,
             actionKey: .refresh
         ),
         ShortcutSpec(

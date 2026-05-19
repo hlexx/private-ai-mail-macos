@@ -277,6 +277,7 @@ public struct InlineComposer: View {
                 }
                 .buttonStyle(.rbPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+                .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .keyboardShortcut(.return, modifiers: [.command])
                 .help("Send (⌘⏎)")
             }

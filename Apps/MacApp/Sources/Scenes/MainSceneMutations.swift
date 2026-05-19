@@ -79,20 +79,28 @@ extension MainScene {
             replyToAddr = extractEmail(from: lastMessage.toAddr)
         }
 
-        let allTo = lastMessage.toAddr ?? ""
-        let allCc = lastMessage.ccAddr ?? ""
-
-        let inReplyToID = lastMessage.messageIdHeader ?? lastMessage.id
-        let referencesChain = threadStore.messages.compactMap(\.messageIdHeader)
-
         let threadAccountId = inboxStore.threads.first(where: { $0.id == lastMessage.threadId })?.accountId
         let replyAccountId = threadAccountId ?? composition.activeAccountID
         let replyAccountEmail = accounts.first(where: { $0.id == replyAccountId })?.email
 
+        // Collect all To and Cc addresses, then remove the sender (already in To:)
+        // and the current user's own address to avoid duplicates.
+        let excludeAddrs = Set([replyToAddr.lowercased(), (replyAccountEmail ?? "").lowercased()]
+            .filter { !$0.isEmpty })
+        let allTo = parseAddressList(lastMessage.toAddr)
+            .filter { !excludeAddrs.contains($0.lowercased()) }
+        let allCc = parseAddressList(lastMessage.ccAddr)
+            .filter { !excludeAddrs.contains($0.lowercased()) }
+        let dedupCc = allTo.joined(separator: ", ")
+        let dedupCcExtra = allCc.joined(separator: ", ")
+
+        let inReplyToID = lastMessage.messageIdHeader ?? lastMessage.id
+        let referencesChain = threadStore.messages.compactMap(\.messageIdHeader)
+
         vm.prefillReplyAll(
             fromAddr: replyToAddr,
-            allToAddrs: allTo,
-            allCcAddrs: allCc,
+            allToAddrs: dedupCc,
+            allCcAddrs: dedupCcExtra,
             subject: threadStore.subject,
             threadID: lastMessage.threadId,
             lastMessageID: inReplyToID,
@@ -103,6 +111,11 @@ extension MainScene {
             vm.selectedAccountID = accountID
             vm.selectedAccountEmail = replyAccountEmail
         }
+    }
+
+    private func parseAddressList(_ raw: String?) -> [String] {
+        guard let raw, !raw.isEmpty else { return [] }
+        return raw.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     private func prefillComposeForForward() {
