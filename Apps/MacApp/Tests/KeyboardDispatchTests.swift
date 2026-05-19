@@ -60,21 +60,21 @@ struct KeyboardDispatchTests {
     }
 
     @MainActor
-    @Test("Bare key J dispatches .threadNewer")
+    @Test("Bare key J dispatches .threadOlder (Gmail convention)")
     func bareKeyJ() {
         let dispatcher = KeyboardDispatcher()
         let event = makeKeyEvent(characters: "j", modifierFlags: [])
         let action = dispatcher.bareKeyAction(for: event)
-        #expect(action == .threadNewer)
+        #expect(action == .threadOlder)
     }
 
     @MainActor
-    @Test("Bare key K dispatches .threadOlder")
+    @Test("Bare key K dispatches .threadNewer (Gmail convention)")
     func bareKeyK() {
         let dispatcher = KeyboardDispatcher()
         let event = makeKeyEvent(characters: "k", modifierFlags: [])
         let action = dispatcher.bareKeyAction(for: event)
-        #expect(action == .threadOlder)
+        #expect(action == .threadNewer)
     }
 
     @MainActor

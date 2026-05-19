@@ -154,7 +154,7 @@ struct ThreadNavigationTests {
     // MARK: - Bare Key Dispatch
 
     @MainActor
-    @Test("J key dispatches threadNewer via dispatcher")
+    @Test("J key dispatches threadOlder via dispatcher (Gmail convention)")
     func jKeyDispatch() {
         let dispatcher = KeyboardDispatcher()
         let event = NSEvent.keyEvent(
@@ -164,11 +164,11 @@ struct ThreadNavigationTests {
             isARepeat: false, keyCode: 0
         )!
         let action = dispatcher.bareKeyAction(for: event)
-        #expect(action == .threadNewer)
+        #expect(action == .threadOlder)
     }
 
     @MainActor
-    @Test("K key dispatches threadOlder via dispatcher")
+    @Test("K key dispatches threadNewer via dispatcher (Gmail convention)")
     func kKeyDispatch() {
         let dispatcher = KeyboardDispatcher()
         let event = NSEvent.keyEvent(
@@ -178,7 +178,7 @@ struct ThreadNavigationTests {
             isARepeat: false, keyCode: 0
         )!
         let action = dispatcher.bareKeyAction(for: event)
-        #expect(action == .threadOlder)
+        #expect(action == .threadNewer)
     }
 
     @MainActor

@@ -85,8 +85,8 @@ struct KeyboardCatalogSnapshotTests {
       ⇧U — Mark Unread
 
     [Navigation]
-      J — Newer Thread
-      K — Older Thread
+      J — Older Thread
+      K — Newer Thread
       Space — Page Down / Next Unread
       ⌘1 — Go to Inbox
       ⌘2 — Go to Starred

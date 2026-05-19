@@ -174,18 +174,18 @@ extension ShortcutSpec {
 
         // MARK: Navigation
         ShortcutSpec(
-            id: "nav.threadNewer",
-            section: .navigation, label: "Newer Thread",
-            key: "j",
-            requiresInputBlur: true,
-            actionKey: .threadNewer
-        ),
-        ShortcutSpec(
             id: "nav.threadOlder",
             section: .navigation, label: "Older Thread",
-            key: "k",
+            key: "j",
             requiresInputBlur: true,
             actionKey: .threadOlder
+        ),
+        ShortcutSpec(
+            id: "nav.threadNewer",
+            section: .navigation, label: "Newer Thread",
+            key: "k",
+            requiresInputBlur: true,
+            actionKey: .threadNewer
         ),
         ShortcutSpec(
             id: "nav.pageDown",
