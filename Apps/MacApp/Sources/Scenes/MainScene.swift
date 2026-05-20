@@ -113,17 +113,17 @@ struct MainScene: View {
                                 : preferredLanguage
                         ),
                         onTextNodesExtracted: { messageId, nodes in
-                            _ = translationStore.nextGeneration(for: messageId)
-                            // Clear stale node translations so re-extraction
-                            // (e.g. after toggling remote images) triggers fresh translation
-                            translationStore.clearNodeTranslations(for: messageId)
-                            translationStore.setExtractedNodes(
-                                for: messageId,
-                                nodes: nodes.map { ($0.id, $0.text) }
-                            )
-                            // Re-trigger translation if the toggle is already active.
-                            // translateAll may have run before extraction finished,
-                            // so newly extracted nodes need a fresh translation pass.
+                            let incoming = nodes.map { ($0.id, $0.text) }
+                            // Only invalidate cache if extracted nodes actually changed
+                            let existing = translationStore.extractedNodes[messageId]
+                            let changed = existing == nil
+                                || existing?.count != incoming.count
+                                || zip(existing!, incoming).contains { $0.0 != $1.0 || $0.1 != $1.1 }
+                            if changed {
+                                _ = translationStore.nextGeneration(for: messageId)
+                                translationStore.clearNodeTranslations(for: messageId)
+                            }
+                            translationStore.setExtractedNodes(for: messageId, nodes: incoming)
                             if translationStore.showTranslated {
                                 translationStore.needsRetranslation = true
                             }

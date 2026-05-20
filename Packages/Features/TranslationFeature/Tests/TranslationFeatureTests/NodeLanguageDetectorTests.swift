@@ -52,13 +52,12 @@ struct NodeLanguageDetectorTests {
         #expect(result == nil)
     }
 
-    @Test("returns nil for very short ambiguous fragment")
+    @Test("returns nil or low confidence for numeric-only fragment")
     func shortAmbiguous() {
         let result = NodeLanguageDetector.detect("1234")
-        // Numeric-only content should either return nil or have low confidence
-        // Either way, it should not confidently detect a language
-        if let result {
-            #expect(result.confidence < 0.9)
-        }
+        // Numeric-only content should not be confidently detected as any language.
+        // NLLanguageRecognizer may return nil or a low-confidence guess.
+        let isAcceptable = result == nil || result!.confidence < 0.9
+        #expect(isAcceptable, "Expected nil or confidence < 0.9, got \(String(describing: result))")
     }
 }

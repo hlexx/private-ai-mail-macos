@@ -87,14 +87,16 @@ struct MultiBatchTests {
         #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == false)
     }
 
-    @Test("clearCache resets nodeTranslationComplete and inflightBatches")
+    @Test("clearCache resets nodeTranslationComplete, inflightBatches, and needsRetranslation")
     func clearCacheResetsNew() {
         let store = TranslationStore()
         store.incrementInflight()
         store.markNodeTranslationComplete(for: "msg1", target: "en")
+        store.needsRetranslation = true
         store.clearCache()
         #expect(store.inflightBatches == 0)
         #expect(store.nodeTranslationComplete.isEmpty)
+        #expect(store.needsRetranslation == false)
     }
 
     // MARK: - Grouping integration for Lazada-shaped input
@@ -228,6 +230,17 @@ struct MultiBatchTests {
         #expect(ruResult == ["n1": "Привет"])
     }
 
+    @Test("nodeTranslations returns nil when all fragments are for a different target")
+    func filterByTargetReturnsNil() {
+        let store = TranslationStore()
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Hello", source: "ru", target: "en"),
+        ])
+        // Querying for a target that has no fragments should return nil
+        let result = store.nodeTranslations(for: "msg1", target: "fr")
+        #expect(result == nil)
+    }
+
     @Test("allTranslatedNodes filters all messages by target")
     func allTranslatedNodesFiltered() {
         let store = TranslationStore()
@@ -248,7 +261,7 @@ struct MultiBatchTests {
         #expect(frNodes["msg2"] == ["n0": "Bonjour"])
     }
 
-    @Test("isNodeTranslationComplete is per-target")
+    @Test("isNodeTranslationComplete tracks multiple targets independently")
     func completionPerTarget() {
         let store = TranslationStore()
         store.markNodeTranslationComplete(for: "msg1", target: "en")
@@ -256,11 +269,15 @@ struct MultiBatchTests {
         #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == true)
         #expect(store.isNodeTranslationComplete(for: "msg1", target: "ru") == false)
 
-        // Marking complete for a different target overwrites
+        // Marking complete for a different target preserves the first
         store.markNodeTranslationComplete(for: "msg1", target: "ru")
         #expect(store.isNodeTranslationComplete(for: "msg1", target: "ru") == true)
-        // Previous target no longer marked complete (new target overwrote)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == true)
+
+        // Clear removes all targets
+        store.clearNodeTranslations(for: "msg1")
         #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == false)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "ru") == false)
     }
 
     @Test("Cache hit: fragments persist across tab toggles, no re-translation needed")

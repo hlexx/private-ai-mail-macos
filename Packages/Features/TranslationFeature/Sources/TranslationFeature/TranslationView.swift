@@ -91,6 +91,11 @@ public struct TranslationToggleView: View {
                     ProgressView()
                         .controlSize(.small)
                 }
+                if store.error != nil && !store.isTranslating {
+                    Text(String(localized: "translation.partialError", defaultValue: "Some sections couldn't be translated."))
+                        .font(.rbGeist(11, weight: .regular))
+                        .foregroundStyle(Color.rbFg3)
+                }
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 8)
@@ -167,6 +172,7 @@ public struct TranslationToggleView: View {
 
     private func triggerTranslation() {
         store.showTranslated = true
+        store.setError(nil)
 
         let target = effectivePreferredLanguage
 
@@ -230,7 +236,10 @@ public struct TranslationToggleView: View {
         }
 
         if !newBatches.isEmpty {
-            pendingBatches = newBatches
+            // Remove stale batches for the same (messageId, sourceLanguage) before appending
+            let newIds = Set(newBatches.map(\.id))
+            pendingBatches.removeAll { newIds.contains($0.id) }
+            pendingBatches.append(contentsOf: newBatches)
         }
     }
 
@@ -292,12 +301,14 @@ public struct TranslationToggleView: View {
             guard store.currentGeneration(for: msgId) == generation else { return }
             store.mergeNodeTranslations(for: msgId, fragments: result)
 
-            // Remove this batch from pending
-            pendingBatches.removeAll { $0.id == batch.id }
+            // Remove this batch from pending (guard by generation to avoid removing a re-triggered batch)
+            pendingBatches.removeAll { $0.id == batch.id && $0.generation == batch.generation }
+        } catch is CancellationError {
+            // Task was cancelled (e.g. re-trigger replaced batches) — don't set error
+            pendingBatches.removeAll { $0.id == batch.id && $0.generation == batch.generation }
         } catch {
             store.setError(error)
-            // Remove failed batch from pending
-            pendingBatches.removeAll { $0.id == batch.id }
+            pendingBatches.removeAll { $0.id == batch.id && $0.generation == batch.generation }
         }
     }
 

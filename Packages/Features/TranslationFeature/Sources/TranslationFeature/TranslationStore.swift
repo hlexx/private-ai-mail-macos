@@ -1,5 +1,4 @@
 import Foundation
-import NaturalLanguage
 import Observation
 import Persistence
 
@@ -25,8 +24,8 @@ public final class TranslationStore {
     public private(set) var translatedTexts: [String: String] = [:]
     public private(set) var translatedNodes: [String: [String: TranslatedFragment]] = [:]
     public private(set) var translationGeneration: [String: Int] = [:]
-    /// Maps messageId -> target language for which translation is complete.
-    public private(set) var nodeTranslationComplete: [String: String] = [:]
+    /// Maps messageId -> set of target languages for which translation is complete.
+    public private(set) var nodeTranslationComplete: [String: Set<String>] = [:]
 
     private let db: AppDatabase?
 
@@ -36,26 +35,6 @@ public final class TranslationStore {
 
     public init() {
         self.db = nil
-    }
-
-    // MARK: - Language Detection
-
-    public nonisolated func detect(text: String) -> String? {
-        guard !text.isEmpty else { return nil }
-        let recognizer = NLLanguageRecognizer()
-        recognizer.processString(text)
-        guard let language = recognizer.dominantLanguage else { return nil }
-        return language.rawValue
-    }
-
-    public nonisolated func detectWithConfidence(text: String) -> (language: String, confidence: Double)? {
-        guard !text.isEmpty else { return nil }
-        let recognizer = NLLanguageRecognizer()
-        recognizer.processString(text)
-        guard let language = recognizer.dominantLanguage else { return nil }
-        let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
-        let confidence = hypotheses[language] ?? 0.0
-        return (language.rawValue, confidence)
     }
 
     // MARK: - Translation Cache (plain text fallback)
@@ -72,11 +51,6 @@ public final class TranslationStore {
 
     public func setNodeTranslations(for messageId: String, fragments: [String: TranslatedFragment]) {
         translatedNodes[messageId] = fragments
-    }
-
-    /// Returns all cached fragments for a message (unfiltered).
-    public func nodeFragments(for messageId: String) -> [String: TranslatedFragment]? {
-        translatedNodes[messageId]
     }
 
     /// Returns node translations filtered to the given target language.
@@ -156,11 +130,11 @@ public final class TranslationStore {
     }
 
     public func markNodeTranslationComplete(for messageId: String, target: String) {
-        nodeTranslationComplete[messageId] = target
+        nodeTranslationComplete[messageId, default: []].insert(target)
     }
 
     public func isNodeTranslationComplete(for messageId: String, target: String) -> Bool {
-        nodeTranslationComplete[messageId] == target
+        nodeTranslationComplete[messageId]?.contains(target) ?? false
     }
 
     public func clearCache() {
