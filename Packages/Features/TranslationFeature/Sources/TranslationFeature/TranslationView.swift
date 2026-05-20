@@ -196,6 +196,7 @@ public struct TranslationToggleView: View {
                 plainTextConfig = TranslationSession.Configuration(source: source, target: targetLang)
             } else {
                 plainTextConfig?.invalidate()
+                plainTextConfig = TranslationSession.Configuration(source: source, target: targetLang)
             }
         }
 
@@ -274,16 +275,15 @@ public struct TranslationToggleView: View {
 
     @MainActor
     private func translateBatch(_ batch: PendingBatch, session: TranslationSession) async {
+        let target = effectivePreferredLanguage
         store.incrementInflight()
         defer {
             store.decrementInflight()
-            checkAndFinalizeBatches(messageId: batch.messageId, target: self.effectivePreferredLanguage)
+            checkAndFinalizeBatches(messageId: batch.messageId, target: target)
         }
 
         let msgId = batch.messageId
         let generation = batch.generation
-
-        let target = effectivePreferredLanguage
 
         do {
             let requests = batch.nodes.map {
