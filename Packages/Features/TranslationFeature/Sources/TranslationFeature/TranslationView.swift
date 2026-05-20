@@ -76,11 +76,20 @@ public struct TranslationToggleView: View {
     }
 
     private var shouldShow: Bool {
-        guard detectedLanguage != nil else { return false }
         // For HTML messages, always show — per-node detection may find
-        // foreign-language nodes even when dominant matches preferred.
+        // foreign-language nodes even when dominant matches preferred,
+        // and thread-level detection may return nil for short snippets.
         if !htmlMessageIds.isEmpty { return true }
-        return !TranslationGroupingService.languagesMatch(detectedLanguage ?? "", effectivePreferredLanguage)
+        guard let detectedLanguage else { return false }
+        return !TranslationGroupingService.languagesMatch(detectedLanguage, effectivePreferredLanguage)
+    }
+
+    /// Whether auto-translate should fire: only for threads where the
+    /// dominant language is detected AND differs from preferred.
+    private var shouldAutoTranslate: Bool {
+        guard autoTranslate else { return false }
+        guard let detectedLanguage else { return false }
+        return !TranslationGroupingService.languagesMatch(detectedLanguage, effectivePreferredLanguage)
     }
 
     public var body: some View {
@@ -113,12 +122,12 @@ public struct TranslationToggleView: View {
                 }
             }
             .onAppear {
-                if autoTranslate && !store.showTranslated {
+                if shouldAutoTranslate && !store.showTranslated {
                     triggerTranslation()
                 }
             }
             .onChange(of: messageFingerprint) { _, _ in
-                if autoTranslate && !store.showTranslated {
+                if shouldAutoTranslate && !store.showTranslated {
                     triggerTranslation()
                 }
             }

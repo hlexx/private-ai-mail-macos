@@ -33,7 +33,7 @@ public actor LabelReconciler {
     public func reconcileInbox(accountId: String) async throws {
         let api = apiFactory(accountId)
 
-        var pageToken: String? = nil
+        var pageToken: String?
         var collected: Set<String> = []
 
         repeat {
