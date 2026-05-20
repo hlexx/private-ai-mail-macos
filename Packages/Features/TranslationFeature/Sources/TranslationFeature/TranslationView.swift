@@ -80,7 +80,7 @@ public struct TranslationToggleView: View {
         // For HTML messages, always show — per-node detection may find
         // foreign-language nodes even when dominant matches preferred.
         if !htmlMessageIds.isEmpty { return true }
-        return detectedLanguage != effectivePreferredLanguage
+        return !TranslationGroupingService.languagesMatch(detectedLanguage ?? "", effectivePreferredLanguage)
     }
 
     public var body: some View {
@@ -189,7 +189,7 @@ public struct TranslationToggleView: View {
         let hasUncachedPlainText = messages.contains { msg in
             !htmlMessageIds.contains(msg.id) && store.translatedText(for: msg.id) == nil
         }
-        if hasUncachedPlainText, let detected = detectedLanguage, detected != target {
+        if hasUncachedPlainText, let detected = detectedLanguage, !TranslationGroupingService.languagesMatch(detected, target) {
             let source = Locale.Language(identifier: detected)
             let targetLang = Locale.Language(identifier: target)
             if plainTextConfig == nil {
@@ -314,7 +314,7 @@ public struct TranslationToggleView: View {
 
     private func checkAndFinalizeBatches(messageId: String, target: String) {
         let hasPending = pendingBatches.contains { $0.messageId == messageId }
-        if !hasPending {
+        if !hasPending && store.error == nil {
             store.markNodeTranslationComplete(for: messageId, target: target)
         }
     }

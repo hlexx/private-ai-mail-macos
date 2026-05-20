@@ -122,11 +122,11 @@ struct MainScene: View {
                             if changed {
                                 _ = translationStore.nextGeneration(for: messageId)
                                 translationStore.clearNodeTranslations(for: messageId)
+                                if translationStore.showTranslated {
+                                    translationStore.needsRetranslation = true
+                                }
                             }
                             translationStore.setExtractedNodes(for: messageId, nodes: incoming)
-                            if translationStore.showTranslated {
-                                translationStore.needsRetranslation = true
-                            }
                         },
                         onScrollProxy: { proxy in
                             threadScrollProxy = proxy

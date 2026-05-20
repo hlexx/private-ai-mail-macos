@@ -11,6 +11,14 @@ public struct NodeBatch: Sendable {
 }
 
 public enum TranslationGroupingService {
+
+    /// Compare primary language subtags so "zh-Hans" matches "zh", "pt-BR" matches "pt", etc.
+    static func languagesMatch(_ a: String, _ b: String) -> Bool {
+        let primaryA = a.split(separator: "-").first.map(String.init) ?? a
+        let primaryB = b.split(separator: "-").first.map(String.init) ?? b
+        return primaryA.lowercased() == primaryB.lowercased()
+    }
+
     public static func group(
         nodes: [(id: String, text: String)],
         preferredLanguage: String
@@ -22,7 +30,7 @@ public enum TranslationGroupingService {
                 skipped.insert(node.id)
                 continue
             }
-            if detected.bcp47 == preferredLanguage {
+            if languagesMatch(detected.bcp47, preferredLanguage) {
                 skipped.insert(node.id)
                 continue
             }
