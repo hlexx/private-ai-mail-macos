@@ -189,7 +189,7 @@ and group nodes by detected source. Skip nodes whose detected
 language matches the preferred target. Skip nodes where detection
 is nil.
 
-- [ ] Add to `TranslationStore` (or as a free function in a new file
+- [x] Add to `TranslationStore` (or as a free function in a new file
       `TranslationGroupingService.swift`):
       ```swift
       struct NodeBatch {
@@ -219,7 +219,7 @@ is nil.
           return (batches, skipped)
       }
       ```
-- [ ] Tests:
+- [x] Tests:
       - Lazada-shape input: 4 Thai links + ~30 EN nodes + preferred=en →
         1 batch (`th → en`, 4 nodes), 30 nodes skipped (already EN).
       - Mixed EN/RU input + preferred=en → 1 RU batch.
