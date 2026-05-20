@@ -38,10 +38,16 @@ public struct GeneralTab: View {
             } header: {
                 Text(String(localized: "general.section.language", defaultValue: "Language & AI"))
             } footer: {
-                Text(String(
-                    localized: "general.section.language.footer",
-                    defaultValue: "When auto-translate is on, threads in a foreign language show the translated version by default."
-                ))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(
+                        localized: "general.section.language.footer",
+                        defaultValue: "When auto-translate is on, threads in a foreign language show the translated version by default."
+                    ))
+                    Text(String(
+                        localized: "general.section.language.mixedHint",
+                        defaultValue: "Only text in a different language is translated. Mixed-language emails translate only the non-preferred parts."
+                    ))
+                }
                 .foregroundStyle(.secondary)
             }
         }

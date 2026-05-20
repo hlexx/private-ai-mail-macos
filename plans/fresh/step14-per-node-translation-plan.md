@@ -300,13 +300,14 @@ needed.
 
 Make the bilingual behaviour discoverable.
 
-- [ ] Settings → General → Preferred language: append a help-line
+- [x] Settings → General → Preferred language: append a help-line
       below the picker: "Only text in a different language is
       translated. Mixed-language emails translate only the
       non-preferred parts."
-- [ ] Keyboard help overlay (Step 13): add a line under
+- [x] Keyboard help overlay (Step 13): add a line under
       "Translation" section if absent: "⌃T toggle Original/Translated"
       (only if that shortcut already exists; otherwise skip).
+      SKIPPED: ⌃T shortcut does not exist in the codebase.
 
 ### Task 6: Release notes + version bump
 
