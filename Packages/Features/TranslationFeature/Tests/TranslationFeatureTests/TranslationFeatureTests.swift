@@ -65,10 +65,13 @@ struct TranslationStoreTests {
     @Test("node translations stores and retrieves per-message node maps")
     func nodeTranslationCache() {
         let store = TranslationStore()
-        let nodes = ["n0": "Hello", "n1": "World"]
-        store.setNodeTranslations(for: "msg1", nodes: nodes)
-        #expect(store.nodeTranslations(for: "msg1") == nodes)
-        #expect(store.nodeTranslations(for: "msg2") == nil)
+        let fragments: [String: TranslatedFragment] = [
+            "n0": TranslatedFragment(text: "Hello", source: "ru", target: "en"),
+            "n1": TranslatedFragment(text: "World", source: "ru", target: "en"),
+        ]
+        store.setNodeTranslations(for: "msg1", fragments: fragments)
+        #expect(store.nodeTranslations(for: "msg1", target: "en") == ["n0": "Hello", "n1": "World"])
+        #expect(store.nodeTranslations(for: "msg2", target: "en") == nil)
     }
 
     @Test("extracted nodes stores pending extraction data")
@@ -101,7 +104,9 @@ struct TranslationStoreTests {
     func clearCacheResetsAll() {
         let store = TranslationStore()
         store.setTranslation(for: "msg1", text: "Hello")
-        store.setNodeTranslations(for: "msg1", nodes: ["n0": "Hi"])
+        store.setNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Hi", source: "ru", target: "en"),
+        ])
         store.setExtractedNodes(for: "msg1", nodes: [("n0", "Hello")])
         let _ = store.nextGeneration(for: "msg1")
         store.showTranslated = true
@@ -109,7 +114,7 @@ struct TranslationStoreTests {
         store.clearCache()
 
         #expect(store.translatedText(for: "msg1") == nil)
-        #expect(store.nodeTranslations(for: "msg1") == nil)
+        #expect(store.nodeTranslations(for: "msg1", target: "en") == nil)
         #expect(store.extractedNodes["msg1"] == nil)
         #expect(store.currentGeneration(for: "msg1") == 0)
         #expect(store.showTranslated == false)

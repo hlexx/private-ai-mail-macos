@@ -3,6 +3,18 @@ import NaturalLanguage
 import Observation
 import Persistence
 
+public struct TranslatedFragment: Sendable, Equatable {
+    public let text: String
+    public let source: String
+    public let target: String
+
+    public init(text: String, source: String, target: String) {
+        self.text = text
+        self.source = source
+        self.target = target
+    }
+}
+
 @Observable
 @MainActor
 public final class TranslationStore {
@@ -11,9 +23,10 @@ public final class TranslationStore {
     public private(set) var error: (any Error)?
     public var showTranslated = false
     public private(set) var translatedTexts: [String: String] = [:]
-    public private(set) var translatedNodes: [String: [String: String]] = [:]
+    public private(set) var translatedNodes: [String: [String: TranslatedFragment]] = [:]
     public private(set) var translationGeneration: [String: Int] = [:]
-    public private(set) var nodeTranslationComplete: Set<String> = []
+    /// Maps messageId -> target language for which translation is complete.
+    public private(set) var nodeTranslationComplete: [String: String] = [:]
 
     private let db: AppDatabase?
 
@@ -57,25 +70,52 @@ public final class TranslationStore {
 
     // MARK: - Translation Cache (per-node HTML)
 
-    public func setNodeTranslations(for messageId: String, nodes: [String: String]) {
-        translatedNodes[messageId] = nodes
+    public func setNodeTranslations(for messageId: String, fragments: [String: TranslatedFragment]) {
+        translatedNodes[messageId] = fragments
     }
 
-    public func nodeTranslations(for messageId: String) -> [String: String]? {
+    /// Returns all cached fragments for a message (unfiltered).
+    public func nodeFragments(for messageId: String) -> [String: TranslatedFragment]? {
         translatedNodes[messageId]
     }
 
-    public func mergeNodeTranslations(for messageId: String, nodes: [String: String]) {
+    /// Returns node translations filtered to the given target language.
+    /// Only fragments whose `target` matches are included.
+    public func nodeTranslations(for messageId: String, target: String) -> [String: String]? {
+        guard let fragments = translatedNodes[messageId] else { return nil }
+        var result: [String: String] = [:]
+        for (nodeId, fragment) in fragments where fragment.target == target {
+            result[nodeId] = fragment.text
+        }
+        return result.isEmpty ? nil : result
+    }
+
+    /// Returns all translated nodes grouped by messageId, filtered to the given target.
+    public func allTranslatedNodes(target: String) -> [String: [String: String]] {
+        var result: [String: [String: String]] = [:]
+        for (messageId, fragments) in translatedNodes {
+            var filtered: [String: String] = [:]
+            for (nodeId, fragment) in fragments where fragment.target == target {
+                filtered[nodeId] = fragment.text
+            }
+            if !filtered.isEmpty {
+                result[messageId] = filtered
+            }
+        }
+        return result
+    }
+
+    public func mergeNodeTranslations(for messageId: String, fragments: [String: TranslatedFragment]) {
         if translatedNodes[messageId] == nil {
-            translatedNodes[messageId] = nodes
+            translatedNodes[messageId] = fragments
         } else {
-            translatedNodes[messageId]?.merge(nodes) { _, new in new }
+            translatedNodes[messageId]?.merge(fragments) { _, new in new }
         }
     }
 
     public func clearNodeTranslations(for messageId: String) {
         translatedNodes.removeValue(forKey: messageId)
-        nodeTranslationComplete.remove(messageId)
+        nodeTranslationComplete.removeValue(forKey: messageId)
     }
 
     public func nextGeneration(for messageId: String) -> Int {
@@ -115,8 +155,12 @@ public final class TranslationStore {
         error = err
     }
 
-    public func markNodeTranslationComplete(for messageId: String) {
-        nodeTranslationComplete.insert(messageId)
+    public func markNodeTranslationComplete(for messageId: String, target: String) {
+        nodeTranslationComplete[messageId] = target
+    }
+
+    public func isNodeTranslationComplete(for messageId: String, target: String) -> Bool {
+        nodeTranslationComplete[messageId] == target
     }
 
     public func clearCache() {

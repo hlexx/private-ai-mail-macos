@@ -173,7 +173,7 @@ public struct TranslationToggleView: View {
         // Check if all messages are cached
         let allCached = messages.allSatisfy { msg in
             if htmlMessageIds.contains(msg.id) {
-                return store.nodeTranslationComplete.contains(msg.id)
+                return store.isNodeTranslationComplete(for: msg.id, target: target)
             }
             return store.translatedText(for: msg.id) != nil
         }
@@ -196,7 +196,7 @@ public struct TranslationToggleView: View {
         // --- HTML messages: per-node grouping ---
         var newBatches: [PendingBatch] = []
         for msgId in htmlMessageIds {
-            guard !store.nodeTranslationComplete.contains(msgId) else { continue }
+            guard !store.isNodeTranslationComplete(for: msgId, target: target) else { continue }
             guard let nodes = store.extractedNodes[msgId], !nodes.isEmpty else { continue }
             let generation = store.currentGeneration(for: msgId)
 
@@ -206,17 +206,17 @@ public struct TranslationToggleView: View {
             )
 
             // Store original text for skipped nodes immediately
-            var skipResult: [String: String] = [:]
+            var skipResult: [String: TranslatedFragment] = [:]
             for node in nodes where skipped.contains(node.id) {
-                skipResult[node.id] = node.text
+                skipResult[node.id] = TranslatedFragment(text: node.text, source: target, target: target)
             }
             if !skipResult.isEmpty {
-                store.mergeNodeTranslations(for: msgId, nodes: skipResult)
+                store.mergeNodeTranslations(for: msgId, fragments: skipResult)
             }
 
             if batches.isEmpty {
                 // All nodes skipped — mark complete
-                store.markNodeTranslationComplete(for: msgId)
+                store.markNodeTranslationComplete(for: msgId, target: target)
             } else {
                 for batch in batches {
                     newBatches.append(PendingBatch(
@@ -264,27 +264,33 @@ public struct TranslationToggleView: View {
             // Only mark complete if this was the last active batch for the message
             // (other batches either finished or this is the only one)
             if !remaining || !store.isTranslating {
-                checkAndFinalizeBatches(messageId: batch.messageId)
+                checkAndFinalizeBatches(messageId: batch.messageId, target: self.effectivePreferredLanguage)
             }
         }
 
         let msgId = batch.messageId
         let generation = batch.generation
 
+        let target = effectivePreferredLanguage
+
         do {
             let requests = batch.nodes.map {
                 TranslationSession.Request(sourceText: $0.text, clientIdentifier: $0.id)
             }
-            var result: [String: String] = [:]
+            var result: [String: TranslatedFragment] = [:]
             let responses = session.translate(batch: requests)
             for try await response in responses {
                 guard store.currentGeneration(for: msgId) == generation else { break }
                 if let nodeId = response.clientIdentifier {
-                    result[nodeId] = response.targetText
+                    result[nodeId] = TranslatedFragment(
+                        text: response.targetText,
+                        source: batch.sourceLanguage,
+                        target: target
+                    )
                 }
             }
             guard store.currentGeneration(for: msgId) == generation else { return }
-            store.mergeNodeTranslations(for: msgId, nodes: result)
+            store.mergeNodeTranslations(for: msgId, fragments: result)
 
             // Remove this batch from pending
             pendingBatches.removeAll { $0.id == batch.id }
@@ -295,10 +301,10 @@ public struct TranslationToggleView: View {
         }
     }
 
-    private func checkAndFinalizeBatches(messageId: String) {
+    private func checkAndFinalizeBatches(messageId: String, target: String) {
         let hasPending = pendingBatches.contains { $0.messageId == messageId }
         if !hasPending {
-            store.markNodeTranslationComplete(for: messageId)
+            store.markNodeTranslationComplete(for: messageId, target: target)
         }
     }
 }

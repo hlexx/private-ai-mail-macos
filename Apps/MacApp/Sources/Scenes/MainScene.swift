@@ -107,7 +107,11 @@ struct MainScene: View {
                         onStar: { starSelectedThread() },
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
-                        translatedNodes: translationStore.translatedNodes,
+                        translatedNodes: translationStore.allTranslatedNodes(
+                            target: preferredLanguage.isEmpty
+                                ? (Locale.current.language.languageCode?.identifier ?? "en")
+                                : preferredLanguage
+                        ),
                         onTextNodesExtracted: { messageId, nodes in
                             _ = translationStore.nextGeneration(for: messageId)
                             // Clear stale node translations so re-extraction

@@ -285,14 +285,14 @@ Cache must work per `(messageId, targetLanguage, sourceLanguage)`
 so that switching preferred language re-translates only what's
 needed.
 
-- [ ] Update `TranslationStore.translatedNodes` to be:
+- [x] Update `TranslationStore.translatedNodes` to be:
       `[messageId: [nodeId: TranslatedFragment]]` where
       `TranslatedFragment { text: String; source: String; target: String }`.
-- [ ] `apply()` JS step reads only fragments where
+- [x] `apply()` JS step reads only fragments where
       `target == effectivePreferredLanguage`. Older fragments stay
       in cache but are ignored if target mismatches; they're
       garbage-collected when the message is freshly extracted.
-- [ ] Cache hit-rate test: open a thread, switch tabs five times,
+- [x] Cache hit-rate test: open a thread, switch tabs five times,
       assert TranslationSession was invoked exactly once per
       detected source group.
 

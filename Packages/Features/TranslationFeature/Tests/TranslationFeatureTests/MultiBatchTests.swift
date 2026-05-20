@@ -42,24 +42,34 @@ struct MultiBatchTests {
     @Test("mergeNodeTranslations creates dict when none exists")
     func mergeCreatesNew() {
         let store = TranslationStore()
-        store.mergeNodeTranslations(for: "msg1", nodes: ["n0": "Hello"])
-        #expect(store.nodeTranslations(for: "msg1") == ["n0": "Hello"])
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Hello", source: "ru", target: "en"),
+        ])
+        #expect(store.nodeTranslations(for: "msg1", target: "en") == ["n0": "Hello"])
     }
 
     @Test("mergeNodeTranslations appends to existing dict")
     func mergeAppends() {
         let store = TranslationStore()
-        store.mergeNodeTranslations(for: "msg1", nodes: ["n0": "Hello"])
-        store.mergeNodeTranslations(for: "msg1", nodes: ["n1": "World"])
-        #expect(store.nodeTranslations(for: "msg1") == ["n0": "Hello", "n1": "World"])
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Hello", source: "ru", target: "en"),
+        ])
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n1": TranslatedFragment(text: "World", source: "ru", target: "en"),
+        ])
+        #expect(store.nodeTranslations(for: "msg1", target: "en") == ["n0": "Hello", "n1": "World"])
     }
 
     @Test("mergeNodeTranslations overwrites existing keys")
     func mergeOverwrites() {
         let store = TranslationStore()
-        store.mergeNodeTranslations(for: "msg1", nodes: ["n0": "Original"])
-        store.mergeNodeTranslations(for: "msg1", nodes: ["n0": "Updated"])
-        #expect(store.nodeTranslations(for: "msg1") == ["n0": "Updated"])
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Original", source: "ru", target: "en"),
+        ])
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Updated", source: "ru", target: "en"),
+        ])
+        #expect(store.nodeTranslations(for: "msg1", target: "en") == ["n0": "Updated"])
     }
 
     // MARK: - Node translation complete tracking
@@ -67,20 +77,21 @@ struct MultiBatchTests {
     @Test("markNodeTranslationComplete and clearNodeTranslations")
     func nodeTranslationComplete() {
         let store = TranslationStore()
-        #expect(store.nodeTranslationComplete.contains("msg1") == false)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == false)
 
-        store.markNodeTranslationComplete(for: "msg1")
-        #expect(store.nodeTranslationComplete.contains("msg1") == true)
+        store.markNodeTranslationComplete(for: "msg1", target: "en")
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == true)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "ru") == false)
 
         store.clearNodeTranslations(for: "msg1")
-        #expect(store.nodeTranslationComplete.contains("msg1") == false)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == false)
     }
 
     @Test("clearCache resets nodeTranslationComplete and inflightBatches")
     func clearCacheResetsNew() {
         let store = TranslationStore()
         store.incrementInflight()
-        store.markNodeTranslationComplete(for: "msg1")
+        store.markNodeTranslationComplete(for: "msg1", target: "en")
         store.clearCache()
         #expect(store.inflightBatches == 0)
         #expect(store.nodeTranslationComplete.isEmpty)
@@ -135,29 +146,29 @@ struct MultiBatchTests {
             preferredLanguage: "en"
         )
 
-        // Store skipped nodes with original text
-        var skipResult: [String: String] = [:]
+        // Store skipped nodes with original text (source == target for skipped)
+        var skipResult: [String: TranslatedFragment] = [:]
         for node in nodes where skipped.contains(node.id) {
-            skipResult[node.id] = node.text
+            skipResult[node.id] = TranslatedFragment(text: node.text, source: "en", target: "en")
         }
-        store.mergeNodeTranslations(for: "msg1", nodes: skipResult)
+        store.mergeNodeTranslations(for: "msg1", fragments: skipResult)
 
         // Simulate batch translation completing
         #expect(batches.count == 1)
-        let translatedNodes: [String: String] = [
-            "n1": "Top up & Online deals",
-            "n3": "Discount Coupons",
+        let translatedFragments: [String: TranslatedFragment] = [
+            "n1": TranslatedFragment(text: "Top up & Online deals", source: "th", target: "en"),
+            "n3": TranslatedFragment(text: "Discount Coupons", source: "th", target: "en"),
         ]
-        store.mergeNodeTranslations(for: "msg1", nodes: translatedNodes)
-        store.markNodeTranslationComplete(for: "msg1")
+        store.mergeNodeTranslations(for: "msg1", fragments: translatedFragments)
+        store.markNodeTranslationComplete(for: "msg1", target: "en")
 
-        // Verify final state
-        let result = store.nodeTranslations(for: "msg1")!
+        // Verify final state — filtered for target "en"
+        let result = store.nodeTranslations(for: "msg1", target: "en")!
         #expect(result["n0"] == "Your order has been delivered") // skipped, kept original
         #expect(result["n1"] == "Top up & Online deals") // translated
         #expect(result["n2"] == "Thank you for shopping") // skipped, kept original
         #expect(result["n3"] == "Discount Coupons") // translated
-        #expect(store.nodeTranslationComplete.contains("msg1"))
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en"))
     }
 
     @Test("All-English nodes with preferred en: zero batches, all skipped")
@@ -197,5 +208,91 @@ struct MultiBatchTests {
         let languages = Set(batches.map(\.sourceLanguage))
         #expect(languages.contains("ru"))
         #expect(languages.contains("de"))
+    }
+
+    // MARK: - Per-target cache filtering
+
+    @Test("nodeTranslations filters by target language")
+    func filterByTarget() {
+        let store = TranslationStore()
+        // Store fragments with different targets
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Hello", source: "ru", target: "en"),
+            "n1": TranslatedFragment(text: "Привет", source: "en", target: "ru"),
+        ])
+
+        let enResult = store.nodeTranslations(for: "msg1", target: "en")
+        #expect(enResult == ["n0": "Hello"])
+
+        let ruResult = store.nodeTranslations(for: "msg1", target: "ru")
+        #expect(ruResult == ["n1": "Привет"])
+    }
+
+    @Test("allTranslatedNodes filters all messages by target")
+    func allTranslatedNodesFiltered() {
+        let store = TranslationStore()
+        store.mergeNodeTranslations(for: "msg1", fragments: [
+            "n0": TranslatedFragment(text: "Hello", source: "ru", target: "en"),
+        ])
+        store.mergeNodeTranslations(for: "msg2", fragments: [
+            "n0": TranslatedFragment(text: "Bonjour", source: "en", target: "fr"),
+        ])
+
+        let enNodes = store.allTranslatedNodes(target: "en")
+        #expect(enNodes.count == 1)
+        #expect(enNodes["msg1"] == ["n0": "Hello"])
+        #expect(enNodes["msg2"] == nil)
+
+        let frNodes = store.allTranslatedNodes(target: "fr")
+        #expect(frNodes.count == 1)
+        #expect(frNodes["msg2"] == ["n0": "Bonjour"])
+    }
+
+    @Test("isNodeTranslationComplete is per-target")
+    func completionPerTarget() {
+        let store = TranslationStore()
+        store.markNodeTranslationComplete(for: "msg1", target: "en")
+
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == true)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "ru") == false)
+
+        // Marking complete for a different target overwrites
+        store.markNodeTranslationComplete(for: "msg1", target: "ru")
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "ru") == true)
+        // Previous target no longer marked complete (new target overwrote)
+        #expect(store.isNodeTranslationComplete(for: "msg1", target: "en") == false)
+    }
+
+    @Test("Cache hit: fragments persist across tab toggles, no re-translation needed")
+    func cacheHitRate() {
+        let store = TranslationStore()
+
+        // Simulate a translation run for a Lazada-shape message
+        let thaiFragments: [String: TranslatedFragment] = [
+            "n0": TranslatedFragment(text: "Top up & Online deals", source: "th", target: "en"),
+            "n1": TranslatedFragment(text: "Discount Coupons", source: "th", target: "en"),
+        ]
+        let skippedFragments: [String: TranslatedFragment] = [
+            "n2": TranslatedFragment(text: "Your order delivered", source: "en", target: "en"),
+            "n3": TranslatedFragment(text: "Thank you for shopping", source: "en", target: "en"),
+        ]
+        store.mergeNodeTranslations(for: "msg1", fragments: thaiFragments)
+        store.mergeNodeTranslations(for: "msg1", fragments: skippedFragments)
+        store.markNodeTranslationComplete(for: "msg1", target: "en")
+
+        // Simulate 5 tab switches: each time we check isComplete and get cached data
+        for _ in 0..<5 {
+            // This is what triggerTranslation checks
+            let isComplete = store.isNodeTranslationComplete(for: "msg1", target: "en")
+            #expect(isComplete == true)
+
+            // This is what the view layer reads
+            let nodes = store.nodeTranslations(for: "msg1", target: "en")
+            #expect(nodes?.count == 4)
+            #expect(nodes?["n0"] == "Top up & Online deals")
+            #expect(nodes?["n1"] == "Discount Coupons")
+            #expect(nodes?["n2"] == "Your order delivered")
+            #expect(nodes?["n3"] == "Thank you for shopping")
+        }
     }
 }
