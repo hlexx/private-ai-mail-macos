@@ -311,9 +311,9 @@ Make the bilingual behaviour discoverable.
 
 ### Task 6: Release notes + version bump
 
-- [ ] Bump `MARKETING_VERSION` to `0.1.11-alpha`,
+- [x] Bump `MARKETING_VERSION` to `0.1.11-alpha`,
       `CURRENT_PROJECT_VERSION` to `111`.
-- [ ] Write `release-notes/v0.1.11-alpha.md`:
+- [x] Write `release-notes/v0.1.11-alpha.md`:
       - Translation now handles mixed-language emails. Each text
         chunk is independently detected; only chunks NOT in the
         preferred language are translated. English-dominant emails
