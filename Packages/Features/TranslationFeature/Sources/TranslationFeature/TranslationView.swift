@@ -236,9 +236,12 @@ public struct TranslationToggleView: View {
         }
 
         if !newBatches.isEmpty {
-            // Remove stale batches for the same (messageId, sourceLanguage) before appending
-            let newIds = Set(newBatches.map(\.id))
-            pendingBatches.removeAll { newIds.contains($0.id) }
+            // Remove ALL old batches for messages being re-triggered.
+            // This prevents stale batches from blocking completion checks
+            // and avoids CancellationError handlers removing new batches
+            // when old and new share the same id.
+            let retriggeredMessages = Set(newBatches.map(\.messageId))
+            pendingBatches.removeAll { retriggeredMessages.contains($0.messageId) }
             pendingBatches.append(contentsOf: newBatches)
         }
     }
@@ -268,13 +271,7 @@ public struct TranslationToggleView: View {
         store.incrementInflight()
         defer {
             store.decrementInflight()
-            // Check if all batches for this message are done
-            let remaining = pendingBatches.contains { $0.messageId == batch.messageId && $0.sourceLanguage != batch.sourceLanguage }
-            // Only mark complete if this was the last active batch for the message
-            // (other batches either finished or this is the only one)
-            if !remaining || !store.isTranslating {
-                checkAndFinalizeBatches(messageId: batch.messageId, target: self.effectivePreferredLanguage)
-            }
+            checkAndFinalizeBatches(messageId: batch.messageId, target: self.effectivePreferredLanguage)
         }
 
         let msgId = batch.messageId
@@ -298,7 +295,10 @@ public struct TranslationToggleView: View {
                     )
                 }
             }
-            guard store.currentGeneration(for: msgId) == generation else { return }
+            guard store.currentGeneration(for: msgId) == generation else {
+                pendingBatches.removeAll { $0.id == batch.id }
+                return
+            }
             store.mergeNodeTranslations(for: msgId, fragments: result)
 
             // Remove this batch from pending (guard by generation to avoid removing a re-triggered batch)
