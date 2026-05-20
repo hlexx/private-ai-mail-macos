@@ -204,7 +204,13 @@ public struct TranslationToggleView: View {
         for msgId in htmlMessageIds {
             guard !store.isNodeTranslationComplete(for: msgId, target: target) else { continue }
             guard let nodes = store.extractedNodes[msgId], !nodes.isEmpty else { continue }
-            let generation = store.currentGeneration(for: msgId)
+            // Bump generation if there are in-flight batches for this message,
+            // so new batch IDs differ from old ones. This prevents old completion
+            // handlers from removing new batches and ensures SwiftUI re-fires .task(id:).
+            let hasInflight = pendingBatches.contains { $0.messageId == msgId }
+            let generation = hasInflight
+                ? store.nextGeneration(for: msgId)
+                : store.currentGeneration(for: msgId)
 
             let (batches, skipped) = TranslationGroupingService.group(
                 nodes: nodes,
