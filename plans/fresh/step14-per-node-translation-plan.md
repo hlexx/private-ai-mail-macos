@@ -133,7 +133,7 @@ cd $PROJ && ! grep -rE '(Subject:|Bearer |refresh_token)' Apps Packages --includ
 Centralise the detection logic with confidence thresholds and short-
 text handling. Used by Task 2's grouping pass.
 
-- [ ] Create
+- [x] Create
       `Packages/Features/TranslationFeature/Sources/TranslationFeature/NodeLanguageDetector.swift`:
       ```swift
       import NaturalLanguage
@@ -172,7 +172,7 @@ text handling. Used by Task 2's grouping pass.
           }
       }
       ```
-- [ ] Tests in `TranslationFeatureTests/NodeLanguageDetectorTests.swift`:
+- [x] Tests in `TranslationFeatureTests/NodeLanguageDetectorTests.swift`:
       - English "Thanks for shopping with us!" → `en`, ≥ 0.6.
       - Thai "เติมเงิน & ดีลออนไลน์" → `th`, ≥ 0.6.
       - Russian "Здравствуйте, ваш заказ" → `ru`, ≥ 0.6.
@@ -180,7 +180,7 @@ text handling. Used by Task 2's grouping pass.
       - "OK" → nil (too short).
       - Empty string → nil.
       - 4-char fragment in unknown encoding → nil with low confidence.
-- [ ] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`.
+- [x] Run `cd $PROJ/Packages/Features/TranslationFeature && swift test`.
 
 ### Task 2: Group nodes by source language
 
