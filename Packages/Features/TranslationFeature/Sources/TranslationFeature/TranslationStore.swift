@@ -144,6 +144,7 @@ public final class TranslationStore {
         translationGeneration.removeAll()
         nodeTranslationComplete.removeAll()
         inflightBatches = 0
+        error = nil
         needsRetranslation = false
         showTranslated = false
     }

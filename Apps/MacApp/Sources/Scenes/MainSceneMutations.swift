@@ -6,6 +6,7 @@ import InboxFeature
 import Persistence
 import SwiftUI
 import ThreadFeature
+import TranslationFeature
 
 // MARK: - Translation Helpers
 
@@ -20,18 +21,18 @@ extension MainScene {
 
     func detectThreadLanguage() -> String? {
         guard let text = lastIncomingText() else { return nil }
-        return translationStore.detect(text: text)
+        return NodeLanguageDetector.detect(text)?.bcp47
     }
 
     func detectReplyLanguage() -> String? {
         guard let text = lastIncomingText(), !text.isEmpty else {
             return preferredLanguage.isEmpty ? nil : preferredLanguage
         }
-        guard let result = translationStore.detectWithConfidence(text: text),
-              result.confidence >= 0.5 else {
+        guard let detected = NodeLanguageDetector.detect(text),
+              detected.confidence >= 0.5 else {
             return preferredLanguage.isEmpty ? nil : preferredLanguage
         }
-        return result.language
+        return detected.bcp47
     }
 }
 

@@ -5,7 +5,7 @@ import SwiftUI
 // MARK: - Pending batch model for multi-session translation
 
 struct PendingBatch: Identifiable, Sendable {
-    var id: String { "\(messageId)_\(sourceLanguage)" }
+    var id: String { "\(messageId)_\(sourceLanguage)_\(generation)" }
     let messageId: String
     let sourceLanguage: String
     let nodes: [(id: String, text: String)]
@@ -302,13 +302,13 @@ public struct TranslationToggleView: View {
             store.mergeNodeTranslations(for: msgId, fragments: result)
 
             // Remove this batch from pending (guard by generation to avoid removing a re-triggered batch)
-            pendingBatches.removeAll { $0.id == batch.id && $0.generation == batch.generation }
+            pendingBatches.removeAll { $0.id == batch.id }
         } catch is CancellationError {
             // Task was cancelled (e.g. re-trigger replaced batches) — don't set error
-            pendingBatches.removeAll { $0.id == batch.id && $0.generation == batch.generation }
+            pendingBatches.removeAll { $0.id == batch.id }
         } catch {
             store.setError(error)
-            pendingBatches.removeAll { $0.id == batch.id && $0.generation == batch.generation }
+            pendingBatches.removeAll { $0.id == batch.id }
         }
     }
 
