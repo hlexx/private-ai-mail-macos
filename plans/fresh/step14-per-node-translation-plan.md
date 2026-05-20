@@ -233,7 +233,7 @@ Replace the single `TranslationSession` with N sessions, one per
 detected source language. Use the existing
 `TranslationView.translationConfig` slot but make it a list.
 
-- [ ] Refactor `TranslationView` (`triggerTranslation` +
+- [x] Refactor `TranslationView` (`triggerTranslation` +
       `translateAll`):
       - Remove the single `translationConfig` state. Replace with
         `var pendingBatches: [NodeBatch] = []` and a chain of
@@ -246,7 +246,7 @@ detected source language. Use the existing
       - Skipped nodes get their `data-tx-orig` value re-applied in
         the apply step (already happens, since they have no entry in
         `translatedNodes[messageId]`).
-- [ ] Add the multi-task wrapper view in
+- [x] Add the multi-task wrapper view in
       `TranslationToggleView.body`:
       ```swift
       ForEach(pendingBatches, id: \.sourceLanguage) { batch in
@@ -264,16 +264,16 @@ detected source language. Use the existing
       (Use a hidden 0x0 view to host each `.translationTask`. SwiftUI
       requires the modifier to live on a view; this is the canonical
       workaround for needing multiple sessions in parallel.)
-- [ ] In the `TranslationStore`: turn `isTranslating` into a counter
+- [x] In the `TranslationStore`: turn `isTranslating` into a counter
       (`inflightBatches: Int`) so the spinner is shown while ANY
       batch is in flight, and only cleared when all batches finish.
       Existing call sites (`setTranslating(true/false)`) become
       `incrementInflight()` / `decrementInflight()`.
-- [ ] On any batch error: store the error against the message id
+- [x] On any batch error: store the error against the message id
       with the partial-success behaviour — translated batches stay
       cached, failed batches' nodes show original. Toast: "Some
       sections couldn't be translated."
-- [ ] Tests in `TranslationFeatureTests/MultiBatchTests.swift`:
+- [x] Tests in `TranslationFeatureTests/MultiBatchTests.swift`:
       - Mock `TranslationSession` that returns `"[XX]<text>"` per
         source language. Verify that grouped output for a synthetic
         Lazada-shaped HTML produces correct per-node translations

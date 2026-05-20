@@ -6,12 +6,14 @@ import Persistence
 @Observable
 @MainActor
 public final class TranslationStore {
-    public private(set) var isTranslating = false
+    public private(set) var inflightBatches: Int = 0
+    public var isTranslating: Bool { inflightBatches > 0 }
     public private(set) var error: (any Error)?
     public var showTranslated = false
     public private(set) var translatedTexts: [String: String] = [:]
     public private(set) var translatedNodes: [String: [String: String]] = [:]
     public private(set) var translationGeneration: [String: Int] = [:]
+    public private(set) var nodeTranslationComplete: Set<String> = []
 
     private let db: AppDatabase?
 
@@ -63,8 +65,17 @@ public final class TranslationStore {
         translatedNodes[messageId]
     }
 
+    public func mergeNodeTranslations(for messageId: String, nodes: [String: String]) {
+        if translatedNodes[messageId] == nil {
+            translatedNodes[messageId] = nodes
+        } else {
+            translatedNodes[messageId]?.merge(nodes) { _, new in new }
+        }
+    }
+
     public func clearNodeTranslations(for messageId: String) {
         translatedNodes.removeValue(forKey: messageId)
+        nodeTranslationComplete.remove(messageId)
     }
 
     public func nextGeneration(for messageId: String) -> Int {
@@ -92,12 +103,20 @@ public final class TranslationStore {
     /// this flag to re-trigger translation for HTML messages.
     public var needsRetranslation = false
 
-    public func setTranslating(_ value: Bool) {
-        isTranslating = value
+    public func incrementInflight() {
+        inflightBatches += 1
+    }
+
+    public func decrementInflight() {
+        inflightBatches = max(0, inflightBatches - 1)
     }
 
     public func setError(_ err: (any Error)?) {
         error = err
+    }
+
+    public func markNodeTranslationComplete(for messageId: String) {
+        nodeTranslationComplete.insert(messageId)
     }
 
     public func clearCache() {
@@ -105,6 +124,8 @@ public final class TranslationStore {
         translatedNodes.removeAll()
         extractedNodes.removeAll()
         translationGeneration.removeAll()
+        nodeTranslationComplete.removeAll()
+        inflightBatches = 0
         needsRetranslation = false
         showTranslated = false
     }
