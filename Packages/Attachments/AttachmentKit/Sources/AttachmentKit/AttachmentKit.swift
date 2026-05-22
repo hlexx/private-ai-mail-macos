@@ -134,8 +134,3 @@ public final class LocalAttachmentByteStore: AttachmentByteStore {
             .replacingOccurrences(of: "=", with: "")
     }
 }
-
-/// Namespace for AttachmentKit module.
-public enum AttachmentKit {
-    public static let moduleName = "AttachmentKit"
-}

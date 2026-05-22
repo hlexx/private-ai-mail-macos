@@ -157,25 +157,25 @@ remaining demo-only mailbox mutation path was found in the audited surfaces.
 
 ### Task 4: Implement AttachmentKit extraction for MVP file types
 
-- [ ] Replace the `AttachmentKit` namespace stub with typed contracts:
+- [x] Replace the `AttachmentKit` namespace stub with typed contracts:
       `AttachmentExtractor`, `AttachmentExtractionInput`,
       `AttachmentExtractionResult`, `AttachmentExtractionFailure`, and evidence
       locators.
-- [ ] Implement PDF text extraction with page references using platform APIs
+- [x] Implement PDF text extraction with page references using platform APIs
       available to the macOS target.
-- [ ] Implement text/HTML/plain document extraction for text-based docs already
+- [x] Implement text/HTML/plain document extraction for text-based docs already
       present in MIME data.
-- [ ] Add a DOCX/text-based-doc path if a lightweight parser exists in the
+- [x] Add a DOCX/text-based-doc path if a lightweight parser exists in the
       workspace; otherwise add a clearly typed unsupported state with user-facing
       reason and do not fake extraction.
-- [ ] Add image-scan/OCR as optional: use Vision where available; unsupported
+- [x] Add image-scan/OCR as optional: use Vision where available; unsupported
       or low-confidence OCR must produce an incomplete extraction state, not an
       empty "success".
-- [ ] Keep every result evidence-backed: page number, byte/source range, or
+- [x] Keep every result evidence-backed: page number, byte/source range, or
       section locator where possible.
-- [ ] Add tests with small fixtures for PDF, plain text, unsupported binary,
+- [x] Add tests with small fixtures for PDF, plain text, unsupported binary,
       incomplete extraction, and OCR-disabled behavior.
-- [ ] Run `cd $PROJ/Packages/Attachments/AttachmentKit && swift test`.
+- [x] Run `cd $PROJ/Packages/Attachments/AttachmentKit && swift test`.
 
 ### Task 5: Build AttachmentRAG and AI attachment summaries
 
