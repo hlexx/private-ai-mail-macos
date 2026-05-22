@@ -84,9 +84,21 @@ final class CompositionRoot {
                 tokenStore: tokenStore
             )
         }
+        let mutationAPIFactory: @Sendable (String) throws -> any GmailAPI = { [tokenStore, oauthClient] accountId in
+            guard let credential = try tokenStore.load(for: accountId),
+                  !credential.accessToken.isEmpty || !credential.refreshToken.isEmpty else {
+                throw MailMutationError.missingCredential(accountId: accountId)
+            }
+            return GmailAPIClient(
+                accountId: accountId,
+                credential: credential,
+                oauthClient: oauthClient,
+                tokenStore: tokenStore
+            )
+        }
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
-        self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
+        self.mailMutator = MailMutator(db: db, apiFactory: mutationAPIFactory)
         self.labelReconciler = LabelReconciler(db: db, apiFactory: apiFactory)
         self.translationStore = TranslationStore(db: db)
 

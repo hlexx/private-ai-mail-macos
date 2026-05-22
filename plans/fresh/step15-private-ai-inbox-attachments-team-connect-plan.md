@@ -101,24 +101,37 @@ Current baseline verified 2026-05-22:
 
 ### Task 2: Harden the Private AI inbox baseline before attachment work
 
-- [ ] Audit current mailbox actions from UI to provider: archive, unarchive,
+- [x] Audit current mailbox actions from UI to provider: archive, unarchive,
       star, unstar, read/unread, trash/untrash, send, refresh, account reconnect.
       Document any remaining no-op or demo-only path in this plan or a follow-up
       issue before starting Team Connect.
-- [ ] Add a small domain-level `MailboxAction` or equivalent use-case contract
+- [x] Add a small domain-level `MailboxAction` or equivalent use-case contract
       only if existing `MailMutator` call sites are duplicating provider/local
       mutation logic. Keep the abstraction in Mail/Feature boundary, not in UI.
-- [ ] Ensure each mailbox action resolves a real provider client before local
+- [x] Ensure each mailbox action resolves a real provider client before local
       optimistic mutation; missing credentials must fail before changing SQLite.
-- [ ] Add/extend tests in `Packages/Mail/MailSync/Tests/MailSyncTests` for
+- [x] Add/extend tests in `Packages/Mail/MailSync/Tests/MailSyncTests` for
       provider-factory failure, provider API failure rollback, and idempotent
       repeated mutations.
-- [ ] Ensure user-visible errors distinguish missing credential, provider
+- [x] Ensure user-visible errors distinguish missing credential, provider
       rejection, rate limit, and offline/degraded sync.
-- [ ] Add privacy-safe OSLog entries for mutation start/success/failure using
+- [x] Add privacy-safe OSLog entries for mutation start/success/failure using
       account/thread hashes or IDs only, never subject/body.
-- [ ] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
-- [ ] Run `cd $PROJ && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests`.
+- [x] Run `cd $PROJ/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd $PROJ && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests`.
+
+Task 2 audit note: archive/unarchive, star/unstar, read/unread, trash/untrash,
+swipe actions, toolbar actions, keyboard actions, and undo now route through
+`MailMutator`, which resolves an authenticated provider client before any local
+SQLite mutation and restores pre-mutation state if the provider rejects the
+change. Send routes through `ComposeViewModel` to `LiveComposeService` and
+`GmailAPI.sendMessage`, then writes the sent record only after provider success;
+send errors now distinguish provider rejection, rate limit, offline, scope, and
+degraded states. Refresh remains a sync operation through `SyncSupervisor`, and
+account reconnect remains the Settings/Accounts OAuth flow. No new
+`MailboxAction` abstraction was added because provider/local mutation logic is
+centralized in `MailMutator` rather than duplicated in UI call sites. No
+remaining demo-only mailbox mutation path was found in the audited surfaces.
 
 ### Task 3: Add attachment data-plane schema and storage policy
 

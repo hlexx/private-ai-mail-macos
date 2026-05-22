@@ -86,7 +86,7 @@ struct MainScene: View {
                                     try await composition.mailMutator.archive(threadId, accountId: accountId)
                                     showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
                                 } catch {
-                                    showToast("Archive failed", undo: nil)
+                                    showToast(mailboxActionFailureMessage("Archive", error: error), undo: nil)
                                 }
                             }
                         },
@@ -423,7 +423,7 @@ extension MainScene {
                 try await composition.mailMutator.markRead(threadId, accountId: accountId, read: false)
                 showToast("Marked unread", undo: nil)
             } catch {
-                showToast("Mark unread failed", undo: nil)
+                showToast(mailboxActionFailureMessage("Mark unread", error: error), undo: nil)
             }
         }
     }

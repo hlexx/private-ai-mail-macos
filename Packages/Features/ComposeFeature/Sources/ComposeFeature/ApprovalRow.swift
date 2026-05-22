@@ -1,4 +1,5 @@
 import DesignSystem
+import MailProviders
 import SwiftUI
 
 public struct ApprovalRow: View {
@@ -134,8 +135,35 @@ public struct ApprovalRow: View {
             return String(localized: "approval.error.noAccount", defaultValue: "No sending account selected")
         case .needsReconsent:
             return String(localized: "approval.error.needsReconsent", defaultValue: "This account hasn\u{2019}t granted send permission yet \u{2014} Re-authorize")
-        case .send:
+        case .send(let underlying):
+            if let gmailError = underlying as? GmailAPIError {
+                return gmailSendErrorMessage(gmailError)
+            }
             return String(localized: "approval.error.generic", defaultValue: "Failed to send message. Please try again.")
+        }
+    }
+
+    private static func gmailSendErrorMessage(_ error: GmailAPIError) -> String {
+        switch error {
+        case .unauthorized:
+            return String(localized: "approval.error.reconnect", defaultValue: "Reconnect this Gmail account before sending.")
+        case .rateLimited(let retryAfter):
+            if let retryAfter {
+                return String(localized: "approval.error.rateLimitedWithDelay", defaultValue: "Gmail rate limit hit. Retry in \(Int(retryAfter))s.")
+            }
+            return String(localized: "approval.error.rateLimited", defaultValue: "Gmail rate limit hit. Retry later.")
+        case .networkError:
+            return String(localized: "approval.error.offline", defaultValue: "You appear to be offline. Message was not sent.")
+        case .insufficientScope:
+            return String(localized: "approval.error.needsReconsent", defaultValue: "This account hasn\u{2019}t granted send permission yet \u{2014} Re-authorize")
+        case .serverError(let statusCode) where statusCode == 403:
+            return String(localized: "approval.error.rejected", defaultValue: "Gmail rejected this send request.")
+        case .serverError(let statusCode) where statusCode >= 500:
+            return String(localized: "approval.error.degraded", defaultValue: "Gmail is degraded. Message was not sent.")
+        case .serverError:
+            return String(localized: "approval.error.rejected", defaultValue: "Gmail rejected this send request.")
+        case .exhaustedRetries, .decodingError, .invalidResponse:
+            return String(localized: "approval.error.degraded", defaultValue: "Gmail is degraded. Message was not sent.")
         }
     }
 }

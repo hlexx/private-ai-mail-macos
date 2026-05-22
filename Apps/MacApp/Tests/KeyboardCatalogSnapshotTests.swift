@@ -57,7 +57,7 @@ struct KeyboardCatalogSnapshotTests {
         switch char {
         case "\r": return "⏎"
         case " ": return "Space"
-        case "\u{7F}": return "⌫"
+        case "\u{7F}", "\u{08}": return "⌫"
         default:
             let scalar = char.unicodeScalars.first!
             if scalar.value == UInt32(0xF708) { return "F5" }

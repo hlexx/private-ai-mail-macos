@@ -3,6 +3,7 @@ import ComposeFeature
 import DesignSystem
 import GRDB
 import InboxFeature
+import MailSync
 import Persistence
 import SwiftUI
 import ThreadFeature
@@ -196,7 +197,7 @@ extension MainScene {
                 inboxStore.selectedThreadID = nil
                 showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
             } catch {
-                showToast("Archive failed", undo: nil)
+                showToast(mailboxActionFailureMessage("Archive", error: error), undo: nil)
             }
         }
     }
@@ -220,7 +221,7 @@ extension MainScene {
                     showToast("Starred", undo: .unstar(threadId: threadId, accountId: accountId))
                 }
             } catch {
-                showToast("Star failed", undo: nil)
+                showToast(mailboxActionFailureMessage("Star", error: error), undo: nil)
             }
         }
     }
@@ -234,7 +235,7 @@ extension MainScene {
                 try await composition.mailMutator.markRead(threadId, accountId: accountId, read: true)
                 showToast("Marked read", undo: nil)
             } catch {
-                showToast("Mark read failed", undo: nil)
+                showToast(mailboxActionFailureMessage("Mark read", error: error), undo: nil)
             }
         }
     }
@@ -248,7 +249,7 @@ extension MainScene {
                 }
                 showToast("Trashed", undo: .untrash(threadId: threadId, accountId: accountId))
             } catch {
-                showToast("Trash failed", undo: nil)
+                showToast(mailboxActionFailureMessage("Trash", error: error), undo: nil)
             }
         }
     }
@@ -281,7 +282,7 @@ extension MainScene {
                     try await composition.mailMutator.untrash(threadId, accountId: accountId)
                 }
             } catch {
-                showToast("Undo failed", undo: nil)
+                showToast(mailboxActionFailureMessage("Undo", error: error), undo: nil)
             }
         }
     }
@@ -296,6 +297,29 @@ extension MainScene {
                 }
                 .buttonStyle(.rbGhost)
             }
+        }
+    }
+
+    func mailboxActionFailureMessage(_ action: String, error: any Error) -> String {
+        guard let mutationError = error as? MailMutationError else {
+            return "\(action) failed. Gmail did not accept the change."
+        }
+        switch mutationError {
+        case .missingCredential:
+            return "\(action) failed. Reconnect this Gmail account."
+        case .providerRejected:
+            return "\(action) failed. Gmail rejected the request."
+        case .rateLimited(let retryAfter):
+            if let retryAfter {
+                return "\(action) paused. Gmail rate limit hit; retry in \(Int(retryAfter))s."
+            }
+            return "\(action) paused. Gmail rate limit hit; retry later."
+        case .offline:
+            return "\(action) failed. You appear to be offline."
+        case .degradedSync:
+            return "\(action) failed. Gmail sync is degraded; local state was restored."
+        case .providerFailure:
+            return "\(action) failed. Gmail did not accept the change."
         }
     }
 

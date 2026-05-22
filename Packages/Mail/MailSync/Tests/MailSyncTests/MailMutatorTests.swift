@@ -66,6 +66,47 @@ struct MailMutatorTests {
         }
     }
 
+    private func threadLabelCount(_ db: AppDatabase, labelId: String, threadId: String = "t1") throws -> Int {
+        try db.read { dbConn in
+            try ThreadLabelRecord
+                .filter(Column("thread_id") == threadId)
+                .filter(Column("label_id") == labelId)
+                .fetchCount(dbConn)
+        }
+    }
+
+    private func threadHasUnread(_ db: AppDatabase, threadId: String = "t1") throws -> Int? {
+        try db.read { dbConn in
+            try ThreadRecord
+                .filter(Column("id") == threadId)
+                .fetchOne(dbConn)?
+                .hasUnread
+        }
+    }
+
+    private func messageFlags(_ db: AppDatabase, messageId: String = "m1") throws -> Int? {
+        try db.read { dbConn in
+            try MessageRecord
+                .filter(Column("id") == messageId)
+                .fetchOne(dbConn)?
+                .flags
+        }
+    }
+
+    private func expectMutationError(
+        _ expected: MailMutationError,
+        operation: () async throws -> Void
+    ) async {
+        do {
+            try await operation()
+            Issue.record("Expected \(expected)")
+        } catch let error as MailMutationError {
+            #expect(error == expected)
+        } catch {
+            Issue.record("Expected \(expected), got \(error)")
+        }
+    }
+
     // MARK: - Archive
 
     @Test func archiveRemovesINBOXLabel() async throws {
@@ -186,6 +227,24 @@ struct MailMutatorTests {
         #expect((msg!.flags & MessageRecord.read) != 0)
     }
 
+    @Test func markReadRollbackOnAPIFailureRestoresUnreadState() async throws {
+        let db = try await makeDB()
+        try seedThreadWithLabels(db, activeLabels: ["INBOX", "UNREAD"])
+
+        let api = MockGmailAPI()
+        api.modifyThreadResult = .failure(GmailAPIError.rateLimited(retryAfter: 12))
+        let mutator = MailMutator(db: db, apiFactory: { _ in api })
+
+        await expectMutationError(.rateLimited(retryAfter: 12)) {
+            try await mutator.markRead("t1", accountId: "acc1", read: true)
+        }
+
+        let labels = try threadLabels(db)
+        #expect(labels.contains("UNREAD"))
+        #expect(try threadHasUnread(db) == 1)
+        #expect(try messageFlags(db) == 0)
+    }
+
     // MARK: - Rollback on API failure
 
     @Test func rollbacksOnAPIFailure() async throws {
@@ -228,5 +287,62 @@ struct MailMutatorTests {
         let labels = try threadLabels(db)
         #expect(!labels.contains("STARRED"))
         #expect(labels.contains("INBOX"))
+    }
+
+    @Test func providerFactoryFailureDoesNotMutateLocalLabels() async throws {
+        let db = try await makeDB()
+        try seedThreadWithLabels(db, activeLabels: ["INBOX", "STARRED"])
+
+        let mutator = MailMutator(db: db, apiFactory: { accountId in
+            throw MailMutationError.missingCredential(accountId: accountId)
+        })
+
+        await expectMutationError(.missingCredential(accountId: "acc1")) {
+            try await mutator.archive("t1", accountId: "acc1")
+        }
+
+        let labels = try threadLabels(db)
+        #expect(labels == ["INBOX", "STARRED"])
+    }
+
+    @Test func repeatedArchiveIsIdempotent() async throws {
+        let db = try await makeDB()
+        try seedThreadWithLabels(db, activeLabels: ["INBOX", "STARRED"])
+
+        let api = MockGmailAPI()
+        let mutator = MailMutator(db: db, apiFactory: { _ in api })
+
+        try await mutator.archive("t1", accountId: "acc1")
+        try await mutator.archive("t1", accountId: "acc1")
+
+        let labels = try threadLabels(db)
+        #expect(!labels.contains("INBOX"))
+        #expect(labels.contains("STARRED"))
+        #expect(api.modifyThreadCalls.count == 2)
+    }
+
+    @Test func idempotentStarRollbackKeepsExistingStarredLabel() async throws {
+        let db = try await makeDB()
+        try seedThreadWithLabels(db, activeLabels: ["INBOX", "STARRED"])
+
+        let api = MockGmailAPI()
+        api.modifyThreadResult = .failure(GmailAPIError.serverError(statusCode: 500))
+        let mutator = MailMutator(db: db, apiFactory: { _ in api })
+
+        await expectMutationError(.degradedSync) {
+            try await mutator.star("t1", accountId: "acc1")
+        }
+
+        let labels = try threadLabels(db)
+        #expect(labels.contains("STARRED"))
+        #expect(try threadLabelCount(db, labelId: "STARRED") == 1)
+    }
+
+    @Test func providerErrorsAreClassifiedForUserVisibleStates() {
+        #expect(MailMutationError.provider(GmailAPIError.unauthorized) == .providerRejected(reason: .unauthorized))
+        #expect(MailMutationError.provider(GmailAPIError.insufficientScope) == .providerRejected(reason: .insufficientScope))
+        #expect(MailMutationError.provider(GmailAPIError.rateLimited(retryAfter: 5)) == .rateLimited(retryAfter: 5))
+        #expect(MailMutationError.provider(GmailAPIError.serverError(statusCode: 503)) == .degradedSync)
+        #expect(MailMutationError.provider(GmailAPIError.invalidResponse) == .degradedSync)
     }
 }

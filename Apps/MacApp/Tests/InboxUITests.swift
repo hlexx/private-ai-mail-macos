@@ -72,6 +72,16 @@ struct InboxUITests {
         try db.dbQueue.write { dbConn in
             try thread1.insert(dbConn)
             try thread2.insert(dbConn)
+            try LabelRecord(
+                id: "INBOX",
+                accountId: accountId,
+                name: "Inbox",
+                type: .system,
+                messagesUnreadCount: 0,
+                messagesTotalCount: 0
+            ).insert(dbConn)
+            try ThreadLabelRecord(accountId: accountId, threadId: "thread-1", labelId: "INBOX").insert(dbConn)
+            try ThreadLabelRecord(accountId: accountId, threadId: "thread-2", labelId: "INBOX").insert(dbConn)
             try msg1.insert(dbConn)
             try msg2.insert(dbConn)
             try msg3.insert(dbConn)
