@@ -85,19 +85,19 @@ Current baseline verified 2026-05-22:
 
 ### Task 1: Record the sequencing contract and guardrails
 
-- [ ] Create `docs/adr/0002-private-inbox-attachment-team-connect-sequencing.md`.
-- [ ] In the ADR, state the sequence: Private AI inbox first, Attachment
+- [x] Create `docs/adr/0002-private-inbox-attachment-team-connect-sequencing.md`.
+- [x] In the ADR, state the sequence: Private AI inbox first, Attachment
       Intelligence second, Team Connect integrations third.
-- [ ] In the ADR, explicitly preserve the `EMAIL_ALF` trust boundary: raw
+- [x] In the ADR, explicitly preserve the `EMAIL_ALF` trust boundary: raw
       email bodies, attachments, semantic indexes, AI artifacts, and reply
       drafts stay on device; Team Connect sends only user-approved minimized
       payloads.
-- [ ] In the ADR, state non-goals for this tranche: SQLCipher, CRM writes,
+- [x] In the ADR, state non-goals for this tranche: SQLCipher, CRM writes,
       Salesforce, enterprise governance, multi-device sync, and auto-send.
-- [ ] Add a short `README.md` / `NOTES.md` update only if the current text says
+- [x] Add a short `README.md` / `NOTES.md` update only if the current text says
       the integration or attachment capability is already complete when it is
       not.
-- [ ] Run `cd $PROJ && git diff --check`.
+- [x] Run `cd $PROJ && git diff --check`.
 
 ### Task 2: Harden the Private AI inbox baseline before attachment work
 
