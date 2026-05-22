@@ -11,6 +11,7 @@ public struct AttachmentRecord: Codable, Sendable, FetchableRecord, PersistableR
     public var mime: String?
     public var sizeBytes: Int?
     public var contentId: String?
+    /// Inline CID payload cache only. Large attachment bytes belong in AttachmentKit's file store.
     public var dataBase64: String?
 
     public init(

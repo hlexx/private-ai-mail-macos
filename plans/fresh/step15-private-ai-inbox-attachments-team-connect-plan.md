@@ -135,25 +135,25 @@ remaining demo-only mailbox mutation path was found in the audited surfaces.
 
 ### Task 3: Add attachment data-plane schema and storage policy
 
-- [ ] Extend `Persistence` with additive migrations for attachment processing:
+- [x] Extend `Persistence` with additive migrations for attachment processing:
       `attachment_extraction`, `attachment_chunk`, `attachment_ai_artifact`, and
       `attachment_processing_job` tables, or equivalent names that match local
       conventions.
-- [ ] Keep existing `attachment` rows as provider metadata. Do not overload
+- [x] Keep existing `attachment` rows as provider metadata. Do not overload
       `AttachmentRecord.dataBase64` as the long-term file store for large
       attachments.
-- [ ] Add a FileStore-facing abstraction in `AttachmentKit` that can store,
+- [x] Add a FileStore-facing abstraction in `AttachmentKit` that can store,
       read, and delete attachment bytes by `(account_id, message_id,
       attachment_id)` while allowing later per-account encryption keys.
-- [ ] Exclude attachment byte cache from Time Machine by default where the
+- [x] Exclude attachment byte cache from Time Machine by default where the
       FileStore path is created.
-- [ ] Add cascade behavior for account removal: attachment extraction rows,
+- [x] Add cascade behavior for account removal: attachment extraction rows,
       chunks, AI artifacts, processing jobs, and FileStore blobs must be removed
       or made unreachable by account deletion.
-- [ ] Add `PersistenceTests` covering migration, round-trip, cascade delete,
+- [x] Add `PersistenceTests` covering migration, round-trip, cascade delete,
       and idempotent rerun semantics.
-- [ ] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
-- [ ] Run `cd $PROJ/Packages/Attachments/AttachmentKit && swift test`.
+- [x] Run `cd $PROJ/Packages/Core/Persistence && swift test`.
+- [x] Run `cd $PROJ/Packages/Attachments/AttachmentKit && swift test`.
 
 ### Task 4: Implement AttachmentKit extraction for MVP file types
 

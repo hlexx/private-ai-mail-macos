@@ -14,6 +14,7 @@ enum Migrator {
         migrator.registerMigration("M008_BackfillInboxLabel", migrate: M008_BackfillInboxLabel.migrate)
         migrator.registerMigration("M009_BackfillInboxLabelV2", migrate: M009_BackfillInboxLabelV2.migrate)
         migrator.registerMigration("M010_SignalLabelReconcile", migrate: M010_SignalLabelReconcile.migrate)
+        migrator.registerMigration("M011_AttachmentDataPlane", migrate: M011_AttachmentDataPlane.migrate)
         try migrator.migrate(db)
     }
 }
@@ -326,5 +327,130 @@ enum M009_BackfillInboxLabelV2 {
 enum M010_SignalLabelReconcile {
     static func migrate(_ db: Database) throws {
         UserDefaults.standard.set(true, forKey: "pam.needsLabelReconcile")
+    }
+}
+
+enum M011_AttachmentDataPlane {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "attachment_extraction") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .integer).notNull()
+            t.column("status", .text).notNull()
+            t.column("content_hash", .text)
+            t.column("mime", .text)
+            t.column("filename", .text)
+            t.column("byte_count", .integer)
+            t.column("created_at", .integer).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.column("completed_at", .integer)
+            t.column("error_code", .text)
+            t.column("error_message", .text)
+            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_extraction_attachment",
+            on: "attachment_extraction",
+            columns: ["account_id", "message_id", "attachment_id"]
+        )
+
+        try db.create(table: "attachment_chunk") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .integer).notNull()
+            t.column("chunk_index", .integer).notNull()
+            t.column("content_text", .text).notNull()
+            t.column("source_reference", .text)
+            t.column("page_number", .integer)
+            t.column("source_start", .integer)
+            t.column("source_end", .integer)
+            t.column("token_count", .integer)
+            t.column("created_at", .integer).notNull()
+            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version", "chunk_index"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id", "extraction_version"],
+                references: "attachment_extraction",
+                columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_chunk_attachment",
+            on: "attachment_chunk",
+            columns: ["account_id", "message_id", "attachment_id", "extraction_version"]
+        )
+
+        try db.create(table: "attachment_ai_artifact") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .integer).notNull()
+            t.column("artifact_kind", .text).notNull()
+            t.column("artifact_version", .integer).notNull()
+            t.column("model_id", .text)
+            t.column("content_hash", .text)
+            t.column("payload_json", .text).notNull()
+            t.column("created_at", .integer).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.primaryKey([
+                "account_id",
+                "message_id",
+                "attachment_id",
+                "extraction_version",
+                "artifact_kind",
+                "artifact_version",
+            ])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id", "extraction_version"],
+                references: "attachment_extraction",
+                columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_ai_artifact_attachment",
+            on: "attachment_ai_artifact",
+            columns: ["account_id", "message_id", "attachment_id", "extraction_version"]
+        )
+
+        try db.create(table: "attachment_processing_job") { t in
+            t.primaryKey("id", .text)
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("job_kind", .text).notNull()
+            t.column("status", .text).notNull()
+            t.column("priority", .integer).notNull().defaults(to: 0)
+            t.column("attempt_count", .integer).notNull().defaults(to: 0)
+            t.column("available_at", .integer).notNull()
+            t.column("created_at", .integer).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.column("last_error_code", .text)
+            t.column("last_error_message", .text)
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_processing_job_status",
+            on: "attachment_processing_job",
+            columns: ["status", "available_at"]
+        )
+        try db.create(
+            index: "idx_attachment_processing_job_attachment",
+            on: "attachment_processing_job",
+            columns: ["account_id", "message_id", "attachment_id"]
+        )
     }
 }
