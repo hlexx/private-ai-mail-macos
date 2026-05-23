@@ -389,6 +389,85 @@ Record each smoke test result here:
 9. Press Cmd+R to trigger incremental sync — new messages should
    appear without restarting the app.
 
+## Manual smoke test: attachment intelligence reading pane
+
+Use this procedure after the app has at least one synced Gmail account and the
+local AI model is available. The purpose is to verify that the reading pane shows
+real attachment processing states without implying that remote download, Team
+Connect, or cloud processing is available.
+
+### Scope boundaries
+
+- Gmail attachment download is not part of this plan. If an attachment's bytes
+  are not already present in the local byte store, the UI must show that the
+  local file is missing and must not try to fetch the bytes from Gmail.
+- Team Connect is not part of this plan. Do not expect Slack, Notion, CRM,
+  external dispatch, or "Ask about attachment" actions to appear as working
+  controls.
+- Cloud attachment processing is disabled. Extraction, chunking, summary
+  generation, and evidence display must use local services and local persisted
+  artifacts only.
+
+### Test messages
+
+Prepare or identify the following messages in the synced account:
+
+1. A message with no attachments.
+2. A message with a locally saved PDF attachment.
+3. A message with a locally saved plain text attachment.
+4. A message with an unsupported attachment type, such as DOCX or another binary
+   document without a supported extractor.
+5. A message whose attachment metadata is synced but whose local bytes are not
+   saved in the attachment byte store.
+
+If no real mailbox contains all five cases, seed the development database with
+the same attachment records used by `ThreadFeatureTests` and store local bytes
+with `LocalAttachmentByteStore` for the PDF and text cases. Do not add a network
+download step to manufacture missing bytes.
+
+### Expected reading pane behavior
+
+1. Select the message with no attachments.
+   Expected: the reading pane renders normally with no attachment cards and no
+   attachment actions.
+2. Select the PDF message.
+   Expected: the attachment card shows filename, size, MIME type, "Local file
+   ready", extraction progress or "Text extracted", and either "Summary pending"
+   or a "Local summary" panel. When the summary is available, the panel shows the
+   summary, key fields, risks, next steps, confidence, and evidence chunk IDs or
+   "No relevant fragments." Preview is enabled only while the local file exists.
+3. Select the text attachment message.
+   Expected: the same local-file, extraction, summary, and evidence states appear
+   for the text file. Text extraction should complete without OCR or network
+   calls.
+4. Select the unsupported attachment message.
+   Expected: the card remains visible, shows "Format not supported" and
+   "Summary unavailable for unsupported format", and does not present the
+   unsupported state as a successful empty summary.
+5. Select the message without locally saved bytes.
+   Expected: the card shows "No local file yet", "Text not extracted", and
+   "Summary unavailable until text is extracted". Preview and summarize controls
+   are disabled or show the local-file-missing toast; no Gmail download starts.
+6. Retry or reselect messages with attachments.
+   Expected: the local processing queue does not create unbounded duplicate work,
+   and selected attachments can be prioritized without changing the scope
+   boundaries above.
+
+### Privacy verification
+
+1. Run the app from Xcode or Console with the `PrivateAIMail` subsystem visible
+   while opening the five test messages.
+2. Confirm logs contain only safe processing events such as queued, started,
+   completed, skipped because bytes are missing, cancelled, or failed. Logs must
+   not contain raw email bodies, HTML, extracted attachment text, attachment
+   bytes, summary text, bearer tokens, refresh tokens, or full external payloads.
+3. Watch network activity during attachment extraction and summary generation.
+   Only model setup may use the network when the local model is missing. Once
+   the model is present, opening attachments and generating summaries must not
+   send attachment content or summaries in network requests.
+4. Run the repository sensitive-data grep from the validation commands before
+   marking this smoke test complete.
+
 ## Releases
 
 ### How to cut a release locally
