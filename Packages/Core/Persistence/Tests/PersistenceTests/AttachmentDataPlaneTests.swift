@@ -185,6 +185,57 @@ struct AttachmentDataPlaneTests {
         #expect(counts == [0, 0, 0, 0])
     }
 
+    @Test func attachmentChunksAndArtifactsCascadeOnExtractionRemoval() async throws {
+        let db = try await DatabaseActor.shared.run {
+            try AppDatabase.openInMemory()
+        }
+
+        try await DatabaseActor.shared.run {
+            try db.write { db in
+                try seedAttachment(db)
+                try AttachmentExtractionRecord(
+                    accountId: "a1",
+                    messageId: "m1",
+                    attachmentId: "att1",
+                    extractionVersion: 1,
+                    status: "succeeded",
+                    createdAt: 100,
+                    updatedAt: 100
+                ).insert(db)
+                try AttachmentChunkRecord(
+                    accountId: "a1",
+                    messageId: "m1",
+                    attachmentId: "att1",
+                    extractionVersion: 1,
+                    chunkIndex: 0,
+                    contentText: "text",
+                    createdAt: 110
+                ).insert(db)
+                try AttachmentAIArtifactRecord(
+                    accountId: "a1",
+                    messageId: "m1",
+                    attachmentId: "att1",
+                    extractionVersion: 1,
+                    artifactKind: "summary",
+                    artifactVersion: 1,
+                    payloadJson: "{}",
+                    createdAt: 120,
+                    updatedAt: 120
+                ).insert(db)
+
+                _ = try AttachmentExtractionRecord.deleteAll(db)
+            }
+        }
+
+        let counts = try db.read { db -> [Int] in
+            [
+                try AttachmentChunkRecord.fetchCount(db),
+                try AttachmentAIArtifactRecord.fetchCount(db),
+            ]
+        }
+        #expect(counts == [0, 0])
+    }
+
     @Test func attachmentDataPlaneSaveIsIdempotentForReruns() async throws {
         let db = try await DatabaseActor.shared.run {
             try AppDatabase.openInMemory()

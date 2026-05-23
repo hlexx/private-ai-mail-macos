@@ -148,7 +148,7 @@ public struct AttachmentChunkCacheKeyInput: Equatable, Sendable {
     }
 
     public var cacheKey: String {
-        let digest = stableDigest(lengthPrefixedFields([
+        let digest = attachmentRAGStableDigest(attachmentRAGLengthPrefixedFields([
             attachmentId,
             extractionVersion,
             extractionContentHash,
@@ -227,11 +227,11 @@ public struct LocalAttachmentRetriever: Sendable {
         _ query: AttachmentRetrievalQuery,
         from chunks: [AttachmentChunk]
     ) -> [AttachmentRetrievalResult] {
-        let queryTerms = orderedUnique(tokenize(query.text))
+        let queryTerms = orderedUnique(attachmentRAGTokenize(query.text))
         guard !queryTerms.isEmpty else { return [] }
 
         return chunks.compactMap { chunk in
-            let chunkTerms = tokenize(chunk.text)
+            let chunkTerms = attachmentRAGTokenize(chunk.text)
             guard !chunkTerms.isEmpty else { return nil }
 
             let frequencies = Dictionary(grouping: chunkTerms, by: { $0 })
@@ -385,19 +385,19 @@ private func makeChunkID(
     evidence: AttachmentEvidenceSource,
     text: String
 ) -> String {
-    let canonical = lengthPrefixedFields([
+    let canonical = attachmentRAGLengthPrefixedFields([
         attachmentId,
         extractionVersion,
         policyVersion,
         String(index),
         String(sourceIndex),
         evidence.canonicalValue,
-        stableDigest(text),
+        attachmentRAGStableDigest(text),
     ])
-    return "chunk:\(stableDigest(canonical))"
+    return "chunk:\(attachmentRAGStableDigest(canonical))"
 }
 
-private func tokenize(_ text: String) -> [String] {
+func attachmentRAGTokenize(_ text: String) -> [String] {
     var tokens: [String] = []
     var current = ""
 
@@ -426,14 +426,14 @@ private func orderedUnique(_ values: [String]) -> [String] {
 }
 
 private func normalizedPhrase(_ text: String) -> String {
-    tokenize(text).joined(separator: " ")
+    attachmentRAGTokenize(text).joined(separator: " ")
 }
 
-private func lengthPrefixedFields(_ fields: [String]) -> String {
+func attachmentRAGLengthPrefixedFields(_ fields: [String]) -> String {
     fields.map { "\($0.utf8.count):\($0)" }.joined(separator: "|")
 }
 
-private func stableDigest(_ text: String) -> String {
+func attachmentRAGStableDigest(_ text: String) -> String {
     let digest = SHA256.hash(data: Data(text.utf8))
     return digest.map { String(format: "%02x", $0) }.joined()
 }

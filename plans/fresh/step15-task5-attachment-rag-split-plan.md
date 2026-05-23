@@ -61,20 +61,20 @@ schema migration unless an existing attachment-processing table is insufficient.
 - [x] Run `git diff --check` and fix whitespace issues.
 
 ### Task 2: Add Persistence-Backed Chunk And Artifact Cache
-- [ ] Add an AttachmentRAG repository/cache boundary that stores and fetches
+- [x] Add an AttachmentRAG repository/cache boundary that stores and fetches
       chunks through existing `AttachmentChunkRecord` rows without changing the
       migration.
-- [ ] Add artifact persistence for attachment summary payloads through existing
+- [x] Add artifact persistence for attachment summary payloads through existing
       `AttachmentAIArtifactRecord` rows with cache keys based on attachment ID,
       extraction version, chunking policy version, model ID, and prompt version.
-- [ ] Keep GRDB access behind an AttachmentRAG-owned protocol or small adapter so
+- [x] Keep GRDB access behind an AttachmentRAG-owned protocol or small adapter so
       feature/UI code does not depend on record details.
-- [ ] Add tests covering chunk upsert/fetch, artifact cache hit/miss,
+- [x] Add tests covering chunk upsert/fetch, artifact cache hit/miss,
       invalidation when extraction version or policy version changes, and cascade
       assumptions using the existing foreign keys.
-- [ ] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
-- [ ] Run `cd Packages/Core/Persistence && swift test` and fix failures.
-- [ ] Run `git diff --check` and fix whitespace issues.
+- [x] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
+- [x] Run `cd Packages/Core/Persistence && swift test` and fix failures.
+- [x] Run `git diff --check` and fix whitespace issues.
 
 ### Task 3: Add Local Attachment Summary Orchestration
 - [ ] Introduce typed attachment summary output with `summary`, `keyFields`,
