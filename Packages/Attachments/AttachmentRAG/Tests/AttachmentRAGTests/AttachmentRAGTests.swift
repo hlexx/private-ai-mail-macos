@@ -1,4 +1,5 @@
 import AttachmentKit
+import Foundation
 import GRDB
 import Persistence
 import Testing
@@ -396,6 +397,214 @@ struct AttachmentRAGTests {
         #expect(key.cacheKey != changedPolicy.cacheKey)
     }
 
+    @Test func summaryOrchestrationPersistsAndReusesCachedArtifact() async throws {
+        let database = try makeDatabase()
+        let scope = testScope()
+        try seedAttachmentGraph(database, extractionVersion: scope.extractionVersion)
+        let cache = PersistenceAttachmentRAGCache(database: database)
+        let summarizer = CountingAttachmentSummarizer()
+        let chunker = LocalAttachmentChunker(policy: testPolicy(maxCharacters: 200))
+        let request = AttachmentSummaryRequest(
+            scope: scope,
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(
+                status: .complete,
+                extractedText: [
+                    AttachmentExtractedText(
+                        text: "Invoice: INV-42\nTotal: 42.00\nPayment due Friday",
+                        locator: .page(number: 1)
+                    ),
+                    AttachmentExtractedText(
+                        text: "Urgent approval required before the deadline.",
+                        locator: .page(number: 2)
+                    ),
+                ]
+            ),
+            query: AttachmentRetrievalQuery(text: "invoice total due urgent approval", limit: 5),
+            createdAt: 700
+        )
+        let orchestrator = AttachmentSummaryOrchestrator(
+            cache: cache,
+            chunker: chunker,
+            summarizer: summarizer
+        )
+
+        let first = await orchestrator.summarize(request)
+
+        guard case let .complete(firstOutput, firstSource) = first else {
+            Issue.record("Expected generated complete summary, got \(first)")
+            return
+        }
+        #expect(firstSource == .generated)
+        #expect(firstOutput.summary == "summary from 2 chunks")
+        #expect(firstOutput.keyFields.first?.label == "chunks")
+        #expect(firstOutput.modelId == summarizer.modelId)
+        #expect(firstOutput.promptVersion == summarizer.promptVersion)
+        #expect(summarizer.callCount == 1)
+        #expect(try artifactRowCount(database, scope: scope) == 1)
+
+        let second = await orchestrator.summarize(request)
+
+        guard case let .complete(secondOutput, secondSource) = second else {
+            Issue.record("Expected cached complete summary, got \(second)")
+            return
+        }
+        #expect(secondSource == .cached)
+        #expect(secondOutput == firstOutput)
+        #expect(summarizer.callCount == 1)
+    }
+
+    @Test func summaryOrchestrationReturnsIncompleteUnsupportedAndFailedStatuses() async {
+        let scope = testScope()
+        let chunker = LocalAttachmentChunker(policy: testPolicy(maxCharacters: 200))
+        let orchestrator = AttachmentSummaryOrchestrator(
+            cache: InMemoryAttachmentRAGCache(),
+            chunker: chunker,
+            summarizer: DeterministicAttachmentSummarizer()
+        )
+
+        let incomplete = await orchestrator.summarize(AttachmentSummaryRequest(
+            scope: scope,
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(
+                status: .incomplete,
+                extractedText: [
+                    AttachmentExtractedText(
+                        text: "Invoice total is 42.00. Payment due Friday.",
+                        locator: .page(number: 1)
+                    ),
+                ]
+            ),
+            query: AttachmentRetrievalQuery(text: "invoice total due", limit: 3),
+            createdAt: 800
+        ))
+
+        guard case let .incomplete(incompleteOutput, incompleteReason, incompleteSource) = incomplete else {
+            Issue.record("Expected incomplete summary, got \(incomplete)")
+            return
+        }
+        #expect(incompleteOutput?.summary == "Invoice total is 42.00. Payment due Friday.")
+        #expect(incompleteOutput?.confidence == 0.56)
+        #expect(incompleteReason == .extractionIncomplete)
+        #expect(incompleteSource == .generated)
+
+        let unsupported = await orchestrator.summarize(AttachmentSummaryRequest(
+            scope: scope,
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(status: .unsupported),
+            query: AttachmentRetrievalQuery(text: "invoice", limit: 3),
+            createdAt: 810
+        ))
+        #expect(unsupported == .unsupported(.unsupportedExtraction))
+
+        let failed = await orchestrator.summarize(AttachmentSummaryRequest(
+            scope: scope,
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(status: .failed),
+            query: AttachmentRetrievalQuery(text: "invoice", limit: 3),
+            createdAt: 820
+        ))
+
+        guard case let .failed(failure) = failed else {
+            Issue.record("Expected failed summary, got \(failed)")
+            return
+        }
+        #expect(failure.code == .extractionFailed)
+    }
+
+    @Test func summaryOrchestrationReportsNoRelevantChunksAsIncomplete() async {
+        let orchestrator = AttachmentSummaryOrchestrator(
+            cache: InMemoryAttachmentRAGCache(),
+            chunker: LocalAttachmentChunker(policy: testPolicy(maxCharacters: 200)),
+            summarizer: DeterministicAttachmentSummarizer()
+        )
+
+        let result = await orchestrator.summarize(AttachmentSummaryRequest(
+            scope: testScope(),
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(
+                status: .complete,
+                extractedText: [
+                    AttachmentExtractedText(
+                        text: "Quarterly roadmap notes and meeting agenda.",
+                        locator: .section(name: "body")
+                    ),
+                ]
+            ),
+            query: AttachmentRetrievalQuery(text: "invoice", limit: 3),
+            createdAt: 830
+        ))
+
+        #expect(result == .incomplete(nil, reason: .noRelevantChunks, source: nil))
+    }
+
+    @Test func summaryOrchestrationMakesNoNetworkRequestsByDefault() async {
+        _ = URLProtocol.registerClass(SummarySpyURLProtocol.self)
+        defer { URLProtocol.unregisterClass(SummarySpyURLProtocol.self) }
+        SummarySpyURLProtocol.reset()
+
+        let result = await AttachmentSummaryOrchestrator(
+            cache: InMemoryAttachmentRAGCache(),
+            chunker: LocalAttachmentChunker(policy: testPolicy(maxCharacters: 200)),
+            summarizer: DeterministicAttachmentSummarizer()
+        )
+        .summarize(AttachmentSummaryRequest(
+            scope: testScope(),
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(
+                status: .complete,
+                extractedText: [
+                    AttachmentExtractedText(
+                        text: "Invoice: INV-42\nTotal: 42.00\nPayment due Friday",
+                        locator: .page(number: 1)
+                    ),
+                ]
+            ),
+            query: AttachmentRetrievalQuery(text: "invoice total due", limit: 3),
+            createdAt: 840
+        ))
+
+        guard case .complete = result else {
+            Issue.record("Expected complete summary, got \(result)")
+            return
+        }
+        #expect(SummarySpyURLProtocol.requestCount == 0)
+    }
+
+    @Test func summaryOrchestrationFailsClosedWithoutConfiguredFallback() async {
+        _ = URLProtocol.registerClass(SummarySpyURLProtocol.self)
+        defer { URLProtocol.unregisterClass(SummarySpyURLProtocol.self) }
+        SummarySpyURLProtocol.reset()
+
+        let result = await AttachmentSummaryOrchestrator(
+            cache: InMemoryAttachmentRAGCache(),
+            chunker: LocalAttachmentChunker(policy: testPolicy(maxCharacters: 200)),
+            summarizer: nil
+        )
+        .summarize(AttachmentSummaryRequest(
+            scope: testScope(),
+            extractionVersion: "extract-v1",
+            extractionResult: AttachmentExtractionResult(
+                status: .complete,
+                extractedText: [
+                    AttachmentExtractedText(
+                        text: "Invoice total is 42.00. Payment due Friday.",
+                        locator: .page(number: 1)
+                    ),
+                ]
+            ),
+            query: AttachmentRetrievalQuery(text: "invoice total due", limit: 3),
+            createdAt: 850
+        ))
+
+        guard case let .failed(failure) = result else {
+            Issue.record("Expected closed failure, got \(result)")
+            return
+        }
+        #expect(failure.code == .cloudFallbackNotConfigured)
+        #expect(SummarySpyURLProtocol.requestCount == 0)
+    }
+
     private func testPolicy(maxCharacters: Int) -> AttachmentChunkingPolicy {
         AttachmentChunkingPolicy(
             version: "test-policy-v1",
@@ -479,6 +688,15 @@ struct AttachmentRAGTests {
         }
     }
 
+    private func testScope(extractionVersion: Int = 1) -> AttachmentRAGCacheScope {
+        AttachmentRAGCacheScope(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: extractionVersion
+        )
+    }
+
     private func makeChunk(
         index: Int,
         text: String,
@@ -498,4 +716,123 @@ struct AttachmentRAGTests {
             evidence: evidence
         )
     }
+}
+
+private final class CountingAttachmentSummarizer: AttachmentSummarizer, @unchecked Sendable {
+    let modelId = "local-counting-summary"
+    let promptVersion = "prompt-counting-v1"
+    private(set) var callCount = 0
+
+    func summarize(_ input: AttachmentSummaryInput) async throws -> AttachmentSummaryOutput {
+        callCount += 1
+        let evidenceChunkIds = input.chunks.map(\.id)
+        return AttachmentSummaryOutput(
+            summary: "summary from \(input.chunks.count) chunks",
+            keyFields: [
+                AttachmentSummaryKeyField(
+                    label: "chunks",
+                    value: "\(input.chunks.count)",
+                    evidenceChunkIds: evidenceChunkIds
+                ),
+            ],
+            risks: [],
+            nextSteps: [
+                AttachmentSummaryFinding(
+                    text: "Review the attachment evidence.",
+                    evidenceChunkIds: evidenceChunkIds
+                ),
+            ],
+            evidenceChunkIds: evidenceChunkIds,
+            modelId: modelId,
+            promptVersion: promptVersion,
+            confidence: 0.9
+        )
+    }
+}
+
+private final class InMemoryAttachmentRAGCache: AttachmentRAGCache, @unchecked Sendable {
+    private var chunksByKey: [String: [AttachmentChunk]] = [:]
+    private var artifactsByKey: [String: AttachmentCachedAIArtifact] = [:]
+
+    func upsertChunks(
+        _ chunks: [AttachmentChunk],
+        for scope: AttachmentRAGCacheScope,
+        createdAt: Int
+    ) throws {
+        guard let policyVersion = chunks.first?.policyVersion else {
+            return
+        }
+
+        for chunk in chunks {
+            guard chunk.attachmentId == scope.attachmentId else {
+                throw AttachmentRAGCacheError.chunkAttachmentMismatch(
+                    chunkId: chunk.id,
+                    expectedAttachmentId: scope.attachmentId,
+                    actualAttachmentId: chunk.attachmentId
+                )
+            }
+            guard chunk.policyVersion == policyVersion else {
+                throw AttachmentRAGCacheError.chunkPolicyMismatch(
+                    chunkId: chunk.id,
+                    expectedPolicyVersion: policyVersion,
+                    actualPolicyVersion: chunk.policyVersion
+                )
+            }
+        }
+
+        chunksByKey[chunkCacheKey(scope: scope, policyVersion: policyVersion)] = chunks
+    }
+
+    func fetchChunks(
+        for scope: AttachmentRAGCacheScope,
+        policyVersion: String
+    ) throws -> [AttachmentChunk]? {
+        chunksByKey[chunkCacheKey(scope: scope, policyVersion: policyVersion)]
+    }
+
+    func upsertArtifact(_ artifact: AttachmentCachedAIArtifact) throws {
+        artifactsByKey[artifact.key.cacheKey] = artifact
+    }
+
+    func fetchArtifact(for key: AttachmentAIArtifactCacheKey) throws -> AttachmentCachedAIArtifact? {
+        artifactsByKey[key.cacheKey]
+    }
+
+    private func chunkCacheKey(scope: AttachmentRAGCacheScope, policyVersion: String) -> String {
+        [
+            scope.accountId,
+            scope.messageId,
+            scope.attachmentId,
+            String(scope.extractionVersion),
+            policyVersion,
+        ].joined(separator: "|")
+    }
+}
+
+private final class SummarySpyURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var requestCount = 0
+
+    static func reset() {
+        requestCount = 0
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        true
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        Self.requestCount += 1
+        let error = NSError(
+            domain: "AttachmentSummaryNetworkIsolation",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: "Unexpected network request during attachment summary orchestration"]
+        )
+        client?.urlProtocol(self, didFailWithError: error)
+    }
+
+    override func stopLoading() {}
 }

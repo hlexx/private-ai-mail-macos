@@ -77,25 +77,25 @@ schema migration unless an existing attachment-processing table is insufficient.
 - [x] Run `git diff --check` and fix whitespace issues.
 
 ### Task 3: Add Local Attachment Summary Orchestration
-- [ ] Introduce typed attachment summary output with `summary`, `keyFields`,
+- [x] Introduce typed attachment summary output with `summary`, `keyFields`,
       `risks`, `nextSteps`, `evidenceChunkIds`, `modelId`, `promptVersion`, and
       `confidence`.
-- [ ] Add an AttachmentRAG summarizer protocol and deterministic local test
+- [x] Add an AttachmentRAG summarizer protocol and deterministic local test
       implementation. If existing AIKit needs a public extension, keep it narrow
       and do not expose AIRuntime directly to AttachmentRAG callers.
-- [ ] Implement orchestration that retrieves relevant chunks, calls the summarizer
+- [x] Implement orchestration that retrieves relevant chunks, calls the summarizer
       protocol, persists the artifact through the Task 2 cache, and returns a
       typed status for complete, incomplete, unsupported, and failed cases.
-- [ ] Add network-isolation tests proving summary orchestration does not perform
+- [x] Add network-isolation tests proving summary orchestration does not perform
       network access by default and fails closed when a cloud fallback is not
       explicitly configured.
-- [ ] Add or update AIKit/AIRuntime tests only for changed public contracts; avoid
+- [x] Add or update AIKit/AIRuntime tests only for changed public contracts; avoid
       broad live-model validation in this split.
-- [ ] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
-- [ ] Run `cd Packages/AI/AIKit && swift test` and fix failures if AIKit changed.
-- [ ] Run `cd Packages/AI/AIRuntime && swift test` and fix failures if AIRuntime
+- [x] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
+- [x] Run `cd Packages/AI/AIKit && swift test` and fix failures if AIKit changed.
+- [x] Run `cd Packages/AI/AIRuntime && swift test` and fix failures if AIRuntime
       changed.
-- [ ] Run `git diff --check` and fix whitespace issues.
+- [x] Run `git diff --check` and fix whitespace issues.
 
 ## Rollback / Recovery
 - If Task 1 fails, revert only the AttachmentRAG chunking commit and keep the
