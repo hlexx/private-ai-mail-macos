@@ -28,6 +28,7 @@ struct MainScene: View {
     @State var threadScrollProxy: ScrollViewProxy?
     @State var threadScrolledToBottom: Bool = false
     @State var lastScrolledMessageIndex: Int = 0
+    @State var attachmentProcessingSelectionTask: Task<Void, Never>?
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage("pam.defaultTone") var defaultToneRaw: String = "warm"
@@ -108,6 +109,9 @@ struct MainScene: View {
                         onPreviewAttachment: { request in
                             previewAttachment(request)
                         },
+                        onSummarizeAttachment: { attachment in
+                            prioritizeAttachmentProcessing(attachment)
+                        },
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.allTranslatedNodes(
@@ -181,7 +185,7 @@ struct MainScene: View {
         .overlay {
             if composition.showActionSheet {
                 ActionSheetView(
-                    threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
+                    threadTitle: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
                     onAction: { _ in
                         composition.showActionSheet = false
                     }
@@ -215,9 +219,11 @@ struct MainScene: View {
                 threadStore.accountEmail = accountEmail
                 threadStore.observe(threadId: threadId, accountId: thread.accountId)
                 briefStore.loadBrief(forThreadID: threadId, accountId: thread.accountId)
+                startAttachmentProcessing(forSelectedThreadID: threadId)
             } else {
                 threadStore.stopObserving()
                 briefStore.loadBrief(forThreadID: nil)
+                cancelAttachmentProcessingForSelection()
             }
         }
         .task {

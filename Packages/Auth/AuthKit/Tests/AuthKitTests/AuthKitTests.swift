@@ -8,10 +8,9 @@ struct AuthKitTests {
         #expect(AuthKit.moduleName == "AuthKit")
     }
 
-    @Test func defaultScopesIncludeReadMetadataSendAndUserinfo() {
+    @Test func defaultScopesIncludeReadonlySendAndUserinfo() {
         let expected: Set<String> = [
             "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/gmail.metadata",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/userinfo.email"
         ]
@@ -131,7 +130,7 @@ struct ReauthorizeScopeTests {
         (
             label: "default config includes gmail.send",
             additionalScopes: [] as [String],
-            mustContain: ["gmail.send", "gmail.readonly", "gmail.metadata", "userinfo.email"]
+            mustContain: ["gmail.send", "gmail.readonly", "userinfo.email"]
         ),
         (
             label: "adding gmail.compose merges with defaults",
@@ -234,4 +233,3 @@ final class InMemoryTokenStore: TokenStore, @unchecked Sendable {
         storage.removeValue(forKey: accountID)
     }
 }
-

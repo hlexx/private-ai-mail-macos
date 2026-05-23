@@ -90,6 +90,8 @@ let project = Project(
             ],
             entitlements: .file(path: "Apps/MacApp/PrivateAIMail.entitlements"),
             dependencies: appFeatureDeps + [
+                .package(product: "AttachmentKit"),
+                .package(product: "AttachmentRAG"),
                 .xcframework(path: "Frameworks/Sparkle.xcframework"),
             ],
             settings: .settings(

@@ -87,13 +87,13 @@ struct ActionTile: View {
 // MARK: - ActionSheetView
 
 public struct ActionSheetView: View {
-    let threadSubject: String
+    let threadTitle: String
     let onAction: (ActionID?) -> Void
 
     @State private var picked: ActionID = .snooze
 
-    public init(threadSubject: String, onAction: @escaping (ActionID?) -> Void) {
-        self.threadSubject = threadSubject
+    public init(threadTitle: String, onAction: @escaping (ActionID?) -> Void) {
+        self.threadTitle = threadTitle
         self.onAction = onAction
     }
 
@@ -115,7 +115,7 @@ public struct ActionSheetView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
                             EyebrowLabel(String(localized: "action.sheet.eyebrow", defaultValue: "What should I do with this thread?"))
-                            Text(threadSubject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadSubject)
+                            Text(threadTitle.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadTitle)
                                 .rbTextStyle(.body)
                                 .fontWeight(.medium)
                                 .foregroundStyle(Color.rbFg1)
@@ -206,12 +206,12 @@ public struct ActionSheetView: View {
 
 #if DEBUG
 #Preview("Action Sheet - Dark") {
-    ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") { _ in }
+    ActionSheetView(threadTitle: "Re: Contract draft — Acme GmbH") { _ in }
         .preferredColorScheme(.dark)
 }
 
 #Preview("Action Sheet - Light") {
-    ActionSheetView(threadSubject: "Re: Contract draft — Acme GmbH") { _ in }
+    ActionSheetView(threadTitle: "Re: Contract draft — Acme GmbH") { _ in }
         .preferredColorScheme(.light)
 }
 #endif

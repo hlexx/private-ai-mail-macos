@@ -1,6 +1,7 @@
 import AIKit
 import AIRuntime
 import AttachmentKit
+import AttachmentRAG
 import AuthKit
 import BriefFeature
 import ComposeFeature
@@ -34,6 +35,8 @@ final class CompositionRoot {
     let inboxStore: InboxStore
     let threadStore: ThreadStore
     let attachmentByteStore: LocalAttachmentByteStore
+    let attachmentProcessingQueue: LocalAttachmentProcessingQueue
+    let attachmentProcessingService: AttachmentProcessingService
     let attachmentPreviewService: AttachmentPreviewService
     let briefStore: BriefStore
     let briefBackgroundQueue: BriefBackgroundQueue
@@ -66,6 +69,9 @@ final class CompositionRoot {
         self.threadStore = ThreadStore(db: db)
         let attachmentByteStore = try! LocalAttachmentByteStore(rootURL: Self.defaultAttachmentByteStoreRoot())
         self.attachmentByteStore = attachmentByteStore
+        let attachmentProcessingQueue = LocalAttachmentProcessingQueue(database: db, byteStore: attachmentByteStore)
+        self.attachmentProcessingQueue = attachmentProcessingQueue
+        self.attachmentProcessingService = AttachmentProcessingService(queue: attachmentProcessingQueue)
         self.attachmentPreviewService = AttachmentPreviewService(byteStore: attachmentByteStore)
         self.briefStore = BriefStore(aiService: aiService, db: db)
         self.briefBackgroundQueue = BriefBackgroundQueue(aiService: aiService, db: db)

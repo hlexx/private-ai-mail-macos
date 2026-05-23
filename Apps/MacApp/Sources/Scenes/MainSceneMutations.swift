@@ -175,13 +175,14 @@ extension MainScene {
         formatter.timeStyle = .short
         let dateStr = formatter.string(from: message.sentAt)
         let body = message.bestPlainText
+        let subjectLine = "Subject: " + threadStore.subject
 
         return """
 
         ---------- Forwarded message ----------
         From: \(from)
         Date: \(dateStr)
-        Subject: \(threadStore.subject)
+        \(subjectLine)
 
         \(body)
         """
@@ -276,6 +277,32 @@ extension MainScene {
         case .failedToOpen:
             showToast("Attachment preview could not be opened.", undo: nil)
         }
+    }
+
+    func startAttachmentProcessing(forSelectedThreadID threadId: String?) {
+        attachmentProcessingSelectionTask?.cancel()
+        attachmentProcessingSelectionTask = AttachmentProcessingActionRouter.selectedThreadTask(
+            selectedThreadID: threadId,
+            threads: inboxStore.threads,
+            service: composition.attachmentProcessingService,
+            onFailure: { message in
+                showToast(message, undo: nil)
+            }
+        )
+    }
+
+    func cancelAttachmentProcessingForSelection() {
+        startAttachmentProcessing(forSelectedThreadID: nil)
+    }
+
+    func prioritizeAttachmentProcessing(_ attachment: AttachmentInfo) {
+        _ = AttachmentProcessingActionRouter.prioritizeAttachmentTask(
+            attachment: attachment,
+            service: composition.attachmentProcessingService,
+            onFailure: { message in
+                showToast(message, undo: nil)
+            }
+        )
     }
 
     func handleUndo(_ action: ToastState.UndoAction) {

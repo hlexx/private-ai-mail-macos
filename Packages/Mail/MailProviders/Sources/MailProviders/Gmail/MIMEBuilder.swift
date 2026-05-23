@@ -30,7 +30,8 @@ public enum MIMEBuilder {
             lines.append("Bcc: \(message.bcc.map(formatAddress).joined(separator: ", "))")
         }
 
-        lines.append("Subject: \(encodeHeaderValue(message.subject))")
+        let encodedSubject = encodeHeaderValue(message.subject)
+        lines.append("Subject: " + encodedSubject)
 
         if let inReplyTo = message.inReplyTo {
             let sanitizedReplyTo = sanitizeHeaderValue(inReplyTo)

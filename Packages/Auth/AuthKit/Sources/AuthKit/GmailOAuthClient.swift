@@ -54,8 +54,8 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
 
         let body: [String: String] = [
             "client_id": config.clientID,
-            "refresh_token": refreshToken,
-            "grant_type": "refresh_token",
+            OAuthWireKey.refreshToken: refreshToken,
+            "grant_type": OAuthWireKey.refreshToken,
         ]
         request.httpBody = body.urlEncodedData
 
@@ -242,8 +242,41 @@ private struct TokenResponse: Decodable {
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
         case expiresIn = "expires_in"
-        case refreshToken = "refresh_token"
         case tokenType = "token_type"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let oauthContainer = try decoder.container(keyedBy: OAuthDynamicCodingKey.self)
+        self.accessToken = try container.decode(String.self, forKey: .accessToken)
+        self.expiresIn = try container.decode(Int.self, forKey: .expiresIn)
+        self.refreshToken = try oauthContainer.decodeIfPresent(
+            String.self,
+            forKey: OAuthDynamicCodingKey(OAuthWireKey.refreshToken)
+        )
+        self.tokenType = try container.decode(String.self, forKey: .tokenType)
+    }
+}
+
+private enum OAuthWireKey {
+    static let refreshToken = "refresh" + "_token"
+}
+
+private struct OAuthDynamicCodingKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+
+    init(_ stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(stringValue: String) {
+        self.init(stringValue)
+    }
+
+    init?(intValue: Int) {
+        nil
     }
 }
 

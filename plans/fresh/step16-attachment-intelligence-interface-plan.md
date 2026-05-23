@@ -149,24 +149,24 @@
 - [x] Запустить `git diff --check` и исправить пробелы.
 
 ### Task 5: Связать экран письма с обработкой в составе приложения
-- [ ] Зарегистрировать сервис обработки вложений и локальное хранилище байтов в
+- [x] Зарегистрировать сервис обработки вложений и локальное хранилище байтов в
       `CompositionRoot`, рядом с уже существующими сервисами почты и ИИ.
-- [ ] При смене выбранного письма в `MainScene` запускать ограниченную обработку
+- [x] При смене выбранного письма в `MainScene` запускать ограниченную обработку
       вложений для этого письма; при снятии выбора отменять ненужные задачи.
-- [ ] Передать в `ThreadView` реальные обработчики: запустить или повысить
+- [x] Передать в `ThreadView` реальные обработчики: запустить или повысить
       приоритет обработки вложения, открыть локальный просмотр, обновить
       состояние после ошибки.
-- [ ] Убедиться, что отсутствие локального файла, отсутствие модели ИИ или
+- [x] Убедиться, что отсутствие локального файла, отсутствие модели ИИ или
       неподдерживаемый формат не ломают запуск приложения и показываются как
       нормальные состояния.
-- [ ] Добавить или обновить `MacAppTests` для проводки: выбор письма запускает
+- [x] Добавить или обновить `MacAppTests` для проводки: выбор письма запускает
       очередь, отключенные действия не выглядят рабочими, ошибка обработки
       показывает понятное состояние.
-- [ ] Запустить `cd . && tuist generate`.
-- [ ] Запустить `cd . && xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`.
-- [ ] Запустить `cd . && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests`.
-- [ ] Запустить проверку на утечки чувствительных данных из `## Validation Commands`.
-- [ ] Запустить `git diff --check` и исправить пробелы.
+- [x] Запустить `cd . && tuist generate`.
+- [x] Запустить `cd . && xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`.
+- [x] Запустить `cd . && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests`.
+- [x] Запустить проверку на утечки чувствительных данных из `## Validation Commands`.
+- [x] Запустить `git diff --check` и исправить пробелы.
 
 ### Task 6: Обновить заметки и ручную проверку
 - [ ] Обновить `NOTES.md` или существующий файл с ручной проверкой: открыть
