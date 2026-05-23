@@ -119,6 +119,315 @@ struct ThreadFeatureTests {
     }
 }
 
+// MARK: - Attachment Display State
+
+@Suite("ThreadStore Attachment Display State")
+@MainActor
+struct ThreadStoreAttachmentDisplayStateTests {
+    @Test func observesNoAttachments() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, attachment: nil)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty }
+
+        #expect(store.attachments.isEmpty)
+        #expect(store.hasAttachment == false)
+        store.stopObserving()
+    }
+
+    @Test func observesAttachmentWaitingForLocalFile() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.localFileState == .waitingForLocalFile)
+        #expect(attachment.extractionState == .waitingForLocalFile)
+        #expect(attachment.summaryState == .unavailable)
+        store.stopObserving()
+    }
+
+    @Test func observesQueuedExtractionAsPending() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedProcessingJob(db: db, status: "queued")
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.localFileState == .available(byteCount: 4096, contentHash: nil))
+        #expect(attachment.extractionState == .pending(status: "queued"))
+        #expect(attachment.processingState?.jobKind == "extraction")
+        store.stopObserving()
+    }
+
+    @Test func observesSuccessfulExtraction() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(
+            db: db,
+            status: "succeeded",
+            contentHash: "sha256:abc",
+            byteCount: 4096,
+            completedAt: 120
+        )
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.localFileState == .available(byteCount: 4096, contentHash: "sha256:abc"))
+        #expect(attachment.extractionState == .succeeded(version: 1, contentHash: "sha256:abc"))
+        #expect(attachment.summaryState == .unavailable)
+        store.stopObserving()
+    }
+
+    @Test func observesUnsupportedExtraction() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, attachment: AttachmentSeed(filename: "contract.docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+        try seedExtraction(
+            db: db,
+            status: "unsupported",
+            errorCode: "unsupportedDocumentFormat",
+            errorMessage: "DOCX extraction is not available yet."
+        )
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.isUnsupportedFormat)
+        #expect(attachment.extractionState == .unsupported(
+            code: "unsupportedDocumentFormat",
+            message: "DOCX extraction is not available yet."
+        ))
+        store.stopObserving()
+    }
+
+    @Test func observesFailedExtraction() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(
+            db: db,
+            status: "failed",
+            errorCode: "unreadablePDF",
+            errorMessage: "PDF could not be read."
+        )
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.extractionState == .failed(
+            code: "unreadablePDF",
+            message: "PDF could not be read."
+        ))
+        #expect(attachment.summaryState == .unavailable)
+        store.stopObserving()
+    }
+
+    @Test func observesSavedSummaryArtifact() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        try seedSummaryArtifact(db: db, payloadJson: Self.validSummaryPayload)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        guard case let .available(summary) = attachment.summaryState else {
+            Issue.record("Expected available summary, got \(attachment.summaryState)")
+            return
+        }
+        #expect(summary.summary == "Invoice total is 42.00")
+        #expect(summary.keyFields.first?.label == "Total")
+        #expect(summary.risks.first?.text == "Payment is overdue.")
+        #expect(summary.nextSteps.first?.text == "Pay by Friday.")
+        #expect(attachment.evidenceChunkIds == ["chunk-1"])
+        store.stopObserving()
+    }
+
+    @Test func observesCorruptedSummaryArtifactAsError() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        try seedSummaryArtifact(db: db, payloadJson: "{not-json")
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.summaryState == .failed(
+            code: "artifact_decoding_failed",
+            message: "Stored attachment summary artifact could not be decoded."
+        ))
+        #expect(attachment.extractionState == .succeeded(version: 1, contentHash: "sha256:abc"))
+        store.stopObserving()
+    }
+
+    private struct AttachmentSeed {
+        var id = "att1"
+        var filename = "invoice.pdf"
+        var mime = "application/pdf"
+        var sizeBytes = 4096
+    }
+
+    private static var validSummaryPayload: String {
+        """
+        {
+          "summary": "Invoice total is 42.00",
+          "keyFields": [
+            {
+              "label": "Total",
+              "value": "42.00",
+              "evidenceChunkIds": ["chunk-1"]
+            }
+          ],
+          "risks": [
+            {
+              "text": "Payment is overdue.",
+              "evidenceChunkIds": ["chunk-1"]
+            }
+          ],
+          "nextSteps": [
+            {
+              "text": "Pay by Friday.",
+              "evidenceChunkIds": ["chunk-1"]
+            }
+          ],
+          "evidenceChunkIds": ["chunk-1"],
+          "modelId": "local-test",
+          "promptVersion": "attachment-summary-prompt-v1",
+          "confidence": 0.82
+        }
+        """
+    }
+
+    private func makeDB() throws -> AppDatabase {
+        try AppDatabase.openInMemorySync()
+    }
+
+    private func seedThread(db: AppDatabase, attachment: AttachmentSeed? = AttachmentSeed()) throws {
+        try db.dbQueue.write { dbConn in
+            try AccountRecord(id: "acc1", email: "user@example.com", createdAt: 1).insert(dbConn)
+            try ThreadRecord(
+                id: "t1",
+                accountId: "acc1",
+                subject: "Invoice",
+                snippet: "Please review",
+                lastMessageAt: 2,
+                messageCount: 1
+            ).insert(dbConn)
+            try MessageRecord(
+                id: "m1",
+                threadId: "t1",
+                accountId: "acc1",
+                fromAddr: "sender@example.com",
+                toAddr: "user@example.com",
+                sentAt: 2,
+                bodyText: "Please review",
+                flags: 0
+            ).insert(dbConn)
+            if let attachment {
+                try AttachmentRecord(
+                    id: attachment.id,
+                    messageId: "m1",
+                    accountId: "acc1",
+                    filename: attachment.filename,
+                    mime: attachment.mime,
+                    sizeBytes: attachment.sizeBytes
+                ).insert(dbConn)
+            }
+        }
+    }
+
+    private func seedExtraction(
+        db: AppDatabase,
+        status: String,
+        contentHash: String? = nil,
+        byteCount: Int? = nil,
+        completedAt: Int? = nil,
+        errorCode: String? = nil,
+        errorMessage: String? = nil
+    ) throws {
+        try db.dbQueue.write { dbConn in
+            try AttachmentExtractionRecord(
+                accountId: "acc1",
+                messageId: "m1",
+                attachmentId: "att1",
+                extractionVersion: 1,
+                status: status,
+                contentHash: contentHash,
+                mime: "application/pdf",
+                filename: "invoice.pdf",
+                byteCount: byteCount,
+                createdAt: 100,
+                updatedAt: 120,
+                completedAt: completedAt,
+                errorCode: errorCode,
+                errorMessage: errorMessage
+            ).insert(dbConn)
+        }
+    }
+
+    private func seedSummaryArtifact(db: AppDatabase, payloadJson: String) throws {
+        try db.dbQueue.write { dbConn in
+            try AttachmentAIArtifactRecord(
+                accountId: "acc1",
+                messageId: "m1",
+                attachmentId: "att1",
+                extractionVersion: 1,
+                artifactKind: "summary",
+                artifactVersion: 1,
+                modelId: "local-test",
+                contentHash: "sha256:abc",
+                payloadJson: payloadJson,
+                createdAt: 130,
+                updatedAt: 130
+            ).insert(dbConn)
+        }
+    }
+
+    private func seedProcessingJob(db: AppDatabase, status: String) throws {
+        try db.dbQueue.write { dbConn in
+            try AttachmentProcessingJobRecord(
+                id: "job1",
+                accountId: "acc1",
+                messageId: "m1",
+                attachmentId: "att1",
+                jobKind: "extraction",
+                status: status,
+                priority: 10,
+                availableAt: 90,
+                createdAt: 90,
+                updatedAt: 90
+            ).insert(dbConn)
+        }
+    }
+
+    private func firstAttachment(in store: ThreadStore) async throws -> AttachmentInfo {
+        try await waitUntil { store.attachments.count == 1 }
+        let attachment = try #require(store.attachments.first)
+        return attachment
+    }
+
+    private func waitUntil(timeout: Duration = .seconds(3), _ condition: @MainActor () -> Bool) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while !condition() {
+            if ContinuousClock.now >= deadline {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+    }
+}
+
 // MARK: - Snapshot Tests
 
 @Suite("ThreadView Snapshots")
