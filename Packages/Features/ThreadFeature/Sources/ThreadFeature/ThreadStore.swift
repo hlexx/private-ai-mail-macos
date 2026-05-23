@@ -175,10 +175,17 @@ public struct AttachmentInfo: Identifiable, Equatable, Sendable {
         self.init(record: record, extraction: nil, summaryArtifact: nil, processingJob: nil)
     }
 
-    public init(id: String, filename: String, sizeBytes: Int?, mime: String?) {
+    public init(
+        id: String,
+        accountId: String = "",
+        messageId: String = "",
+        filename: String,
+        sizeBytes: Int?,
+        mime: String?
+    ) {
         self.id = id
-        self.accountId = ""
-        self.messageId = ""
+        self.accountId = accountId
+        self.messageId = messageId
         self.filename = filename
         self.sizeBytes = sizeBytes
         self.mime = mime

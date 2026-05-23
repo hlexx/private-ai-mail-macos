@@ -393,6 +393,59 @@ struct ThreadStoreAttachmentDisplayStateTests {
         store.stopObserving()
     }
 
+    @Test func previewButtonIsEnabledWhenLocalFileExistsAndHandlerIsPresent() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.canPreviewAttachment(hasHandler: true))
+        store.stopObserving()
+    }
+
+    @Test func previewButtonIsDisabledWhenLocalFileIsMissing() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.canPreviewAttachment(hasHandler: true) == false)
+        store.stopObserving()
+    }
+
+    @Test func previewButtonIsDisabledWhenHandlerIsMissing() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.canPreviewAttachment(hasHandler: false) == false)
+        store.stopObserving()
+    }
+
+    @Test func previewRequestCarriesAttachmentIdentifierAndState() {
+        let attachment = AttachmentInfo(
+            id: "att1",
+            accountId: "acc1",
+            messageId: "m1",
+            filename: "invoice.pdf",
+            sizeBytes: 4096,
+            mime: "application/pdf"
+        )
+        let request = AttachmentPreviewRequest(attachment: attachment)
+
+        #expect(request.attachmentId == "att1")
+        #expect(request.attachment == attachment)
+    }
+
     private struct AttachmentSeed {
         var id = "att1"
         var filename = "invoice.pdf"

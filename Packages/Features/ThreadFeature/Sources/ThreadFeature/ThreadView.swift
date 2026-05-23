@@ -13,7 +13,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     let translationHeader: TranslationHeader
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
-    var onPreviewAttachment: ((AttachmentInfo) -> Void)?
+    var onPreviewAttachment: AttachmentPreviewHandler?
     var onSummarizeAttachment: ((AttachmentInfo) -> Void)?
     var showTranslated: Bool
     var translatedTexts: [String: String]
@@ -25,7 +25,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         store: ThreadStore,
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
-        onPreviewAttachment: ((AttachmentInfo) -> Void)? = nil,
+        onPreviewAttachment: AttachmentPreviewHandler? = nil,
         onSummarizeAttachment: ((AttachmentInfo) -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
@@ -222,7 +222,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 
 private struct AttachmentCardView: View {
     let attachment: AttachmentInfo
-    var onPreview: ((AttachmentInfo) -> Void)?
+    var onPreview: AttachmentPreviewHandler?
     var onSummarize: ((AttachmentInfo) -> Void)?
 
     var body: some View {
@@ -244,7 +244,7 @@ private struct AttachmentCardView: View {
                 Spacer(minLength: 12)
 
                 HStack(spacing: 8) {
-                    Button { onPreview?(attachment) } label: {
+                    Button { onPreview?(AttachmentPreviewRequest(attachment: attachment)) } label: {
                         Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
                     }
                     .buttonStyle(.rbGhost)
@@ -501,7 +501,7 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         store: ThreadStore,
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
-        onPreviewAttachment: ((AttachmentInfo) -> Void)? = nil,
+        onPreviewAttachment: AttachmentPreviewHandler? = nil,
         onSummarizeAttachment: ((AttachmentInfo) -> Void)? = nil
     ) {
         self.store = store

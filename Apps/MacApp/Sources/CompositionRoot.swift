@@ -1,5 +1,6 @@
 import AIKit
 import AIRuntime
+import AttachmentKit
 import AuthKit
 import BriefFeature
 import ComposeFeature
@@ -32,6 +33,8 @@ final class CompositionRoot {
     let aiService: any AIService
     let inboxStore: InboxStore
     let threadStore: ThreadStore
+    let attachmentByteStore: LocalAttachmentByteStore
+    let attachmentPreviewService: AttachmentPreviewService
     let briefStore: BriefStore
     let briefBackgroundQueue: BriefBackgroundQueue
     let replyStore: ReplyStore
@@ -61,6 +64,9 @@ final class CompositionRoot {
         self.aiService = ThreadBriefService.live(modelManager: modelManager)
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
+        let attachmentByteStore = try! LocalAttachmentByteStore(rootURL: Self.defaultAttachmentByteStoreRoot())
+        self.attachmentByteStore = attachmentByteStore
+        self.attachmentPreviewService = AttachmentPreviewService(byteStore: attachmentByteStore)
         self.briefStore = BriefStore(aiService: aiService, db: db)
         self.briefBackgroundQueue = BriefBackgroundQueue(aiService: aiService, db: db)
         self.replyStore = ReplyStore(aiService: aiService, db: db)
@@ -139,6 +145,16 @@ final class CompositionRoot {
             .appendingPathComponent("PrivateAIMail")
             .appendingPathComponent("db.sqlite")
             .path
+    }
+
+    private static func defaultAttachmentByteStoreRoot() -> URL {
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first!
+        return appSupport
+            .appendingPathComponent("PrivateAIMail", isDirectory: true)
+            .appendingPathComponent("attachments", isDirectory: true)
     }
 
     var toastDismissTask: Task<Void, Never>?

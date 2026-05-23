@@ -105,6 +105,9 @@ struct MainScene: View {
                         store: threadStore,
                         onArchive: { archiveSelectedThread() },
                         onStar: { starSelectedThread() },
+                        onPreviewAttachment: { request in
+                            previewAttachment(request)
+                        },
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.allTranslatedNodes(

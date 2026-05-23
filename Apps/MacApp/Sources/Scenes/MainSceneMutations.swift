@@ -267,6 +267,17 @@ extension MainScene {
         }
     }
 
+    func previewAttachment(_ request: AttachmentPreviewRequest) {
+        switch composition.attachmentPreviewService.preview(request) {
+        case .opened:
+            break
+        case .missingLocalFile:
+            showToast("Attachment is not saved locally yet.", undo: nil)
+        case .failedToOpen:
+            showToast("Attachment preview could not be opened.", undo: nil)
+        }
+    }
+
     func handleUndo(_ action: ToastState.UndoAction) {
         composition.toastMessage = nil
         Task {

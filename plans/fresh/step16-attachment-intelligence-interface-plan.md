@@ -132,21 +132,21 @@
 - [x] Запустить `git diff --check` и исправить пробелы.
 
 ### Task 4: Подключить просмотр локального файла
-- [ ] Добавить в `ThreadFeature` действие просмотра вложения как callback,
+- [x] Добавить в `ThreadFeature` действие просмотра вложения как callback,
       принимающий идентификатор вложения и текущее состояние, без прямой
       зависимости от системного просмотрщика.
-- [ ] В `MacApp` добавить обработчик просмотра: получить путь из
+- [x] В `MacApp` добавить обработчик просмотра: получить путь из
       `LocalAttachmentByteStore.fileURL(for:)`, проверить существование файла и
       открыть безопасный системный просмотр для локального файла.
-- [ ] Если файла нет, показать понятное сообщение в интерфейсе или toast:
+- [x] Если файла нет, показать понятное сообщение в интерфейсе или toast:
       вложение еще не сохранено локально.
-- [ ] Не пытаться скачивать файл из Gmail в этом плане; загрузка удаленных
+- [x] Не пытаться скачивать файл из Gmail в этом плане; загрузка удаленных
       вложений должна быть отдельной задачей с отдельными правилами доступа.
-- [ ] Добавить тесты на состояние кнопки просмотра: файл есть, файла нет,
+- [x] Добавить тесты на состояние кнопки просмотра: файл есть, файла нет,
       обработчик не передан.
-- [ ] Запустить `cd Packages/Features/ThreadFeature && swift test`.
-- [ ] Запустить `cd . && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests`.
-- [ ] Запустить `git diff --check` и исправить пробелы.
+- [x] Запустить `cd Packages/Features/ThreadFeature && swift test`.
+- [x] Запустить `cd . && xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests`.
+- [x] Запустить `git diff --check` и исправить пробелы.
 
 ### Task 5: Связать экран письма с обработкой в составе приложения
 - [ ] Зарегистрировать сервис обработки вложений и локальное хранилище байтов в
