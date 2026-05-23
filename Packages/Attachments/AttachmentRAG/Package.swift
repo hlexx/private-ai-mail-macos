@@ -9,16 +9,12 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../AttachmentKit"),
-        .package(path: "../../AI/AIEmbeddings"),
-        .package(path: "../../Core/Persistence"),
     ],
     targets: [
         .target(
             name: "AttachmentRAG",
             dependencies: [
                 "AttachmentKit",
-                "AIEmbeddings",
-                "Persistence",
             ],
             resources: [.process("Resources")]
         ),

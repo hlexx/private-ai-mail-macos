@@ -45,20 +45,20 @@ schema migration unless an existing attachment-processing table is insufficient.
 - `git diff --check`
 
 ### Task 1: Implement AttachmentRAG Chunking And Retrieval Core
-- [ ] Replace the `AttachmentRAG` namespace stub with typed contracts for
+- [x] Replace the `AttachmentRAG` namespace stub with typed contracts for
       `AttachmentChunk`, evidence source references, chunking policy, retrieval
       query, retrieval result, and deterministic cache key inputs.
-- [ ] Implement a local chunker that consumes `AttachmentExtractionResult` from
+- [x] Implement a local chunker that consumes `AttachmentExtractionResult` from
       AttachmentKit, preserves page/byte/section evidence locators, drops empty
       sections, and never stores raw text in logs.
-- [ ] Implement deterministic lexical retrieval over chunks using local scoring
+- [x] Implement deterministic lexical retrieval over chunks using local scoring
       only. Do not call AIKit, AIRuntime, network APIs, or Persistence in this
       task.
-- [ ] Add `AttachmentRAGTests` for PDF-page evidence, text byte-range evidence,
+- [x] Add `AttachmentRAGTests` for PDF-page evidence, text byte-range evidence,
       empty/unsupported extraction handling, stable chunk ordering, retrieval
       ranking, and cache-key determinism.
-- [ ] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
-- [ ] Run `git diff --check` and fix whitespace issues.
+- [x] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
+- [x] Run `git diff --check` and fix whitespace issues.
 
 ### Task 2: Add Persistence-Backed Chunk And Artifact Cache
 - [ ] Add an AttachmentRAG repository/cache boundary that stores and fetches
