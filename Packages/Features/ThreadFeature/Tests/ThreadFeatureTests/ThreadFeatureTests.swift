@@ -271,6 +271,128 @@ struct ThreadStoreAttachmentDisplayStateTests {
         store.stopObserving()
     }
 
+    @Test func presentationShowsWaitingStateAndDisabledActions() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.metadataDisplayText == "4 KB · application/pdf")
+        #expect(attachment.localFileStatusText == "No local file yet")
+        #expect(attachment.extractionStatusText == "Text not extracted")
+        #expect(attachment.summaryStatusText == "Summary unavailable until text is extracted")
+        #expect(attachment.canPreviewAttachment(hasHandler: true) == false)
+        #expect(attachment.canSummarizeAttachment(hasHandler: true) == false)
+        store.stopObserving()
+    }
+
+    @Test func presentationShowsSuccessfulSummaryAndEvidence() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        try seedSummaryArtifact(db: db, payloadJson: Self.validSummaryPayload)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.localFileStatusText == "Local file ready")
+        #expect(attachment.extractionStatusText == "Text extracted · v1")
+        #expect(attachment.summaryStatusText == "Summary ready")
+        #expect(attachment.canPreviewAttachment(hasHandler: true))
+        #expect(attachment.canSummarizeAttachment(hasHandler: true))
+        guard case let .available(summary) = attachment.summaryState else {
+            Issue.record("Expected available summary, got \(attachment.summaryState)")
+            return
+        }
+        #expect(summary.confidenceDisplayText == "82% confidence")
+        #expect(summary.evidenceDisplayText == "Evidence: chunk-1")
+        store.stopObserving()
+    }
+
+    @Test func presentationShowsSummaryWithoutRelevantFragments() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        try seedSummaryArtifact(db: db, payloadJson: Self.summaryWithoutEvidencePayload)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        guard case let .available(summary) = attachment.summaryState else {
+            Issue.record("Expected available summary, got \(attachment.summaryState)")
+            return
+        }
+        #expect(summary.evidenceDisplayText == "No relevant fragments.")
+        store.stopObserving()
+    }
+
+    @Test func presentationShowsUnsupportedFormat() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, attachment: AttachmentSeed(filename: "contract.docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+        try seedExtraction(
+            db: db,
+            status: "failed",
+            contentHash: "sha256:def",
+            byteCount: 4096,
+            completedAt: 120,
+            errorCode: "unsupported_document_format",
+            errorMessage: "DOCX extraction is not supported yet."
+        )
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.fileBadgeText == "DOC")
+        #expect(attachment.extractionStatusText == "Format not supported: DOCX extraction is not supported yet.")
+        #expect(attachment.summaryStatusText == "Summary unavailable for unsupported format")
+        #expect(attachment.canPreviewAttachment(hasHandler: true))
+        #expect(attachment.canSummarizeAttachment(hasHandler: true) == false)
+        store.stopObserving()
+    }
+
+    @Test func presentationShowsProcessingError() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(
+            db: db,
+            status: "failed",
+            contentHash: "sha256:abc",
+            byteCount: 4096,
+            completedAt: 120,
+            errorCode: "extract_failed",
+            errorMessage: "Could not read the file."
+        )
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.extractionStatusText == "Processing error: Could not read the file.")
+        #expect(attachment.summaryStatusText == "Summary unavailable because processing failed")
+        store.stopObserving()
+    }
+
+    @Test func presentationDisablesButtonsWithoutHandlers() async throws {
+        let db = try makeDB()
+        try seedThread(db: db)
+        try seedExtraction(db: db, status: "succeeded", contentHash: "sha256:abc", byteCount: 4096, completedAt: 120)
+        let store = ThreadStore(db: db)
+
+        store.observe(threadId: "t1", accountId: "acc1")
+        let attachment = try await firstAttachment(in: store)
+
+        #expect(attachment.canPreviewAttachment(hasHandler: false) == false)
+        #expect(attachment.canSummarizeAttachment(hasHandler: false) == false)
+        #expect(attachment.canPreviewAttachment(hasHandler: true))
+        #expect(attachment.canSummarizeAttachment(hasHandler: true))
+        store.stopObserving()
+    }
+
     private struct AttachmentSeed {
         var id = "att1"
         var filename = "invoice.pdf"
@@ -305,6 +427,21 @@ struct ThreadStoreAttachmentDisplayStateTests {
           "modelId": "local-test",
           "promptVersion": "attachment-summary-prompt-v1",
           "confidence": 0.82
+        }
+        """
+    }
+
+    private static var summaryWithoutEvidencePayload: String {
+        """
+        {
+          "summary": "Attachment has no relevant extracted fragments.",
+          "keyFields": [],
+          "risks": [],
+          "nextSteps": [],
+          "evidenceChunkIds": [],
+          "modelId": "local-test",
+          "promptVersion": "attachment-summary-prompt-v1",
+          "confidence": 0.4
         }
         """
     }
@@ -478,9 +615,9 @@ struct ThreadViewSnapshotTests {
     @Test func attachmentBlockDark() {
         let view = attachmentBlockView()
             .preferredColorScheme(.dark)
-            .frame(width: 600, height: 100)
+            .frame(width: 600, height: 150)
         let host = NSHostingView(rootView: view)
-        host.frame = NSRect(x: 0, y: 0, width: 600, height: 100)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 150)
         host.layout()
     }
 
@@ -488,9 +625,9 @@ struct ThreadViewSnapshotTests {
     @Test func attachmentBlockLight() {
         let view = attachmentBlockView()
             .preferredColorScheme(.light)
-            .frame(width: 600, height: 100)
+            .frame(width: 600, height: 150)
         let host = NSHostingView(rootView: view)
-        host.frame = NSRect(x: 0, y: 0, width: 600, height: 100)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 150)
         host.layout()
     }
 
@@ -560,23 +697,32 @@ struct ThreadViewSnapshotTests {
     }
 
     private func attachmentBlockView() -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            RoundedRectangle(cornerRadius: RBRadius.xs)
-                .fill(Color.rbBgElev2)
-                .frame(width: 38, height: 48)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("contract.pdf")
-                    .font(.rbGeist(13, weight: .medium))
-                    .foregroundStyle(Color.rbFg1)
-                Text("277 KB · summarized locally")
-                    .font(.rbMono(11))
-                    .foregroundStyle(Color.rbFg3)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                RoundedRectangle(cornerRadius: RBRadius.xs)
+                    .fill(Color.rbBgElev2)
+                    .frame(width: 38, height: 48)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("contract.pdf")
+                        .font(.rbGeist(13, weight: .medium))
+                        .foregroundStyle(Color.rbFg1)
+                    Text("277 KB · application/pdf")
+                        .font(.rbMono(11))
+                        .foregroundStyle(Color.rbFg3)
+                }
+                Spacer()
+                Button("Preview") {}
+                    .buttonStyle(.rbGhost)
+                Button("Summarize") {}
+                    .buttonStyle(.rbSecondary)
             }
-            Spacer()
-            Button("Preview") {}
-                .buttonStyle(.rbGhost)
-            Button("Summarize") {}
-                .buttonStyle(.rbSecondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Local file ready")
+                Text("Text extracted · v1")
+                Text("Summary ready")
+            }
+            .font(.rbMono(10.5))
+            .foregroundStyle(Color.rbFg3)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

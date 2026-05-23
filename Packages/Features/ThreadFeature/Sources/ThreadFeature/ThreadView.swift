@@ -13,6 +13,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     let translationHeader: TranslationHeader
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
+    var onPreviewAttachment: ((AttachmentInfo) -> Void)?
+    var onSummarizeAttachment: ((AttachmentInfo) -> Void)?
     var showTranslated: Bool
     var translatedTexts: [String: String]
     var translatedNodes: [String: [String: String]]
@@ -23,6 +25,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         store: ThreadStore,
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
+        onPreviewAttachment: ((AttachmentInfo) -> Void)? = nil,
+        onSummarizeAttachment: ((AttachmentInfo) -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
         translatedNodes: [String: [String: String]] = [:],
@@ -35,6 +39,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.store = store
         self.onArchive = onArchive
         self.onStar = onStar
+        self.onPreviewAttachment = onPreviewAttachment
+        self.onSummarizeAttachment = onSummarizeAttachment
         self.showTranslated = showTranslated
         self.translatedTexts = translatedTexts
         self.translatedNodes = translatedNodes
@@ -201,66 +207,308 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     // MARK: - Attachment Block
 
     private var attachmentBlock: some View {
-        ForEach(store.attachments) { att in
-            HStack(alignment: .center, spacing: 12) {
-                // Thumbnail placeholder
-                ZStack(alignment: .bottomLeading) {
-                    RoundedRectangle(cornerRadius: RBRadius.xs)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.96, green: 0.95, blue: 0.9),
-                                         Color(red: 0.84, green: 0.82, blue: 0.75)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 38, height: 48)
-                    Text(att.mime?.contains("pdf") == true ? "PDF" : "FILE")
-                        .font(.rbMono(8, weight: .semibold))
-                        .foregroundStyle(Color.rbGraphite900)
-                        .padding(.leading, 4)
-                        .padding(.bottom, 4)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(store.attachments) { attachment in
+                AttachmentCardView(
+                    attachment: attachment,
+                    onPreview: onPreviewAttachment,
+                    onSummarize: onSummarizeAttachment
+                )
+            }
+        }
+        .padding(.top, 14)
+    }
+}
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(att.filename)
+private struct AttachmentCardView: View {
+    let attachment: AttachmentInfo
+    var onPreview: ((AttachmentInfo) -> Void)?
+    var onSummarize: ((AttachmentInfo) -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                AttachmentThumbnailView(attachment: attachment)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(attachment.filename)
                         .font(.rbGeist(13, weight: .medium))
                         .foregroundStyle(Color.rbFg1)
-                    Text("\(att.formattedSize) \u{00B7} summarized locally")
+                        .lineLimit(2)
+                    Text(attachment.metadataDisplayText)
                         .font(.rbMono(11))
                         .foregroundStyle(Color.rbFg3)
+                        .lineLimit(2)
                 }
 
-                Spacer()
+                Spacer(minLength: 12)
 
-                Button { /* Preview stub */ } label: {
-                    Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
-                }
-                .buttonStyle(.rbGhost)
+                HStack(spacing: 8) {
+                    Button { onPreview?(attachment) } label: {
+                        Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
+                    }
+                    .buttonStyle(.rbGhost)
+                    .disabled(!attachment.canPreviewAttachment(hasHandler: onPreview != nil))
 
-                Button { /* Summarize stub */ } label: {
-                    Label(String(localized: "thread.attachment.summarize", defaultValue: "Summarize"), systemImage: "sparkle")
+                    Button { onSummarize?(attachment) } label: {
+                        Label(String(localized: "thread.attachment.summarize", defaultValue: "Summarize"), systemImage: "sparkle")
+                    }
+                    .buttonStyle(.rbSecondary)
+                    .disabled(!attachment.canSummarizeAttachment(hasHandler: onSummarize != nil))
                 }
-                .buttonStyle(.rbSecondary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.rbBgElev1)
-            .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: RBRadius.md)
-                    .strokeBorder(Color.rbStroke1, lineWidth: 1)
-            )
-            .padding(.top, 14)
+
+            AttachmentStateStackView(attachment: attachment)
+
+            if case .available(let summary) = attachment.summaryState {
+                AttachmentSummaryPanel(summary: summary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: RBRadius.md)
+                .strokeBorder(Color.rbStroke1, lineWidth: 1)
+        )
+    }
+}
+
+private struct AttachmentThumbnailView: View {
+    let attachment: AttachmentInfo
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            RoundedRectangle(cornerRadius: RBRadius.xs)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.rbSignalAttachBg.opacity(0.78),
+                            Color.rbBgElev2
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 38, height: 48)
+            Text(attachment.fileBadgeText)
+                .font(.rbMono(8, weight: .semibold))
+                .foregroundStyle(Color.rbFg1)
+                .padding(.leading, 4)
+                .padding(.bottom, 4)
         }
     }
 }
 
+private struct AttachmentStateStackView: View {
+    let attachment: AttachmentInfo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            AttachmentStatusLineView(
+                systemName: attachment.hasLocalFile ? "externaldrive.fill" : "externaldrive.badge.xmark",
+                text: attachment.localFileStatusText,
+                tint: attachment.hasLocalFile ? Color.rbSignalSuccess : Color.rbFg3
+            )
+            AttachmentStatusLineView(
+                systemName: extractionIconName,
+                text: attachment.extractionStatusText,
+                tint: extractionTint
+            )
+            AttachmentStatusLineView(
+                systemName: summaryIconName,
+                text: attachment.summaryStatusText,
+                tint: summaryTint
+            )
+        }
+    }
+
+    private var extractionIconName: String {
+        switch attachment.extractionState {
+        case .succeeded:
+            return "text.page.fill"
+        case .unsupported:
+            return "nosign"
+        case .failed:
+            return "exclamationmark.triangle.fill"
+        case .running:
+            return "gearshape.fill"
+        case .pending:
+            return "clock.fill"
+        case .waitingForLocalFile:
+            return "text.page"
+        }
+    }
+
+    private var extractionTint: Color {
+        switch attachment.extractionState {
+        case .succeeded:
+            return .rbSignalSuccess
+        case .unsupported, .failed:
+            return .rbSignalDeadline
+        case .running, .pending:
+            return .rbSignalAttach
+        case .waitingForLocalFile:
+            return .rbFg3
+        }
+    }
+
+    private var summaryIconName: String {
+        switch attachment.summaryState {
+        case .available:
+            return "sparkle"
+        case .failed:
+            return "exclamationmark.triangle.fill"
+        case .unavailable:
+            return "sparkles"
+        }
+    }
+
+    private var summaryTint: Color {
+        switch attachment.summaryState {
+        case .available:
+            return .rbSignalLocalAi
+        case .failed:
+            return .rbSignalDeadline
+        case .unavailable:
+            return .rbFg3
+        }
+    }
+}
+
+private struct AttachmentStatusLineView: View {
+    let systemName: String
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: systemName)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 14)
+            Text(text)
+                .font(.rbMono(10.5))
+                .foregroundStyle(Color.rbFg3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AttachmentSummaryPanel: View {
+    let summary: AttachmentSummaryViewData
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+                .overlay(Color.rbStroke1)
+
+            HStack(spacing: 8) {
+                Text("Local summary")
+                    .font(.rbMono(10, weight: .semibold))
+                    .foregroundStyle(Color.rbSignalLocalAi)
+                    .textCase(.uppercase)
+                Text(summary.confidenceDisplayText)
+                    .font(.rbMono(10))
+                    .foregroundStyle(Color.rbFg3)
+            }
+
+            Text(summary.summary)
+                .font(.rbGeist(12.5))
+                .foregroundStyle(Color.rbFg2)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !summary.keyFields.isEmpty {
+                AttachmentSummaryKeyFieldsView(fields: summary.keyFields)
+            }
+
+            if !summary.risks.isEmpty {
+                AttachmentSummaryFindingsView(title: "Risks", findings: summary.risks)
+            }
+
+            if !summary.nextSteps.isEmpty {
+                AttachmentSummaryFindingsView(title: "Next steps", findings: summary.nextSteps)
+            }
+
+            Text(summary.evidenceDisplayText)
+                .font(.rbMono(10))
+                .foregroundStyle(summary.evidenceChunkIds.isEmpty ? Color.rbFg3 : Color.rbSignalAttach)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AttachmentSummaryKeyFieldsView: View {
+    let fields: [AttachmentSummaryKeyFieldViewData]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            AttachmentSummarySectionTitleView(title: "Key fields")
+            ForEach(Array(fields.enumerated()), id: \.offset) { _, field in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(field.label): \(field.value)")
+                        .font(.rbGeist(12, weight: .medium))
+                        .foregroundStyle(Color.rbFg1)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(AttachmentSummaryViewData.evidenceText(for: field.evidenceChunkIds))
+                        .font(.rbMono(10))
+                        .foregroundStyle(Color.rbFg3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
+private struct AttachmentSummaryFindingsView: View {
+    let title: String
+    let findings: [AttachmentSummaryFindingViewData]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            AttachmentSummarySectionTitleView(title: title)
+            ForEach(Array(findings.enumerated()), id: \.offset) { _, finding in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(finding.text)
+                        .font(.rbGeist(12))
+                        .foregroundStyle(Color.rbFg2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(AttachmentSummaryViewData.evidenceText(for: finding.evidenceChunkIds))
+                        .font(.rbMono(10))
+                        .foregroundStyle(Color.rbFg3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
+private struct AttachmentSummarySectionTitleView: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.rbMono(10, weight: .semibold))
+            .foregroundStyle(Color.rbFg3)
+            .textCase(.uppercase)
+    }
+}
+
 extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView, TranslationHeader == EmptyView {
-    public init(store: ThreadStore, onArchive: (() -> Void)? = nil, onStar: (() -> Void)? = nil) {
+    public init(
+        store: ThreadStore,
+        onArchive: (() -> Void)? = nil,
+        onStar: (() -> Void)? = nil,
+        onPreviewAttachment: ((AttachmentInfo) -> Void)? = nil,
+        onSummarizeAttachment: ((AttachmentInfo) -> Void)? = nil
+    ) {
         self.store = store
         self.onArchive = onArchive
         self.onStar = onStar
+        self.onPreviewAttachment = onPreviewAttachment
+        self.onSummarizeAttachment = onSummarizeAttachment
         self.showTranslated = false
         self.translatedTexts = [:]
         self.translatedNodes = [:]
