@@ -14,7 +14,8 @@ enum Migrator {
         migrator.registerMigration("M008_BackfillInboxLabel", migrate: M008_BackfillInboxLabel.migrate)
         migrator.registerMigration("M009_BackfillInboxLabelV2", migrate: M009_BackfillInboxLabelV2.migrate)
         migrator.registerMigration("M010_SignalLabelReconcile", migrate: M010_SignalLabelReconcile.migrate)
-        migrator.registerMigration("M011_AttachmentAIArtifacts", migrate: M011_AttachmentAIArtifacts.migrate)
+        migrator.registerMigration("M011_AttachmentDataPlane", migrate: M011_AttachmentDataPlane.migrate)
+        migrator.registerMigration("M012_AttachmentBlobStore", migrate: M012_AttachmentBlobStore.migrate)
         try migrator.migrate(db)
     }
 }
@@ -330,9 +331,139 @@ enum M010_SignalLabelReconcile {
     }
 }
 
-enum M011_AttachmentAIArtifacts {
+enum M011_AttachmentDataPlane {
     static func migrate(_ db: Database) throws {
-        try db.create(table: "attachment_blob") { t in
+        try db.create(table: "attachment_extraction", ifNotExists: true) { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .integer).notNull()
+            t.column("status", .text).notNull()
+            t.column("content_hash", .text)
+            t.column("mime", .text)
+            t.column("filename", .text)
+            t.column("byte_count", .integer)
+            t.column("created_at", .integer).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.column("completed_at", .integer)
+            t.column("error_code", .text)
+            t.column("error_message", .text)
+            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_extraction_attachment",
+            on: "attachment_extraction",
+            columns: ["account_id", "message_id", "attachment_id"],
+            ifNotExists: true
+        )
+
+        try db.create(table: "attachment_chunk", ifNotExists: true) { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .integer).notNull()
+            t.column("chunk_index", .integer).notNull()
+            t.column("content_text", .text).notNull()
+            t.column("source_reference", .text)
+            t.column("page_number", .integer)
+            t.column("source_start", .integer)
+            t.column("source_end", .integer)
+            t.column("token_count", .integer)
+            t.column("created_at", .integer).notNull()
+            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version", "chunk_index"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id", "extraction_version"],
+                references: "attachment_extraction",
+                columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_chunk_attachment",
+            on: "attachment_chunk",
+            columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+            ifNotExists: true
+        )
+
+        try db.create(table: "attachment_ai_artifact", ifNotExists: true) { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .integer).notNull()
+            t.column("artifact_kind", .text).notNull()
+            t.column("artifact_version", .integer).notNull()
+            t.column("model_id", .text)
+            t.column("content_hash", .text)
+            t.column("payload_json", .text).notNull()
+            t.column("created_at", .integer).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.primaryKey([
+                "account_id",
+                "message_id",
+                "attachment_id",
+                "extraction_version",
+                "artifact_kind",
+                "artifact_version",
+            ])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id", "extraction_version"],
+                references: "attachment_extraction",
+                columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_ai_artifact_attachment",
+            on: "attachment_ai_artifact",
+            columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+            ifNotExists: true
+        )
+
+        try db.create(table: "attachment_processing_job", ifNotExists: true) { t in
+            t.primaryKey("id", .text)
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("job_kind", .text).notNull()
+            t.column("status", .text).notNull()
+            t.column("priority", .integer).notNull().defaults(to: 0)
+            t.column("attempt_count", .integer).notNull().defaults(to: 0)
+            t.column("available_at", .integer).notNull()
+            t.column("created_at", .integer).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.column("last_error_code", .text)
+            t.column("last_error_message", .text)
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+        try db.create(
+            index: "idx_attachment_processing_job_status",
+            on: "attachment_processing_job",
+            columns: ["status", "available_at"],
+            ifNotExists: true
+        )
+        try db.create(
+            index: "idx_attachment_processing_job_attachment",
+            on: "attachment_processing_job",
+            columns: ["account_id", "message_id", "attachment_id"],
+            ifNotExists: true
+        )
+    }
+}
+
+enum M012_AttachmentBlobStore {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "attachment_blob", ifNotExists: true) { t in
             t.column("account_id", .text).notNull()
             t.column("message_id", .text).notNull()
             t.column("attachment_id", .text).notNull()
@@ -349,71 +480,52 @@ enum M011_AttachmentAIArtifacts {
             )
         }
 
-        try db.create(table: "attachment_extraction") { t in
-            t.column("account_id", .text).notNull()
-            t.column("message_id", .text).notNull()
-            t.column("attachment_id", .text).notNull()
-            t.column("extraction_version", .text).notNull()
-            t.column("status", .text).notNull()
-            t.column("mime", .text).notNull()
-            t.column("text", .text)
-            t.column("unsupported_reason", .text)
-            t.column("generated_at", .integer).notNull()
-            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version"])
-            t.foreignKey(
-                ["account_id", "message_id", "attachment_id"],
-                references: "attachment",
-                columns: ["account_id", "message_id", "id"],
-                onDelete: .cascade
-            )
-        }
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "content_hash", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "filename", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "byte_count", definition: "INTEGER")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "created_at", definition: "INTEGER NOT NULL DEFAULT 0")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "updated_at", definition: "INTEGER NOT NULL DEFAULT 0")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "completed_at", definition: "INTEGER")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "error_code", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_extraction", column: "error_message", definition: "TEXT")
 
-        try db.create(table: "attachment_chunk") { t in
-            t.column("account_id", .text).notNull()
-            t.column("message_id", .text).notNull()
-            t.column("attachment_id", .text).notNull()
-            t.column("extraction_version", .text).notNull()
-            t.column("chunk_index", .integer).notNull()
-            t.column("source_offset", .integer).notNull()
-            t.column("text", .text).notNull()
-            t.column("token_count", .integer).notNull().defaults(to: 0)
-            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version", "chunk_index"])
-            t.foreignKey(
-                ["account_id", "message_id", "attachment_id", "extraction_version"],
-                references: "attachment_extraction",
-                columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
-                onDelete: .cascade
-            )
-        }
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "content_text", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "source_reference", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "page_number", definition: "INTEGER")
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "source_start", definition: "INTEGER")
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "source_end", definition: "INTEGER")
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "token_count", definition: "INTEGER")
+        try addColumnIfMissing(db, table: "attachment_chunk", column: "created_at", definition: "INTEGER NOT NULL DEFAULT 0")
 
-        try db.create(table: "attachment_ai_artifact") { t in
-            t.column("account_id", .text).notNull()
-            t.column("message_id", .text).notNull()
-            t.column("attachment_id", .text).notNull()
-            t.column("task_id", .text).notNull()
-            t.column("prompt_version", .text).notNull()
-            t.column("schema_version", .text).notNull()
-            t.column("model_id", .text).notNull()
-            t.column("extraction_version", .text).notNull()
-            t.column("input_fingerprint", .text).notNull()
-            t.column("content_json", .text).notNull()
-            t.column("generated_at", .integer).notNull()
-            t.primaryKey([
-                "account_id", "message_id", "attachment_id", "task_id",
-                "prompt_version", "schema_version", "model_id", "extraction_version",
-            ])
-            t.foreignKey(
-                ["account_id", "message_id", "attachment_id"],
-                references: "attachment",
-                columns: ["account_id", "message_id", "id"],
-                onDelete: .cascade
-            )
-        }
-
+        try addColumnIfMissing(db, table: "attachment_ai_artifact", column: "artifact_kind", definition: "TEXT NOT NULL DEFAULT 'attachmentSummary'")
+        try addColumnIfMissing(db, table: "attachment_ai_artifact", column: "artifact_version", definition: "INTEGER NOT NULL DEFAULT 1")
+        try addColumnIfMissing(db, table: "attachment_ai_artifact", column: "content_hash", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_ai_artifact", column: "payload_json", definition: "TEXT")
+        try addColumnIfMissing(db, table: "attachment_ai_artifact", column: "created_at", definition: "INTEGER NOT NULL DEFAULT 0")
+        try addColumnIfMissing(db, table: "attachment_ai_artifact", column: "updated_at", definition: "INTEGER NOT NULL DEFAULT 0")
         try db.create(
             index: "idx_attachment_ai_artifact_lookup",
             on: "attachment_ai_artifact",
-            columns: ["account_id", "message_id", "attachment_id", "task_id"]
+            columns: ["account_id", "message_id", "attachment_id"],
+            ifNotExists: true
         )
+    }
+
+    private static func addColumnIfMissing(
+        _ db: Database,
+        table: String,
+        column: String,
+        definition: String
+    ) throws {
+        let existing = try Row.fetchAll(db, sql: "PRAGMA table_info(\(table.sqlIdentifier))")
+            .compactMap { $0["name"] as String? }
+        guard !existing.contains(column) else { return }
+        try db.execute(sql: "ALTER TABLE \(table.sqlIdentifier) ADD COLUMN \(column.sqlIdentifier) \(definition)")
+    }
+}
+
+private extension String {
+    var sqlIdentifier: String {
+        "\"\(replacingOccurrences(of: "\"", with: "\"\""))\""
     }
 }

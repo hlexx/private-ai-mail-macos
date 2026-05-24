@@ -7,52 +7,52 @@ public struct AttachmentAIArtifactRecord: Codable, Sendable, FetchableRecord, Pe
     public var accountId: String
     public var messageId: String
     public var attachmentId: String
-    public var taskId: String
-    public var promptVersion: String
-    public var schemaVersion: String
-    public var modelId: String
     public var extractionVersion: String
-    public var inputFingerprint: String
-    public var contentJSON: String
-    public var generatedAt: Int
+    public var artifactKind: String
+    public var artifactVersion: Int
+    public var modelId: String?
+    public var contentHash: String?
+    public var payloadJSON: String
+    public var createdAt: Int
+    public var updatedAt: Int
 
     public init(
         accountId: String,
         messageId: String,
         attachmentId: String,
-        taskId: String,
-        promptVersion: String,
-        schemaVersion: String,
-        modelId: String,
         extractionVersion: String,
-        inputFingerprint: String,
-        contentJSON: String,
-        generatedAt: Int
+        artifactKind: String,
+        artifactVersion: Int,
+        modelId: String?,
+        contentHash: String?,
+        payloadJSON: String,
+        createdAt: Int,
+        updatedAt: Int
     ) {
         self.accountId = accountId
         self.messageId = messageId
         self.attachmentId = attachmentId
-        self.taskId = taskId
-        self.promptVersion = promptVersion
-        self.schemaVersion = schemaVersion
-        self.modelId = modelId
         self.extractionVersion = extractionVersion
-        self.inputFingerprint = inputFingerprint
-        self.contentJSON = contentJSON
-        self.generatedAt = generatedAt
+        self.artifactKind = artifactKind
+        self.artifactVersion = artifactVersion
+        self.modelId = modelId
+        self.contentHash = contentHash
+        self.payloadJSON = payloadJSON
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 
     enum CodingKeys: String, CodingKey {
         case accountId = "account_id"
         case messageId = "message_id"
         case attachmentId = "attachment_id"
-        case taskId = "task_id"
-        case promptVersion = "prompt_version"
-        case schemaVersion = "schema_version"
-        case modelId = "model_id"
         case extractionVersion = "extraction_version"
-        case inputFingerprint = "input_fingerprint"
-        case contentJSON = "content_json"
-        case generatedAt = "generated_at"
+        case artifactKind = "artifact_kind"
+        case artifactVersion = "artifact_version"
+        case modelId = "model_id"
+        case contentHash = "content_hash"
+        case payloadJSON = "payload_json"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
 }
