@@ -33,7 +33,12 @@ jobs:
 
       - name: Download Metal Toolchain
         if: steps.cache-metal.outputs.cache-hit != 'true'
-        run: sudo xcodebuild -downloadComponent MetalToolchain
+        run: |
+          if xcodebuild -help 2>&1 | grep -q -- "-downloadComponent"; then
+            sudo xcodebuild -downloadComponent MetalToolchain
+          else
+            echo "::notice::xcodebuild -downloadComponent is unavailable on this runner; continuing without an explicit Metal toolchain download."
+          fi
 
       - name: Install Tuist
         run: |
