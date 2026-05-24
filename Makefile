@@ -25,6 +25,8 @@ DESTINATION := platform=macOS
 # Derived paths
 DIST_DIR := dist
 DD_BASE := $(HOME)/Library/Developer/Xcode/DerivedData
+DERIVED_DATA_PATH ?= $(CURDIR)/.build/xcode-derived-data
+APP_BUNDLE := $(DERIVED_DATA_PATH)/Build/Products/$(CONFIGURATION)/PrivateAIMail.app
 
 # --- Full release pipeline ---
 release: build test sign dmg notarize appcast
@@ -47,6 +49,7 @@ build: fetch-sparkle
 		-scheme $(SCHEME) \
 		-configuration $(CONFIGURATION) \
 		-destination '$(DESTINATION)' \
+		-derivedDataPath "$(DERIVED_DATA_PATH)" \
 		CODE_SIGNING_ALLOWED=NO \
 		2>&1 | tail -30
 	@echo "==> Build complete."
@@ -54,20 +57,19 @@ build: fetch-sparkle
 # --- Run tests ---
 test:
 	@echo "==> Running tests..."
-	xcodebuild test \
+	set -o pipefail && xcodebuild test \
 		-workspace $(WORKSPACE) \
 		-scheme $(SCHEME) \
 		-configuration Debug \
 		-destination '$(DESTINATION)' \
 		CODE_SIGNING_ALLOWED=NO \
 		-only-testing:MacAppTests \
-		2>&1 | tail -20 || echo "Note: test target may not have testable tests; continuing."
+		2>&1 | tail -20
 
 # --- Codesign the .app ---
 sign:
 	@echo "==> Signing app bundle..."
-	@APP=$$(find $(DD_BASE) -maxdepth 6 -type d -name "PrivateAIMail.app" \
-		-path "*PrivateAIMail*$(CONFIGURATION)*" 2>/dev/null | sort -r | head -1); \
+	@APP="$(APP_BUNDLE)"; \
 	if [ -z "$$APP" ]; then \
 		echo "Error: built .app not found. Run 'make build' first." >&2; exit 1; \
 	fi; \
@@ -76,7 +78,7 @@ sign:
 # --- Package DMG ---
 dmg:
 	@echo "==> Packaging DMG..."
-	./scripts/build-dmg.sh $(VERSION)
+	APP_PATH="$(APP_BUNDLE)" ./scripts/build-dmg.sh $(VERSION)
 
 # --- Notarize (skipped if env vars missing) ---
 notarize:
@@ -98,5 +100,5 @@ appcast:
 
 # --- Clean ---
 clean:
-	rm -rf $(DIST_DIR)
+	rm -rf $(DIST_DIR) "$(DERIVED_DATA_PATH)"
 	@echo "==> Cleaned $(DIST_DIR)/"

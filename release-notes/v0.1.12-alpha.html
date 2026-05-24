@@ -1,0 +1,26 @@
+<h2>PrivateAIMail 0.1.12-alpha</h2>
+
+<h3>New</h3>
+<ul>
+  <li><strong>Attachment intelligence in the reading pane.</strong> Messages now show real attachment cards with local-file, extraction, processing, summary, evidence, unsupported-format, and missing-local-bytes states.</li>
+  <li><strong>Local attachment processing queue.</strong> Attachment extraction and summary work now runs through a bounded local queue with cancellation, selected-attachment priority, duplicate-work protection, and explicit persistence of job state.</li>
+  <li><strong>Local file preview.</strong> Attachment preview opens the saved local file when it exists and reports a clear missing-file state when bytes have not been saved locally.</li>
+  <li><strong>Manual privacy smoke test.</strong> Project notes now include a manual verification path for PDF, text, unsupported, missing-local-file, and no-attachment messages, including log and network checks.</li>
+</ul>
+
+<h3>Privacy and scope</h3>
+<ul>
+  <li>Attachment content stays on device.</li>
+  <li>Extracted text, summaries, evidence chunks, and attachment bytes are not logged.</li>
+  <li>This release does not add Gmail remote attachment download.</li>
+  <li>This release does not add Team Connect, Slack, Notion, CRM, or cloud attachment processing.</li>
+</ul>
+
+<h3>Known limitations</h3>
+<ul>
+  <li>Gmail attachment bytes must already be present locally; the app does not fetch missing attachment bytes from Gmail in this release.</li>
+  <li>Unsupported attachment formats are shown explicitly and are not summarized.</li>
+  <li>Team Connect actions remain out of scope for this release.</li>
+  <li>App Sandbox is off for alpha; re-enable with Developer ID notarisation.</li>
+  <li>Ad-hoc signed unless Developer ID release credentials are present locally.</li>
+</ul>

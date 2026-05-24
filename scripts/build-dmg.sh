@@ -3,8 +3,9 @@
 # Usage: ./scripts/build-dmg.sh <version>
 # Example: ./scripts/build-dmg.sh 0.1.0-alpha
 #
-# Expects PrivateAIMail.app to already be built. Looks for it in the
-# xcodebuild DerivedData directory (Release config first, then Debug).
+# Expects PrivateAIMail.app to already be built. When APP_PATH is set, that
+# bundle is used. Otherwise it looks in the xcodebuild DerivedData directory
+# (Release config first, then Debug).
 # Produces dist/PrivateAIMail-<version>.dmg + dist/PrivateAIMail-<version>.sha256
 set -euo pipefail
 
@@ -34,11 +35,19 @@ find_app() {
     return 1
 }
 
-APP_SOURCE=$(find_app) || {
-    echo "ERROR: Could not find $APP_NAME in DerivedData. Build the app first:" >&2
-    echo "  xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Release" >&2
-    exit 1
-}
+if [[ -n "${APP_PATH:-}" ]]; then
+    if [[ ! -d "$APP_PATH" ]]; then
+        echo "ERROR: APP_PATH does not point to an app bundle: $APP_PATH" >&2
+        exit 1
+    fi
+    APP_SOURCE="$APP_PATH"
+else
+    APP_SOURCE=$(find_app) || {
+        echo "ERROR: Could not find $APP_NAME in DerivedData. Build the app first:" >&2
+        echo "  xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Release" >&2
+        exit 1
+    }
+fi
 echo "Using app bundle: $APP_SOURCE"
 
 # --- Clean dist/ ---
