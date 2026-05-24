@@ -4,6 +4,41 @@ import Foundation
 /// A collection of 20 synthetic email threads covering diverse categories
 /// for evaluating the AI thread brief feature. No real PII; shapes mirror DevSeeder.
 public enum EvalCorpus {
+    public struct AttachmentCase: Sendable {
+        public let id: String
+        public let filename: String
+        public let mime: String
+        public let text: String
+
+        public init(id: String, filename: String, mime: String, text: String) {
+            self.id = id
+            self.filename = filename
+            self.mime = mime
+            self.text = text
+        }
+    }
+
+    public static let attachments: [AttachmentCase] = [
+        .init(
+            id: "attachment-01-invoice",
+            filename: "invoice-2026-04.txt",
+            mime: "text/plain",
+            text: "Invoice INV-2026-04 for $4,250.00 is due April 15, 2026. Payment terms: Net 15."
+        ),
+        .init(
+            id: "attachment-02-contract-note",
+            filename: "msa-summary.txt",
+            mime: "text/plain",
+            text: "MSA Section 7.2 indemnification accepted. Section 8.1 liability cap remains open at $1.5M."
+        ),
+        .init(
+            id: "attachment-03-csv",
+            filename: "pipeline.csv",
+            mime: "text/csv",
+            text: "stage,count\nnew,3\nscreen,1\noffer_declined,2\n"
+        ),
+    ]
+
     public static let threads: [(id: String, input: AIThreadInput)] = [
         // 1. Short informational — company newsletter
         ("eval-01-newsletter", AIThreadInput(messages: [

@@ -47,6 +47,7 @@ private let appFeatureDeps: [TargetDependency] = [
     .package(product: "SettingsFeature"),
     .package(product: "DesignSystem"),
     .package(product: "AIRuntime"),
+    .package(product: "AttachmentRAG"),
     .package(product: "TranslationFeature"),
 ]
 
@@ -96,8 +97,8 @@ let project = Project(
                 base: [
                     "CODE_SIGN_STYLE": "Automatic",
                     "DEVELOPMENT_TEAM": "",
-                    "MARKETING_VERSION": "0.1.11-alpha",
-                    "CURRENT_PROJECT_VERSION": "111",
+                    "MARKETING_VERSION": "0.1.13-alpha",
+                    "CURRENT_PROJECT_VERSION": "113",
                 ]
             )
         ),

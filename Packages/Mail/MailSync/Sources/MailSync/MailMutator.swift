@@ -4,9 +4,9 @@ import Persistence
 
 public actor MailMutator {
     private let db: AppDatabase
-    private let apiFactory: @Sendable (String) -> any GmailAPI
+    private let apiFactory: GmailAPIFactory
 
-    public init(db: AppDatabase, apiFactory: @Sendable @escaping (String) -> any GmailAPI) {
+    public init(db: AppDatabase, apiFactory: @escaping GmailAPIFactory) {
         self.db = db
         self.apiFactory = apiFactory
     }
@@ -48,6 +48,7 @@ public actor MailMutator {
     }
 
     public func markRead(_ threadId: String, accountId: String, read: Bool) async throws {
+        let api = try apiFactory(accountId)
         let readFlag = MessageRecord.read
         // Capture original has_unread before optimistic update for correct rollback
         let originalHasUnread: Int = (try? await db.dbQueue.read { dbConn in
@@ -85,7 +86,6 @@ public actor MailMutator {
 
         // API call
         do {
-            let api = apiFactory(accountId)
             _ = try await api.modifyThread(
                 id: threadId,
                 addLabelIds: read ? [] : ["UNREAD"],
@@ -146,6 +146,8 @@ public actor MailMutator {
         addLabelIds: [String],
         removeLabelIds: [String]
     ) async throws {
+        let api = try apiFactory(accountId)
+
         // 1. Optimistic local update
         try await db.dbQueue.write { dbConn in
             for labelId in removeLabelIds {
@@ -159,7 +161,6 @@ public actor MailMutator {
 
         // 2. API call
         do {
-            let api = apiFactory(accountId)
             _ = try await api.modifyThread(
                 id: threadId,
                 addLabelIds: addLabelIds,

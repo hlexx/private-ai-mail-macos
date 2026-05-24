@@ -36,6 +36,35 @@ public enum Metrics {
         brief.confidence >= 0.0 && brief.confidence <= 1.0
     }
 
+    public static func schemaValid(attachmentSummary: AIAttachmentSummary) -> Bool {
+        !attachmentSummary.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && attachmentSummary.confidence >= 0.0
+            && attachmentSummary.confidence <= 1.0
+    }
+
+    public static func evidenceCoverage(attachmentSummary: AIAttachmentSummary) -> Double {
+        let claimCount = 1
+            + attachmentSummary.keyFields.count
+            + attachmentSummary.risks.count
+            + attachmentSummary.nextSteps.count
+        guard claimCount > 0 else { return 1.0 }
+        return min(1.0, Double(attachmentSummary.evidence.count) / Double(claimCount))
+    }
+
+    public static func hallucinationRate(
+        attachmentSummary: AIAttachmentSummary,
+        sourceText: String,
+        chunkCount: Int
+    ) -> Double {
+        guard !attachmentSummary.evidence.isEmpty else { return 0.0 }
+        let hallucinated = attachmentSummary.evidence.filter { evidence in
+            evidence.chunkIndex < 0
+                || evidence.chunkIndex >= chunkCount
+                || !sourceText.localizedCaseInsensitiveContains(evidence.quote)
+        }.count
+        return Double(hallucinated) / Double(attachmentSummary.evidence.count)
+    }
+
     // MARK: - Internal helpers
 
     static func buildSourceText(from input: AIThreadInput) -> String {

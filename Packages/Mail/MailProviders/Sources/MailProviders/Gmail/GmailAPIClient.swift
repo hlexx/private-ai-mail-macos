@@ -59,6 +59,16 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
         return try await perform(endpoint)
     }
 
+    public func getAttachmentData(messageId: String, attachmentId: String) async throws -> Data {
+        let endpoint = GmailEndpoint.getAttachment(messageId: messageId, attachmentId: attachmentId)
+        let body: GmailDTO.MessagePartBody = try await perform(endpoint)
+        guard let encoded = body.data,
+              let data = Self.decodeBase64URL(encoded) else {
+            throw GmailAPIError.decodingError(AttachmentDataError.missingData)
+        }
+        return data
+    }
+
     public func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse {
         let endpoint = GmailEndpoint.listHistory(startHistoryId: startHistoryId, pageToken: pageToken)
         return try await perform(endpoint)
@@ -270,4 +280,19 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
             quotaCost: quotaCost, attempt: attempt + 1, totalWaited: totalWaited + delay
         )
     }
+
+    private static func decodeBase64URL(_ encoded: String) -> Data? {
+        var base64 = encoded
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = base64.count % 4
+        if remainder > 0 {
+            base64 += String(repeating: "=", count: 4 - remainder)
+        }
+        return Data(base64Encoded: base64)
+    }
+}
+
+private enum AttachmentDataError: Error {
+    case missingData
 }

@@ -14,6 +14,7 @@ enum Migrator {
         migrator.registerMigration("M008_BackfillInboxLabel", migrate: M008_BackfillInboxLabel.migrate)
         migrator.registerMigration("M009_BackfillInboxLabelV2", migrate: M009_BackfillInboxLabelV2.migrate)
         migrator.registerMigration("M010_SignalLabelReconcile", migrate: M010_SignalLabelReconcile.migrate)
+        migrator.registerMigration("M011_AttachmentAIArtifacts", migrate: M011_AttachmentAIArtifacts.migrate)
         try migrator.migrate(db)
     }
 }
@@ -326,5 +327,93 @@ enum M009_BackfillInboxLabelV2 {
 enum M010_SignalLabelReconcile {
     static func migrate(_ db: Database) throws {
         UserDefaults.standard.set(true, forKey: "pam.needsLabelReconcile")
+    }
+}
+
+enum M011_AttachmentAIArtifacts {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "attachment_blob") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("relative_path", .text).notNull()
+            t.column("byte_count", .integer).notNull()
+            t.column("sha256", .text).notNull()
+            t.column("stored_at", .integer).notNull()
+            t.primaryKey(["account_id", "message_id", "attachment_id"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+
+        try db.create(table: "attachment_extraction") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .text).notNull()
+            t.column("status", .text).notNull()
+            t.column("mime", .text).notNull()
+            t.column("text", .text)
+            t.column("unsupported_reason", .text)
+            t.column("generated_at", .integer).notNull()
+            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+
+        try db.create(table: "attachment_chunk") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("extraction_version", .text).notNull()
+            t.column("chunk_index", .integer).notNull()
+            t.column("source_offset", .integer).notNull()
+            t.column("text", .text).notNull()
+            t.column("token_count", .integer).notNull().defaults(to: 0)
+            t.primaryKey(["account_id", "message_id", "attachment_id", "extraction_version", "chunk_index"])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id", "extraction_version"],
+                references: "attachment_extraction",
+                columns: ["account_id", "message_id", "attachment_id", "extraction_version"],
+                onDelete: .cascade
+            )
+        }
+
+        try db.create(table: "attachment_ai_artifact") { t in
+            t.column("account_id", .text).notNull()
+            t.column("message_id", .text).notNull()
+            t.column("attachment_id", .text).notNull()
+            t.column("task_id", .text).notNull()
+            t.column("prompt_version", .text).notNull()
+            t.column("schema_version", .text).notNull()
+            t.column("model_id", .text).notNull()
+            t.column("extraction_version", .text).notNull()
+            t.column("input_fingerprint", .text).notNull()
+            t.column("content_json", .text).notNull()
+            t.column("generated_at", .integer).notNull()
+            t.primaryKey([
+                "account_id", "message_id", "attachment_id", "task_id",
+                "prompt_version", "schema_version", "model_id", "extraction_version",
+            ])
+            t.foreignKey(
+                ["account_id", "message_id", "attachment_id"],
+                references: "attachment",
+                columns: ["account_id", "message_id", "id"],
+                onDelete: .cascade
+            )
+        }
+
+        try db.create(
+            index: "idx_attachment_ai_artifact_lookup",
+            on: "attachment_ai_artifact",
+            columns: ["account_id", "message_id", "attachment_id", "task_id"]
+        )
     }
 }

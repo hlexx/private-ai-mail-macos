@@ -72,4 +72,20 @@ struct ThreadBriefPromptTests {
         #expect(prompt.contains("\"evidence\""))
         #expect(prompt.contains("\"summary\""))
     }
+
+    @Test("task prompt trims long message bodies")
+    func taskPromptTrimsLongBodies() {
+        let prompt = ThreadBriefPrompt.taskPrompt(
+            messages: [
+                PromptMessage(
+                    from: "X",
+                    sentAt: Date(timeIntervalSince1970: 0),
+                    bodyText: String(repeating: "x", count: ThreadBriefTask.metadata.maxInputCharacters + 4)
+                ),
+            ],
+            attachments: []
+        )
+
+        #expect(prompt.contains("[trimmed 4 characters"))
+    }
 }

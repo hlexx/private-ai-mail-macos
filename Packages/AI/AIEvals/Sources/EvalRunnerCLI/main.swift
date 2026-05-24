@@ -29,6 +29,16 @@ struct StubEvalService: AIService {
             confidence: 0.7
         )
     }
+
+    func draftReply(
+        _ input: AIThreadInput,
+        tone _: AIReplyTone,
+        locale _: Locale,
+        replyLanguage _: String?
+    ) async throws -> AIThreadReply {
+        let body = input.messages.first?.bodyText.prefix(80) ?? "Thanks, I will review this."
+        return AIThreadReply(body: "Draft response based on: \(body)")
+    }
 }
 
 let corpus = EvalCorpus.threads

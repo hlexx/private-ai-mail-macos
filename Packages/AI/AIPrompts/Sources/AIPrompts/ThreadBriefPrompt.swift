@@ -30,7 +30,32 @@ public struct PromptAttachment: Sendable {
 
 // MARK: - Thread Brief Prompt
 
-public enum ThreadBriefPrompt {
+public struct ThreadBriefTaskInput: Sendable {
+    public let messages: [PromptMessage]
+    public let attachments: [PromptAttachment]
+
+    public init(messages: [PromptMessage], attachments: [PromptAttachment]) {
+        self.messages = messages
+        self.attachments = attachments
+    }
+}
+
+public enum ThreadBriefTask: PromptTaskDefinition {
+    public typealias Input = ThreadBriefTaskInput
+    public typealias Output = ParsedThreadBrief
+
+    public static let metadata = PromptTaskMetadata(
+        id: .threadBrief,
+        promptVersion: "thread-brief.v2",
+        schemaVersion: "thread-brief.schema.v1",
+        modelProfile: "local-gemma-structured-json",
+        maxInputCharacters: 6_000,
+        maxOutputTokens: 512,
+        examples: [
+            #"{"summary":"Team sync on Q3 goals","request":"Review the deck by Friday","deadline":"Friday","risk":null,"nextStep":"Reply with feedback","evidence":["Review the deck by Friday","Q3 goals"],"confidence":0.9}"#,
+        ],
+        privacyCategory: "local-email-thread"
+    )
 
     public static let systemPrompt: String = """
         You are an email analyst. Output ONLY a JSON object — no text before or after. \
@@ -41,27 +66,30 @@ public enum ThreadBriefPrompt {
         "risk":null,"nextStep":"Reply with feedback","evidence":["Review the deck by Friday","Q3 goals"],"confidence":0.9}
         """
 
-    public static func taskPrompt(
-        messages: [PromptMessage],
-        attachments: [PromptAttachment]
-    ) -> String {
+    public static let jsonSchemaString = ThreadBriefSchema.jsonSchemaString
+
+    public static func renderUserPrompt(_ input: ThreadBriefTaskInput) -> String {
         var parts: [String] = []
 
         parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        for msg in messages {
+        for msg in input.messages {
             let ts = formatter.string(from: msg.sentAt)
+            let body = PromptTextBudget.trimmedMessageBody(
+                msg.bodyText,
+                maxCharacters: metadata.maxInputCharacters
+            )
             parts.append("""
                 [From: \(msg.from) | \(ts)]
-                \(msg.bodyText)
+                \(body)
                 """)
         }
 
-        if !attachments.isEmpty {
+        if !input.attachments.isEmpty {
             parts.append("")
             parts.append("## Attachments")
-            for att in attachments {
+            for att in input.attachments {
                 let pages = att.pageCount.map { " (\($0) pages)" } ?? ""
                 parts.append("- \(att.filename) [\(att.mime)]\(pages)")
             }
@@ -69,10 +97,27 @@ public enum ThreadBriefPrompt {
 
         parts.append("")
         parts.append("## Output Schema")
-        parts.append(ThreadBriefSchema.jsonSchemaString)
+        parts.append(jsonSchemaString)
         parts.append("")
         parts.append("Reply with the JSON object only.")
 
         return parts.joined(separator: "\n")
+    }
+
+    public static func parse(_ rawOutput: String) throws -> ParsedThreadBrief {
+        try ThreadBriefParser.parse(rawOutput)
+    }
+}
+
+public enum ThreadBriefPrompt {
+    public static let systemPrompt = ThreadBriefTask.systemPrompt
+
+    public static func taskPrompt(
+        messages: [PromptMessage],
+        attachments: [PromptAttachment]
+    ) -> String {
+        ThreadBriefTask.renderUserPrompt(
+            ThreadBriefTaskInput(messages: messages, attachments: attachments)
+        )
     }
 }

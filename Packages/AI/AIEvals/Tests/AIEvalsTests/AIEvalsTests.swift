@@ -141,6 +141,27 @@ struct MetricsTests {
         #expect(!Metrics.schemaValid(brief: brief))
     }
 
+    @Test func attachmentSummaryMetrics_coverSchemaEvidenceAndHallucination() {
+        let summary = AIAttachmentSummary(
+            summary: "Invoice INV-2026-04 is due April 15.",
+            keyFields: [AIKeyField(name: "Amount", value: "$4,250.00")],
+            risks: [],
+            nextSteps: ["Pay by April 15"],
+            evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Invoice INV-2026-04 for $4,250.00 is due April 15"),
+            ],
+            confidence: 0.8
+        )
+
+        #expect(Metrics.schemaValid(attachmentSummary: summary))
+        #expect(Metrics.evidenceCoverage(attachmentSummary: summary) > 0)
+        #expect(Metrics.hallucinationRate(
+            attachmentSummary: summary,
+            sourceText: "Invoice INV-2026-04 for $4,250.00 is due April 15, 2026.",
+            chunkCount: 1
+        ) == 0)
+    }
+
     // MARK: - Claim Extraction
 
     @Test func extractClaims_findsDollarAmounts() {
@@ -231,6 +252,7 @@ struct EvalRunnerTests {
 
         #expect(report.totalThreads == 2)
         #expect(report.successCount == 2)
+        #expect(report.task.taskID == "threadBrief")
         #expect(report.schemaValidityRate == 1.0)
         #expect(report.p50Latency >= 0)
         #expect(report.p95Latency >= 0)
@@ -279,10 +301,28 @@ private struct MockEvalService: AIService {
             confidence: 0.8
         )
     }
+
+    func draftReply(
+        _ input: AIThreadInput,
+        tone _: AIReplyTone,
+        locale _: Locale,
+        replyLanguage _: String?
+    ) async throws -> AIThreadReply {
+        AIThreadReply(body: "Reply for \(input.messages.first?.from ?? "unknown")")
+    }
 }
 
 private struct FailingEvalService: AIService {
     func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+        throw AIError.inferenceFailed(NSError(domain: "test", code: 1))
+    }
+
+    func draftReply(
+        _ input: AIThreadInput,
+        tone _: AIReplyTone,
+        locale _: Locale,
+        replyLanguage _: String?
+    ) async throws -> AIThreadReply {
         throw AIError.inferenceFailed(NSError(domain: "test", code: 1))
     }
 }

@@ -72,12 +72,14 @@ public struct ThreadBriefService: AIService, Sendable {
             throw AIError.modelLoadFailed(error)
         }
 
+        let resolvedReplyLanguage = replyLanguage ?? locale.language.languageCode?.identifier ?? "en"
+
         let parsed: ParsedThreadReply
         do {
             parsed = try await backend.draftReply(
                 messages: messages,
                 tone: tone.rawValue,
-                replyLanguage: replyLanguage ?? locale.language.languageCode?.identifier ?? "en"
+                replyLanguage: resolvedReplyLanguage
             )
         } catch let error as MLXBackendError {
             throw error.toAIError()
@@ -90,7 +92,51 @@ public struct ThreadBriefService: AIService, Sendable {
         return AIThreadReply(
             body: parsed.body,
             evidenceMessageIDs: parsed.evidenceMessageIDs,
-            detectedReplyLanguage: parsed.detectedReplyLanguage,
+            detectedReplyLanguage: parsed.detectedReplyLanguage == "und"
+                ? resolvedReplyLanguage
+                : parsed.detectedReplyLanguage,
+            confidence: parsed.confidence
+        )
+    }
+
+    public func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary {
+        do {
+            try await backend.loadModel()
+        } catch let error as MLXBackendError {
+            throw error.toAIError()
+        } catch is CancellationError {
+            throw AIError.cancelled
+        } catch {
+            throw AIError.modelLoadFailed(error)
+        }
+
+        let promptChunks = input.chunks.map {
+            PromptAttachmentChunk(index: $0.index, sourceOffset: $0.sourceOffset, text: $0.text)
+        }
+
+        let parsed: ParsedAttachmentSummary
+        do {
+            parsed = try await backend.attachmentSummary(
+                filename: input.filename,
+                mime: input.mime,
+                chunks: promptChunks
+            )
+        } catch let error as MLXBackendError {
+            throw error.toAIError()
+        } catch is CancellationError {
+            throw AIError.cancelled
+        } catch {
+            throw AIError.inferenceFailed(error)
+        }
+
+        return AIAttachmentSummary(
+            summary: parsed.summary,
+            keyFields: parsed.keyFields.map { AIKeyField(name: $0.name, value: $0.value) },
+            risks: parsed.risks,
+            nextSteps: parsed.nextSteps,
+            evidence: parsed.evidence.map {
+                AIAttachmentEvidence(chunkIndex: $0.chunkIndex, quote: $0.quote)
+            },
             confidence: parsed.confidence
         )
     }

@@ -73,8 +73,8 @@ cd Packages/Mail/MailDomain && swift test
 
 Open `PrivateAIMail.xcworkspace`, select the `MacApp` scheme, run.
 
-The app opens a single window with a 3-pane `NavigationSplitView` placeholder
-(Accounts/Folders | Threads | Reading). No data flows yet.
+The app opens the Re:Box mail workspace with Gmail account connection, folder
+filters, thread reading, local AI briefs, reply drafting, and Gmail send.
 
 ## Repo layout
 
@@ -106,8 +106,8 @@ in §4 of the design doc.
 - **One `xcstrings` catalog per package** under `Sources/<Name>/Resources/`.
   MVP ships `en` only, but every package is i18n-ready (see §14.1 of the
   design doc).
-- **Single-writer DB pattern.** Persistence writes go through `@DatabaseActor`
-  (not yet implemented; placeholder lives in `Persistence` package).
+- **Single-writer DB pattern.** Persistence writes that cross concurrency
+  boundaries go through `@DatabaseActor` in the `Persistence` package.
 - **Module names avoid collision with Apple frameworks.** The Core package
   is `AppFoundation`, not `Foundation`.
 

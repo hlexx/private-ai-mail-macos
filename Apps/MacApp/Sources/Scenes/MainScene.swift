@@ -131,6 +131,7 @@ struct MainScene: View {
                         onScrollProxy: { proxy in
                             threadScrollProxy = proxy
                         },
+                        attachmentSummaryStore: composition.attachmentSummaryStore,
                         composer: {
                             if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
                                 InlineComposer(
@@ -324,36 +325,7 @@ extension MainScene {
                 if composition.activeAccountID == nil, let first = records.first {
                     composition.activeAccountID = first.id
                 }
-                // One-shot fix-up for the M008/M009 over-eager INBOX backfill.
-                // M010 set this flag during migration; we run reconcile once
-                // per account here (NOT in a tight loop — the for-await body
-                // re-fires on EVERY account change, so we check the flag and
-                // clear it the first time we see a non-empty account list).
-                if !records.isEmpty,
-                   UserDefaults.standard.bool(forKey: "pam.needsLabelReconcile") {
-                    UserDefaults.standard.set(false, forKey: "pam.needsLabelReconcile")
-                    let toast = ToastState(
-                        message: String(
-                            localized: "labels.reconciling",
-                            defaultValue: "Refreshing labels from Gmail…"
-                        ),
-                        undoAction: nil
-                    )
-                    composition.toastMessage = toast
-                    let reconciler = composition.labelReconciler
-                    let accountIds = records.map(\.id)
-                    let toastID = toast.id
-                    Task.detached {
-                        for accountId in accountIds {
-                            try? await reconciler.reconcileInbox(accountId: accountId)
-                        }
-                        await MainActor.run {
-                            if composition.toastMessage?.id == toastID {
-                                composition.toastMessage = nil
-                            }
-                        }
-                    }
-                }
+                composition.reconcileLabelsIfNeeded(accountIds: records.map(\.id))
             }
         } catch {
             // Observation ended

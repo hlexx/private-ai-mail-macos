@@ -1,11 +1,14 @@
 import AIKit
 import AIRuntime
+import AttachmentKit
+import AttachmentRAG
 import AuthKit
 import BriefFeature
 import ComposeFeature
 import InboxFeature
 import MailProviders
 import MailSync
+import OSLog
 import Persistence
 import SettingsFeature
 import SwiftUI
@@ -40,6 +43,8 @@ final class CompositionRoot {
     let mailMutator: MailMutator
     let labelReconciler: LabelReconciler
     let translationStore: TranslationStore
+    let attachmentSummaryOrchestrator: AttachmentSummaryOrchestrator
+    let attachmentSummaryStore: AttachmentSummaryStore
 
     var activeAccountID: String?
     var toastMessage: ToastState? {
@@ -49,14 +54,14 @@ final class CompositionRoot {
     var showCompose = false
     let composeViewModel: ComposeViewModel
 
+    private let labelReconcileCoordinator: LabelReconcileCoordinator
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
-    private let apiFactory: @Sendable (String) -> any GmailAPI
+    private let apiFactory: GmailAPIFactory
 
-    init() {
+    init() throws {
         let path = Self.defaultDBPath()
-        // swiftlint:disable:next force_try
-        self.db = try! AppDatabase.openSync(at: path)
+        self.db = try AppDatabase.openSync(at: path)
         self.modelManager = ModelManager()
         self.aiService = ThreadBriefService.live(modelManager: modelManager)
         self.inboxStore = InboxStore(db: db)
@@ -72,11 +77,9 @@ final class CompositionRoot {
         self.oauthClient = oauthClient
 
         self.apiFactory = { [tokenStore, oauthClient] accountId in
-            let credential = (try? tokenStore.load(for: accountId)) ?? TokenCredential(
-                accessToken: "",
-                refreshToken: "",
-                expiresAt: .distantPast
-            )
+            guard let credential = try tokenStore.load(for: accountId) else {
+                throw AuthError.missingCredential(accountID: accountId)
+            }
             return GmailAPIClient(
                 accountId: accountId,
                 credential: credential,
@@ -88,7 +91,15 @@ final class CompositionRoot {
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
         self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
         self.labelReconciler = LabelReconciler(db: db, apiFactory: apiFactory)
+        self.labelReconcileCoordinator = LabelReconcileCoordinator(reconciler: labelReconciler)
         self.translationStore = TranslationStore(db: db)
+        self.attachmentSummaryOrchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: AttachmentByteStore(baseURL: AttachmentByteStore.defaultBaseURL()),
+            aiService: aiService,
+            byteProvider: GmailAttachmentByteProvider(apiFactory: apiFactory)
+        )
+        self.attachmentSummaryStore = AttachmentSummaryStore(orchestrator: attachmentSummaryOrchestrator)
 
         let capturedFactory = apiFactory
         let capturedDB = db
@@ -96,7 +107,7 @@ final class CompositionRoot {
         let capturedTokenStore = tokenStore
         self.composeViewModel = ComposeViewModel(
             composeServiceFactory: { accountId in
-                LiveComposeService(api: capturedFactory(accountId), db: capturedDB)
+                LiveComposeService(api: try capturedFactory(accountId), db: capturedDB)
             },
             reauthorizeHandler: { @MainActor accountId in
                 let newCredential = try await capturedOAuth.reauthorize(
@@ -118,7 +129,7 @@ final class CompositionRoot {
         }
     }
 
-    private static func defaultDBPath() -> String {
+    nonisolated static func defaultDBPath() -> String {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -134,6 +145,8 @@ final class CompositionRoot {
     private var debounceTimers: [String: Task<Void, Never>] = [:]
 
     func resumeExistingAccounts() {
+        guard !Self.isRunningTests else { return }
+
         #if DEBUG
         // Populate the DB with seven synthetic threads from the Re:Box
         // handoff so the UI has something realistic to render before a real
@@ -144,8 +157,12 @@ final class CompositionRoot {
         Task {
             let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
             for account in accounts ?? [] {
-                await syncSupervisor.startIncremental(accountId: account.id)
-                subscribeSyncEvents(accountId: account.id)
+                do {
+                    try await syncSupervisor.startIncremental(accountId: account.id)
+                    subscribeSyncEvents(accountId: account.id)
+                } catch {
+                    showErrorToast("Sync start failed: \(describe(error))")
+                }
             }
 
             // Backfill briefs for threads that don't have one yet
@@ -181,21 +198,45 @@ final class CompositionRoot {
 
     func refreshAccount(_ accountId: String) {
         Task {
-            await syncSupervisor.refresh(accountId: accountId)
+            do {
+                try await syncSupervisor.refresh(accountId: accountId)
+            } catch {
+                showErrorToast("Refresh failed: \(describe(error))")
+            }
         }
     }
 
-    func makeComposeService(accountId: String) -> any ComposeService {
-        LiveComposeService(api: apiFactory(accountId), db: db)
+    func makeComposeService(accountId: String) throws -> any ComposeService {
+        LiveComposeService(api: try apiFactory(accountId), db: db)
     }
 
     func refreshAllAccounts() {
         Task {
             let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
             for account in accounts ?? [] {
-                await syncSupervisor.refresh(accountId: account.id)
+                do {
+                    try await syncSupervisor.refresh(accountId: account.id)
+                } catch {
+                    showErrorToast("Refresh failed: \(describe(error))")
+                }
             }
         }
+    }
+
+    func reconcileLabelsIfNeeded(accountIds: [String]) {
+        guard !Self.isRunningTests else { return }
+
+        labelReconcileCoordinator.runIfNeeded(
+            accountIds: accountIds,
+            showToast: { [weak self] toast in
+                self?.toastMessage = toast
+            },
+            clearToastIfCurrent: { [weak self] toastID in
+                if self?.toastMessage?.id == toastID {
+                    self?.toastMessage = nil
+                }
+            }
+        )
     }
 
     func cycleActiveAccount(accounts: [AccountRecord]) {
@@ -205,6 +246,96 @@ final class CompositionRoot {
             activeAccountID = accounts[(idx + 1) % accounts.count].id
         } else {
             activeAccountID = accounts.first?.id
+        }
+    }
+
+    private func showErrorToast(_ message: String) {
+        toastMessage = ToastState(message: message, undoAction: nil)
+    }
+
+    private func describe(_ error: any Error) -> String {
+        if let localized = (error as? LocalizedError)?.errorDescription {
+            return localized
+        }
+        return String(describing: error)
+    }
+
+    nonisolated private static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+}
+
+private struct GmailAttachmentByteProvider: AttachmentByteProvider {
+    let apiFactory: GmailAPIFactory
+
+    func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
+        let api = try apiFactory(accountId)
+        return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
+    }
+}
+
+@MainActor
+private final class LabelReconcileCoordinator {
+    private static let flagKey = "pam.needsLabelReconcile"
+
+    private let reconciler: LabelReconciler
+    private let defaults: UserDefaults
+    private let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "LabelReconcile")
+    private var isRunning = false
+
+    init(reconciler: LabelReconciler, defaults: UserDefaults = .standard) {
+        self.reconciler = reconciler
+        self.defaults = defaults
+    }
+
+    func runIfNeeded(
+        accountIds: [String],
+        showToast: @escaping (ToastState) -> Void,
+        clearToastIfCurrent: @escaping (UUID) -> Void
+    ) {
+        guard !accountIds.isEmpty,
+              defaults.bool(forKey: Self.flagKey),
+              !isRunning else { return }
+
+        isRunning = true
+        logger.info("Starting Gmail label reconcile for \(accountIds.count, privacy: .public) accounts")
+
+        let toast = ToastState(
+            message: String(
+                localized: "labels.reconciling",
+                defaultValue: "Refreshing labels from Gmail…"
+            ),
+            undoAction: nil
+        )
+        showToast(toast)
+
+        Task { [weak self] in
+            guard let self else { return }
+            var failures: [(String, any Error)] = []
+
+            for accountId in accountIds {
+                do {
+                    try await reconciler.reconcileInbox(accountId: accountId)
+                    logger.info("Gmail label reconcile succeeded for account \(accountId, privacy: .private)")
+                } catch {
+                    failures.append((accountId, error))
+                    logger.error("Gmail label reconcile failed for account \(accountId, privacy: .private): \(String(describing: error), privacy: .public)")
+                }
+            }
+
+            if failures.isEmpty {
+                defaults.set(false, forKey: Self.flagKey)
+                clearToastIfCurrent(toast.id)
+                logger.info("Gmail label reconcile completed")
+            } else {
+                let message = String(
+                    localized: "labels.reconcileFailed",
+                    defaultValue: "Label refresh failed. The app will retry next launch."
+                )
+                showToast(ToastState(message: message, undoAction: nil))
+            }
+
+            isRunning = false
         }
     }
 }

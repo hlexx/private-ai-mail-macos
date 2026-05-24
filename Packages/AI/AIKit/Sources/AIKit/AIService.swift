@@ -8,6 +8,19 @@ public protocol AIService: Sendable {
         locale: Locale,
         replyLanguage: String?
     ) async throws -> AIThreadReply
+    func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary
+}
+
+public extension AIService {
+    func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary {
+        throw AIError.inferenceFailed(
+            NSError(
+                domain: "AIService",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Attachment summaries are not implemented by this AI service"]
+            )
+        )
+    }
 }
 
 public enum AIReplyTone: String, Sendable, CaseIterable {

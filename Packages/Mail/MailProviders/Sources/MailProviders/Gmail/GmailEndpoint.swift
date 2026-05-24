@@ -6,6 +6,7 @@ enum GmailEndpoint {
     case listMessages(query: String?, pageToken: String?, maxResults: Int)
     case getMessage(id: String, format: GmailMessageFormat)
     case getThread(id: String, format: GmailMessageFormat)
+    case getAttachment(messageId: String, attachmentId: String)
     case listHistory(startHistoryId: String, pageToken: String?)
     case sendMessage(raw: String, threadId: String?)
     case listLabels
@@ -25,6 +26,8 @@ enum GmailEndpoint {
             return "/messages/\(id)"
         case .getThread(let id, _):
             return "/threads/\(id)"
+        case .getAttachment(let messageId, let attachmentId):
+            return "/messages/\(messageId)/attachments/\(attachmentId)"
         case .listHistory:
             return "/history"
         case .sendMessage:
@@ -42,6 +45,7 @@ enum GmailEndpoint {
         case .listMessages: return 5
         case .getMessage: return 5
         case .getThread: return 10
+        case .getAttachment: return 5
         case .listHistory: return 2
         case .sendMessage: return 100
         case .listLabels: return 1
@@ -87,6 +91,8 @@ enum GmailEndpoint {
             return [URLQueryItem(name: "format", value: format.rawValue)]
         case .getThread(_, let format):
             return [URLQueryItem(name: "format", value: format.rawValue)]
+        case .getAttachment:
+            return []
         case .listHistory(let startHistoryId, let pageToken):
             var items = [URLQueryItem(name: "startHistoryId", value: startHistoryId)]
             if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }

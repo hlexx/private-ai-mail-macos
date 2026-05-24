@@ -1,6 +1,8 @@
 import Testing
 import SwiftUI
 import AppKit
+import AIKit
+import AttachmentRAG
 @testable import ThreadFeature
 import DesignSystem
 import Persistence
@@ -116,6 +118,156 @@ struct ThreadFeatureTests {
     @Test func attachmentFormattedSizeNil() {
         let info = AttachmentInfo(id: "a3", filename: "unknown", sizeBytes: nil, mime: nil)
         #expect(info.formattedSize == "")
+    }
+
+    @MainActor @Test func attachmentSummaryStoreShowsSummary() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        let provider = TestAttachmentByteProvider(data: Data("Amount due: EUR 1840".utf8))
+        let ai = TestAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+        let store = AttachmentSummaryStore(orchestrator: orchestrator)
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 10,
+            mime: "text/plain"
+        )
+
+        #expect(store.state(for: attachment) == .idle)
+        store.summarize(attachment)
+        #expect(store.state(for: attachment).isWorking)
+
+        let finalState = try await waitForAttachmentState(store: store, attachment: attachment) { state in
+            if case .summary = state { return true }
+            return false
+        }
+
+        guard case .summary(let summary) = finalState else {
+            Issue.record("Expected summary state")
+            return
+        }
+        #expect(summary.summary == "Attachment summary")
+        #expect(summary.cached == false)
+        #expect(await ai.callCount == 1)
+    }
+
+    @MainActor @Test func attachmentSummaryStoreShowsUnsupportedState() async throws {
+        let db = try makeAttachmentSummaryDatabase(mime: "application/zip", filename: "archive.zip")
+        let provider = TestAttachmentByteProvider(data: Data([0x00, 0x01]))
+        let ai = TestAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+        let store = AttachmentSummaryStore(orchestrator: orchestrator)
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "archive.zip",
+            sizeBytes: 2,
+            mime: "application/zip"
+        )
+
+        store.summarize(attachment)
+        let finalState = try await waitForAttachmentState(store: store, attachment: attachment) { state in
+            if case .unsupported = state { return true }
+            return false
+        }
+
+        guard case .unsupported(let reason) = finalState else {
+            Issue.record("Expected unsupported state")
+            return
+        }
+        #expect(reason.contains("Unsupported"))
+        #expect(await ai.callCount == 0)
+    }
+}
+
+private func makeAttachmentSummaryDatabase(
+    mime: String = "text/plain",
+    filename: String = "invoice.txt"
+) throws -> AppDatabase {
+    let db = try AppDatabase.openInMemorySync()
+    try db.dbQueue.write { database in
+        try AccountRecord(id: "a1", email: "a@example.com", createdAt: 1).insert(database)
+        try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 1).insert(database)
+        try MessageRecord(id: "m1", threadId: "t1", accountId: "a1", sentAt: 1).insert(database)
+        try AttachmentRecord(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: filename,
+            mime: mime,
+            sizeBytes: 10
+        ).insert(database)
+    }
+    return db
+}
+
+@MainActor
+private func waitForAttachmentState(
+    store: AttachmentSummaryStore,
+    attachment: AttachmentInfo,
+    matches: (AttachmentSummaryViewState) -> Bool
+) async throws -> AttachmentSummaryViewState {
+    for _ in 0..<50 {
+        let state = store.state(for: attachment)
+        if matches(state) { return state }
+        try await Task.sleep(for: .milliseconds(20))
+    }
+    return store.state(for: attachment)
+}
+
+private struct TestAttachmentByteProvider: AttachmentByteProvider {
+    let data: Data
+
+    func fetchAttachmentData(accountId _: String, messageId _: String, attachmentId _: String) async throws -> Data {
+        data
+    }
+}
+
+private actor TestAttachmentAIService: AIService {
+    private(set) var callCount = 0
+
+    func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+        AIThreadBrief(summary: "unused", confidence: 0.1)
+    }
+
+    func draftReply(
+        _ input: AIThreadInput,
+        tone _: AIReplyTone,
+        locale _: Locale,
+        replyLanguage _: String?
+    ) async throws -> AIThreadReply {
+        AIThreadReply(body: "unused")
+    }
+
+    func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary {
+        callCount += 1
+        return AIAttachmentSummary(
+            summary: "Attachment summary",
+            keyFields: [AIKeyField(name: "amount", value: "EUR 1840")],
+            risks: [],
+            nextSteps: ["Pay invoice"],
+            evidence: [AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840")],
+            confidence: 0.9
+        )
     }
 }
 

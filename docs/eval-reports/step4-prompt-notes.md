@@ -39,6 +39,18 @@ maintained (faithfulness 1.0, hallucination 0%).
 
 ## Current prompt text
 
+## Registry contract update
+
+The eval runner now records PromptTask metadata for each measured model task:
+task id, prompt version, and schema version. The current baseline is tied to
+`threadBrief` with the versions provided by `PromptTaskRegistry`.
+
+Attachment summary evals use a synthetic local corpus with no private data.
+The first release gate tracks schema validity, evidence coverage, and
+hallucination rate against extracted attachment text. Every evidence item must
+point back to a chunk quote instead of introducing file facts that were not in
+the extracted text.
+
 ### System prompt
 ```
 You are an email analyst. Output ONLY a JSON object -- no text before or after.

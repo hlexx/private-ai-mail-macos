@@ -23,45 +23,94 @@ public struct ParsedThreadReply: Sendable, Equatable, Codable {
 
 // MARK: - Draft Reply Prompt
 
-public enum DraftReplyPrompt {
+public struct DraftReplyTaskInput: Sendable {
+    public let messages: [PromptMessage]
+    public let tone: String
+    public let replyLanguage: String
+
+    public init(messages: [PromptMessage], tone: String, replyLanguage: String) {
+        self.messages = messages
+        self.tone = tone
+        self.replyLanguage = replyLanguage
+    }
+}
+
+public enum DraftReplyTask: PromptTaskDefinition {
+    public typealias Input = DraftReplyTaskInput
+    public typealias Output = ParsedThreadReply
+
+    public static let metadata = PromptTaskMetadata(
+        id: .draftReply,
+        promptVersion: "draft-reply.v2",
+        schemaVersion: "draft-reply.schema.v2",
+        modelProfile: "local-gemma-structured-json",
+        maxInputCharacters: 5_000,
+        maxOutputTokens: 512,
+        examples: [
+            #"{"body":"Thanks for the update. I will review the contract today and get back to you by Friday.","evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.86}"#,
+        ],
+        privacyCategory: "local-email-thread"
+    )
 
     public static let systemPrompt: String = """
         You are an email reply assistant. Output ONLY a JSON object — no text before or after. \
         Fields: body (string, the reply text), evidenceMessageIDs (array of message indices like "msg_1"), \
         detectedReplyLanguage (BCP-47 code like "en" or "ru"), confidence (number 0-1). \
         Rules: write a natural reply to the thread; match the tone instruction; respond in the specified language; \
-        never invent facts not in the thread; keep the reply concise and actionable.
+        never invent facts not in the thread; keep the reply concise and actionable. \
+        Example output: {"body":"Thanks for the update. I will review the contract today and get back to you by Friday.", \
+        "evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.86}
         """
+
+    public static let jsonSchemaString = DraftReplySchema.jsonSchemaString
+
+    public static func renderUserPrompt(_ input: DraftReplyTaskInput) -> String {
+        var parts: [String] = []
+
+        parts.append("## Thread")
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        for (idx, msg) in input.messages.enumerated() {
+            let ts = formatter.string(from: msg.sentAt)
+            let body = PromptTextBudget.trimmedMessageBody(
+                msg.bodyText,
+                maxCharacters: metadata.maxInputCharacters
+            )
+            parts.append("""
+                [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
+                \(body)
+                """)
+        }
+
+        parts.append("")
+        parts.append("## Instructions")
+        parts.append("- Tone: \(input.tone)")
+        parts.append("- Respond in: \(input.replyLanguage)")
+        parts.append("")
+        parts.append("## Output Schema")
+        parts.append(jsonSchemaString)
+        parts.append("")
+        parts.append("Reply with the JSON object only.")
+
+        return parts.joined(separator: "\n")
+    }
+
+    public static func parse(_ rawOutput: String) throws -> ParsedThreadReply {
+        try DraftReplyParser.parse(rawOutput)
+    }
+}
+
+public enum DraftReplyPrompt {
+    public static let systemPrompt = DraftReplyTask.systemPrompt
 
     public static func taskPrompt(
         messages: [PromptMessage],
         tone: String,
         replyLanguage: String
     ) -> String {
-        var parts: [String] = []
-
-        parts.append("## Thread")
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        for (idx, msg) in messages.enumerated() {
-            let ts = formatter.string(from: msg.sentAt)
-            parts.append("""
-                [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
-                \(msg.bodyText)
-                """)
-        }
-
-        parts.append("")
-        parts.append("## Instructions")
-        parts.append("- Tone: \(tone)")
-        parts.append("- Respond in: \(replyLanguage)")
-        parts.append("")
-        parts.append("## Output Schema")
-        parts.append(DraftReplySchema.jsonSchemaString)
-        parts.append("")
-        parts.append("Reply with the JSON object only.")
-
-        return parts.joined(separator: "\n")
+        DraftReplyTask.renderUserPrompt(
+            DraftReplyTaskInput(messages: messages, tone: tone, replyLanguage: replyLanguage)
+        )
     }
 }
 
@@ -77,7 +126,7 @@ public enum DraftReplySchema {
             "detectedReplyLanguage": { "type": "string" },
             "confidence":            { "type": "number", "minimum": 0, "maximum": 1 }
           },
-          "required": ["body", "evidenceMessageIDs", "detectedReplyLanguage", "confidence"],
+          "required": ["body"],
           "additionalProperties": false
         }
         """
@@ -108,15 +157,16 @@ public enum DraftReplyParser {
             throw ParseError.schemaViolation("body must not be empty")
         }
 
-        guard raw.confidence >= 0, raw.confidence <= 1 else {
-            throw ParseError.schemaViolation("confidence must be between 0 and 1, got \(raw.confidence)")
+        let confidence = raw.confidence ?? 0.8
+        guard confidence >= 0, confidence <= 1 else {
+            throw ParseError.schemaViolation("confidence must be between 0 and 1, got \(confidence)")
         }
 
         return ParsedThreadReply(
             body: raw.body,
-            evidenceMessageIDs: raw.evidenceMessageIDs,
-            detectedReplyLanguage: raw.detectedReplyLanguage,
-            confidence: raw.confidence
+            evidenceMessageIDs: raw.evidenceMessageIDs ?? [],
+            detectedReplyLanguage: raw.detectedReplyLanguage ?? "und",
+            confidence: confidence
         )
     }
 
@@ -161,7 +211,7 @@ public enum DraftReplyParser {
 
 private struct RawReply: Decodable {
     let body: String
-    let evidenceMessageIDs: [String]
-    let detectedReplyLanguage: String
-    let confidence: Double
+    let evidenceMessageIDs: [String]?
+    let detectedReplyLanguage: String?
+    let confidence: Double?
 }

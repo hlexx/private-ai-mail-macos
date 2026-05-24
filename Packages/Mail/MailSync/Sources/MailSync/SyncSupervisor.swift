@@ -6,14 +6,14 @@ import Persistence
 public actor SyncSupervisor {
     private var engines: [String: MailSyncEngine] = [:]
     private let db: AppDatabase
-    private let apiFactory: @Sendable (String) -> any GmailAPI
+    private let apiFactory: GmailAPIFactory
 
-    public init(db: AppDatabase, apiFactory: @escaping @Sendable (String) -> any GmailAPI) {
+    public init(db: AppDatabase, apiFactory: @escaping GmailAPIFactory) {
         self.db = db
         self.apiFactory = apiFactory
     }
 
-    public func start(accountId: String) async {
+    public func start(accountId: String) async throws {
         if let existing = engines[accountId] {
             let state = await existing.state
             guard state == .degraded else { return }
@@ -21,15 +21,15 @@ public actor SyncSupervisor {
             await existing.stop()
             engines.removeValue(forKey: accountId)
         }
-        let api = apiFactory(accountId)
+        let api = try apiFactory(accountId)
         let engine = MailSyncEngine(accountId: accountId, api: api, db: db)
         engines[accountId] = engine
         await engine.bootstrap()
     }
 
-    public func startIncremental(accountId: String) async {
+    public func startIncremental(accountId: String) async throws {
         if engines[accountId] != nil { return }
-        let api = apiFactory(accountId)
+        let api = try apiFactory(accountId)
         let engine = MailSyncEngine(accountId: accountId, api: api, db: db)
         engines[accountId] = engine
 
@@ -47,7 +47,7 @@ public actor SyncSupervisor {
         }
     }
 
-    public func refresh(accountId: String) async {
+    public func refresh(accountId: String) async throws {
         guard let engine = engines[accountId] else { return }
         await engine.refresh()
     }

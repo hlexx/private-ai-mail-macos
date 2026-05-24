@@ -229,4 +229,28 @@ struct MailMutatorTests {
         #expect(!labels.contains("STARRED"))
         #expect(labels.contains("INBOX"))
     }
+
+    @Test func factoryFailureDoesNotMutateLocalLabels() async throws {
+        struct FactoryFailure: Error, Sendable {}
+
+        let db = try await makeDB()
+        try seedThreadWithLabels(db, activeLabels: ["INBOX", "STARRED"])
+
+        let mutator = MailMutator(db: db, apiFactory: { _ in
+            throw FactoryFailure()
+        })
+
+        do {
+            try await mutator.archive("t1", accountId: "acc1")
+            Issue.record("Expected factory error")
+        } catch is FactoryFailure {
+            // Expected
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        let labels = try threadLabels(db)
+        #expect(labels.contains("INBOX"))
+        #expect(labels.contains("STARRED"))
+    }
 }

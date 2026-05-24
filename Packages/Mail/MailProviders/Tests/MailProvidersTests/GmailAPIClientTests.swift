@@ -207,6 +207,27 @@ struct GmailAPIClientTests {
         #expect(MockURLProtocol.requestLog.count == 1, "No implicit follow-ups or telemetry requests")
     }
 
+    // MARK: - attachment data
+
+    @Test func getAttachmentDataDecodesBase64URLPayload() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/msg001/attachments/att001",
+            json: """
+            {"size": 11, "data": "SGVsbG8td29ybGQ"}
+            """
+        )
+
+        let client = makeClient()
+        let data = try await client.getAttachmentData(messageId: "msg001", attachmentId: "att001")
+
+        #expect(String(data: data, encoding: .utf8) == "Hello-world")
+        let requests = MockURLProtocol.requestLog.filter {
+            $0.url?.path.contains("/messages/msg001/attachments/att001") == true
+        }
+        #expect(requests.count == 1)
+    }
+
     // MARK: - sendMessage 429 → backoff → retry → 200
 
     @Test func sendMessageRateLimitedRetries() async throws {

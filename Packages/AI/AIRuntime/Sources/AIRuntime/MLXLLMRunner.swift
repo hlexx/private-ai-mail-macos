@@ -73,6 +73,8 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
 
         // Prepend the seeded "{" to capture the full JSON object
         var fullOutput = "{"
+        var completionTracker = JSONCompletionTracker()
+        _ = completionTracker.consume("{")
         onToken("{")
 
         for await generation in stream {
@@ -82,6 +84,9 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             case .chunk(let text):
                 fullOutput += text
                 onToken(text)
+                if completionTracker.consume(text) {
+                    return fullOutput
+                }
             case .info:
                 break
             case .toolCall:
@@ -159,4 +164,39 @@ enum MLXLLMRunnerError: Error, Sendable {
     case modelNotLoaded
     case weightLoadFailed(String)
     case tokeniserMissing
+}
+
+struct JSONCompletionTracker: Sendable {
+    private var depth = 0
+    private var inString = false
+    private var escaped = false
+    private var hasStarted = false
+
+    mutating func consume(_ text: String) -> Bool {
+        for ch in text {
+            if escaped {
+                escaped = false
+                continue
+            }
+            if ch == "\\" && inString {
+                escaped = true
+                continue
+            }
+            if ch == "\"" {
+                inString.toggle()
+                continue
+            }
+            if inString { continue }
+            if ch == "{" {
+                hasStarted = true
+                depth += 1
+            } else if ch == "}" {
+                depth -= 1
+                if hasStarted && depth == 0 {
+                    return true
+                }
+            }
+        }
+        return false
+    }
 }

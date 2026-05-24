@@ -46,11 +46,11 @@ public final class ComposeViewModel {
 
     private var countdownTask: Task<Void, Never>?
     private var sendTask: Task<Void, Never>?
-    private let composeServiceFactory: @Sendable (String) -> any ComposeService
+    private let composeServiceFactory: @Sendable (String) throws -> any ComposeService
     private let reauthorizeHandler: @Sendable (String) async throws -> Void
 
     public init(
-        composeServiceFactory: @escaping @Sendable (String) -> any ComposeService,
+        composeServiceFactory: @escaping @Sendable (String) throws -> any ComposeService,
         reauthorizeHandler: @escaping @Sendable (String) async throws -> Void = { _ in }
     ) {
         self.composeServiceFactory = composeServiceFactory
@@ -212,9 +212,8 @@ public final class ComposeViewModel {
                 replyContext: self.replyContext
             )
 
-            let service = self.composeServiceFactory(accountID)
-
             do {
+                let service = try self.composeServiceFactory(accountID)
                 _ = try await service.send(draft)
                 guard !Task.isCancelled else { return }
                 self.sendState = .sent

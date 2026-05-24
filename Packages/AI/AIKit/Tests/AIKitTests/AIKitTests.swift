@@ -198,4 +198,27 @@ struct AIKitTests {
         let c = AIThreadReply(body: "Different", confidence: 0.8)
         #expect(a != c)
     }
+
+    @Test func attachmentSummaryHappyPath() async throws {
+        let expected = AIAttachmentSummary(
+            summary: "Invoice is due April 15.",
+            keyFields: [AIKeyField(name: "Amount", value: "$4,250.00")],
+            risks: [],
+            nextSteps: ["Pay by April 15"],
+            evidence: [AIAttachmentEvidence(chunkIndex: 0, quote: "due April 15")],
+            confidence: 0.86
+        )
+        let mock = MockAIService(stubbedAttachmentSummary: expected)
+        let input = AIAttachmentSummaryInput(
+            filename: "invoice.txt",
+            mime: "text/plain",
+            chunks: [.init(index: 0, sourceOffset: 0, text: "Invoice is due April 15.")]
+        )
+
+        let result = try await mock.attachmentSummary(input)
+
+        #expect(result == expected)
+        #expect(mock.attachmentSummaryCallCount == 1)
+        #expect(mock.lastAttachmentInput?.filename == "invoice.txt")
+    }
 }

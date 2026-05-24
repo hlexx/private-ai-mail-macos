@@ -1,8 +1,15 @@
 import AIKit
+import AIPrompts
 import Foundation
 
 /// Report produced by an eval run.
 public struct EvalReport: Sendable {
+    public struct TaskInfo: Sendable, Equatable {
+        public let taskID: String
+        public let promptVersion: String
+        public let schemaVersion: String
+    }
+
     public struct ThreadResult: Sendable {
         public let threadID: String
         public let brief: AIThreadBrief?
@@ -13,6 +20,7 @@ public struct EvalReport: Sendable {
         public let hallucinationRate: Double?
     }
 
+    public let task: TaskInfo
     public let results: [ThreadResult]
     public let totalThreads: Int
     public let successCount: Int
@@ -26,6 +34,8 @@ public struct EvalReport: Sendable {
     public func markdownReport() -> String {
         var lines: [String] = []
         lines.append("# AIEvals — Thread Brief Baseline Report")
+        lines.append("")
+        lines.append("Task: `\(task.taskID)` · prompt `\(task.promptVersion)` · schema `\(task.schemaVersion)`")
         lines.append("")
         lines.append("| Metric | Value |")
         lines.append("|---|---|")
@@ -66,6 +76,7 @@ public struct EvalRunner: Sendable {
         corpus: [(id: String, input: AIThreadInput)],
         service: any AIService
     ) async throws -> EvalReport {
+        let metadata = ThreadBriefTask.metadata
         var threadResults: [EvalReport.ThreadResult] = []
 
         for (id, input) in corpus {
@@ -105,6 +116,11 @@ public struct EvalRunner: Sendable {
         let hallValues = threadResults.compactMap(\.hallucinationRate)
 
         return EvalReport(
+            task: .init(
+                taskID: metadata.id.rawValue,
+                promptVersion: metadata.promptVersion,
+                schemaVersion: metadata.schemaVersion
+            ),
             results: threadResults,
             totalThreads: threadResults.count,
             successCount: successCount,

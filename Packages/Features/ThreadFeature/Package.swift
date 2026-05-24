@@ -11,6 +11,7 @@ let package = Package(
         .package(path: "../../Mail/MailSync"),
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Attachments/AttachmentKit"),
+        .package(path: "../../Attachments/AttachmentRAG"),
         .package(path: "../../Core/DesignSystem"),
         .package(path: "../../Core/Persistence"),
     ],
@@ -21,11 +22,12 @@ let package = Package(
                 "MailSync",
                 "AIKit",
                 "AttachmentKit",
+                "AttachmentRAG",
                 "DesignSystem",
                 "Persistence",
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "Persistence"]),
+        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "AIKit", "AttachmentRAG", "Persistence"]),
     ]
 )

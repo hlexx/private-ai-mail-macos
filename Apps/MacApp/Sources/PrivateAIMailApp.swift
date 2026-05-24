@@ -9,15 +9,15 @@ struct PrivateAIMailApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.openWindow) private var openWindow
 
-    private let composition = CompositionRoot()
     private let keyboardDispatcher = KeyboardDispatcher()
     private let sparkleUpdater = SparkleUpdater()
+    @State private var startup = AppStartupState.bootstrap()
     @State private var setupComplete = false
 
     var body: some Scene {
         WindowGroup(id: "main") {
             Group {
-                if setupComplete {
+                if let composition = startup.composition, setupComplete {
                     MainScene(composition: composition, keyboardDispatcher: keyboardDispatcher)
                         .frame(minWidth: 980, minHeight: 720)
                         .task { composition.resumeExistingAccounts() }
@@ -28,15 +28,19 @@ struct PrivateAIMailApp: App {
                                 composition.showCompose = false
                             }
                         }
-                } else {
+                } else if let composition = startup.composition {
                     ModelSetupScene(
                         modelManager: composition.modelManager,
                         onComplete: { setupComplete = true }
                     )
                     .frame(minWidth: 480, minHeight: 360)
+                } else if let failure = startup.failure {
+                    StartupRecoveryScene(failure: failure, onRetry: retryStartup)
+                        .frame(minWidth: 560, minHeight: 360)
                 }
             }
-            .task {
+            .task(id: startup.id) {
+                guard let composition = startup.composition else { return }
                 let installed = await composition.modelManager.installedURL()
                 if installed != nil {
                     setupComplete = true
@@ -53,6 +57,7 @@ struct PrivateAIMailApp: App {
                     openWindow(id: "compose")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
+                .disabled(startup.composition == nil)
             }
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates\u{2026}") {
@@ -117,20 +122,32 @@ struct PrivateAIMailApp: App {
         }
 
         WindowGroup(id: "compose") {
-            ComposeWindowView(viewModel: composition.composeViewModel)
-            .frame(minWidth: 600, minHeight: 480)
-            .rbTheme()
+            if let composition = startup.composition {
+                ComposeWindowView(viewModel: composition.composeViewModel)
+                    .frame(minWidth: 600, minHeight: 480)
+                    .rbTheme()
+            } else if let failure = startup.failure {
+                StartupRecoveryScene(failure: failure, onRetry: retryStartup)
+                    .frame(minWidth: 560, minHeight: 360)
+                    .rbTheme()
+            }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 720, height: 560)
 
         Settings {
-            SettingsScene(composition: composition)
-                .rbTheme()
+            if let composition = startup.composition {
+                SettingsScene(composition: composition)
+                    .rbTheme()
+            } else if let failure = startup.failure {
+                StartupRecoveryScene(failure: failure, onRetry: retryStartup)
+                    .rbTheme()
+            }
         }
     }
 
     private func prepareComposeViewModel() {
+        guard let composition = startup.composition else { return }
         let vm = composition.composeViewModel
         vm.reset()
         let accounts = (try? composition.db.read { db in try AccountRecord.fetchAll(db) }) ?? []
@@ -139,6 +156,11 @@ struct PrivateAIMailApp: App {
             vm.selectedAccountID = activeID
             vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
         }
+    }
+
+    private func retryStartup() {
+        setupComplete = false
+        startup = AppStartupState.bootstrap()
     }
 
     private func configureMainWindow() {

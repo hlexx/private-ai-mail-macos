@@ -73,19 +73,25 @@ public struct MessageRow: Identifiable, Sendable {
 
 public struct AttachmentInfo: Identifiable, Sendable {
     public let id: String
+    public let messageId: String
+    public let accountId: String
     public let filename: String
     public let sizeBytes: Int?
     public let mime: String?
 
     public init(record: AttachmentRecord) {
         self.id = record.id
+        self.messageId = record.messageId
+        self.accountId = record.accountId
         self.filename = record.filename ?? "attachment"
         self.sizeBytes = record.sizeBytes
         self.mime = record.mime
     }
 
-    public init(id: String, filename: String, sizeBytes: Int?, mime: String?) {
+    public init(id: String, messageId: String = "", accountId: String = "", filename: String, sizeBytes: Int?, mime: String?) {
         self.id = id
+        self.messageId = messageId
+        self.accountId = accountId
         self.filename = filename
         self.sizeBytes = sizeBytes
         self.mime = mime

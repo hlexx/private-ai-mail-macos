@@ -63,63 +63,11 @@ public actor MLXBackend {
         messages: [PromptMessage],
         attachments: [PromptAttachment]
     ) async throws -> ParsedThreadBrief {
-        try Task.checkCancellation()
-
-        let systemPrompt = ThreadBriefPrompt.systemPrompt
-        let userPrompt = ThreadBriefPrompt.taskPrompt(
-            messages: messages,
-            attachments: attachments
+        try await runStructuredTask(
+            ThreadBriefTask.self,
+            input: ThreadBriefTaskInput(messages: messages, attachments: attachments),
+            label: "threadBrief"
         )
-
-        let start = ContinuousClock.now
-        var lastError: (any Error)?
-
-        for attempt in 0 ... maxRetries {
-            try Task.checkCancellation()
-
-            do {
-                let rawOutput = try await runner.generate(
-                    systemPrompt: systemPrompt,
-                    userPrompt: userPrompt,
-                    maxTokens: maxOutputTokens,
-                    onToken: { _ in }
-                )
-
-                let parsed = try ThreadBriefParser.parse(rawOutput)
-
-                let elapsed = ContinuousClock.now - start
-                Self.logger.info(
-                    "Thread brief generated in \(elapsed) (attempt \(attempt + 1))"
-                )
-                latencyRecorder?.record(label: "threadBrief", duration: elapsed)
-
-                return parsed
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch let parseError as ThreadBriefParser.ParseError {
-                lastError = parseError
-                if attempt < maxRetries {
-                    Self.logger.warning(
-                        "Malformed output on attempt \(attempt + 1), retrying"
-                    )
-                    continue
-                }
-            } catch {
-                throw MLXBackendError.inferenceFailed(error)
-            }
-        }
-
-        let diagnostic: String
-        if let parseError = lastError as? ThreadBriefParser.ParseError {
-            switch parseError {
-            case .invalidJSON(let raw): diagnostic = raw
-            case .schemaViolation(let msg): diagnostic = msg
-            }
-        } else {
-            diagnostic = String(describing: lastError)
-        }
-
-        throw MLXBackendError.invalidStructuredOutput(diagnostic)
     }
 
     /// Generate a draft reply from thread messages.
@@ -128,14 +76,38 @@ public actor MLXBackend {
         tone: String,
         replyLanguage: String
     ) async throws -> ParsedThreadReply {
+        try await runStructuredTask(
+            DraftReplyTask.self,
+            input: DraftReplyTaskInput(messages: messages, tone: tone, replyLanguage: replyLanguage),
+            label: "draftReply"
+        )
+    }
+
+    /// Generate an attachment summary from extracted chunks.
+    public func attachmentSummary(
+        filename: String,
+        mime: String,
+        chunks: [PromptAttachmentChunk]
+    ) async throws -> ParsedAttachmentSummary {
+        try await runStructuredTask(
+            AttachmentSummaryTask.self,
+            input: AttachmentSummaryTaskInput(filename: filename, mime: mime, chunks: chunks),
+            label: "attachmentSummary"
+        )
+    }
+
+    private func runStructuredTask<TaskDefinition: PromptTaskDefinition>(
+        _ task: TaskDefinition.Type,
+        input: TaskDefinition.Input,
+        label: String
+    ) async throws -> TaskDefinition.Output {
         try Task.checkCancellation()
 
-        let systemPrompt = DraftReplyPrompt.systemPrompt
-        let userPrompt = DraftReplyPrompt.taskPrompt(
-            messages: messages,
-            tone: tone,
-            replyLanguage: replyLanguage
-        )
+        let systemPrompt = task.systemPrompt
+        let userPrompt = task.renderUserPrompt(input)
+        let taskID = task.metadata.id.rawValue
+        let promptVersion = task.metadata.promptVersion
+        let taskMaxOutputTokens = min(maxOutputTokens, task.metadata.maxOutputTokens)
 
         let start = ContinuousClock.now
         var lastError: (any Error)?
@@ -147,43 +119,36 @@ public actor MLXBackend {
                 let rawOutput = try await runner.generate(
                     systemPrompt: systemPrompt,
                     userPrompt: userPrompt,
-                    maxTokens: maxOutputTokens,
+                    maxTokens: taskMaxOutputTokens,
                     onToken: { _ in }
                 )
 
-                let parsed = try DraftReplyParser.parse(rawOutput)
+                let parsed = try task.parse(rawOutput)
 
                 let elapsed = ContinuousClock.now - start
                 Self.logger.info(
-                    "Draft reply generated in \(elapsed) (attempt \(attempt + 1))"
+                    "Structured task \(taskID, privacy: .public) \(promptVersion, privacy: .public) generated in \(elapsed) (attempt \(attempt + 1))"
                 )
-                latencyRecorder?.record(label: "draftReply", duration: elapsed)
+                latencyRecorder?.record(label: label, duration: elapsed)
 
                 return parsed
             } catch is CancellationError {
                 throw CancellationError()
-            } catch let parseError as DraftReplyParser.ParseError {
-                lastError = parseError
+            } catch {
+                lastError = error
+                if !Self.isParseError(error) {
+                    throw MLXBackendError.inferenceFailed(error)
+                }
                 if attempt < maxRetries {
                     Self.logger.warning(
-                        "Malformed reply output on attempt \(attempt + 1), retrying"
+                        "Malformed structured task \(taskID, privacy: .public) output on attempt \(attempt + 1), retrying"
                     )
                     continue
                 }
-            } catch {
-                throw MLXBackendError.inferenceFailed(error)
             }
         }
 
-        let diagnostic: String
-        if let parseError = lastError as? DraftReplyParser.ParseError {
-            switch parseError {
-            case .invalidJSON(let raw): diagnostic = raw
-            case .schemaViolation(let msg): diagnostic = msg
-            }
-        } else {
-            diagnostic = String(describing: lastError)
-        }
+        let diagnostic = Self.parseDiagnostic(lastError)
 
         throw MLXBackendError.invalidStructuredOutput(diagnostic)
     }
@@ -207,6 +172,41 @@ public actor MLXBackend {
         let elapsed = ContinuousClock.now - start
         Self.logger.info("Model loaded in \(elapsed)")
         latencyRecorder?.record(label: "modelLoad", duration: elapsed)
+    }
+
+    private static func isParseError(_ error: any Error) -> Bool {
+        error is ThreadBriefParser.ParseError
+            || error is DraftReplyParser.ParseError
+            || error is AttachmentSummaryParser.ParseError
+            || error is PromptParseError
+    }
+
+    private static func parseDiagnostic(_ error: (any Error)?) -> String {
+        if let parseError = error as? ThreadBriefParser.ParseError {
+            switch parseError {
+            case .invalidJSON(let raw): return raw
+            case .schemaViolation(let msg): return msg
+            }
+        }
+        if let parseError = error as? DraftReplyParser.ParseError {
+            switch parseError {
+            case .invalidJSON(let raw): return raw
+            case .schemaViolation(let msg): return msg
+            }
+        }
+        if let parseError = error as? AttachmentSummaryParser.ParseError {
+            switch parseError {
+            case .invalidJSON(let raw): return raw
+            case .schemaViolation(let msg): return msg
+            }
+        }
+        if let parseError = error as? PromptParseError {
+            switch parseError {
+            case .invalidJSON(let raw): return raw
+            case .schemaViolation(let msg): return msg
+            }
+        }
+        return String(describing: error)
     }
 }
 

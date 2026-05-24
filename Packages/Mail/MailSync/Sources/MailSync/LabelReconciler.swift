@@ -20,9 +20,9 @@ import Persistence
 /// re-run via Settings → Accounts → "Refresh labels" if needed.
 public actor LabelReconciler {
     private let db: AppDatabase
-    private let apiFactory: @Sendable (String) -> any GmailAPI
+    private let apiFactory: GmailAPIFactory
 
-    public init(db: AppDatabase, apiFactory: @Sendable @escaping (String) -> any GmailAPI) {
+    public init(db: AppDatabase, apiFactory: @escaping GmailAPIFactory) {
         self.db = db
         self.apiFactory = apiFactory
     }
@@ -31,7 +31,7 @@ public actor LabelReconciler {
     /// collect the unique `threadId` set, then rewrite the account's
     /// `thread_label` rows where `label_id = 'INBOX'` to match exactly.
     public func reconcileInbox(accountId: String) async throws {
-        let api = apiFactory(accountId)
+        let api = try apiFactory(accountId)
 
         var pageToken: String?
         var collected: Set<String> = []

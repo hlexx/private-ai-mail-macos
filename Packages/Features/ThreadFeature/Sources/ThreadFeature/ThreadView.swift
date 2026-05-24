@@ -18,6 +18,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     var translatedNodes: [String: [String: String]]
     var onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)?
     var onScrollProxy: ((ScrollViewProxy) -> Void)?
+    var attachmentSummaryStore: AttachmentSummaryStore?
 
     public init(
         store: ThreadStore,
@@ -28,6 +29,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         translatedNodes: [String: [String: String]] = [:],
         onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)? = nil,
         onScrollProxy: ((ScrollViewProxy) -> Void)? = nil,
+        attachmentSummaryStore: AttachmentSummaryStore? = nil,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
@@ -40,6 +42,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.translatedNodes = translatedNodes
         self.onTextNodesExtracted = onTextNodesExtracted
         self.onScrollProxy = onScrollProxy
+        self.attachmentSummaryStore = attachmentSummaryStore
         self.composerContent = composer()
         self.briefContent = briefRail()
         self.translationHeader = translationHeader()
@@ -202,46 +205,57 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 
     private var attachmentBlock: some View {
         ForEach(store.attachments) { att in
-            HStack(alignment: .center, spacing: 12) {
-                // Thumbnail placeholder
-                ZStack(alignment: .bottomLeading) {
-                    RoundedRectangle(cornerRadius: RBRadius.xs)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.96, green: 0.95, blue: 0.9),
-                                         Color(red: 0.84, green: 0.82, blue: 0.75)],
-                                startPoint: .top,
-                                endPoint: .bottom
+            let summaryState = attachmentSummaryStore?.state(for: att) ?? .idle
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 12) {
+                    // Thumbnail placeholder
+                    ZStack(alignment: .bottomLeading) {
+                        RoundedRectangle(cornerRadius: RBRadius.xs)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(red: 0.96, green: 0.95, blue: 0.9),
+                                             Color(red: 0.84, green: 0.82, blue: 0.75)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
+                            .frame(width: 38, height: 48)
+                        Text(att.mime?.contains("pdf") == true ? "PDF" : "FILE")
+                            .font(.rbMono(8, weight: .semibold))
+                            .foregroundStyle(Color.rbGraphite900)
+                            .padding(.leading, 4)
+                            .padding(.bottom, 4)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(att.filename)
+                            .font(.rbGeist(13, weight: .medium))
+                            .foregroundStyle(Color.rbFg1)
+                        Text(attachmentStatusText(att, state: summaryState))
+                            .font(.rbMono(11))
+                            .foregroundStyle(Color.rbFg3)
+                    }
+
+                    Spacer()
+
+                    Button { /* Preview stub */ } label: {
+                        Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
+                    }
+                    .buttonStyle(.rbGhost)
+
+                    Button { attachmentSummaryStore?.summarize(att) } label: {
+                        Label(
+                            summaryState.isWorking
+                                ? String(localized: "thread.attachment.summarizing", defaultValue: "Summarizing")
+                                : String(localized: "thread.attachment.summarize", defaultValue: "Summarize"),
+                            systemImage: "sparkle"
                         )
-                        .frame(width: 38, height: 48)
-                    Text(att.mime?.contains("pdf") == true ? "PDF" : "FILE")
-                        .font(.rbMono(8, weight: .semibold))
-                        .foregroundStyle(Color.rbGraphite900)
-                        .padding(.leading, 4)
-                        .padding(.bottom, 4)
+                    }
+                    .buttonStyle(.rbSecondary)
+                    .disabled(attachmentSummaryStore == nil || summaryState.isWorking)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(att.filename)
-                        .font(.rbGeist(13, weight: .medium))
-                        .foregroundStyle(Color.rbFg1)
-                    Text("\(att.formattedSize) \u{00B7} summarized locally")
-                        .font(.rbMono(11))
-                        .foregroundStyle(Color.rbFg3)
-                }
-
-                Spacer()
-
-                Button { /* Preview stub */ } label: {
-                    Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
-                }
-                .buttonStyle(.rbGhost)
-
-                Button { /* Summarize stub */ } label: {
-                    Label(String(localized: "thread.attachment.summarize", defaultValue: "Summarize"), systemImage: "sparkle")
-                }
-                .buttonStyle(.rbSecondary)
+                attachmentSummaryContent(summaryState)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -252,6 +266,61 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     .strokeBorder(Color.rbStroke1, lineWidth: 1)
             )
             .padding(.top, 14)
+        }
+    }
+
+    private func attachmentStatusText(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
+        let size = attachment.formattedSize.isEmpty ? "File" : attachment.formattedSize
+        switch state {
+        case .idle:
+            return "\(size) \u{00B7} local summary ready"
+        case .summarizing:
+            return "\(size) \u{00B7} summarizing locally"
+        case .summary(let data):
+            return data.cached
+                ? "\(size) \u{00B7} cached local summary"
+                : "\(size) \u{00B7} summarized locally"
+        case .unsupported:
+            return "\(size) \u{00B7} unsupported"
+        case .failed:
+            return "\(size) \u{00B7} summary failed"
+        }
+    }
+
+    @ViewBuilder
+    private func attachmentSummaryContent(_ state: AttachmentSummaryViewState) -> some View {
+        switch state {
+        case .idle:
+            EmptyView()
+        case .summarizing:
+            Text(String(localized: "thread.attachment.summary.loading", defaultValue: "Reading attachment locally..."))
+                .font(.rbGeist(12))
+                .foregroundStyle(Color.rbFg3)
+        case .summary(let data):
+            VStack(alignment: .leading, spacing: 8) {
+                Text(data.summary)
+                    .font(.rbGeist(13, weight: .medium))
+                    .foregroundStyle(Color.rbFg1)
+                if !data.keyFields.isEmpty {
+                    Text(data.keyFields.map { "\($0.name): \($0.value)" }.joined(separator: " \u{00B7} "))
+                        .font(.rbMono(11))
+                        .foregroundStyle(Color.rbFg2)
+                }
+                if let evidence = data.evidence.first {
+                    Text("\(String(localized: "thread.attachment.summary.evidence", defaultValue: "Evidence:")) \(evidence.quote)")
+                        .font(.rbMono(11))
+                        .foregroundStyle(Color.rbFg3)
+                        .lineLimit(2)
+                }
+            }
+        case .unsupported(let reason):
+            Text(reason)
+                .font(.rbGeist(12))
+                .foregroundStyle(Color.rbFg3)
+        case .failed(let message):
+            Text(message)
+                .font(.rbGeist(12))
+                .foregroundStyle(Color.rbFg3)
         }
     }
 }
@@ -266,6 +335,7 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.translatedNodes = [:]
         self.onTextNodesExtracted = nil
         self.onScrollProxy = nil
+        self.attachmentSummaryStore = nil
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()

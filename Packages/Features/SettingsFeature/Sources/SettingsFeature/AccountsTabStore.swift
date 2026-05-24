@@ -111,7 +111,7 @@ public final class AccountsTabStore {
 
                 self.addPhase = .bootstrapping(0)
                 self.observeSyncEvents(for: accountId)
-                await self.syncSupervisor.start(accountId: accountId)
+                try await self.syncSupervisor.start(accountId: accountId)
                 self.onAccountAdded?(accountId)
             } catch let error as AuthError where error.isCancelled {
                 self.addPhase = .idle

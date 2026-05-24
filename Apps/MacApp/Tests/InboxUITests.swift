@@ -72,6 +72,12 @@ struct InboxUITests {
         try db.dbQueue.write { dbConn in
             try thread1.insert(dbConn)
             try thread2.insert(dbConn)
+            try LabelRecord(id: "INBOX", accountId: accountId, name: "Inbox", type: .system)
+                .insert(dbConn)
+            try ThreadLabelRecord(accountId: accountId, threadId: thread1.id, labelId: "INBOX")
+                .insert(dbConn)
+            try ThreadLabelRecord(accountId: accountId, threadId: thread2.id, labelId: "INBOX")
+                .insert(dbConn)
             try msg1.insert(dbConn)
             try msg2.insert(dbConn)
             try msg3.insert(dbConn)
@@ -89,12 +95,14 @@ struct InboxUITests {
         try await Task.sleep(for: .milliseconds(200))
 
         #expect(store.threads.count == 2)
+        let first = try #require(store.threads.first)
+        let second = try #require(store.threads.dropFirst().first)
         // Sorted by last_message_at DESC: thread-2 first, thread-1 second
-        #expect(store.threads[0].subject == "Meeting Notes")
-        #expect(store.threads[1].subject == "Hello World")
-        #expect(store.threads[0].snippet == "Attached are the meeting notes")
-        #expect(store.threads[1].hasUnread == true)
-        #expect(store.threads[1].messageCount == 2)
+        #expect(first.subject == "Meeting Notes")
+        #expect(second.subject == "Hello World")
+        #expect(first.snippet == "Attached are the meeting notes")
+        #expect(second.hasUnread == true)
+        #expect(second.messageCount == 2)
 
         store.stopObserving()
     }
@@ -107,9 +115,11 @@ struct InboxUITests {
         try await Task.sleep(for: .milliseconds(200))
 
         #expect(store.messages.count == 2)
+        let first = try #require(store.messages.first)
+        let second = try #require(store.messages.dropFirst().first)
         // Sorted by sent_at ASC
-        #expect(store.messages[0].fromAddr == "alice@example.com")
-        #expect(store.messages[1].fromAddr == "bob@example.com")
+        #expect(first.fromAddr == "alice@example.com")
+        #expect(second.fromAddr == "bob@example.com")
 
         store.stopObserving()
     }
@@ -124,7 +134,7 @@ struct InboxUITests {
         #expect(inboxStore.threads.count == 2)
 
         // Simulate selecting thread-1
-        let selected = inboxStore.threads.first { $0.id == "thread-1" }!
+        let selected = try #require(inboxStore.threads.first { $0.id == "thread-1" })
         threadStore.observe(threadId: selected.id, accountId: selected.accountId)
 
         try await Task.sleep(for: .milliseconds(200))
