@@ -67,7 +67,8 @@ test:
 sign:
 	@echo "==> Signing app bundle..."
 	@APP=$$(find $(DD_BASE) -maxdepth 6 -type d -name "PrivateAIMail.app" \
-		-path "*PrivateAIMail*$(CONFIGURATION)*" 2>/dev/null | sort -r | head -1); \
+		-path "*PrivateAIMail*$(CONFIGURATION)*" -print0 2>/dev/null \
+		| xargs -0 stat -f "%m %N" 2>/dev/null | sort -nr | head -1 | cut -d" " -f2-); \
 	if [ -z "$$APP" ]; then \
 		echo "Error: built .app not found. Run 'make build' first." >&2; exit 1; \
 	fi; \

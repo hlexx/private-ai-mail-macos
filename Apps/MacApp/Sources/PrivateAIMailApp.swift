@@ -167,7 +167,7 @@ struct PrivateAIMailApp: App {
         DispatchQueue.main.async {
             guard let window = NSApplication.shared.windows.first(where: {
                 $0.identifier?.rawValue.contains("main") == true
-                || $0.title.contains("Private AI Mail")
+                || $0.title.contains("Re:Box")
             }) else { return }
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden

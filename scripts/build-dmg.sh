@@ -24,8 +24,11 @@ find_app() {
     for config in Release Debug; do
         local candidate
         candidate=$(find "$dd_base" -maxdepth 6 -type d -name "$APP_NAME" \
-            -path "*PrivateAIMail*${config}*" 2>/dev/null \
-            | sort -r | head -1)
+            -path "*PrivateAIMail*${config}*" -print0 2>/dev/null \
+            | xargs -0 stat -f "%m %N" 2>/dev/null \
+            | sort -nr \
+            | head -1 \
+            | cut -d" " -f2-)
         if [ -n "$candidate" ] && [ -d "$candidate" ]; then
             echo "$candidate"
             return 0

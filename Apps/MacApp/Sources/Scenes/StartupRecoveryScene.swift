@@ -62,7 +62,7 @@ struct StartupRecoveryScene: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RBSpace.s4) {
             VStack(alignment: .leading, spacing: RBSpace.s2) {
-                Text(String(localized: "startup.failed.title", defaultValue: "Private AI Mail could not start"))
+                Text(String(localized: "startup.failed.title", defaultValue: "Re:Box could not start"))
                     .rbTextStyle(.h2)
                     .foregroundStyle(Color.rbFg1)
                 Text(failure.underlyingDescription)
