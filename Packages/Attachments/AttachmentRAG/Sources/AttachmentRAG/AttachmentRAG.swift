@@ -3,8 +3,8 @@ import AIPrompts
 import AttachmentKit
 import Foundation
 import GRDB
-import Persistence
 import os
+import Persistence
 
 // MARK: - Public API
 
@@ -177,7 +177,9 @@ public actor AttachmentSummaryOrchestrator {
             )
         }
     }
+}
 
+extension AttachmentSummaryOrchestrator {
     private func fetchCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) throws -> AIAttachmentSummary? {
         let metadata = AttachmentSummaryTask.metadata
         let payload = try db.dbQueue.read { database -> String? in

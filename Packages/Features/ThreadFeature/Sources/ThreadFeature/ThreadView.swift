@@ -200,10 +200,12 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
             .padding(.bottom, 12)
         }
     }
+}
 
+private extension ThreadView {
     // MARK: - Attachment Block
 
-    private var attachmentBlock: some View {
+    var attachmentBlock: some View {
         ForEach(store.attachments) { att in
             let summaryState = attachmentSummaryStore?.state(for: att) ?? .idle
             VStack(alignment: .leading, spacing: 10) {
@@ -269,7 +271,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         }
     }
 
-    private func attachmentStatusText(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
+    func attachmentStatusText(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
         let size = attachment.formattedSize.isEmpty ? "File" : attachment.formattedSize
         switch state {
         case .idle:
@@ -288,7 +290,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     }
 
     @ViewBuilder
-    private func attachmentSummaryContent(_ state: AttachmentSummaryViewState) -> some View {
+    func attachmentSummaryContent(_ state: AttachmentSummaryViewState) -> some View {
         switch state {
         case .idle:
             EmptyView()
@@ -339,95 +341,5 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()
-    }
-}
-
-// MARK: - Message Card
-
-private struct MessageCardView: View {
-    let message: MessageRow
-    let showTranslated: Bool
-    let translatedText: String?
-    let translatedNodes: [String: String]?
-    var onTextNodesExtracted: (([TranslationTextNode]) -> Void)?
-    private static let timeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "EEE HH:mm"
-        return f
-    }()
-
-    init(
-        message: MessageRow,
-        showTranslated: Bool = false,
-        translatedText: String? = nil,
-        translatedNodes: [String: String]? = nil,
-        onTextNodesExtracted: (([TranslationTextNode]) -> Void)? = nil
-    ) {
-        self.message = message
-        self.showTranslated = showTranslated
-        self.translatedText = translatedText
-        self.translatedNodes = translatedNodes
-        self.onTextNodesExtracted = onTextNodesExtracted
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: RBSpace.s2) {
-            HStack(alignment: .center, spacing: 10) {
-                AvatarView(name: message.senderName, size: 28)
-                Text(message.senderName)
-                    .font(.rbGeist(13, weight: .semibold))
-                    .foregroundStyle(Color.rbFg1)
-                Spacer()
-                Text(Self.timeFormatter.string(from: message.sentAt))
-                    .font(.rbMono(11))
-                    .foregroundStyle(Color.rbFg3)
-            }
-            // When showing translated for HTML messages, render via HTMLWebView
-            // with translatedNodes injected (preserves layout).
-            // For plain-text-only messages, fall back to Text(translated).
-            if showTranslated, message.bodyHtml != nil, translatedNodes != nil || onTextNodesExtracted != nil {
-                MessageBodyView(
-                    bodyHtml: message.bodyHtml,
-                    bodyText: message.bodyText,
-                    snippet: message.snippet,
-                    attachments: message.inlineAttachments.map { att in
-                        HTMLWebView.AttachmentData(
-                            contentId: att.contentId,
-                            mime: att.mime,
-                            data: Data(base64Encoded: att.dataBase64, options: .ignoreUnknownCharacters) ?? Data()
-                        )
-                    },
-                    translatedNodes: translatedNodes,
-                    onTextNodesExtracted: onTextNodesExtracted
-                )
-            } else if let translated = translatedText, message.bodyHtml == nil {
-                Text(translated)
-                    .font(.rbGeist(14))
-                    .foregroundStyle(Color.rbFg2)
-                    .lineSpacing(4)
-                    .textSelection(.enabled)
-            } else {
-                MessageBodyView(
-                    bodyHtml: message.bodyHtml,
-                    bodyText: message.bodyText,
-                    snippet: message.snippet,
-                    attachments: message.inlineAttachments.map { att in
-                        HTMLWebView.AttachmentData(
-                            contentId: att.contentId,
-                            mime: att.mime,
-                            data: Data(base64Encoded: att.dataBase64, options: .ignoreUnknownCharacters) ?? Data()
-                        )
-                    }
-                )
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color.rbBgElev1)
-        .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: RBRadius.md)
-                .strokeBorder(Color.rbStroke1, lineWidth: 1)
-        )
     }
 }
