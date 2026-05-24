@@ -5,9 +5,9 @@
     "app.title": {
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Private AI Mail" } },
-        "ru": { "stringUnit": { "state": "translated", "value": "Private AI Mail" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Private AI Mail" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Re:Box" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Re:Box" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Re:Box" } }
       }
     },
     "menu.compose.new": {

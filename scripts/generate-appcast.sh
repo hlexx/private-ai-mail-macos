@@ -48,9 +48,9 @@ cat > "$APPCAST_PATH" <<'XML_HEADER'
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
-    <title>PrivateAIMail Updates</title>
+    <title>Re:Box Updates</title>
     <link>https://github.com/hlexx/private-ai-mail-macos</link>
-    <description>Most recent updates for PrivateAIMail</description>
+    <description>Most recent updates for Re:Box</description>
     <language>en</language>
 XML_HEADER
 
@@ -103,7 +103,7 @@ for dmg in "${DMGS_SORTED[@]}"; do
     fi
   done
   if [[ -z "$NOTES_HTML" ]]; then
-    NOTES_HTML="<p>PrivateAIMail ${VERSION}</p>"
+    NOTES_HTML="<p>Re:Box ${VERSION}</p>"
   fi
 
   DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${DMG_BASENAME}"
