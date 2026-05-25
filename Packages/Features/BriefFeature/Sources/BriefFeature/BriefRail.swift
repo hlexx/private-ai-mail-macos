@@ -191,6 +191,17 @@ public struct BriefRail: View {
                 Text(String(localized: "brief.error.retry", defaultValue: "Retry"))
             }
             .buttonStyle(.rbGhost)
+
+            Button {
+                onDraftReply?()
+            } label: {
+                Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .buttonStyle(.rbPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .disabled(onDraftReply == nil)
         }
         .padding(16)
         .background(Color.rbBgElev1)
@@ -213,6 +224,17 @@ public struct BriefRail: View {
                 .font(.rbGeist(15, weight: .medium))
                 .foregroundStyle(Color.rbFg3)
                 .lineSpacing(3)
+
+            Button {
+                onDraftReply?()
+            } label: {
+                Label(String(localized: "brief.cta.draftReply", defaultValue: "Draft reply"), systemImage: "sparkles")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .buttonStyle(.rbPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .disabled(onDraftReply == nil)
         }
         .padding(16)
         .background(Color.rbBgElev1)

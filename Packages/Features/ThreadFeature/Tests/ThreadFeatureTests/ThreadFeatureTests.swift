@@ -357,6 +357,34 @@ struct ThreadViewSnapshotTests {
         host.layout()
     }
 
+    @MainActor
+    @Test func threadViewRendersComposerWithLongMessage() async throws {
+        let db = try makeThreadViewDatabase()
+        let store = ThreadStore(db: db)
+        store.accountEmail = "alex@example.com"
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty }
+
+        let view = ThreadView(
+            store: store,
+            composer: {
+                Text("Draft reply panel")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 120)
+                    .background(Color.rbBgElev1)
+            },
+            briefRail: {
+                EmptyView()
+            }
+        )
+        .preferredColorScheme(.light)
+        .frame(width: 900, height: 700)
+
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 900, height: 700)
+        host.layout()
+    }
+
     private func emptyStateView() -> some View {
         VStack(spacing: 8) {
             Text("Re:")
@@ -521,6 +549,35 @@ struct ThreadViewSnapshotTests {
         .padding(.horizontal, 28)
         .padding(.vertical, 18)
         .background(Color.rbBgCanvas)
+    }
+
+    private func makeThreadViewDatabase() throws -> AppDatabase {
+        let db = try AppDatabase.openInMemorySync()
+        try db.dbQueue.write { dbConn in
+            try dbConn.execute(sql: """
+                INSERT INTO account (id, email, display_name, provider, created_at) VALUES
+                ('acc1', 'alex@example.com', 'Alex', 'gmail', 1000)
+                """)
+            try dbConn.execute(sql: """
+                INSERT INTO thread (id, account_id, subject, snippet, last_message_at, message_count, has_unread) VALUES
+                ('t1', 'acc1', 'Long email', 'snippet', 1000, 1, 0)
+                """)
+            try dbConn.execute(sql: """
+                INSERT INTO message (id, thread_id, account_id, from_addr, to_addr, sent_at, body_text, flags) VALUES
+                ('m1', 't1', 'acc1', 'OpenAI <billing@example.com>', 'alex@example.com', 1000, :body, 0)
+                """, arguments: ["body": String(repeating: "Long billing update paragraph. ", count: 120)])
+        }
+        return db
+    }
+
+    private func waitUntil(timeout: Duration = .seconds(3), _ condition: @MainActor () -> Bool) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while !condition() {
+            if ContinuousClock.now >= deadline {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
     }
 
     private func starButtonView(isStarred: Bool) -> some View {

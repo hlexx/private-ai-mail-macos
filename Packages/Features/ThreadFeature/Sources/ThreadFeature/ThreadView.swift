@@ -61,20 +61,26 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     translationHeader
                     HStack(spacing: 0) {
                         ScrollViewReader { proxy in
-                            ScrollView {
-                                VStack(alignment: .leading, spacing: 0) {
-                                    threadColumn
-                                    if store.hasAttachment {
-                                        attachmentBlock
+                            VStack(spacing: 0) {
+                                ScrollView {
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        threadColumn
+                                        if store.hasAttachment {
+                                            attachmentBlock
+                                        }
                                     }
-                                    composerContent
-                                        .id(ThreadViewAnchor.composer)
+                                    .padding(.horizontal, 28)
+                                    .padding(.top, 20)
+                                    .padding(.bottom, 24)
                                 }
-                                .padding(.horizontal, 28)
-                                .padding(.top, 20)
-                                .padding(.bottom, 24)
+                                .onAppear { onScrollProxy?(proxy) }
+
+                                composerContent
+                                    .id(ThreadViewAnchor.composer)
+                                    .padding(.horizontal, 28)
+                                    .padding(.bottom, 24)
+                                    .background(Color.rbBgCanvas)
                             }
-                            .onAppear { onScrollProxy?(proxy) }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 

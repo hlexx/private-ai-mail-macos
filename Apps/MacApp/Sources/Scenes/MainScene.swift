@@ -133,7 +133,7 @@ struct MainScene: View {
                         },
                         attachmentSummaryStore: composition.attachmentSummaryStore,
                         composer: {
-                            if let threadID = inboxStore.selectedThreadID, briefStore.brief != nil {
+                            if let threadID = inboxStore.selectedThreadID {
                                 InlineComposer(
                                     threadID: threadID,
                                     accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
