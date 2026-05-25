@@ -13,6 +13,32 @@ struct DraftReplyPromptTests {
         #expect(reply.confidence == 0.8)
     }
 
+    @Test func parserAcceptsCommonReplyAliasesAndStringMetadata() throws {
+        let reply = try DraftReplyParser.parse(
+            #"{"reply":"Thanks, I will review this today.","evidence_message_ids":"msg_1","language":"en","confidence":"0.7"}"#
+        )
+
+        #expect(reply.body == "Thanks, I will review this today.")
+        #expect(reply.evidenceMessageIDs == ["msg_1"])
+        #expect(reply.detectedReplyLanguage == "en")
+        #expect(reply.confidence == 0.7)
+    }
+
+    @Test func parserAcceptsPlainTextReplyFallback() throws {
+        let reply = try DraftReplyParser.parse("Thanks, I will review this today.")
+
+        #expect(reply.body == "Thanks, I will review this today.")
+        #expect(reply.evidenceMessageIDs == [])
+        #expect(reply.detectedReplyLanguage == "und")
+        #expect(reply.confidence == 0.6)
+    }
+
+    @Test func parserStillRejectsMalformedJSONAttempts() throws {
+        #expect(throws: DraftReplyParser.ParseError.self) {
+            try DraftReplyParser.parse(#"{"reply":"unterminated""#)
+        }
+    }
+
     @Test func taskPromptTrimsLongMessageBodies() {
         let prompt = DraftReplyPrompt.taskPrompt(
             messages: [

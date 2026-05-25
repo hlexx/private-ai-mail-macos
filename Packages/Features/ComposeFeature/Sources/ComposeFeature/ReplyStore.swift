@@ -2,6 +2,7 @@ import AIKit
 import Foundation
 import GRDB
 import Observation
+import os
 import Persistence
 
 @Observable
@@ -17,6 +18,11 @@ public final class ReplyStore {
     private var replyCache: [CacheKey: AIThreadReply] = [:]
     private var inflightTask: Task<Void, Never>?
 
+    private static let logger = Logger(
+        subsystem: "com.hlexx.privateaimail",
+        category: "ReplyStore"
+    )
+
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
         self.db = db
@@ -31,6 +37,12 @@ public final class ReplyStore {
     public static func preview(reply: AIThreadReply?) -> ReplyStore {
         let store = ReplyStore()
         store.reply = reply
+        return store
+    }
+
+    public static func preview(error: any Error) -> ReplyStore {
+        let store = ReplyStore()
+        store.error = error
         return store
     }
 
@@ -79,12 +91,18 @@ public final class ReplyStore {
                 reply = aiReply
                 isLoading = false
                 error = nil
+                Self.logger.info(
+                    "Draft reply generated account=\(key.accountId, privacy: .public) thread=\(key.threadID, privacy: .public) tone=\(tone.rawValue, privacy: .public)"
+                )
             } catch is CancellationError {
                 // Don't update state
             } catch {
                 self.error = error
                 isLoading = false
                 reply = nil
+                Self.logger.error(
+                    "Draft reply failed account=\(key.accountId, privacy: .public) thread=\(key.threadID, privacy: .public) category=\(Self.errorCategory(error), privacy: .public)"
+                )
             }
         }
     }
@@ -168,6 +186,24 @@ public final class ReplyStore {
             )
         }
         return AIThreadInput(messages: aiMessages, attachments: aiAttachments)
+    }
+
+    private nonisolated static func errorCategory(_ error: any Error) -> String {
+        if let aiError = error as? AIError {
+            switch aiError {
+            case .modelNotInstalled:
+                return "modelNotInstalled"
+            case .modelLoadFailed:
+                return "modelLoadFailed"
+            case .inferenceFailed:
+                return "inferenceFailed"
+            case .invalidStructuredOutput:
+                return "invalidStructuredOutput"
+            case .cancelled:
+                return "cancelled"
+            }
+        }
+        return String(describing: type(of: error))
     }
 
 }

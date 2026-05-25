@@ -37,9 +37,22 @@ struct ReplyStoreGenerateIfNeededTests {
         }
     }
 
-    @MainActor
-    @Test func generateIfNeededCallsGenerateOnCacheMiss() async throws {
-        let mock = CountingAIService()
+    private struct FailingAIService: AIService {
+        func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+            AIThreadBrief(summary: "test", confidence: 0.9)
+        }
+
+        func draftReply(
+            _ input: AIThreadInput,
+            tone: AIReplyTone,
+            locale: Locale,
+            replyLanguage: String?
+        ) async throws -> AIThreadReply {
+            throw AIError.invalidStructuredOutput("malformed")
+        }
+    }
+
+    private func makeDB() async throws -> AppDatabase {
         let db = try AppDatabase.openInMemorySync()
         try await db.dbQueue.write { database in
             try database.execute(sql: """
@@ -55,6 +68,13 @@ struct ReplyStoreGenerateIfNeededTests {
                 VALUES ('msg1', 't1', 'acc1', 'alice@test.com', 1000, 'Hello', 0)
             """)
         }
+        return db
+    }
+
+    @MainActor
+    @Test func generateIfNeededCallsGenerateOnCacheMiss() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
         let store = ReplyStore(aiService: mock, db: db)
 
         store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
@@ -73,6 +93,19 @@ struct ReplyStoreGenerateIfNeededTests {
         // Preview store has no AI service, should not crash
         store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
         #expect(store.reply == nil)
+    }
+
+    @MainActor
+    @Test func generateShowsFailureStateWhenAIServiceThrows() async throws {
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: FailingAIService(), db: db)
+
+        store.generate(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(store.reply == nil)
+        #expect(store.error != nil)
+        #expect(store.isLoading == false)
     }
 }
 
@@ -117,6 +150,19 @@ struct InlineComposerSnapshotTests {
             .padding(24)
             .background(Color(.windowBackgroundColor))
             .preferredColorScheme(.dark)
+            .frame(width: 600, height: 400)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
+        host.layout()
+    }
+
+    @MainActor
+    @Test func inlineComposerWithDraftError() {
+        let store = ReplyStore.preview(error: AIError.invalidStructuredOutput("malformed"))
+        let view = InlineComposer(threadID: "t1", replyStore: store)
+            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            .preferredColorScheme(.light)
             .frame(width: 600, height: 400)
         let host = NSHostingView(rootView: view)
         host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)

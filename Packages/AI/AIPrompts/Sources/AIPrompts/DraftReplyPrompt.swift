@@ -149,6 +149,9 @@ public enum DraftReplyParser {
         do {
             raw = try JSONDecoder().decode(RawReply.self, from: data)
         } catch {
+            if let plainReply = parsePlainReplyFallback(rawOutput, extractedText: json) {
+                return plainReply
+            }
             let truncated = String(rawOutput.prefix(200))
             throw ParseError.invalidJSON(truncated)
         }
@@ -207,6 +210,29 @@ public enum DraftReplyParser {
         guard let end = matchEnd else { return text }
         return String(text[start...end])
     }
+
+    private static func parsePlainReplyFallback(
+        _ rawOutput: String,
+        extractedText: String
+    ) -> ParsedThreadReply? {
+        guard !rawOutput.contains("{"), !extractedText.contains("{") else {
+            return nil
+        }
+
+        var body = extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if body.hasPrefix("```") {
+            if let firstNewline = body.firstIndex(of: "\n") {
+                body = String(body[body.index(after: firstNewline)...])
+            }
+            if body.hasSuffix("```") {
+                body = String(body.dropLast(3))
+            }
+            body = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard !body.isEmpty else { return nil }
+        return ParsedThreadReply(body: body, evidenceMessageIDs: [], detectedReplyLanguage: "und", confidence: 0.6)
+    }
 }
 
 private struct RawReply: Decodable {
@@ -214,4 +240,67 @@ private struct RawReply: Decodable {
     let evidenceMessageIDs: [String]?
     let detectedReplyLanguage: String?
     let confidence: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case body
+        case reply
+        case draft
+        case message
+        case evidenceMessageIDs
+        case evidenceMessageIds
+        case evidenceMessageIDsSnake = "evidence_message_ids"
+        case detectedReplyLanguage
+        case detectedReplyLanguageSnake = "detected_reply_language"
+        case language
+        case confidence
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedBody = try container.decodeStringIfPresent(forKeys: [.body, .reply, .draft, .message])
+        body = decodedBody?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        evidenceMessageIDs = try container.decodeStringArrayIfPresent(
+            forKeys: [.evidenceMessageIDs, .evidenceMessageIds, .evidenceMessageIDsSnake]
+        )
+        detectedReplyLanguage = try container.decodeStringIfPresent(
+            forKeys: [.detectedReplyLanguage, .detectedReplyLanguageSnake, .language]
+        )
+        confidence = try container.decodeDoubleIfPresent(forKeys: [.confidence])
+    }
+}
+
+private extension KeyedDecodingContainer where K == RawReply.CodingKeys {
+    func decodeStringIfPresent(forKeys keys: [K]) throws -> String? {
+        for key in keys {
+            if let value = try? decodeIfPresent(String.self, forKey: key) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    func decodeStringArrayIfPresent(forKeys keys: [K]) throws -> [String]? {
+        for key in keys {
+            if let value = try? decodeIfPresent([String].self, forKey: key) {
+                return value
+            }
+            if let value = try? decodeIfPresent(String.self, forKey: key) {
+                return [value]
+            }
+        }
+        return nil
+    }
+
+    func decodeDoubleIfPresent(forKeys keys: [K]) throws -> Double? {
+        for key in keys {
+            if let value = try? decodeIfPresent(Double.self, forKey: key) {
+                return value
+            }
+            if let value = try? decodeIfPresent(String.self, forKey: key),
+               let parsed = Double(value.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                return parsed
+            }
+        }
+        return nil
+    }
 }

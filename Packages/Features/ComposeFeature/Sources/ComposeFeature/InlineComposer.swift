@@ -70,10 +70,15 @@ public struct InlineComposer: View {
                 draftText = newReply.body
                 detectedLanguage = newReply.detectedReplyLanguage
                 isEditorFocused = true
+            } else if replyStore.error != nil {
+                draftText = ""
             }
         }
         .onChange(of: replyStore.focusRequestCount) { _, _ in
             if replyStore.reply != nil { isEditorFocused = true }
+        }
+        .onChange(of: replyStore.error != nil) { _, hasError in
+            if hasError { draftText = "" }
         }
     }
 
@@ -198,7 +203,34 @@ public struct InlineComposer: View {
                     .font(.rbGeist(14))
                     .foregroundStyle(Color.rbFg3)
             }
+
+            if replyStore.error != nil, !replyStore.isLoading {
+                draftErrorState
+            }
         }
+    }
+
+    private var draftErrorState: some View {
+        VStack(spacing: 12) {
+            Text(String(localized: "composer.error.title", defaultValue: "Draft generation failed"))
+                .font(.rbGeist(14, weight: .semibold))
+                .foregroundStyle(Color.rbFg2)
+
+            Button {
+                replyStore.regenerate(
+                    threadID: threadID,
+                    accountId: accountId,
+                    tone: tone,
+                    replyLanguage: effectiveLanguage,
+                    locale: effectiveLocale
+                )
+            } label: {
+                Text(String(localized: "composer.error.retry", defaultValue: "Retry"))
+            }
+            .buttonStyle(.rbSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.rbBgElev1)
     }
 
     // MARK: - Footer
@@ -257,6 +289,7 @@ public struct InlineComposer: View {
                     }
                     .buttonStyle(.rbSecondary)
                     .help(String(localized: "composer.cta.editInFull", defaultValue: "Edit in full"))
+                    .disabled(!canSubmitDraft)
                 } else {
                     Button {
                         onEditInFull(draftText)
@@ -267,6 +300,7 @@ public struct InlineComposer: View {
                     }
                     .buttonStyle(.rbSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .disabled(!canSubmitDraft)
                 }
 
                 Button {
@@ -278,12 +312,18 @@ public struct InlineComposer: View {
                 }
                 .buttonStyle(.rbPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!canSubmitDraft)
                 .keyboardShortcut(.return, modifiers: [.command])
                 .help("Send (⌘⏎)")
             }
         }
         .frame(height: 32)
+    }
+
+    private var canSubmitDraft: Bool {
+        !replyStore.isLoading
+            && replyStore.error == nil
+            && !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 
