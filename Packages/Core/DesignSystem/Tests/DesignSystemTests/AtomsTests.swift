@@ -36,6 +36,7 @@ struct AtomsTests {
         host.layout()
     }
 
+    @MainActor
     private func signalChipGrid() -> some View {
         VStack(spacing: 8) {
             HStack(spacing: 6) {
@@ -78,6 +79,7 @@ struct AtomsTests {
         host.layout()
     }
 
+    @MainActor
     private func buttonStylesView() -> some View {
         VStack(spacing: 12) {
             Button("Primary") {}
@@ -113,6 +115,7 @@ struct AtomsTests {
         host.layout()
     }
 
+    @MainActor
     private func iconButtonRow() -> some View {
         HStack(spacing: 4) {
             RBIconButton(systemName: "line.3.horizontal.decrease", accessibilityLabel: "Filter") {}
@@ -271,6 +274,7 @@ struct AtomsTests {
 
     // MARK: - AvatarView initials extraction
 
+    @MainActor
     @Test func avatarInitialsExtraction() {
         #expect(AvatarView.extractInitials(from: "John Doe") == "JD")
         #expect(AvatarView.extractInitials(from: "Sarah") == "SA")
