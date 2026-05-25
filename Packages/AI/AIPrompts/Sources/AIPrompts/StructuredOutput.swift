@@ -78,13 +78,12 @@ public enum ThreadBriefParser {
             throw ParseError.invalidJSON(truncated)
         }
 
-        guard let evidence = raw.evidence else {
-            throw ParseError.schemaViolation("missing required field: evidence")
+        guard raw.hasMeaningfulContent else {
+            throw ParseError.schemaViolation("brief must contain at least one meaningful field")
         }
 
-        guard let confidence = raw.confidence else {
-            throw ParseError.schemaViolation("missing required field: confidence")
-        }
+        let evidence = raw.evidence ?? []
+        let confidence = raw.confidence ?? 0.7
 
         guard confidence >= 0, confidence <= 1 else {
             throw ParseError.schemaViolation("confidence must be between 0 and 1, got \(confidence)")
@@ -163,7 +162,9 @@ public enum ThreadBriefParser {
     }
 }
 
-// Strict decoding struct: all fields optional for validation, rejects unknown keys
+// Tolerant decoding struct: the prompt schema remains strict, but small local
+// models sometimes omit metadata or use common aliases. Preserve useful briefs
+// and let the registry/tests enforce the preferred schema separately.
 private struct RawBrief: Decodable {
     let summary: String?
     let request: String?
@@ -173,27 +174,74 @@ private struct RawBrief: Decodable {
     let evidence: [String]?
     let confidence: Double?
 
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    var hasMeaningfulContent: Bool {
+        [summary, request, deadline, risk, nextStep].contains { field in
+            field?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        } || evidence?.isEmpty == false
+    }
+
+    enum CodingKeys: String, CodingKey {
         case summary, request, deadline, risk, nextStep, evidence, confidence
+        case next_step
+        case nextSteps
+        case next_steps
+        case confidenceScore
+        case confidence_score
     }
 
     init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: AnyCodingKey.self)
-        let allowed = Set(CodingKeys.allCases.map(\.rawValue))
-        let unknown = container.allKeys.filter { !allowed.contains($0.stringValue) }
-        if let extra = unknown.first {
-            throw DecodingError.dataCorrupted(
-                .init(codingPath: [extra], debugDescription: "unknown field: \(extra.stringValue)")
-            )
-        }
-
         let known = try decoder.container(keyedBy: CodingKeys.self)
         summary = try known.decodeIfPresent(String.self, forKey: .summary)
         request = try known.decodeIfPresent(String.self, forKey: .request)
         deadline = try known.decodeIfPresent(String.self, forKey: .deadline)
         risk = try known.decodeIfPresent(String.self, forKey: .risk)
-        nextStep = try known.decodeIfPresent(String.self, forKey: .nextStep)
-        evidence = try known.decodeIfPresent([String].self, forKey: .evidence)
-        confidence = try known.decodeIfPresent(Double.self, forKey: .confidence)
+        nextStep = try known.decodeFirstString(
+            forKeys: [CodingKeys.nextStep, .next_step, .nextSteps, .next_steps]
+        )
+        evidence = try known.decodeFlexibleStringArrayIfPresent(forKey: .evidence)
+        confidence = try known.decodeFirstDouble(
+            forKeys: [CodingKeys.confidence, .confidenceScore, .confidence_score]
+        )
+    }
+}
+
+private extension KeyedDecodingContainer where K == RawBrief.CodingKeys {
+    func decodeFirstString(forKeys keys: [K]) throws -> String? {
+        for key in keys {
+            if let value = try decodeIfPresent(String.self, forKey: key) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    func decodeFirstDouble(forKeys keys: [K]) throws -> Double? {
+        for key in keys {
+            if let value = try decodeFlexibleDoubleIfPresent(forKey: key) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    func decodeFlexibleDoubleIfPresent(forKey key: K) throws -> Double? {
+        if let number = try? decodeIfPresent(Double.self, forKey: key) {
+            return number
+        }
+        if let string = try? decodeIfPresent(String.self, forKey: key) {
+            return Double(string.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines))
+        }
+        return nil
+    }
+
+    func decodeFlexibleStringArrayIfPresent(forKey key: K) throws -> [String]? {
+        if let values = try? decodeIfPresent([String].self, forKey: key) {
+            return values
+        }
+        if let value = try? decodeIfPresent(String.self, forKey: key) {
+            let trimmed = value.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            return trimmed.isEmpty ? [] : [trimmed]
+        }
+        return nil
     }
 }

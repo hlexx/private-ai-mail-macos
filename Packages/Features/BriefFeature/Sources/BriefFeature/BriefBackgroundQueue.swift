@@ -2,6 +2,7 @@ import AIKit
 import Foundation
 import GRDB
 import NaturalLanguage
+import OSLog
 import Persistence
 
 /// Processes brief generation for threads in the background, one at a time.
@@ -22,6 +23,7 @@ public final class BriefBackgroundQueue {
     private var backfillTask: Task<Void, Never>?
     private var retryCount: Int = 0
     private static let maxRetries = 10
+    private static let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "BriefBackgroundQueue")
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -221,15 +223,40 @@ public final class BriefBackgroundQueue {
                     scheduleRetry()
                 }
             default:
-                break
+                let kind = Self.failureKind(err)
+                Self.logger.error(
+                    "Background brief generation failed kind=\(kind, privacy: .public) account=\(key.accountId, privacy: .private) thread=\(key.threadId, privacy: .private)"
+                )
             }
         } catch {
+            let kind = Self.failureKind(error)
+            Self.logger.error(
+                "Background brief generation failed kind=\(kind, privacy: .public) account=\(key.accountId, privacy: .private) thread=\(key.threadId, privacy: .private)"
+            )
             // Other errors — skip this thread, continue with next
         }
     }
 
     private nonisolated static func encodeEvidence(_ evidence: [String]) -> String {
         (try? JSONEncoder().encode(evidence)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+    }
+
+    private nonisolated static func failureKind(_ error: any Error) -> String {
+        if let aiError = error as? AIError {
+            switch aiError {
+            case .modelNotInstalled:
+                return "modelNotInstalled"
+            case .modelLoadFailed:
+                return "modelLoadFailed"
+            case .inferenceFailed:
+                return "inferenceFailed"
+            case .invalidStructuredOutput:
+                return "invalidStructuredOutput"
+            case .cancelled:
+                return "cancelled"
+            }
+        }
+        return String(describing: type(of: error))
     }
 }
 

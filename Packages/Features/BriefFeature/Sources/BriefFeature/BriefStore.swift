@@ -3,6 +3,7 @@ import Foundation
 import GRDB
 import NaturalLanguage
 import Observation
+import OSLog
 import Persistence
 
 @Observable
@@ -18,6 +19,7 @@ public final class BriefStore {
     private var briefCache: [BriefCacheKey: CacheEntry] = [:]
     private var inflightTask: Task<Void, Never>?
     private var activeAccountId: String?
+    private static let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "BriefStore")
 
     /// Production init with AI service and database.
     public init(aiService: any AIService, db: AppDatabase) {
@@ -127,11 +129,7 @@ public final class BriefStore {
             } catch let err as AIError where err.isCancelled {
                 // AI-level cancellation
             } catch {
-                if activeThreadID == threadID {
-                    self.error = error
-                    isLoading = false
-                    brief = nil
-                }
+                handleBriefFailure(error, threadID: threadID, accountId: accountId)
             }
         }
     }
@@ -224,6 +222,35 @@ public final class BriefStore {
 
     private nonisolated static func encodeEvidence(_ evidence: [String]) -> String {
         (try? JSONEncoder().encode(evidence)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+    }
+
+    private func handleBriefFailure(_ error: any Error, threadID: String, accountId: String?) {
+        guard activeThreadID == threadID else { return }
+        let kind = Self.failureKind(error)
+        Self.logger.error(
+            "Brief generation failed kind=\(kind, privacy: .public) account=\(accountId ?? "<unknown>", privacy: .private) thread=\(threadID, privacy: .private)"
+        )
+        self.error = error
+        isLoading = false
+        brief = nil
+    }
+
+    private nonisolated static func failureKind(_ error: any Error) -> String {
+        if let aiError = error as? AIError {
+            switch aiError {
+            case .modelNotInstalled:
+                return "modelNotInstalled"
+            case .modelLoadFailed:
+                return "modelLoadFailed"
+            case .inferenceFailed:
+                return "inferenceFailed"
+            case .invalidStructuredOutput:
+                return "invalidStructuredOutput"
+            case .cancelled:
+                return "cancelled"
+            }
+        }
+        return String(describing: type(of: error))
     }
 }
 

@@ -73,32 +73,24 @@ struct ThreadBriefParserTests {
 
     // MARK: - Schema violations
 
-    @Test("rejects missing evidence field")
-    func rejectMissingEvidence() throws {
+    @Test("accepts missing evidence field with default empty evidence")
+    func acceptsMissingEvidence() throws {
         let json = """
             {"summary": "test", "confidence": 0.5}
             """
-        #expect {
-            try ThreadBriefParser.parse(json)
-        } throws: { error in
-            guard let parseError = error as? ThreadBriefParser.ParseError,
-                  case .schemaViolation(let msg) = parseError else { return false }
-            return msg.contains("evidence")
-        }
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.summary == "test")
+        #expect(brief.evidence.isEmpty)
     }
 
-    @Test("rejects missing confidence field")
-    func rejectMissingConfidence() throws {
+    @Test("accepts missing confidence field with default confidence")
+    func acceptsMissingConfidence() throws {
         let json = """
             {"summary": "test", "evidence": ["a"]}
             """
-        #expect {
-            try ThreadBriefParser.parse(json)
-        } throws: { error in
-            guard let parseError = error as? ThreadBriefParser.ParseError,
-                  case .schemaViolation(let msg) = parseError else { return false }
-            return msg.contains("confidence")
-        }
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.summary == "test")
+        #expect(brief.confidence == 0.7)
     }
 
     @Test("rejects confidence out of range (above 1)")
@@ -129,23 +121,39 @@ struct ThreadBriefParserTests {
         }
     }
 
-    @Test("rejects extra fields (additionalProperties: false)")
-    func rejectExtraFields() {
+    @Test("ignores extra fields from local model output")
+    func ignoresExtraFields() throws {
         let json = """
             {"summary": "test", "evidence": ["a"], "confidence": 0.5, "foo": "bar"}
             """
-        #expect(throws: ThreadBriefParser.ParseError.self) {
-            try ThreadBriefParser.parse(json)
-        }
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.summary == "test")
+        #expect(brief.confidence == 0.5)
     }
 
-    @Test("rejects wrong type for evidence (string instead of array)")
-    func rejectWrongEvidenceType() {
+    @Test("accepts string evidence from local model output")
+    func acceptsStringEvidence() throws {
         let json = """
             {"summary": "test", "evidence": "not an array", "confidence": 0.5}
             """
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.evidence == ["not an array"])
+    }
+
+    @Test("accepts common aliases")
+    func acceptsCommonAliases() throws {
+        let json = """
+            {"summary": "test", "next_step": "Reply later", "evidence": [], "confidence_score": "0.6"}
+            """
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.nextStep == "Reply later")
+        #expect(brief.confidence == 0.6)
+    }
+
+    @Test("rejects empty object")
+    func rejectsEmptyObject() {
         #expect(throws: ThreadBriefParser.ParseError.self) {
-            try ThreadBriefParser.parse(json)
+            try ThreadBriefParser.parse("{}")
         }
     }
 
