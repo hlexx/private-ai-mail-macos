@@ -8,25 +8,11 @@ import ComposeFeature
 import InboxFeature
 import MailProviders
 import MailSync
-import OSLog
 import Persistence
 import SettingsFeature
 import SwiftUI
 import ThreadFeature
 import TranslationFeature
-
-struct ToastState: Equatable {
-    let id = UUID()
-    let message: String
-    let undoAction: UndoAction?
-
-    enum UndoAction: Equatable {
-        case unarchive(threadId: String, accountId: String)
-        case star(threadId: String, accountId: String)
-        case unstar(threadId: String, accountId: String)
-        case untrash(threadId: String, accountId: String)
-    }
-}
 
 @MainActor @Observable
 final class CompositionRoot {
@@ -91,7 +77,10 @@ final class CompositionRoot {
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
         self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
         self.labelReconciler = LabelReconciler(db: db, apiFactory: apiFactory)
-        self.labelReconcileCoordinator = LabelReconcileCoordinator(reconciler: labelReconciler)
+        self.labelReconcileCoordinator = LabelReconcileCoordinator(
+            reconciler: labelReconciler,
+            tokenStore: tokenStore
+        )
         self.translationStore = TranslationStore(db: db)
         self.attachmentSummaryOrchestrator = AttachmentSummaryOrchestrator(
             db: db,
@@ -250,7 +239,7 @@ final class CompositionRoot {
     }
 
     private func showErrorToast(_ message: String) {
-        toastMessage = ToastState(message: message, undoAction: nil)
+        toastMessage = ToastState(message: message, undoAction: nil, kind: .error)
     }
 
     private func describe(_ error: any Error) -> String {
@@ -271,71 +260,5 @@ private struct GmailAttachmentByteProvider: AttachmentByteProvider {
     func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
         let api = try apiFactory(accountId)
         return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
-    }
-}
-
-@MainActor
-private final class LabelReconcileCoordinator {
-    private static let flagKey = "pam.needsLabelReconcile"
-
-    private let reconciler: LabelReconciler
-    private let defaults: UserDefaults
-    private let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "LabelReconcile")
-    private var isRunning = false
-
-    init(reconciler: LabelReconciler, defaults: UserDefaults = .standard) {
-        self.reconciler = reconciler
-        self.defaults = defaults
-    }
-
-    func runIfNeeded(
-        accountIds: [String],
-        showToast: @escaping (ToastState) -> Void,
-        clearToastIfCurrent: @escaping (UUID) -> Void
-    ) {
-        guard !accountIds.isEmpty,
-              defaults.bool(forKey: Self.flagKey),
-              !isRunning else { return }
-
-        isRunning = true
-        logger.info("Starting Gmail label reconcile for \(accountIds.count, privacy: .public) accounts")
-
-        let toast = ToastState(
-            message: String(
-                localized: "labels.reconciling",
-                defaultValue: "Refreshing labels from Gmail…"
-            ),
-            undoAction: nil
-        )
-        showToast(toast)
-
-        Task { [weak self] in
-            guard let self else { return }
-            var failures: [(String, any Error)] = []
-
-            for accountId in accountIds {
-                do {
-                    try await reconciler.reconcileInbox(accountId: accountId)
-                    logger.info("Gmail label reconcile succeeded for account \(accountId, privacy: .private)")
-                } catch {
-                    failures.append((accountId, error))
-                    logger.error("Gmail label reconcile failed for account \(accountId, privacy: .private): \(String(describing: error), privacy: .public)")
-                }
-            }
-
-            if failures.isEmpty {
-                defaults.set(false, forKey: Self.flagKey)
-                clearToastIfCurrent(toast.id)
-                logger.info("Gmail label reconcile completed")
-            } else {
-                let message = String(
-                    localized: "labels.reconcileFailed",
-                    defaultValue: "Label refresh failed. The app will retry next launch."
-                )
-                showToast(ToastState(message: message, undoAction: nil))
-            }
-
-            isRunning = false
-        }
     }
 }

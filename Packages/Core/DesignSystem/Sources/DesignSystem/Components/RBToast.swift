@@ -3,16 +3,22 @@ import SwiftUI
 public struct RBToast: View {
     let message: String
     let systemImage: String
+    let tint: Color
 
-    public init(_ message: String, systemImage: String = "checkmark.circle.fill") {
+    public init(
+        _ message: String,
+        systemImage: String = "checkmark.circle.fill",
+        tint: Color = .rbSignalSuccess
+    ) {
         self.message = message
         self.systemImage = systemImage
+        self.tint = tint
     }
 
     public var body: some View {
         HStack(spacing: RBSpace.s2) {
             Image(systemName: systemImage)
-                .foregroundStyle(Color.rbSignalSuccess)
+                .foregroundStyle(tint)
             Text(message)
                 .rbTextStyle(.bodySM)
                 .foregroundStyle(Color.rbFg1)
