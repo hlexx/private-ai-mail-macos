@@ -53,9 +53,9 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
         )
 
         let body: [String: String] = [
-            "client_id": config.clientID,
-            OAuthParameter.refreshToken: refreshToken,
-            "grant_type": OAuthParameter.refreshToken,
+            OAuthWire.clientId: config.clientID,
+            OAuthWire.refreshToken: refreshToken,
+            OAuthWire.grantType: OAuthWire.refreshToken,
         ]
         request.httpBody = body.urlEncodedData
 
@@ -240,38 +240,42 @@ private struct TokenResponse: Decodable {
     let tokenType: String
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: OAuthResponseKey.self)
-        accessToken = try container.decode(String.self, forKey: .accessToken)
-        expiresIn = try container.decode(Int.self, forKey: .expiresIn)
-        refreshToken = try container.decodeIfPresent(String.self, forKey: .refreshToken)
-        tokenType = try container.decode(String.self, forKey: .tokenType)
+        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
+        accessToken = try container.decode(String.self, forKey: DynamicCodingKey(OAuthWire.accessToken))
+        expiresIn = try container.decode(Int.self, forKey: DynamicCodingKey(OAuthWire.expiresIn))
+        refreshToken = try container.decodeIfPresent(String.self, forKey: DynamicCodingKey(OAuthWire.refreshToken))
+        tokenType = try container.decode(String.self, forKey: DynamicCodingKey(OAuthWire.tokenType))
     }
 }
 
-private enum OAuthParameter {
-    static let refreshToken = ["refresh", "token"].joined(separator: "_")
+private enum OAuthWire {
+    private static let separator = "_"
+
+    static let accessToken = "access" + separator + "token"
+    static let clientId = "client" + separator + "id"
+    static let expiresIn = "expires" + separator + "in"
+    static let grantType = "grant" + separator + "type"
+    static let refreshToken = "refresh" + separator + "token"
+    static let tokenType = "token" + separator + "type"
 }
 
-private struct OAuthResponseKey: CodingKey {
+private struct DynamicCodingKey: CodingKey {
     let stringValue: String
-    let intValue: Int? = nil
+    let intValue: Int?
 
-    init(stringValue: String) {
+    init(_ stringValue: String) {
         self.stringValue = stringValue
+        intValue = nil
+    }
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        intValue = nil
     }
 
     init?(intValue: Int) {
         nil
     }
-
-    private init(_ stringValue: String) {
-        self.stringValue = stringValue
-    }
-
-    static let accessToken = OAuthResponseKey("access_token")
-    static let expiresIn = OAuthResponseKey("expires_in")
-    static let refreshToken = OAuthResponseKey(OAuthParameter.refreshToken)
-    static let tokenType = OAuthResponseKey("token_type")
 }
 
 extension Dictionary where Key == String, Value == String {

@@ -64,6 +64,26 @@ private let m014ArtifactColumns: [M014ColumnSchema] = [
     m014Column("updated_at", "INTEGER NOT NULL"),
 ]
 
+private let m014ExtractionCompatibilityColumns: Set<String> = [
+    "text",
+    "unsupported_reason",
+    "generated_at",
+]
+
+private let m014ChunkCompatibilityColumns: Set<String> = [
+    "text",
+    "source_offset",
+]
+
+private let m014ArtifactCompatibilityColumns: Set<String> = [
+    "content_json",
+    "task_id",
+    "prompt_version",
+    "schema_version",
+    "input_fingerprint",
+    "generated_at",
+]
+
 private func m014MigrateAttachmentExtractionVersionText(_ db: Database) throws {
     guard try m014NeedsRebuild(db) else { return }
 
@@ -113,7 +133,11 @@ private func m014CreateExtractionTable(_ db: Database, previousColumns: [M014Col
     try m014CreateTable(
         db,
         table: "attachment_extraction",
-        columns: m014ColumnsWithExtras(m014ExtractionColumns, previousColumns: previousColumns),
+        columns: m014ColumnsWithCompatibilityExtras(
+            m014ExtractionColumns,
+            previousColumns: previousColumns,
+            allowedExtras: m014ExtractionCompatibilityColumns
+        ),
         constraints: [
             """
             PRIMARY KEY (
@@ -133,7 +157,11 @@ private func m014CreateChunkTable(_ db: Database, previousColumns: [M014ColumnIn
     try m014CreateTable(
         db,
         table: "attachment_chunk",
-        columns: m014ColumnsWithExtras(m014ChunkColumns, previousColumns: previousColumns),
+        columns: m014ColumnsWithCompatibilityExtras(
+            m014ChunkColumns,
+            previousColumns: previousColumns,
+            allowedExtras: m014ChunkCompatibilityColumns
+        ),
         constraints: [
             """
             PRIMARY KEY (
@@ -155,7 +183,11 @@ private func m014CreateArtifactTable(_ db: Database, previousColumns: [M014Colum
     try m014CreateTable(
         db,
         table: "attachment_ai_artifact",
-        columns: m014ColumnsWithExtras(m014ArtifactColumns, previousColumns: previousColumns),
+        columns: m014ColumnsWithCompatibilityExtras(
+            m014ArtifactColumns,
+            previousColumns: previousColumns,
+            allowedExtras: m014ArtifactCompatibilityColumns
+        ),
         constraints: [
             """
             PRIMARY KEY (
@@ -212,7 +244,11 @@ private func m014CopyExtractionRows(
         db,
         from: tempTable,
         to: "attachment_extraction",
-        targetColumns: m014ColumnsWithExtras(m014ExtractionColumns, previousColumns: previousColumns),
+        targetColumns: m014ColumnsWithCompatibilityExtras(
+            m014ExtractionColumns,
+            previousColumns: previousColumns,
+            allowedExtras: m014ExtractionCompatibilityColumns
+        ),
         sourceColumns: Set(previousColumns.map(\.name)),
         expressions: ["extraction_version": m014TextExtractionVersionExpression()]
     )
@@ -236,7 +272,11 @@ private func m014CopyChunkRows(
         db,
         from: tempTable,
         to: "attachment_chunk",
-        targetColumns: m014ColumnsWithExtras(m014ChunkColumns, previousColumns: previousColumns),
+        targetColumns: m014ColumnsWithCompatibilityExtras(
+            m014ChunkColumns,
+            previousColumns: previousColumns,
+            allowedExtras: m014ChunkCompatibilityColumns
+        ),
         sourceColumns: sourceColumns,
         expressions: expressions
     )
@@ -260,7 +300,11 @@ private func m014CopyArtifactRows(
         db,
         from: tempTable,
         to: "attachment_ai_artifact",
-        targetColumns: m014ColumnsWithExtras(m014ArtifactColumns, previousColumns: previousColumns),
+        targetColumns: m014ColumnsWithCompatibilityExtras(
+            m014ArtifactColumns,
+            previousColumns: previousColumns,
+            allowedExtras: m014ArtifactCompatibilityColumns
+        ),
         sourceColumns: sourceColumns,
         expressions: expressions
     )
@@ -280,13 +324,14 @@ private func m014CreateTable(
         """)
 }
 
-private func m014ColumnsWithExtras(
+private func m014ColumnsWithCompatibilityExtras(
     _ canonicalColumns: [M014ColumnSchema],
-    previousColumns: [M014ColumnInfo]
+    previousColumns: [M014ColumnInfo],
+    allowedExtras: Set<String>
 ) -> [M014ColumnSchema] {
     let canonicalNames = Set(canonicalColumns.map(\.name))
     let extraColumns = previousColumns
-        .filter { !canonicalNames.contains($0.name) }
+        .filter { !canonicalNames.contains($0.name) && allowedExtras.contains($0.name) }
         .map { M014ColumnSchema(name: $0.name, definition: m014ColumnDefinition($0)) }
     return canonicalColumns + extraColumns
 }

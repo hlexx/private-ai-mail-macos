@@ -381,6 +381,65 @@ struct MailSyncEngineTests {
         #expect(syncState?.historyId == "1000")
     }
 
+    @Test func incrementalSyncKeepsOriginalCheckpointWhenLaterHistoryPageFails() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+
+        try await DatabaseActor.shared.run {
+            try db.write { dbConn in
+                var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
+                syncState.historyId = "50"
+                try syncState.update(dbConn)
+            }
+        }
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        messagesAdded: [
+                            GmailDTO.HistoryMessageAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1")
+                            )
+                        ]
+                    )
+                ],
+                nextPageToken: "page-2",
+                historyId: "999"
+            )),
+            .failure(GmailAPIError.serverError(statusCode: 500)),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        let stream = await engine.makeEventStream()
+        let eventTask = Task {
+            var iterator = stream.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        await engine.refresh()
+
+        #expect(api.listHistoryCalls.map(\.startHistoryId) == ["50", "50"])
+        #expect(api.listHistoryCalls.map(\.pageToken) == [nil, "page-2"])
+
+        let syncState = try db.read { dbConn in
+            try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])
+        }
+        #expect(syncState?.historyId == "50")
+
+        guard case .error(.incrementalFailed(let error)) = await eventTask.value else {
+            Issue.record("Expected incremental failure event")
+            return
+        }
+        guard let gmailError = error as? GmailAPIError,
+              case .serverError(statusCode: 500) = gmailError else {
+            Issue.record("Expected page failure to surface as Gmail server error")
+            return
+        }
+    }
+
     @Test func incrementalSyncDeletesMessage() async throws {
         let db = try await makeDB()
         try await seedAccount(db)
@@ -624,6 +683,8 @@ struct MailSyncEngineTests {
             try AttachmentRecord.filter(Column("account_id") == "acc1").fetchCount(dbConn)
         }
 
+        let getThreadCallsAfterFirst = api.getThreadCalled
+
         // Reset mock for second bootstrap
         api.listMessagesResults = [
             .success(GmailDTO.MessageList(
@@ -634,6 +695,7 @@ struct MailSyncEngineTests {
                 nextPageToken: nil
             ))
         ]
+        api.resetListMessagesCallIndex()
 
         let engine2 = MailSyncEngine(accountId: "acc1", api: api, db: db)
         await engine2.bootstrap()
@@ -654,6 +716,7 @@ struct MailSyncEngineTests {
         #expect(countAfterSecond == 1)
         #expect(msgCountAfterSecond == 2)
         #expect(attachmentCountAfterSecond == 2)
+        #expect(api.getThreadCalled == getThreadCallsAfterFirst + 1)
     }
     @Test func syncReplacesLocalSentMessageWithCanonical() async throws {
         let db = try await makeDB()

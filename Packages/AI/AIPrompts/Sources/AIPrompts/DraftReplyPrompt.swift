@@ -66,40 +66,35 @@ public enum DraftReplyTask: PromptTaskDefinition {
     public static let jsonSchemaString = DraftReplySchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: DraftReplyTaskInput) -> String {
-        var parts: [String] = []
+        let fixedParts: [String] = [
+            "## Instructions",
+            "- Tone: \(input.tone)",
+            "- Respond in: \(input.replyLanguage)",
+            "",
+            "## Output JSON",
+            "Keys: body, evidenceMessageIDs, detectedReplyLanguage, confidence.",
+            "Continue the seeded JSON object with the actual reply text as body.",
+            "",
+            "Reply with JSON only. Do not output schema words or placeholders.",
+            "",
+            "## Thread",
+        ]
 
-        parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        let indexedMessages = Array(input.messages.enumerated())
-        let renderedMessages = PromptTextBudget.renderedSections(
-            indexedMessages,
+        let threadText = input.messages.enumerated().map { idx, msg in
+            let ts = formatter.string(from: msg.sentAt)
+            return """
+                [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
+                \(msg.bodyText)
+                """
+        }.joined(separator: "\n")
+
+        return PromptTextBudget.renderedPrompt(
+            fixedParts: fixedParts,
+            budgetedTail: threadText,
             maxCharacters: metadata.maxInputCharacters,
-            text: { $0.element.bodyText },
-            render: { indexedMessage, body in
-                let idx = indexedMessage.offset
-                let msg = indexedMessage.element
-                let ts = formatter.string(from: msg.sentAt)
-                return """
-                    [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
-                    \(body)
-                    """
-            }
         )
-        parts.append(contentsOf: renderedMessages)
-
-        parts.append("")
-        parts.append("## Instructions")
-        parts.append("- Tone: \(input.tone)")
-        parts.append("- Respond in: \(input.replyLanguage)")
-        parts.append("")
-        parts.append("## Output JSON")
-        parts.append("Keys: body, evidenceMessageIDs, detectedReplyLanguage, confidence.")
-        parts.append("Continue the seeded JSON object with the actual reply text as body.")
-        parts.append("")
-        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
-
-        return parts.joined(separator: "\n")
     }
 
     public static func parse(_ rawOutput: String) throws -> ParsedThreadReply {

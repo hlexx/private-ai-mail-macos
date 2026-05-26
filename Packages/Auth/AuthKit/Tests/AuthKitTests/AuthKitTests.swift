@@ -163,19 +163,58 @@ struct ReauthorizeScopeTests {
     }
 }
 
-@Suite("RefreshRequestBody")
+@Suite("RefreshRequestBody", .serialized)
 struct RefreshRequestBodyTests {
-    @Test func refreshBodyContainsRequiredFields() {
-        let body: [String: String] = [
-            "client_id": "test_client_id",
-            "refresh_token": "test_refresh_token",
-            "grant_type": "refresh_token",
-        ]
-        let encoded = String(data: body.urlEncodedData, encoding: .utf8)!
+    @Test func refreshSendsActualRequiredBodyAndDecodesSuccess() async throws {
+        let client = makeClient(
+            session: OAuthRefreshURLProtocol.makeSession(
+                statusCode: 200,
+                body: #"{"access_token":"new_access_token","expires_in":3600,"token_type":"Bearer"}"#
+            )
+        )
+
+        let credential = try await client.refresh("test_refresh_token")
+        let encoded = OAuthRefreshURLProtocol.capturedBodyString() ?? ""
 
         #expect(encoded.contains("client_id=test_client_id"))
         #expect(encoded.contains("refresh_token=test_refresh_token"))
         #expect(encoded.contains("grant_type=refresh_token"))
+        #expect(credential.accessToken == "new_access_token")
+        #expect(credential.refreshToken == "test_refresh_token")
+    }
+
+    @Test func refreshThrowsInvalidResponseForNonSuccessStatus() async throws {
+        let client = makeClient(
+            session: OAuthRefreshURLProtocol.makeSession(
+                statusCode: 500,
+                body: #"{"error":"server_error"}"#
+            )
+        )
+
+        do {
+            _ = try await client.refresh("test_refresh_token")
+            Issue.record("Expected refresh failure")
+        } catch AuthError.invalidResponse {
+        } catch {
+            Issue.record("Expected invalidResponse, got \(error)")
+        }
+    }
+
+    @Test func refreshSurfacesMalformedTokenResponse() async throws {
+        let client = makeClient(
+            session: OAuthRefreshURLProtocol.makeSession(
+                statusCode: 200,
+                body: #"{"access_token":42}"#
+            )
+        )
+
+        do {
+            _ = try await client.refresh("test_refresh_token")
+            Issue.record("Expected decoding failure")
+        } catch is DecodingError {
+        } catch {
+            Issue.record("Expected DecodingError, got \(error)")
+        }
     }
 
     @Test func urlEncodingHandlesSpecialChars() {
@@ -184,6 +223,17 @@ struct RefreshRequestBodyTests {
         ]
         let encoded = String(data: body.urlEncodedData, encoding: .utf8)!
         #expect(encoded.contains("hello%20world"))
+    }
+
+    private func makeClient(session: URLSession) -> GmailOAuthClient {
+        GmailOAuthClient(
+            config: GmailOAuthConfig(
+                clientID: "test_client_id",
+                redirectURI: "test:/oauth2callback",
+                scopes: []
+            ),
+            urlSession: session
+        )
     }
 }
 
@@ -231,5 +281,71 @@ final class InMemoryTokenStore: TokenStore, @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         storage.removeValue(forKey: accountID)
+    }
+}
+
+private final class OAuthRefreshURLProtocol: URLProtocol, @unchecked Sendable {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var responseStatusCode = 200
+    nonisolated(unsafe) private static var responseBody = Data()
+    nonisolated(unsafe) private static var capturedBody: Data?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let requestBody = request.httpBody ?? Self.data(from: request.httpBodyStream)
+        Self.lock.lock()
+        Self.capturedBody = requestBody
+        let statusCode = Self.responseStatusCode
+        let body = Self.responseBody
+        Self.lock.unlock()
+
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: statusCode,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+
+    private static func data(from stream: InputStream?) -> Data? {
+        guard let stream else { return nil }
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1_024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(buffer, count: count)
+        }
+        return data
+    }
+
+    static func makeSession(statusCode: Int, body: String) -> URLSession {
+        lock.lock()
+        responseStatusCode = statusCode
+        responseBody = Data(body.utf8)
+        capturedBody = nil
+        lock.unlock()
+
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [OAuthRefreshURLProtocol.self]
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }
+
+    static func capturedBodyString() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return capturedBody.map { String(decoding: $0, as: UTF8.self) }
     }
 }

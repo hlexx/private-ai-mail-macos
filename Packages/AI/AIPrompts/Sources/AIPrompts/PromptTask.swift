@@ -88,20 +88,42 @@ public enum PromptTextBudget {
         return "\(prefix)\n\n[trimmed \(omitted) characters to fit the local model context]"
     }
 
-    public static func renderedSections<Section>(
-        _ sections: [Section],
-        maxCharacters: Int,
-        text: (Section) -> String,
-        render: (Section, String) -> String
-    ) -> [String] {
-        var remainingCharacters = max(maxCharacters, 0)
+    public static func capped(_ text: String, maxCharacters: Int) -> String {
+        let budget = max(maxCharacters, 0)
+        guard text.count > budget else { return text }
+        guard budget > 0 else { return "" }
 
-        return sections.map { section in
-            let rawText = text(section)
-            let renderedText = trimmed(rawText, maxCharacters: remainingCharacters)
-            remainingCharacters -= min(rawText.count, remainingCharacters)
-            return render(section, renderedText)
+        var marker = "\n\n[trimmed \(text.count) characters to fit the local model context]"
+        var prefixLength = max(budget - marker.count, 0)
+
+        while true {
+            let omitted = text.count - prefixLength
+            let nextMarker = "\n\n[trimmed \(omitted) characters to fit the local model context]"
+            let nextPrefixLength = max(budget - nextMarker.count, 0)
+            guard nextMarker != marker || nextPrefixLength != prefixLength else { break }
+            marker = nextMarker
+            prefixLength = nextPrefixLength
         }
+
+        guard marker.count < budget else {
+            return String(marker.prefix(budget))
+        }
+
+        return "\(text.prefix(prefixLength))\(marker)"
+    }
+
+    static func renderedPrompt(
+        fixedParts: [String],
+        budgetedTail: String,
+        maxCharacters: Int,
+        separator: String = "\n"
+    ) -> String {
+        let fixedText = fixedParts.joined(separator: separator)
+        let separatorCount = fixedText.isEmpty || budgetedTail.isEmpty ? 0 : separator.count
+        let tailBudget = max(maxCharacters - fixedText.count - separatorCount, 0)
+        let tail = capped(budgetedTail, maxCharacters: tailBudget)
+        let prompt = tail.isEmpty ? fixedText : [fixedText, tail].joined(separator: separator)
+        return capped(prompt, maxCharacters: maxCharacters)
     }
 
     static func trimmedMessageBody(_ text: String, maxCharacters: Int) -> String {

@@ -148,6 +148,7 @@ struct AttachmentArtifactMigrationTests {
 
         try dbQueue.write { database in
             try addLegacyCompatibilityColumns(database)
+            try database.execute(sql: "ALTER TABLE attachment_ai_artifact ADD COLUMN scratch_legacy TEXT")
             try AccountRecord(id: "a1", email: "a@example.com", createdAt: 1).insert(database)
             try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 1).insert(database)
             try MessageRecord(id: "m1", threadId: "t1", accountId: "a1", sentAt: 1).insert(database)
@@ -219,6 +220,7 @@ struct AttachmentArtifactMigrationTests {
             #expect(try String.fetchOne(database, sql: "SELECT content_json FROM attachment_ai_artifact") == #"{"summary":"legacy"}"#)
             #expect(try String.fetchOne(database, sql: "SELECT task_id FROM attachment_ai_artifact") == "attachmentSummary")
             #expect(try String.fetchOne(database, sql: "SELECT input_fingerprint FROM attachment_ai_artifact") == "hash1")
+            #expect(!((try columnNames(database, table: "attachment_ai_artifact")).contains("scratch_legacy")))
 
             let extractionIndexes = try indexNames(database, table: "attachment_extraction")
             let chunkIndexes = try indexNames(database, table: "attachment_chunk")
@@ -388,6 +390,12 @@ private func extractionVersionColumnTypes(_ db: Database) throws -> [String: Str
 
 private func storedExtractionVersionType(_ db: Database, table: String) throws -> String? {
     try String.fetchOne(db, sql: "SELECT typeof(extraction_version) FROM \(table) LIMIT 1")
+}
+
+private func columnNames(_ db: Database, table: String) throws -> [String] {
+    try Row.fetchAll(db, sql: "PRAGMA table_info(\(table))").compactMap { row in
+        row["name"] as String?
+    }
 }
 
 private func indexNames(_ db: Database, table: String) throws -> [String] {

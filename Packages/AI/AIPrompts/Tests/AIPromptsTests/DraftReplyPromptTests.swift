@@ -101,10 +101,11 @@ struct DraftReplyPromptTests {
             replyLanguage: "en"
         )
 
-        #expect(prompt.contains("[trimmed 10 characters"))
+        #expect(prompt.count <= DraftReplyTask.metadata.maxInputCharacters)
+        #expect(prompt.contains("[trimmed "))
     }
 
-    @Test func taskPromptUsesOneTotalBodyBudgetAcrossManyMessages() {
+    @Test func taskPromptUsesOneTotalRenderedBudgetAcrossManyMessages() {
         let maxCharacters = DraftReplyTask.metadata.maxInputCharacters
         let messages = [
             PromptMessage(
@@ -130,15 +131,32 @@ struct DraftReplyPromptTests {
             replyLanguage: "en"
         )
 
-        #expect(prompt.count < maxCharacters * 2)
-        #expect(prompt.filter { $0 == "~" }.count == maxCharacters)
+        #expect(prompt.count <= maxCharacters)
+        #expect(prompt.filter { $0 == "~" }.count > 0)
+        #expect(prompt.filter { $0 == "~" }.count < maxCharacters)
         #expect(prompt.filter { $0 == "^" }.isEmpty)
         #expect(prompt.filter { $0 == "$" }.isEmpty)
-        #expect(prompt.contains("[trimmed 100 characters"))
-        #expect(prompt.contains("[trimmed \(maxCharacters + 100) characters"))
+        #expect(prompt.contains("[trimmed "))
+        #expect(prompt.contains("## Output JSON"))
         #expect(prompt.contains("msg_1"))
-        #expect(prompt.contains("msg_2"))
-        #expect(prompt.contains("msg_3"))
+    }
+
+    @Test func taskPromptCapsManyEmptyMessageHeaders() {
+        let maxCharacters = DraftReplyTask.metadata.maxInputCharacters
+        let prompt = DraftReplyPrompt.taskPrompt(
+            messages: (0..<800).map { index in
+                PromptMessage(
+                    from: "sender-\(index)@example.com",
+                    sentAt: Date(timeIntervalSince1970: TimeInterval(index)),
+                    bodyText: ""
+                )
+            },
+            tone: "concise",
+            replyLanguage: "en"
+        )
+
+        #expect(prompt.count <= maxCharacters)
+        #expect(prompt.contains("## Output JSON"))
     }
 
     @Test func smallTaskPromptRendersBodiesUnchanged() {

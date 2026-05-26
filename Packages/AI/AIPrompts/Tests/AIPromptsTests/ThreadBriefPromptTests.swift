@@ -90,11 +90,12 @@ struct ThreadBriefPromptTests {
             attachments: []
         )
 
-        #expect(prompt.contains("[trimmed 4 characters"))
+        #expect(prompt.count <= ThreadBriefTask.metadata.maxInputCharacters)
+        #expect(prompt.contains("[trimmed "))
     }
 
-    @Test("task prompt uses one total body budget across many messages")
-    func taskPromptUsesTotalBodyBudgetAcrossMessages() {
+    @Test("task prompt stays inside one rendered input budget across many messages")
+    func taskPromptUsesTotalRenderedBudgetAcrossMessages() {
         let maxCharacters = ThreadBriefTask.metadata.maxInputCharacters
         let messages = [
             PromptMessage(
@@ -120,13 +121,38 @@ struct ThreadBriefPromptTests {
             ]
         )
 
-        #expect(prompt.count < maxCharacters * 2)
-        #expect(prompt.filter { $0 == "~" }.count == maxCharacters)
+        #expect(prompt.count <= maxCharacters)
+        #expect(prompt.filter { $0 == "~" }.count > 0)
+        #expect(prompt.filter { $0 == "~" }.count < maxCharacters)
         #expect(prompt.filter { $0 == "^" }.isEmpty)
         #expect(prompt.filter { $0 == "$" }.isEmpty)
-        #expect(prompt.contains("[trimmed 100 characters"))
-        #expect(prompt.contains("[trimmed \(maxCharacters + 100) characters"))
+        #expect(prompt.contains("[trimmed "))
         #expect(prompt.contains("budget.pdf"))
+        #expect(prompt.contains("## Output JSON"))
+    }
+
+    @Test("task prompt caps attachment-heavy rendered input")
+    func taskPromptCapsAttachmentHeavyRenderedInput() {
+        let maxCharacters = ThreadBriefTask.metadata.maxInputCharacters
+        let prompt = ThreadBriefPrompt.taskPrompt(
+            messages: [
+                PromptMessage(
+                    from: "small@example.com",
+                    sentAt: Date(timeIntervalSince1970: 0),
+                    bodyText: "Please confirm the final date."
+                ),
+            ],
+            attachments: (0..<500).map { index in
+                PromptAttachment(
+                    filename: "attachment-\(index)-\(String(repeating: "long-name", count: 4)).pdf",
+                    mime: "application/pdf",
+                    pageCount: index + 1
+                )
+            }
+        )
+
+        #expect(prompt.count <= maxCharacters)
+        #expect(prompt.contains("## Output JSON"))
     }
 
     @Test("small task prompt renders bodies unchanged")

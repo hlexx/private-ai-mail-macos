@@ -78,8 +78,14 @@ public actor AttachmentSummaryOrchestrator {
     public func summarize(_ request: AttachmentSummaryRequest) async throws -> AttachmentSummaryOrchestratorResult {
         let blob = try await loadOrFetchBlob(request)
         if let cached = try fetchCachedSummary(request, fingerprint: blob.sha256) {
-            Self.logger.info("Attachment summary cache hit for \(request.attachmentId, privacy: .public)")
-            return .summary(cached, cached: true)
+            do {
+                try validateCachedSummary(cached, request: request)
+                Self.logger.info("Attachment summary cache hit for \(request.attachmentId, privacy: .public)")
+                return .summary(cached, cached: true)
+            } catch let error as AttachmentSummaryEvidenceValidationError {
+                Self.logEvidenceValidationFailure(error, request: request)
+                try await deleteCachedSummary(request, fingerprint: blob.sha256)
+            }
         }
 
         let bytes = try byteStore.load(relativePath: blob.relativePath)
@@ -188,6 +194,13 @@ public actor AttachmentSummaryOrchestrator {
 }
 
 extension AttachmentSummaryOrchestrator {
+    private static let modernArtifactCacheColumns: Set<String> = [
+        "task_id",
+        "prompt_version",
+        "schema_version",
+        "input_fingerprint",
+    ]
+
     private func fetchCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) throws -> AIAttachmentSummary? {
         let metadata = AttachmentSummaryTask.metadata
         let payload = try db.dbQueue.read { database -> String? in
@@ -201,7 +214,7 @@ extension AttachmentSummaryOrchestrator {
                 payloadExpression = "payload_json"
             }
 
-            if columns.contains("task_id"), columns.contains("input_fingerprint") {
+            if columns.isSuperset(of: Self.modernArtifactCacheColumns) {
                 return try String.fetchOne(
                     database,
                     sql: """
@@ -257,6 +270,129 @@ extension AttachmentSummaryOrchestrator {
         }
         guard let payload else { return nil }
         return try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(payload.utf8))
+    }
+
+    private func validateCachedSummary(
+        _ summary: AIAttachmentSummary,
+        request: AttachmentSummaryRequest
+    ) throws {
+        let chunks = try fetchChunks(
+            request,
+            extractionVersion: AttachmentTextExtractor.extractionVersion
+        )
+        try Self.validateSummaryEvidence(summary, chunks: chunks)
+    }
+
+    private func fetchChunks(
+        _ request: AttachmentSummaryRequest,
+        extractionVersion: String
+    ) throws -> [PromptAttachmentChunk] {
+        try db.dbQueue.read { database in
+            let columns = try Self.tableColumns("attachment_chunk", db: database)
+            let textExpression: String
+            if columns.contains("content_text"), columns.contains("text") {
+                textExpression = "COALESCE(content_text, text)"
+            } else if columns.contains("text") {
+                textExpression = "text"
+            } else {
+                textExpression = "content_text"
+            }
+
+            let offsetExpression: String
+            if columns.contains("source_offset") {
+                offsetExpression = "source_offset"
+            } else if columns.contains("source_start") {
+                offsetExpression = "source_start"
+            } else {
+                offsetExpression = "0"
+            }
+
+            let rows = try Row.fetchAll(
+                database,
+                sql: """
+                SELECT chunk_index, \(offsetExpression) AS source_offset, \(textExpression) AS chunk_text
+                FROM attachment_chunk
+                WHERE account_id = ?
+                  AND message_id = ?
+                  AND attachment_id = ?
+                  AND extraction_version = ?
+                ORDER BY chunk_index
+                """,
+                arguments: [
+                    request.accountId,
+                    request.messageId,
+                    request.attachmentId,
+                    extractionVersion,
+                ]
+            )
+
+            return rows.compactMap { row in
+                guard let index = row["chunk_index"] as Int?,
+                      let text = row["chunk_text"] as String?
+                else { return nil }
+                let sourceOffset = row["source_offset"] as Int? ?? 0
+                return PromptAttachmentChunk(index: index, sourceOffset: sourceOffset, text: text)
+            }
+        }
+    }
+
+    private func deleteCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) async throws {
+        let metadata = AttachmentSummaryTask.metadata
+        try await db.write { database in
+            let columns = try Self.tableColumns("attachment_ai_artifact", db: database)
+            if columns.isSuperset(of: Self.modernArtifactCacheColumns) {
+                try database.execute(
+                    sql: """
+                    DELETE FROM attachment_ai_artifact
+                    WHERE account_id = ?
+                      AND message_id = ?
+                      AND attachment_id = ?
+                      AND task_id = ?
+                      AND prompt_version = ?
+                      AND schema_version = ?
+                      AND model_id = ?
+                      AND extraction_version = ?
+                      AND input_fingerprint = ?
+                    """,
+                    arguments: [
+                        request.accountId,
+                        request.messageId,
+                        request.attachmentId,
+                        metadata.id.rawValue,
+                        metadata.promptVersion,
+                        metadata.schemaVersion,
+                        metadata.modelProfile,
+                        AttachmentTextExtractor.extractionVersion,
+                        fingerprint,
+                    ]
+                )
+                return
+            }
+
+            try database.execute(
+                sql: """
+                DELETE FROM attachment_ai_artifact
+                WHERE account_id = ?
+                  AND message_id = ?
+                  AND attachment_id = ?
+                  AND extraction_version = ?
+                  AND artifact_kind = ?
+                  AND artifact_version = ?
+                  AND model_id = ?
+                  AND content_hash = ?
+                """,
+                arguments: [
+                    request.accountId,
+                    request.messageId,
+                    request.attachmentId,
+                    AttachmentTextExtractor.extractionVersion,
+                    Self.artifactKind(metadata),
+                    1,
+                    metadata.modelProfile,
+                    fingerprint,
+                ]
+            )
+        }
     }
 
     private func persistExtraction(
@@ -394,5 +530,11 @@ extension AttachmentSummaryOrchestrator {
             sql: "INSERT OR REPLACE INTO \(table.sqlIdentifier) (\(columns)) VALUES (\(placeholders))",
             arguments: StatementArguments(values.map { $0.1 })
         )
+    }
+}
+
+private extension String {
+    var sqlIdentifier: String {
+        "\"\(replacingOccurrences(of: "\"", with: "\"\""))\""
     }
 }

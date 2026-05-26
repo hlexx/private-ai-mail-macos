@@ -8,6 +8,7 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     var getMessageResults: [String: Result<GmailDTO.Message, Error>] = [:]
     var listLabelsResult: Result<[GmailDTO.Label], Error> = .success([])
 
+    private let lock = NSLock()
     private var listMessagesCallIndex = 0
     private var listHistoryCallIndex = 0
 
@@ -17,38 +18,54 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     var listHistoryCalls: [(startHistoryId: String, pageToken: String?)] = []
 
     func listMessages(query: String?, pageToken: String?, maxResults: Int) async throws -> GmailDTO.MessageList {
-        listMessagesCalled += 1
-        guard listMessagesCallIndex < listMessagesResults.count else {
+        let result: Result<GmailDTO.MessageList, Error>? = withLock {
+            listMessagesCalled += 1
+            guard listMessagesCallIndex < listMessagesResults.count else {
+                return nil
+            }
+            let result = listMessagesResults[listMessagesCallIndex]
+            listMessagesCallIndex += 1
+            return result
+        }
+        guard let result else {
             return GmailDTO.MessageList(messages: nil, nextPageToken: nil)
         }
-        let result = listMessagesResults[listMessagesCallIndex]
-        listMessagesCallIndex += 1
         return try result.get()
     }
 
     func getMessage(id: String, format: GmailMessageFormat) async throws -> GmailDTO.Message {
-        guard let result = getMessageResults[id] else {
+        let result = withLock { getMessageResults[id] }
+        guard let result else {
             throw GmailAPIError.invalidResponse
         }
         return try result.get()
     }
 
     func getThread(id: String, format: GmailMessageFormat) async throws -> GmailDTO.Thread {
-        getThreadCalled += 1
-        getThreadCalledIds.append(id)
-        guard let result = getThreadResults[id] else {
+        let result: Result<GmailDTO.Thread, Error>? = withLock {
+            getThreadCalled += 1
+            getThreadCalledIds.append(id)
+            return getThreadResults[id]
+        }
+        guard let result else {
             throw GmailAPIError.invalidResponse
         }
         return try result.get()
     }
 
     func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse {
-        listHistoryCalls.append((startHistoryId: startHistoryId, pageToken: pageToken))
-        guard listHistoryCallIndex < listHistoryResults.count else {
+        let result: Result<GmailDTO.HistoryResponse, Error>? = withLock {
+            listHistoryCalls.append((startHistoryId: startHistoryId, pageToken: pageToken))
+            guard listHistoryCallIndex < listHistoryResults.count else {
+                return nil
+            }
+            let result = listHistoryResults[listHistoryCallIndex]
+            listHistoryCallIndex += 1
+            return result
+        }
+        guard let result else {
             return GmailDTO.HistoryResponse(history: nil, nextPageToken: nil, historyId: startHistoryId)
         }
-        let result = listHistoryResults[listHistoryCallIndex]
-        listHistoryCallIndex += 1
         return try result.get()
     }
 
@@ -57,17 +74,32 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     }
 
     func listLabels() async throws -> [GmailDTO.Label] {
-        try listLabelsResult.get()
+        try withLock { listLabelsResult }.get()
     }
 
     var modifyThreadCalls: [(id: String, add: [String], remove: [String])] = []
     var modifyThreadResult: Result<GmailDTO.Thread, Error>?
 
     func modifyThread(id: String, addLabelIds: [String], removeLabelIds: [String]) async throws -> GmailDTO.Thread {
-        modifyThreadCalls.append((id: id, add: addLabelIds, remove: removeLabelIds))
-        if let result = modifyThreadResult {
+        let result = withLock { () -> Result<GmailDTO.Thread, Error>? in
+            modifyThreadCalls.append((id: id, add: addLabelIds, remove: removeLabelIds))
+            return modifyThreadResult
+        }
+        if let result {
             return try result.get()
         }
         return GmailDTO.Thread(id: id)
+    }
+
+    func resetListMessagesCallIndex() {
+        withLock {
+            listMessagesCallIndex = 0
+        }
+    }
+
+    private func withLock<T>(_ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
     }
 }

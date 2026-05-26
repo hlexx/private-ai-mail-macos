@@ -44,9 +44,16 @@ space for the app + AI model.
 
 **Step 9 complete.** First installable alpha (v0.1.0-alpha) released with
 Sparkle auto-update support. Gmail read-only sync, on-device AI thread
-briefs via MLX + Gemma, reply composer with real Gmail send. The app
-generates per-thread briefs locally on Apple Silicon with zero network
+briefs via MLX + Gemma, local attachment summaries with grounded evidence,
+reply composer with real Gmail send. The app generates per-thread briefs and
+supported attachment summaries locally on Apple Silicon with zero network
 traffic at inference time.
+
+The reading pane can summarize supported attachments locally. Attachment
+summaries are cached on device, show cited evidence from extracted chunks, and
+fail instead of persisting output when evidence cannot be grounded. V1 supports
+PDF text and text-like formats; DOCX, image OCR, and scanned-PDF OCR remain
+unsupported.
 
 ## Requirements
 
@@ -74,7 +81,8 @@ cd Packages/Mail/MailDomain && swift test
 Open `PrivateAIMail.xcworkspace`, select the `MacApp` scheme, run.
 
 The app opens the Re:Box mail workspace with Gmail account connection, folder
-filters, thread reading, local AI briefs, reply drafting, and Gmail send.
+filters, thread reading, local AI briefs, attachment summaries, reply drafting,
+and Gmail send.
 
 ## Repo layout
 
