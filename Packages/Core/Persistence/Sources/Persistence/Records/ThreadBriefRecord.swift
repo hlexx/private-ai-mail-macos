@@ -16,6 +16,8 @@ public struct ThreadBriefRecord: Codable, Sendable, FetchableRecord, Persistable
     public var evidenceJson: String
     public var language: String?
     public var generatedAt: Int
+    public var promptVersion: String?
+    public var schemaVersion: String?
 
     public init(
         accountId: String,
@@ -29,7 +31,9 @@ public struct ThreadBriefRecord: Codable, Sendable, FetchableRecord, Persistable
         confidence: Double = 0,
         evidenceJson: String = "[]",
         language: String? = nil,
-        generatedAt: Int
+        generatedAt: Int,
+        promptVersion: String? = nil,
+        schemaVersion: String? = nil
     ) {
         self.accountId = accountId
         self.threadId = threadId
@@ -43,6 +47,8 @@ public struct ThreadBriefRecord: Codable, Sendable, FetchableRecord, Persistable
         self.evidenceJson = evidenceJson
         self.language = language
         self.generatedAt = generatedAt
+        self.promptVersion = promptVersion
+        self.schemaVersion = schemaVersion
     }
 
     enum CodingKeys: String, CodingKey {
@@ -55,5 +61,7 @@ public struct ThreadBriefRecord: Codable, Sendable, FetchableRecord, Persistable
         case evidenceJson = "evidence_json"
         case language
         case generatedAt = "generated_at"
+        case promptVersion = "prompt_version"
+        case schemaVersion = "schema_version"
     }
 }

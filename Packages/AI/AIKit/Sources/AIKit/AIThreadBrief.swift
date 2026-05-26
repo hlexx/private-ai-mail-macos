@@ -1,3 +1,4 @@
+import AIPrompts
 import Foundation
 
 public struct AIThreadBrief: Sendable, Equatable {
@@ -26,4 +27,9 @@ public struct AIThreadBrief: Sendable, Equatable {
         self.evidence = evidence
         self.confidence = confidence
     }
+}
+
+public enum AIThreadBriefCacheIdentity {
+    public static let promptVersion = ThreadBriefTask.metadata.promptVersion
+    public static let schemaVersion = ThreadBriefTask.metadata.schemaVersion
 }

@@ -76,11 +76,19 @@ public final class BriefBackgroundQueue {
                         SELECT t.account_id, t.id
                         FROM thread t
                         JOIN thread_label tl ON tl.account_id = t.account_id AND tl.thread_id = t.id AND tl.label_id = 'INBOX'
-                        LEFT JOIN thread_brief tb ON tb.account_id = t.account_id AND tb.thread_id = t.id
+                        LEFT JOIN thread_brief tb
+                          ON tb.account_id = t.account_id
+                         AND tb.thread_id = t.id
+                         AND tb.prompt_version = ?
+                         AND tb.schema_version = ?
                         WHERE tb.thread_id IS NULL
                         ORDER BY t.last_message_at DESC
                         LIMIT ?
-                        """, arguments: [limit])
+                        """, arguments: [
+                            AIThreadBriefCacheIdentity.promptVersion,
+                            AIThreadBriefCacheIdentity.schemaVersion,
+                            limit
+                        ])
                     return rows.map { (accountId: $0["account_id"] as String, threadId: $0["id"] as String) }
                 }
             }.value
@@ -111,7 +119,11 @@ public final class BriefBackgroundQueue {
                 let generated = try Int.fetchOne(database, sql: """
                     SELECT COUNT(*) FROM thread_brief tb
                     JOIN thread_label tl ON tl.account_id = tb.account_id AND tl.thread_id = tb.thread_id AND tl.label_id = 'INBOX'
-                    """) ?? 0
+                    WHERE tb.prompt_version = ? AND tb.schema_version = ?
+                    """, arguments: [
+                        AIThreadBriefCacheIdentity.promptVersion,
+                        AIThreadBriefCacheIdentity.schemaVersion
+                    ]) ?? 0
                 return (total, generated)
             }
         }.value
@@ -178,7 +190,10 @@ public final class BriefBackgroundQueue {
                     )
                 }
             }.value
-            if let existing, existing.latestMessageId == fetchResult.latestMessageID {
+            if let existing,
+               existing.latestMessageId == fetchResult.latestMessageID,
+               existing.promptVersion == AIThreadBriefCacheIdentity.promptVersion,
+               existing.schemaVersion == AIThreadBriefCacheIdentity.schemaVersion {
                 return
             }
 
@@ -201,7 +216,9 @@ public final class BriefBackgroundQueue {
                     confidence: aiBrief.confidence,
                     evidenceJson: Self.encodeEvidence(aiBrief.evidence),
                     language: language,
-                    generatedAt: Int(Date().timeIntervalSince1970)
+                    generatedAt: Int(Date().timeIntervalSince1970),
+                    promptVersion: AIThreadBriefCacheIdentity.promptVersion,
+                    schemaVersion: AIThreadBriefCacheIdentity.schemaVersion
                 )
                 try db.dbQueue.write { database in
                     try record.save(database)

@@ -75,7 +75,7 @@ struct BriefPersistenceTests {
         let store = BriefStore(aiService: fake, db: db)
 
         store.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .seconds(1))
 
         #expect(fake.callCount == 1)
         #expect(store.brief != nil)
@@ -93,6 +93,8 @@ struct BriefPersistenceTests {
         #expect(row?.deadline == "Wednesday")
         #expect(row?.latestMessageId == "msg-2")
         #expect(row?.confidence == 0.9)
+        #expect(row?.promptVersion == AIThreadBriefCacheIdentity.promptVersion)
+        #expect(row?.schemaVersion == AIThreadBriefCacheIdentity.schemaVersion)
     }
 
     @MainActor
@@ -104,18 +106,57 @@ struct BriefPersistenceTests {
         // First store generates and persists
         let store1 = BriefStore(aiService: fake, db: db)
         store1.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .seconds(1))
         #expect(fake.callCount == 1)
 
         // Second store (fresh, no in-memory cache) should load from DB
         let store2 = BriefStore(aiService: fake, db: db)
         store2.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .seconds(1))
 
         #expect(fake.callCount == 1) // AI not called again
         #expect(store2.brief != nil)
         #expect(store2.brief?.summary == "Discussion about seating")
         #expect(store2.brief?.request == "Confirm seat count")
+    }
+
+    @MainActor
+    @Test func stalePromptVersionInDBIsRegenerated() async throws {
+        let fake = FakeAIService()
+        fake.stubbedBrief = sampleBrief
+        let db = try makeTestDB()
+        try await db.dbQueue.write { database in
+            try ThreadBriefRecord(
+                accountId: "acc1",
+                threadId: "thread-1",
+                latestMessageId: "msg-2",
+                summary: "type",
+                request: "type",
+                deadline: "type",
+                risk: "type",
+                nextStep: "type",
+                confidence: 0.55,
+                evidenceJson: "[]",
+                generatedAt: 3000
+            ).insert(database)
+        }
+
+        let store = BriefStore(aiService: fake, db: db)
+        store.loadBrief(forThreadID: "thread-1", accountId: "acc1")
+        try await Task.sleep(for: .seconds(1))
+
+        #expect(fake.callCount == 1)
+        #expect(store.brief?.summary == "Discussion about seating")
+
+        let row = try db.read { database in
+            try ThreadBriefRecord.fetchOne(
+                database,
+                key: ["account_id": "acc1", "thread_id": "thread-1"]
+            )
+        }
+        #expect(row?.summary == "Discussion about seating")
+        #expect(row?.promptVersion == AIThreadBriefCacheIdentity.promptVersion)
+        #expect(row?.schemaVersion == AIThreadBriefCacheIdentity.schemaVersion)
     }
 
     @MainActor
@@ -126,7 +167,7 @@ struct BriefPersistenceTests {
 
         let store = BriefStore(aiService: fake, db: db)
         store.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .seconds(1))
         #expect(fake.callCount == 1)
 
         // Add a new message to thread-1 (simulates incoming mail)
@@ -146,7 +187,7 @@ struct BriefPersistenceTests {
         fake.stubbedBrief = updatedBrief
         let store2 = BriefStore(aiService: fake, db: db)
         store2.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .seconds(1))
 
         #expect(fake.callCount == 2) // AI called again
         #expect(store2.brief?.summary == "Updated discussion")
@@ -160,7 +201,7 @@ struct BriefPersistenceTests {
         let store = BriefStore(aiService: fake, db: db)
 
         store.loadBrief(forThreadID: "thread-1", accountId: "acc1")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .seconds(1))
 
         let row = try db.read { database in
             try ThreadBriefRecord.fetchOne(

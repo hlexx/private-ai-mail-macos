@@ -73,7 +73,10 @@ public final class BriefStore {
                 let resolvedAccountId = fetchResult.resolvedAccountId
 
                 // L1: in-memory cache
-                if let cached = briefCache[cacheKey], cached.latestMessageID == fetchResult.latestMessageID {
+                if let cached = briefCache[cacheKey],
+                   cached.latestMessageID == fetchResult.latestMessageID,
+                   cached.promptVersion == AIThreadBriefCacheIdentity.promptVersion,
+                   cached.schemaVersion == AIThreadBriefCacheIdentity.schemaVersion {
                     brief = cached.viewData
                     isLoading = false
                     return
@@ -84,9 +87,10 @@ public final class BriefStore {
                     accountId: resolvedAccountId,
                     threadId: threadID,
                     db: db
-                ), row.latestMessageId == fetchResult.latestMessageID {
+                ), row.latestMessageId == fetchResult.latestMessageID,
+                   Self.isCurrentCacheRecord(row) {
                     let viewData = ThreadBriefViewData(from: row)
-                    briefCache[cacheKey] = CacheEntry(viewData: viewData, latestMessageID: fetchResult.latestMessageID)
+                    cacheBrief(viewData, for: cacheKey, latestMessageID: fetchResult.latestMessageID)
                     brief = viewData
                     isLoading = false
                     return
@@ -100,19 +104,12 @@ public final class BriefStore {
                 let language = fetchResult.detectedLanguage
                 let latestMessageID = fetchResult.latestMessageID
                 try await Task.detached {
-                    let record = ThreadBriefRecord(
+                    let record = Self.makeRecord(
                         accountId: resolvedAccountId,
                         threadId: threadID,
                         latestMessageId: latestMessageID,
-                        summary: aiBrief.summary,
-                        request: aiBrief.request,
-                        deadline: aiBrief.deadline,
-                        risk: aiBrief.risk,
-                        nextStep: aiBrief.nextStep,
-                        confidence: aiBrief.confidence,
-                        evidenceJson: Self.encodeEvidence(aiBrief.evidence),
-                        language: language,
-                        generatedAt: Int(Date().timeIntervalSince1970)
+                        brief: aiBrief,
+                        language: language
                     )
                     try db.dbQueue.write { database in
                         try record.save(database)
@@ -120,7 +117,7 @@ public final class BriefStore {
                 }.value
 
                 let viewData = ThreadBriefViewData(from: aiBrief)
-                briefCache[cacheKey] = CacheEntry(viewData: viewData, latestMessageID: fetchResult.latestMessageID)
+                cacheBrief(viewData, for: cacheKey, latestMessageID: fetchResult.latestMessageID)
                 brief = viewData
                 isLoading = false
                 error = nil
@@ -224,6 +221,36 @@ public final class BriefStore {
         (try? JSONEncoder().encode(evidence)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
     }
 
+    private nonisolated static func makeRecord(
+        accountId: String,
+        threadId: String,
+        latestMessageId: String,
+        brief: AIThreadBrief,
+        language: String?
+    ) -> ThreadBriefRecord {
+        ThreadBriefRecord(
+            accountId: accountId,
+            threadId: threadId,
+            latestMessageId: latestMessageId,
+            summary: brief.summary,
+            request: brief.request,
+            deadline: brief.deadline,
+            risk: brief.risk,
+            nextStep: brief.nextStep,
+            confidence: brief.confidence,
+            evidenceJson: encodeEvidence(brief.evidence),
+            language: language,
+            generatedAt: Int(Date().timeIntervalSince1970),
+            promptVersion: AIThreadBriefCacheIdentity.promptVersion,
+            schemaVersion: AIThreadBriefCacheIdentity.schemaVersion
+        )
+    }
+
+    private nonisolated static func isCurrentCacheRecord(_ record: ThreadBriefRecord) -> Bool {
+        record.promptVersion == AIThreadBriefCacheIdentity.promptVersion
+            && record.schemaVersion == AIThreadBriefCacheIdentity.schemaVersion
+    }
+
     private func handleBriefFailure(_ error: any Error, threadID: String, accountId: String?) {
         guard activeThreadID == threadID else { return }
         let kind = Self.failureKind(error)
@@ -233,6 +260,15 @@ public final class BriefStore {
         self.error = error
         isLoading = false
         brief = nil
+    }
+
+    private func cacheBrief(_ viewData: ThreadBriefViewData, for key: BriefCacheKey, latestMessageID: String) {
+        briefCache[key] = CacheEntry(
+            viewData: viewData,
+            latestMessageID: latestMessageID,
+            promptVersion: AIThreadBriefCacheIdentity.promptVersion,
+            schemaVersion: AIThreadBriefCacheIdentity.schemaVersion
+        )
     }
 
     private nonisolated static func failureKind(_ error: any Error) -> String {
@@ -271,6 +307,8 @@ private struct BriefCacheKey: Hashable {
 private struct CacheEntry {
     let viewData: ThreadBriefViewData
     let latestMessageID: String
+    let promptVersion: String?
+    let schemaVersion: String?
 }
 
 // MARK: - ThreadBriefViewData convenience

@@ -25,7 +25,19 @@ struct ThreadBriefMigrationTests {
         #expect(indexes.contains("idx_thread_brief_account"))
         #expect(indexes.contains("idx_thread_brief_request"))
         #expect(indexes.contains("idx_thread_brief_deadline"))
-        #expect(indexes.count == 3)
+        #expect(indexes.contains("idx_thread_brief_cache_identity"))
+        #expect(indexes.count == 4)
+    }
+
+    @Test func m013AddsThreadBriefCacheIdentityColumns() async throws {
+        let db = try await DatabaseActor.shared.run {
+            try AppDatabase.openInMemory()
+        }
+        let columns = try db.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM pragma_table_info('thread_brief') ORDER BY name")
+        }
+        #expect(columns.contains("prompt_version"))
+        #expect(columns.contains("schema_version"))
     }
 
     @Test func threadBriefRecordRoundTrip() async throws {
@@ -49,7 +61,9 @@ struct ThreadBriefMigrationTests {
                     confidence: 0.85,
                     evidenceJson: "[\"msg1\",\"msg2\"]",
                     language: "en",
-                    generatedAt: 3000
+                    generatedAt: 3000,
+                    promptVersion: "thread-brief.v2",
+                    schemaVersion: "thread-brief.schema.v1"
                 ).insert(db)
             }
         }
@@ -70,6 +84,8 @@ struct ThreadBriefMigrationTests {
         #expect(brief?.evidenceJson == "[\"msg1\",\"msg2\"]")
         #expect(brief?.language == "en")
         #expect(brief?.generatedAt == 3000)
+        #expect(brief?.promptVersion == "thread-brief.v2")
+        #expect(brief?.schemaVersion == "thread-brief.schema.v1")
     }
 
     @Test func threadBriefCascadeDeleteOnAccountRemoval() async throws {

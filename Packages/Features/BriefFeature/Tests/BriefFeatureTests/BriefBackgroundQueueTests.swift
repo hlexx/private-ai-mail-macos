@@ -72,7 +72,9 @@ private func insertBrief(db: AppDatabase, threadId: String, latestMessageId: Str
             summary: summary,
             confidence: 0.8,
             evidenceJson: "[]",
-            generatedAt: 1000
+            generatedAt: 1000,
+            promptVersion: AIThreadBriefCacheIdentity.promptVersion,
+            schemaVersion: AIThreadBriefCacheIdentity.schemaVersion
         )
         try record.save(database)
     }
@@ -207,6 +209,38 @@ struct BriefBackgroundQueueTests {
         try await Task.sleep(for: .seconds(1))
 
         #expect(fake.callCount == 0)
+    }
+
+    @MainActor
+    @Test func regeneratesBriefWithMissingCacheIdentity() async throws {
+        let fake = QueueFakeAIService()
+        fake.stubbedBrief = queueSampleBrief
+        let db = try makeQueueTestDB(threadCount: 1)
+        try await db.dbQueue.write { database in
+            try ThreadBriefRecord(
+                accountId: "acc1",
+                threadId: "thread-1",
+                latestMessageId: "msg-1",
+                summary: "type",
+                generatedAt: 1000
+            ).insert(database)
+        }
+
+        let queue = BriefBackgroundQueue(aiService: fake, db: db)
+        queue.enqueue(accountId: "acc1", threadId: "thread-1")
+
+        try await Task.sleep(for: .seconds(1))
+
+        let row = try db.read { database in
+            try ThreadBriefRecord.fetchOne(
+                database,
+                key: ["account_id": "acc1", "thread_id": "thread-1"]
+            )
+        }
+        #expect(fake.callCount == 1)
+        #expect(row?.summary == "Queue test summary")
+        #expect(row?.promptVersion == AIThreadBriefCacheIdentity.promptVersion)
+        #expect(row?.schemaVersion == AIThreadBriefCacheIdentity.schemaVersion)
     }
 }
 

@@ -16,6 +16,7 @@ enum Migrator {
         migrator.registerMigration("M010_SignalLabelReconcile", migrate: M010_SignalLabelReconcile.migrate)
         migrator.registerMigration("M011_AttachmentDataPlane", migrate: M011_AttachmentDataPlane.migrate)
         migrator.registerMigration("M012_AttachmentBlobStore", migrate: M012_AttachmentBlobStore.migrate)
+        migrator.registerMigration("M013_ThreadBriefCacheIdentity", migrate: M013_ThreadBriefCacheIdentity.migrate)
         try migrator.migrate(db)
     }
 }
@@ -229,6 +230,20 @@ enum M007_AttachmentCID {
             t.add(column: "content_id", .text)
             t.add(column: "data_base64", .text)
         }
+    }
+}
+
+enum M013_ThreadBriefCacheIdentity {
+    static func migrate(_ db: Database) throws {
+        try db.alter(table: "thread_brief") { t in
+            t.add(column: "prompt_version", .text)
+            t.add(column: "schema_version", .text)
+        }
+        try db.create(
+            index: "idx_thread_brief_cache_identity",
+            on: "thread_brief",
+            columns: ["account_id", "thread_id", "prompt_version", "schema_version"]
+        )
     }
 }
 
