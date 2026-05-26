@@ -64,7 +64,7 @@ struct ThreadBriefParserTests {
     @Test("rejects truncated JSON")
     func rejectTruncated() {
         let truncated = """
-            {"summary": "test", "evidence": ["a"]
+            {"summary": "unterminated
             """
         #expect(throws: ThreadBriefParser.ParseError.self) {
             try ThreadBriefParser.parse(truncated)
@@ -169,6 +169,24 @@ struct ThreadBriefParserTests {
         #expect(brief.summary == "Payment update needed")
         #expect(brief.evidence == ["Payment failed"])
         #expect(brief.confidence == 0.75)
+    }
+
+    @Test("accepts seeded plain text summary fallback")
+    func acceptsSeededPlainTextSummaryFallback() throws {
+        let brief = try ThreadBriefParser.parse("{Payment failed and the user should update the payment method.")
+        #expect(brief.summary == "Payment failed and the user should update the payment method.")
+        #expect(brief.confidence == 0.45)
+    }
+
+    @Test("salvages complete fields from truncated JSON object")
+    func salvagesCompleteFieldsFromTruncatedJSONObject() throws {
+        let json = """
+            {"summary":"Payment failed","request":"Update the payment method","confidence":0.8
+            """
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.summary == "Payment failed")
+        #expect(brief.request == "Update the payment method")
+        #expect(brief.confidence == 0.55)
     }
 
     @Test("rejects empty object")

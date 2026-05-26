@@ -174,6 +174,10 @@ public enum DraftReplyParser {
             throw ParseError.schemaViolation(firstSchemaViolation)
         }
 
+        if let body = PromptJSON.firstStringValue(in: rawOutput, forKeys: ["body", "reply", "draft", "message"]) {
+            return ParsedThreadReply(body: body, evidenceMessageIDs: [], detectedReplyLanguage: "und", confidence: 0.55)
+        }
+
         let truncated = String(rawOutput.prefix(200))
         throw ParseError.invalidJSON(truncated)
     }
@@ -192,6 +196,10 @@ public enum DraftReplyParser {
     }
 
     private static func parsePlainReplyFallback(_ rawOutput: String) -> ParsedThreadReply? {
+        if let body = PromptJSON.seededPlainTextFallback(from: rawOutput) {
+            return ParsedThreadReply(body: body, evidenceMessageIDs: [], detectedReplyLanguage: "und", confidence: 0.5)
+        }
+
         guard !rawOutput.contains("{") else {
             return nil
         }

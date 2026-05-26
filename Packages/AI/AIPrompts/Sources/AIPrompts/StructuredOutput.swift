@@ -98,6 +98,10 @@ public enum ThreadBriefParser {
             throw ParseError.schemaViolation(firstSchemaViolation)
         }
 
+        if let fallback = fallbackBrief(from: rawOutput) {
+            return fallback
+        }
+
         let truncated = String(rawOutput.prefix(200))
         throw ParseError.invalidJSON(truncated)
     }
@@ -115,6 +119,35 @@ public enum ThreadBriefParser {
             return wrapper.brief
         }
         return try? decoder.decode(RawBrief.self, from: data)
+    }
+
+    private static func fallbackBrief(from rawOutput: String) -> ParsedThreadBrief? {
+        if let summary = PromptJSON.seededPlainTextFallback(from: rawOutput) {
+            return ParsedThreadBrief(summary: summary, evidence: [], confidence: 0.45)
+        }
+
+        let summary = PromptJSON.firstStringValue(in: rawOutput, forKeys: ["summary"])
+        let request = PromptJSON.firstStringValue(in: rawOutput, forKeys: ["request"])
+        let deadline = PromptJSON.firstStringValue(in: rawOutput, forKeys: ["deadline"])
+        let risk = PromptJSON.firstStringValue(in: rawOutput, forKeys: ["risk"])
+        let nextStep = PromptJSON.firstStringValue(
+            in: rawOutput,
+            forKeys: ["nextStep", "next_step", "nextSteps", "next_steps"]
+        )
+
+        guard [summary, request, deadline, risk, nextStep].contains(where: { $0 != nil }) else {
+            return nil
+        }
+
+        return ParsedThreadBrief(
+            summary: summary,
+            request: request,
+            deadline: deadline,
+            risk: risk,
+            nextStep: nextStep,
+            evidence: [],
+            confidence: 0.55
+        )
     }
 }
 

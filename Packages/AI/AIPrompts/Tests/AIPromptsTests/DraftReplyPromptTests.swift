@@ -41,6 +41,20 @@ struct DraftReplyPromptTests {
         #expect(reply.confidence == 0.74)
     }
 
+    @Test func parserAcceptsSeededPlainTextReplyFallback() throws {
+        let reply = try DraftReplyParser.parse("{Thanks, I will update the payment method today.")
+
+        #expect(reply.body == "Thanks, I will update the payment method today.")
+        #expect(reply.confidence == 0.5)
+    }
+
+    @Test func parserSalvagesCompleteBodyFromTruncatedJSONObject() throws {
+        let reply = try DraftReplyParser.parse(#"{"body":"Thanks, I will update it today.","confidence":0.8"#)
+
+        #expect(reply.body == "Thanks, I will update it today.")
+        #expect(reply.confidence == 0.55)
+    }
+
     @Test func parserAcceptsPlainTextReplyFallback() throws {
         let reply = try DraftReplyParser.parse("Thanks, I will review this today.")
 
@@ -52,7 +66,7 @@ struct DraftReplyPromptTests {
 
     @Test func parserStillRejectsMalformedJSONAttempts() throws {
         #expect(throws: DraftReplyParser.ParseError.self) {
-            try DraftReplyParser.parse(#"{"reply":"unterminated""#)
+            try DraftReplyParser.parse(#"{"reply":"unterminated"#)
         }
     }
 
