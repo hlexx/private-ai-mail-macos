@@ -104,6 +104,71 @@ struct DraftReplyPromptTests {
         #expect(prompt.contains("[trimmed 10 characters"))
     }
 
+    @Test func taskPromptUsesOneTotalBodyBudgetAcrossManyMessages() {
+        let maxCharacters = DraftReplyTask.metadata.maxInputCharacters
+        let messages = [
+            PromptMessage(
+                from: "one",
+                sentAt: Date(timeIntervalSince1970: 0),
+                bodyText: String(repeating: "~", count: maxCharacters + 100)
+            ),
+            PromptMessage(
+                from: "two",
+                sentAt: Date(timeIntervalSince1970: 60),
+                bodyText: String(repeating: "^", count: maxCharacters + 100)
+            ),
+            PromptMessage(
+                from: "three",
+                sentAt: Date(timeIntervalSince1970: 120),
+                bodyText: String(repeating: "$", count: maxCharacters + 100)
+            ),
+        ]
+
+        let prompt = DraftReplyPrompt.taskPrompt(
+            messages: messages,
+            tone: "concise",
+            replyLanguage: "en"
+        )
+
+        #expect(prompt.count < maxCharacters * 2)
+        #expect(prompt.filter { $0 == "~" }.count == maxCharacters)
+        #expect(prompt.filter { $0 == "^" }.isEmpty)
+        #expect(prompt.filter { $0 == "$" }.isEmpty)
+        #expect(prompt.contains("[trimmed 100 characters"))
+        #expect(prompt.contains("[trimmed \(maxCharacters + 100) characters"))
+        #expect(prompt.contains("msg_1"))
+        #expect(prompt.contains("msg_2"))
+        #expect(prompt.contains("msg_3"))
+    }
+
+    @Test func smallTaskPromptRendersBodiesUnchanged() {
+        let prompt = DraftReplyPrompt.taskPrompt(
+            messages: [
+                PromptMessage(
+                    from: "small@example.com",
+                    sentAt: Date(timeIntervalSince1970: 0),
+                    bodyText: "Please send the signed copy today."
+                ),
+            ],
+            tone: "warm",
+            replyLanguage: "en"
+        )
+
+        #expect(prompt.contains("Please send the signed copy today."))
+        #expect(!prompt.contains("[trimmed"))
+    }
+
+    @Test func parserBehaviorRemainsUnchangedAfterBudgeting() throws {
+        let reply = try DraftReplyTask.parse(
+            #"{"body":"Thanks, I will send the signed copy today.","evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.83}"#
+        )
+
+        #expect(reply.body == "Thanks, I will send the signed copy today.")
+        #expect(reply.evidenceMessageIDs == ["msg_1"])
+        #expect(reply.detectedReplyLanguage == "en")
+        #expect(reply.confidence == 0.83)
+    }
+
     @Test func systemPromptDoesNotIncludeCopyableExampleBody() {
         #expect(DraftReplyPrompt.systemPrompt.contains("body"))
         #expect(!DraftReplyPrompt.systemPrompt.contains("contract today"))

@@ -68,16 +68,16 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 4: Enforce total prompt input budgets for thread brief and draft reply
 
-- [ ] Extend `PromptTextBudget` in `Packages/AI/AIPrompts/Sources/AIPrompts/PromptTask.swift` with a total-budget renderer helper that consumes one task-level character budget across multiple sections/messages.
-- [ ] Update `ThreadBriefTask.renderUserPrompt` to treat `ThreadBriefTask.metadata.maxInputCharacters` as a total thread body budget, not a per-message budget.
-- [ ] Update `DraftReplyTask.renderUserPrompt` to treat `DraftReplyTask.metadata.maxInputCharacters` as a total thread body budget, not a per-message budget.
-- [ ] Preserve deterministic truncation markers so users and tests can tell that content was trimmed.
-- [ ] Keep attachment metadata in brief prompts, but ensure message bodies cannot exceed the task budget even when a thread has many messages.
-- [ ] Add `AIPrompts` tests with multiple long messages proving the full rendered prompt does not grow by `messageCount * maxInputCharacters`.
-- [ ] Add tests proving small threads render unchanged and existing parser behavior remains unchanged.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIPrompts && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIRuntime && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIKit && swift test`.
+- [x] Extend `PromptTextBudget` in `Packages/AI/AIPrompts/Sources/AIPrompts/PromptTask.swift` with a total-budget renderer helper that consumes one task-level character budget across multiple sections/messages.
+- [x] Update `ThreadBriefTask.renderUserPrompt` to treat `ThreadBriefTask.metadata.maxInputCharacters` as a total thread body budget, not a per-message budget.
+- [x] Update `DraftReplyTask.renderUserPrompt` to treat `DraftReplyTask.metadata.maxInputCharacters` as a total thread body budget, not a per-message budget.
+- [x] Preserve deterministic truncation markers so users and tests can tell that content was trimmed.
+- [x] Keep attachment metadata in brief prompts, but ensure message bodies cannot exceed the task budget even when a thread has many messages.
+- [x] Add `AIPrompts` tests with multiple long messages proving the full rendered prompt does not grow by `messageCount * maxInputCharacters`.
+- [x] Add tests proving small threads render unchanged and existing parser behavior remains unchanged.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIPrompts && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIRuntime && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIKit && swift test`.
 
 ### Task 5: Validate attachment summary evidence against chunks
 

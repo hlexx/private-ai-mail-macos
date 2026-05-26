@@ -77,10 +77,31 @@ public enum PromptTaskRegistry {
 
 public enum PromptTextBudget {
     public static func trimmed(_ text: String, maxCharacters: Int) -> String {
-        guard text.count > maxCharacters else { return text }
-        let prefix = text.prefix(maxCharacters)
-        let omitted = text.count - maxCharacters
+        let budget = max(maxCharacters, 0)
+        guard text.count > budget else { return text }
+        guard budget > 0 else {
+            return "[trimmed \(text.count) characters to fit the local model context]"
+        }
+
+        let prefix = text.prefix(budget)
+        let omitted = text.count - budget
         return "\(prefix)\n\n[trimmed \(omitted) characters to fit the local model context]"
+    }
+
+    public static func renderedSections<Section>(
+        _ sections: [Section],
+        maxCharacters: Int,
+        text: (Section) -> String,
+        render: (Section, String) -> String
+    ) -> [String] {
+        var remainingCharacters = max(maxCharacters, 0)
+
+        return sections.map { section in
+            let rawText = text(section)
+            let renderedText = trimmed(rawText, maxCharacters: remainingCharacters)
+            remainingCharacters -= min(rawText.count, remainingCharacters)
+            return render(section, renderedText)
+        }
     }
 
     static func trimmedMessageBody(_ text: String, maxCharacters: Int) -> String {

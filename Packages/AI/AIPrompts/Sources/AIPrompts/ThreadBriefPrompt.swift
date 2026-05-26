@@ -75,17 +75,18 @@ public enum ThreadBriefTask: PromptTaskDefinition {
         parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        for msg in input.messages {
+        let renderedMessages = PromptTextBudget.renderedSections(
+            input.messages,
+            maxCharacters: metadata.maxInputCharacters,
+            text: { $0.bodyText }
+        ) { msg, body in
             let ts = formatter.string(from: msg.sentAt)
-            let body = PromptTextBudget.trimmedMessageBody(
-                msg.bodyText,
-                maxCharacters: metadata.maxInputCharacters
-            )
-            parts.append("""
+            return """
                 [From: \(msg.from) | \(ts)]
                 \(body)
-                """)
+                """
         }
+        parts.append(contentsOf: renderedMessages)
 
         if !input.attachments.isEmpty {
             parts.append("")
