@@ -45,10 +45,15 @@ public protocol PromptTaskDefinition {
 
     static var metadata: PromptTaskMetadata { get }
     static var systemPrompt: String { get }
+    static var outputSeed: String { get }
     static var jsonSchemaString: String { get }
 
     static func renderUserPrompt(_ input: Input) -> String
     static func parse(_ rawOutput: String) throws -> Output
+}
+
+public extension PromptTaskDefinition {
+    static var outputSeed: String { "{" }
 }
 
 public enum PromptParseError: Error, Sendable, Equatable {
@@ -104,6 +109,7 @@ enum PromptJSON {
 
         guard !body.isEmpty else { return nil }
         guard !looksLikeJSONFragment(body) else { return nil }
+        guard isMeaningfulTaskText(body) else { return nil }
         return body
     }
 
@@ -112,16 +118,42 @@ enum PromptJSON {
         for key in keys {
             guard let keyRange = text.range(of: #""\#(key)""#),
                   let colon = text[keyRange.upperBound...].firstIndex(of: ":"),
-                  let quote = text[text.index(after: colon)...].firstIndex(of: "\""),
-                  let value = quotedString(in: text, startingAt: quote) else {
+                  let valueStart = firstNonWhitespaceIndex(in: text, after: colon),
+                  text[valueStart] == "\"",
+                  let value = quotedString(in: text, startingAt: valueStart) else {
                 continue
             }
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
+            if isMeaningfulTaskText(trimmed) {
                 return trimmed
             }
         }
         return nil
+    }
+
+    static func isMeaningfulTaskText(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return false }
+
+        let lowercased = trimmed.lowercased()
+        let schemaEchoTokens: Set<String> = [
+            "type",
+            "string",
+            "number",
+            "object",
+            "array",
+            "null",
+            "properties",
+            "required",
+            "additionalproperties",
+            "items",
+            "body",
+            "summary",
+            "evidence",
+            "confidence",
+        ]
+
+        return !schemaEchoTokens.contains(lowercased)
     }
 
     private static func balancedObjectCandidates(in text: String) -> [String] {
@@ -179,6 +211,17 @@ enum PromptJSON {
 
     private static func looksLikeJSONFragment(_ text: String) -> Bool {
         text.contains("\":") || text.hasPrefix("\"") || text.hasPrefix("[")
+    }
+
+    private static func firstNonWhitespaceIndex(in text: String, after colon: String.Index) -> String.Index? {
+        var index = text.index(after: colon)
+        while index < text.endIndex {
+            if !text[index].isWhitespace {
+                return index
+            }
+            index = text.index(after: index)
+        }
+        return nil
     }
 
     private static func quotedString(in text: String, startingAt quote: String.Index) -> String? {

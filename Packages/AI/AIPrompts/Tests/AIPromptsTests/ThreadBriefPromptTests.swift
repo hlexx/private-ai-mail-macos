@@ -42,7 +42,7 @@ struct ThreadBriefPromptTests {
         #expect(prompt.contains("12 pages"))
         #expect(prompt.contains("## Thread"))
         #expect(prompt.contains("## Attachments"))
-        #expect(prompt.contains("## Output Schema"))
+        #expect(prompt.contains("## Output JSON"))
         #expect(prompt.contains("Reply with the JSON object only."))
     }
 
@@ -62,8 +62,8 @@ struct ThreadBriefPromptTests {
         #expect(!prompt.contains("## Attachments"))
     }
 
-    @Test("task prompt includes JSON schema")
-    func taskPromptIncludesSchema() {
+    @Test("task prompt includes output shape without raw JSON Schema")
+    func taskPromptIncludesOutputShapeWithoutRawSchema() {
         let prompt = ThreadBriefPrompt.taskPrompt(
             messages: [PromptMessage(from: "X", sentAt: .now, bodyText: "test")],
             attachments: []
@@ -71,6 +71,7 @@ struct ThreadBriefPromptTests {
         #expect(prompt.contains("\"confidence\""))
         #expect(prompt.contains("\"evidence\""))
         #expect(prompt.contains("\"summary\""))
+        #expect(!prompt.contains(#""type": "object""#))
     }
 
     @Test("task prompt trims long message bodies")

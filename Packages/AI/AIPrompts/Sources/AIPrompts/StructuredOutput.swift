@@ -165,7 +165,8 @@ private struct RawBrief: Decodable {
 
     var hasMeaningfulContent: Bool {
         [summary, request, deadline, risk, nextStep].contains { field in
-            field?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            guard let field else { return false }
+            return PromptJSON.isMeaningfulTaskText(field)
         } || evidence?.isEmpty == false
     }
 

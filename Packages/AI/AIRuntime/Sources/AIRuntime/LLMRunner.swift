@@ -14,6 +14,7 @@ protocol LLMRunner: Sendable {
         systemPrompt: String,
         userPrompt: String,
         maxTokens: Int,
+        responsePrefix: String,
         onToken: @Sendable (String) -> Void
     ) async throws -> String
 }

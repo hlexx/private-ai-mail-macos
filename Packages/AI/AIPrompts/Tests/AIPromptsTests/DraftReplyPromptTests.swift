@@ -64,6 +64,18 @@ struct DraftReplyPromptTests {
         #expect(reply.confidence == 0.6)
     }
 
+    @Test func parserRejectsSchemaEchoAsDraftBody() throws {
+        #expect(throws: DraftReplyParser.ParseError.self) {
+            try DraftReplyParser.parse(DraftReplySchema.jsonSchemaString)
+        }
+    }
+
+    @Test func parserRejectsSchemaKeywordBody() throws {
+        #expect(throws: DraftReplyParser.ParseError.self) {
+            try DraftReplyParser.parse(#"{"body":"type","confidence":0.5}"#)
+        }
+    }
+
     @Test func parserStillRejectsMalformedJSONAttempts() throws {
         #expect(throws: DraftReplyParser.ParseError.self) {
             try DraftReplyParser.parse(#"{"reply":"unterminated"#)
@@ -89,5 +101,19 @@ struct DraftReplyPromptTests {
     @Test func systemPromptContainsConcreteJSONExample() {
         #expect(DraftReplyPrompt.systemPrompt.contains("Example output"))
         #expect(DraftReplyPrompt.systemPrompt.contains("\"body\""))
+    }
+
+    @Test func taskPromptUsesCompactOutputShapeWithoutRawJSONSchema() {
+        let prompt = DraftReplyPrompt.taskPrompt(
+            messages: [
+                PromptMessage(from: "sender@example.com", sentAt: Date(timeIntervalSince1970: 0), bodyText: "Hello"),
+            ],
+            tone: "warm",
+            replyLanguage: "en"
+        )
+
+        #expect(prompt.contains("## Output JSON"))
+        #expect(prompt.contains("\"body\""))
+        #expect(!prompt.contains(#""type": "object""#))
     }
 }

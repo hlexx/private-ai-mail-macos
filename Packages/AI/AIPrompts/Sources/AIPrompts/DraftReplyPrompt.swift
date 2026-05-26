@@ -62,6 +62,8 @@ public enum DraftReplyTask: PromptTaskDefinition {
         "evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.86}
         """
 
+    public static let outputSeed = #"{"body":"#
+
     public static let jsonSchemaString = DraftReplySchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: DraftReplyTaskInput) -> String {
@@ -87,10 +89,10 @@ public enum DraftReplyTask: PromptTaskDefinition {
         parts.append("- Tone: \(input.tone)")
         parts.append("- Respond in: \(input.replyLanguage)")
         parts.append("")
-        parts.append("## Output Schema")
-        parts.append(jsonSchemaString)
+        parts.append("## Output JSON")
+        parts.append(#"Return this shape: {"body":"...","evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.8}"#)
         parts.append("")
-        parts.append("Reply with the JSON object only.")
+        parts.append(#"Reply with the JSON object only. Start with "body"."#)
 
         return parts.joined(separator: "\n")
     }
@@ -147,7 +149,7 @@ public enum DraftReplyParser {
         for json in PromptJSON.objectCandidates(from: rawOutput) {
             guard let raw = decodeRawReply(from: json) else { continue }
 
-            guard !raw.body.isEmpty else {
+            guard PromptJSON.isMeaningfulTaskText(raw.body) else {
                 firstSchemaViolation = firstSchemaViolation ?? "body must not be empty"
                 continue
             }
@@ -215,7 +217,7 @@ public enum DraftReplyParser {
             body = body.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        guard !body.isEmpty else { return nil }
+        guard PromptJSON.isMeaningfulTaskText(body) else { return nil }
         return ParsedThreadReply(body: body, evidenceMessageIDs: [], detectedReplyLanguage: "und", confidence: 0.6)
     }
 }

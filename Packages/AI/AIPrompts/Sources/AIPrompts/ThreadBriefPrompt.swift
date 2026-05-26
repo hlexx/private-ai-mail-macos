@@ -66,6 +66,8 @@ public enum ThreadBriefTask: PromptTaskDefinition {
         "risk":null,"nextStep":"Reply with feedback","evidence":["Review the deck by Friday","Q3 goals"],"confidence":0.9}
         """
 
+    public static let outputSeed = #"{"summary":"#
+
     public static let jsonSchemaString = ThreadBriefSchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: ThreadBriefTaskInput) -> String {
@@ -96,10 +98,12 @@ public enum ThreadBriefTask: PromptTaskDefinition {
         }
 
         parts.append("")
-        parts.append("## Output Schema")
-        parts.append(jsonSchemaString)
+        parts.append("## Output JSON")
+        parts.append(
+            #"Return this shape: {"summary":"...","request":null,"deadline":null,"risk":null,"nextStep":null,"evidence":["..."],"confidence":0.8}"#
+        )
         parts.append("")
-        parts.append("Reply with the JSON object only.")
+        parts.append(#"Reply with the JSON object only. Start with "summary"."#)
 
         return parts.joined(separator: "\n")
     }

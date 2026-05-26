@@ -37,6 +37,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         systemPrompt: String,
         userPrompt: String,
         maxTokens: Int,
+        responsePrefix: String,
         onToken: @Sendable (String) -> Void
     ) async throws -> String {
         guard let container = lock.withLock({ _modelContainer }) else {
@@ -46,14 +47,15 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
         // Tokenize prompt directly to bypass the Jinja chat template parser
         // (swift-transformers' Jinja parser doesn't support the * operator
         // used in Gemma 4's chat_template.jinja).
-        // Seed the model response with "{" so it starts generating JSON immediately
-        // (critical for small models like E2B 1.21B that otherwise emit thinking tokens).
+        // Seed the model response with the task's first JSON key so small
+        // local models do not start by echoing JSON Schema fields like "type".
         //
         // Sanitize inputs: strip Gemma control tokens so untrusted email content
         // cannot escape the user turn (prompt injection mitigation).
         let sanitizedSystem = Self.sanitizeForGemma(systemPrompt)
         let sanitizedUser = Self.sanitizeForGemma(userPrompt)
-        let prompt = "<start_of_turn>user\n\(sanitizedSystem)\n\n\(sanitizedUser)<end_of_turn>\n<start_of_turn>model\n{"
+        let seed = responsePrefix.isEmpty ? "{" : responsePrefix
+        let prompt = "<start_of_turn>user\n\(sanitizedSystem)\n\n\(sanitizedUser)<end_of_turn>\n<start_of_turn>model\n\(seed)"
         let tokens = try await container.perform { (_, tokenizer) in
             tokenizer.encode(text: prompt)
         }
@@ -71,11 +73,11 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             parameters: parameters
         )
 
-        // Prepend the seeded "{" to capture the full JSON object
-        var fullOutput = "{"
+        // Prepend the seeded prefix to capture the full JSON object.
+        var fullOutput = seed
         var completionTracker = JSONCompletionTracker()
-        _ = completionTracker.consume("{")
-        onToken("{")
+        _ = completionTracker.consume(seed)
+        onToken(seed)
 
         for await generation in stream {
             try Task.checkCancellation()

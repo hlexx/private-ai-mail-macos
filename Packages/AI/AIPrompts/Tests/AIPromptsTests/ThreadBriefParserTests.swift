@@ -189,6 +189,20 @@ struct ThreadBriefParserTests {
         #expect(brief.confidence == 0.55)
     }
 
+    @Test("rejects JSON Schema echo as brief content")
+    func rejectsJSONSchemaEchoAsBriefContent() {
+        #expect(throws: ThreadBriefParser.ParseError.self) {
+            try ThreadBriefParser.parse(ThreadBriefSchema.jsonSchemaString)
+        }
+    }
+
+    @Test("rejects schema keyword summary")
+    func rejectsSchemaKeywordSummary() {
+        #expect(throws: ThreadBriefParser.ParseError.self) {
+            try ThreadBriefParser.parse(#"{"summary":"type","confidence":0.5}"#)
+        }
+    }
+
     @Test("rejects empty object")
     func rejectsEmptyObject() {
         #expect(throws: ThreadBriefParser.ParseError.self) {

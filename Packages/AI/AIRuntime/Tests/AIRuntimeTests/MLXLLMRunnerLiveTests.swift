@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import AIPrompts
 @testable import AIRuntime
 
 private let liveTestsEnabled: Bool = {
@@ -34,6 +35,7 @@ struct MLXLLMRunnerLiveTests {
             systemPrompt: "You are an email assistant. Return JSON with a \"summary\" field.",
             userPrompt: "Subject: Meeting tomorrow\nBody: Let's meet at 3pm to discuss the project.",
             maxTokens: 64,
+            responsePrefix: ThreadBriefTask.outputSeed,
             onToken: { _ in }
         )
 

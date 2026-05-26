@@ -120,6 +120,7 @@ public actor MLXBackend {
                     systemPrompt: systemPrompt,
                     userPrompt: userPrompt,
                     maxTokens: taskMaxOutputTokens,
+                    responsePrefix: task.outputSeed,
                     onToken: { _ in }
                 )
 

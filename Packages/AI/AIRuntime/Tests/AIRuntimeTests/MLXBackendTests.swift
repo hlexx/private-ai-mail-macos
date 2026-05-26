@@ -25,6 +25,7 @@ final class FakeLLMRunner: LLMRunner, @unchecked Sendable {
     var responses: [String] = []
     var shouldThrow: (any Error)?
     var delayNanoseconds: UInt64 = 0
+    var lastResponsePrefix: String?
 
     func load(from modelDirectory: URL) async throws {
         loadCalled = true
@@ -34,9 +35,11 @@ final class FakeLLMRunner: LLMRunner, @unchecked Sendable {
         systemPrompt: String,
         userPrompt: String,
         maxTokens: Int,
+        responsePrefix: String,
         onToken: @Sendable (String) -> Void
     ) async throws -> String {
         try Task.checkCancellation()
+        lastResponsePrefix = responsePrefix
 
         if delayNanoseconds > 0 {
             try await Task.sleep(nanoseconds: delayNanoseconds)
@@ -100,6 +103,10 @@ private let invalidSchemaJSON = """
 
 private let duplicateBraceDraftJSON = """
 {{"body":"Thanks, I will update the payment method today.","confidence":0.72}}
+"""
+
+private let validDraftJSON = """
+{"body":"Thanks, I will review this today.","confidence":0.82}
 """
 
 private func makeSampleMessages() -> [PromptMessage] {
@@ -335,5 +342,24 @@ struct MLXBackendTests {
         #expect(reply.body == "Thanks, I will update the payment method today.")
         #expect(reply.confidence == 0.72)
         #expect(runner.generateCallCount == 1)
+    }
+
+    @Test("Structured tasks pass task-specific response seeds")
+    func structuredTasksPassTaskSpecificResponseSeeds() async throws {
+        let runner = FakeLLMRunner()
+        runner.responses = [validDraftJSON]
+
+        let backend = MLXBackend(
+            modelManager: makeModelManager(),
+            runner: runner
+        )
+
+        _ = try await backend.draftReply(
+            messages: makeSampleMessages(),
+            tone: "concise",
+            replyLanguage: "en"
+        )
+
+        #expect(runner.lastResponsePrefix == DraftReplyTask.outputSeed)
     }
 }

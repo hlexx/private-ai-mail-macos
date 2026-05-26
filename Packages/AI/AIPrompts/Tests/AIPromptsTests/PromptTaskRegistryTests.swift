@@ -17,6 +17,9 @@ struct PromptTaskRegistryTests {
             #expect(!item.examples.isEmpty)
             #expect(!item.privacyCategory.isEmpty)
         }
+        #expect(ThreadBriefTask.outputSeed.hasPrefix("{"))
+        #expect(DraftReplyTask.outputSeed.hasPrefix("{"))
+        #expect(AttachmentSummaryTask.outputSeed.hasPrefix("{"))
     }
 
     @Test func promptTextBudgetTrimsLongText() {
@@ -48,5 +51,15 @@ struct PromptTaskRegistryTests {
 
         #expect(parsed.summary == "Invoice due Friday")
         #expect(parsed.confidence == 0.8)
+    }
+
+    @Test func attachmentSummaryParserRejectsSchemaKeywordSummary() {
+        #expect(throws: AttachmentSummaryParser.ParseError.self) {
+            try AttachmentSummaryTask.parse(
+                """
+                {"summary":"type","keyFields":[],"risks":[],"nextSteps":[],"evidence":[],"confidence":0.8}
+                """
+            )
+        }
     }
 }

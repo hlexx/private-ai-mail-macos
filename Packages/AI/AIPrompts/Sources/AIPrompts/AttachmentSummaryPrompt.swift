@@ -101,6 +101,8 @@ public enum AttachmentSummaryTask: PromptTaskDefinition {
         "risks":[],"nextSteps":["Schedule payment before April 15"],"evidence":[{"chunkIndex":0,"quote":"Amount due: EUR 1,840"}],"confidence":0.91}
         """
 
+    public static let outputSeed = #"{"summary":"#
+
     public static let jsonSchemaString = AttachmentSummarySchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: AttachmentSummaryTaskInput) -> String {
@@ -123,10 +125,12 @@ public enum AttachmentSummaryTask: PromptTaskDefinition {
         }
 
         parts.append("")
-        parts.append("## Output Schema")
-        parts.append(jsonSchemaString)
+        parts.append("## Output JSON")
+        parts.append(
+            #"Return this shape: {"summary":"...","keyFields":[{"name":"...","value":"..."}],"risks":[],"nextSteps":[],"evidence":[{"chunkIndex":0,"quote":"..."}],"confidence":0.8}"#
+        )
         parts.append("")
-        parts.append("Reply with the JSON object only.")
+        parts.append(#"Reply with the JSON object only. Start with "summary"."#)
 
         return parts.joined(separator: "\n")
     }
@@ -172,7 +176,7 @@ public enum AttachmentSummaryParser {
         for json in PromptJSON.objectCandidates(from: rawOutput) {
             guard let raw = decodeRawAttachmentSummary(from: json) else { continue }
 
-            guard !raw.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            guard PromptJSON.isMeaningfulTaskText(raw.summary) else {
                 firstSchemaViolation = firstSchemaViolation ?? "summary must not be empty"
                 continue
             }
