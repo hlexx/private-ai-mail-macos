@@ -1,6 +1,5 @@
 import Foundation
 import GRDB
-import MailDomain
 import MailProviders
 import Persistence
 
@@ -88,39 +87,8 @@ enum IncrementalSync {
         accountId: String,
         db: AppDatabase
     ) throws {
-        let mapped = GmailMapper.mapThread(dto, accountId: accountId)
         try db.write { dbConn in
-            try makeThreadRecord(from: mapped, accountId: accountId)
-                .save(dbConn, onConflict: .replace)
-
-            // Delete existing messages and re-insert; attachment FK cascade handles cleanup
-            try MessageRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
-                .deleteAll(dbConn)
-
-            var threadLabelIds = Set<String>()
-
-            for dtoMsg in dto.messages ?? [] {
-                let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
-                try makeMessageRecord(from: msg, accountId: accountId)
-                    .save(dbConn, onConflict: .replace)
-
-                for att in msg.attachments {
-                    try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
-                        .save(dbConn, onConflict: .replace)
-                }
-
-                threadLabelIds.formUnion(labelIds)
-            }
-
-            // Replace thread_label rows for this thread+account
-            try ThreadLabelRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
-                .deleteAll(dbConn)
-            for labelId in threadLabelIds {
-                try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
-                    .save(dbConn, onConflict: .replace)
-            }
+            try ThreadPersistence.reconcileThread(dto, accountId: accountId, db: dbConn)
         }
     }
 

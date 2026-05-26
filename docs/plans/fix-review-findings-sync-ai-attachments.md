@@ -56,15 +56,15 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 3: Preserve attachment artifacts during thread upsert
 
-- [ ] Extract shared thread persistence logic in `Packages/Mail/MailSync/Sources/MailSync` so `Bootstrap` and `IncrementalSync` can use the same message/attachment reconciliation behavior where practical.
-- [ ] Replace `IncrementalSync.upsertThread` delete-all message handling with reconciliation: upsert incoming messages, delete only local messages missing from the fetched thread, upsert incoming attachments, and delete only local attachments missing from the fetched message.
-- [ ] Ensure unchanged attachment rows keep the same `(account_id, message_id, id)` identity so `attachment_blob`, `attachment_extraction`, `attachment_chunk`, and `attachment_ai_artifact` are not cascade-deleted during label-only or content-identical refreshes.
-- [ ] Keep real deletion behavior: if Gmail no longer returns a message or attachment, related attachment rows and artifacts may still cascade-delete.
-- [ ] Add `MailSync` tests that seed an attachment blob/extraction/chunk/artifact, run an incremental label-only refresh of the same thread, and verify all artifact rows survive.
-- [ ] Add `MailSync` tests that remove an attachment from the fetched message and verify only that attachment's blob/extraction/chunk/artifact rows are deleted.
-- [ ] If `Bootstrap` is updated to use the shared helper, add or update bootstrap idempotency tests to prove no duplicate messages/attachments are created.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Extract shared thread persistence logic in `Packages/Mail/MailSync/Sources/MailSync` so `Bootstrap` and `IncrementalSync` can use the same message/attachment reconciliation behavior where practical.
+- [x] Replace `IncrementalSync.upsertThread` delete-all message handling with reconciliation: upsert incoming messages, delete only local messages missing from the fetched thread, upsert incoming attachments, and delete only local attachments missing from the fetched message.
+- [x] Ensure unchanged attachment rows keep the same `(account_id, message_id, id)` identity so `attachment_blob`, `attachment_extraction`, `attachment_chunk`, and `attachment_ai_artifact` are not cascade-deleted during label-only or content-identical refreshes.
+- [x] Keep real deletion behavior: if Gmail no longer returns a message or attachment, related attachment rows and artifacts may still cascade-delete.
+- [x] Add `MailSync` tests that seed an attachment blob/extraction/chunk/artifact, run an incremental label-only refresh of the same thread, and verify all artifact rows survive.
+- [x] Add `MailSync` tests that remove an attachment from the fetched message and verify only that attachment's blob/extraction/chunk/artifact rows are deleted.
+- [x] If `Bootstrap` is updated to use the shared helper, add or update bootstrap idempotency tests to prove no duplicate messages/attachments are created.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
 
 ### Task 4: Enforce total prompt input budgets for thread brief and draft reply
 
