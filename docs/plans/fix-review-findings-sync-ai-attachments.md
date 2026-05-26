@@ -36,13 +36,13 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 1: Record the sync and artifact lifecycle ADR
 
-- [ ] Create `docs/adr/0003-gmail-history-sync-and-attachment-artifact-lifecycle.md`.
-- [ ] State the Gmail history invariant: use the original `startHistoryId` for every page in a paginated `users.history.list` run, advance local `sync_state.history_id` only after all pages are consumed, and use the final returned history id as the checkpoint.
-- [ ] State the attachment artifact lifecycle invariant: normal thread/message refresh must preserve unchanged attachment blobs, extractions, chunks, and AI artifacts; cascade delete is only for real attachment/message/account deletion.
-- [ ] State the prompt budget invariant: `PromptTaskMetadata.maxInputCharacters` is a total rendered-input budget for the model task, not a per-message limit.
-- [ ] State the evidence invariant: attachment-summary evidence must point to an existing chunk and the quoted text must be found in that chunk.
-- [ ] Include privacy constraints: no raw bodies, attachment bytes, extracted text, prompt bodies, or model output in logs.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check` and fix formatting issues.
+- [x] Create `docs/adr/0003-gmail-history-sync-and-attachment-artifact-lifecycle.md`.
+- [x] State the Gmail history invariant: use the original `startHistoryId` for every page in a paginated `users.history.list` run, advance local `sync_state.history_id` only after all pages are consumed, and use the final returned history id as the checkpoint.
+- [x] State the attachment artifact lifecycle invariant: normal thread/message refresh must preserve unchanged attachment blobs, extractions, chunks, and AI artifacts; cascade delete is only for real attachment/message/account deletion.
+- [x] State the prompt budget invariant: `PromptTaskMetadata.maxInputCharacters` is a total rendered-input budget for the model task, not a per-message limit.
+- [x] State the evidence invariant: attachment-summary evidence must point to an existing chunk and the quoted text must be found in that chunk.
+- [x] Include privacy constraints: no raw bodies, attachment bytes, extracted text, prompt bodies, or model output in logs.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check` and fix formatting issues.
 
 ### Task 2: Fix Gmail history pagination checkpointing
 
