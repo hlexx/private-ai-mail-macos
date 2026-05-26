@@ -52,6 +52,21 @@ struct ReplyStoreGenerateIfNeededTests {
         }
     }
 
+    private struct PlaceholderAIService: AIService {
+        func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+            AIThreadBrief(summary: "test", confidence: 0.9)
+        }
+
+        func draftReply(
+            _ input: AIThreadInput,
+            tone: AIReplyTone,
+            locale: Locale,
+            replyLanguage: String?
+        ) async throws -> AIThreadReply {
+            AIThreadReply(body: "...", evidenceMessageIDs: ["msg1"], confidence: 0.9)
+        }
+    }
+
     private func makeDB() async throws -> AppDatabase {
         let db = try AppDatabase.openInMemorySync()
         try await db.dbQueue.write { database in
@@ -102,6 +117,26 @@ struct ReplyStoreGenerateIfNeededTests {
 
         store.generate(threadID: "t1", tone: .warm, replyLanguage: "en")
         try await Task.sleep(for: .milliseconds(500))
+
+        #expect(store.reply == nil)
+        #expect(store.error != nil)
+        #expect(store.isLoading == false)
+    }
+
+    @Test func displayableDraftRejectsPlaceholders() {
+        #expect(!ReplyStore.isDisplayableDraft("..."))
+        #expect(!ReplyStore.isDisplayableDraft("type"))
+        #expect(!ReplyStore.isDisplayableDraft(" body "))
+        #expect(ReplyStore.isDisplayableDraft("Thanks, I will review this."))
+    }
+
+    @MainActor
+    @Test func generateRejectsPlaceholderDraftBody() async throws {
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: PlaceholderAIService(), db: db)
+
+        store.generate(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .seconds(1))
 
         #expect(store.reply == nil)
         #expect(store.error != nil)

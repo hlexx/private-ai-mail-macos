@@ -66,10 +66,12 @@ public struct InlineComposer: View {
             replyStore.generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: effectiveLanguage, locale: effectiveLocale)
         }
         .onChange(of: replyStore.reply) { _, newReply in
-            if let newReply {
+            if let newReply, ReplyStore.isDisplayableDraft(newReply.body) {
                 draftText = newReply.body
                 detectedLanguage = newReply.detectedReplyLanguage
                 isEditorFocused = true
+            } else if newReply != nil {
+                draftText = ""
             } else if replyStore.error != nil {
                 draftText = ""
             }
@@ -323,7 +325,7 @@ public struct InlineComposer: View {
     private var canSubmitDraft: Bool {
         !replyStore.isLoading
             && replyStore.error == nil
-            && !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && ReplyStore.isDisplayableDraft(draftText)
     }
 }
 

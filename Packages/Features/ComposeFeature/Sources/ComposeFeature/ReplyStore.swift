@@ -64,9 +64,12 @@ public final class ReplyStore {
 
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
         if let cached = replyCache[key] {
-            reply = cached
-            isLoading = false
-            return
+            if Self.isDisplayableDraft(cached.body) {
+                reply = cached
+                isLoading = false
+                return
+            }
+            replyCache.removeValue(forKey: key)
         }
 
         isLoading = true
@@ -86,6 +89,9 @@ public final class ReplyStore {
                     replyLanguage: replyLanguage
                 )
                 try Task.checkCancellation()
+                guard Self.isDisplayableDraft(aiReply.body) else {
+                    throw AIError.invalidStructuredOutput("draft body was placeholder")
+                }
 
                 replyCache[key] = aiReply
                 reply = aiReply
@@ -128,9 +134,12 @@ public final class ReplyStore {
     ) {
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
         if let cached = replyCache[key] {
-            reply = cached
-            focusRequestCount += 1
-            return
+            if Self.isDisplayableDraft(cached.body) {
+                reply = cached
+                focusRequestCount += 1
+                return
+            }
+            replyCache.removeValue(forKey: key)
         }
         generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
     }
@@ -206,6 +215,23 @@ public final class ReplyStore {
         return String(describing: type(of: error))
     }
 
+    nonisolated static func isDisplayableDraft(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return false }
+
+        let blockedValues: Set<String> = [
+            "...",
+            "…",
+            "type",
+            "string",
+            "body",
+            "placeholder",
+            "example",
+            "todo",
+            "n/a",
+        ]
+        return !blockedValues.contains(trimmed.lowercased())
+    }
 }
 
 // MARK: - Cache Key
