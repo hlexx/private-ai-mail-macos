@@ -62,4 +62,14 @@ struct PromptTaskRegistryTests {
             )
         }
     }
+
+    @Test func attachmentSummaryParserRejectsPlaceholderSummary() {
+        #expect(throws: AttachmentSummaryParser.ParseError.self) {
+            try AttachmentSummaryTask.parse(
+                """
+                {"summary":"...","keyFields":[],"risks":[],"nextSteps":[],"evidence":[],"confidence":0.8}
+                """
+            )
+        }
+    }
 }

@@ -151,6 +151,12 @@ enum PromptJSON {
             "summary",
             "evidence",
             "confidence",
+            "...",
+            "…",
+            "placeholder",
+            "example",
+            "todo",
+            "n/a",
         ]
 
         return !schemaEchoTokens.contains(lowercased)

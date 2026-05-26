@@ -90,9 +90,10 @@ public enum DraftReplyTask: PromptTaskDefinition {
         parts.append("- Respond in: \(input.replyLanguage)")
         parts.append("")
         parts.append("## Output JSON")
-        parts.append(#"Return this shape: {"body":"...","evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.8}"#)
+        parts.append("Keys: body, evidenceMessageIDs, detectedReplyLanguage, confidence.")
+        parts.append("Continue the seeded JSON object with the actual reply text as body.")
         parts.append("")
-        parts.append(#"Reply with the JSON object only. Start with "body"."#)
+        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
 
         return parts.joined(separator: "\n")
     }

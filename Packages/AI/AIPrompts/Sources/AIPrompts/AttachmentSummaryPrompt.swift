@@ -126,11 +126,11 @@ public enum AttachmentSummaryTask: PromptTaskDefinition {
 
         parts.append("")
         parts.append("## Output JSON")
-        parts.append(
-            #"Return this shape: {"summary":"...","keyFields":[{"name":"...","value":"..."}],"risks":[],"nextSteps":[],"evidence":[{"chunkIndex":0,"quote":"..."}],"confidence":0.8}"#
-        )
+        parts.append("Keys: summary, keyFields, risks, nextSteps, evidence, confidence.")
+        parts.append("Evidence entries must include chunkIndex and quote from the extracted text.")
+        parts.append("Continue the seeded JSON object with the actual attachment summary.")
         parts.append("")
-        parts.append(#"Reply with the JSON object only. Start with "summary"."#)
+        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
 
         return parts.joined(separator: "\n")
     }

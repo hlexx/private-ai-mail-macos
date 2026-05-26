@@ -43,7 +43,7 @@ struct ThreadBriefPromptTests {
         #expect(prompt.contains("## Thread"))
         #expect(prompt.contains("## Attachments"))
         #expect(prompt.contains("## Output JSON"))
-        #expect(prompt.contains("Reply with the JSON object only."))
+        #expect(prompt.contains("Reply with JSON only."))
     }
 
     @Test("task prompt omits attachments section when empty")
@@ -68,9 +68,10 @@ struct ThreadBriefPromptTests {
             messages: [PromptMessage(from: "X", sentAt: .now, bodyText: "test")],
             attachments: []
         )
-        #expect(prompt.contains("\"confidence\""))
-        #expect(prompt.contains("\"evidence\""))
-        #expect(prompt.contains("\"summary\""))
+        #expect(prompt.contains("confidence"))
+        #expect(prompt.contains("evidence"))
+        #expect(prompt.contains("summary"))
+        #expect(!prompt.contains(#""summary":"...""#))
         #expect(!prompt.contains(#""type": "object""#))
     }
 

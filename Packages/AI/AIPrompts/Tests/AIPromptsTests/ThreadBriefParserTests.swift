@@ -203,6 +203,13 @@ struct ThreadBriefParserTests {
         }
     }
 
+    @Test("rejects placeholder summary")
+    func rejectsPlaceholderSummary() {
+        #expect(throws: ThreadBriefParser.ParseError.self) {
+            try ThreadBriefParser.parse(#"{"summary":"...","confidence":0.5}"#)
+        }
+    }
+
     @Test("rejects empty object")
     func rejectsEmptyObject() {
         #expect(throws: ThreadBriefParser.ParseError.self) {

@@ -76,6 +76,12 @@ struct DraftReplyPromptTests {
         }
     }
 
+    @Test func parserRejectsPlaceholderBody() throws {
+        #expect(throws: DraftReplyParser.ParseError.self) {
+            try DraftReplyParser.parse(#"{"body":"...","confidence":0.5}"#)
+        }
+    }
+
     @Test func parserStillRejectsMalformedJSONAttempts() throws {
         #expect(throws: DraftReplyParser.ParseError.self) {
             try DraftReplyParser.parse(#"{"reply":"unterminated"#)
@@ -113,7 +119,8 @@ struct DraftReplyPromptTests {
         )
 
         #expect(prompt.contains("## Output JSON"))
-        #expect(prompt.contains("\"body\""))
+        #expect(prompt.contains("body"))
+        #expect(!prompt.contains(#""body":"...""#))
         #expect(!prompt.contains(#""type": "object""#))
     }
 }

@@ -99,11 +99,11 @@ public enum ThreadBriefTask: PromptTaskDefinition {
 
         parts.append("")
         parts.append("## Output JSON")
-        parts.append(
-            #"Return this shape: {"summary":"...","request":null,"deadline":null,"risk":null,"nextStep":null,"evidence":["..."],"confidence":0.8}"#
-        )
+        parts.append("Keys: summary, request, deadline, risk, nextStep, evidence, confidence.")
+        parts.append("Use null for unknown request, deadline, risk, and nextStep.")
+        parts.append("Continue the seeded JSON object with the actual thread summary.")
         parts.append("")
-        parts.append(#"Reply with the JSON object only. Start with "summary"."#)
+        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
 
         return parts.joined(separator: "\n")
     }
