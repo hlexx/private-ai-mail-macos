@@ -96,9 +96,8 @@ public enum AttachmentSummaryTask: PromptTaskDefinition {
         You summarize email attachments for a private on-device mail client. Output ONLY a JSON object — no text before or after. \
         Fields: summary (string), keyFields (array of {"name","value"}), risks (array of strings), nextSteps (array of strings), \
         evidence (array of {"chunkIndex","quote"}), confidence (number 0-1). \
-        Rules: never invent facts; every important claim needs evidence from a chunk; quote exact source text; keep response concise. \
-        Example output: {"summary":"Invoice for EUR 1,840 due on April 15.","keyFields":[{"name":"amount","value":"EUR 1,840"}], \
-        "risks":[],"nextSteps":["Schedule payment before April 15"],"evidence":[{"chunkIndex":0,"quote":"Amount due: EUR 1,840"}],"confidence":0.91}
+        Rules: never invent facts; every important claim needs evidence from a chunk; quote exact source text; keep response concise; \
+        never copy schema words, placeholders, or examples as attachment content.
         """
 
     public static let outputSeed = #"{"summary":"#

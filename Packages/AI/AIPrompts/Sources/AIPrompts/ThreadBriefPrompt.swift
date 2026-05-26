@@ -61,9 +61,8 @@ public enum ThreadBriefTask: PromptTaskDefinition {
         You are an email analyst. Output ONLY a JSON object — no text before or after. \
         Fields: summary (string), request (string or null), deadline (string or null), risk (string or null), \
         nextStep (string or null), evidence (array of short quotes), confidence (number 0-1). \
-        Rules: never invent facts; use null when unsure; evidence must be verbatim quotes; keep response under 200 tokens. \
-        Example output: {"summary":"Team sync on Q3 goals","request":"Review the deck by Friday","deadline":"Friday", \
-        "risk":null,"nextStep":"Reply with feedback","evidence":["Review the deck by Friday","Q3 goals"],"confidence":0.9}
+        Rules: never invent facts; use null when unsure; evidence must be verbatim quotes; keep response under 200 tokens; \
+        never copy schema words, placeholders, or examples as brief content.
         """
 
     public static let outputSeed = #"{"summary":"#

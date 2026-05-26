@@ -12,6 +12,8 @@ struct ThreadBriefPromptTests {
         #expect(prompt.contains("JSON"))
         #expect(prompt.contains("null"))
         #expect(prompt.contains("confidence"))
+        #expect(!prompt.contains("Q3 goals"))
+        #expect(!prompt.contains("Example output"))
     }
 
     @Test("task prompt renders messages and attachments")

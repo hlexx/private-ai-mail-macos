@@ -42,6 +42,12 @@ struct PromptTaskRegistryTests {
         #expect(parsed.evidence.first?.chunkIndex == 0)
     }
 
+    @Test func attachmentSummarySystemPromptDoesNotIncludeCopyableExampleContent() {
+        #expect(AttachmentSummaryTask.systemPrompt.contains("summary"))
+        #expect(!AttachmentSummaryTask.systemPrompt.contains("Invoice for EUR"))
+        #expect(!AttachmentSummaryTask.systemPrompt.contains("Example output"))
+    }
+
     @Test func attachmentSummaryParserAcceptsSeededDuplicateOpeningBrace() throws {
         let parsed = try AttachmentSummaryTask.parse(
             """

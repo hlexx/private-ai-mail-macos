@@ -104,9 +104,10 @@ struct DraftReplyPromptTests {
         #expect(prompt.contains("[trimmed 10 characters"))
     }
 
-    @Test func systemPromptContainsConcreteJSONExample() {
-        #expect(DraftReplyPrompt.systemPrompt.contains("Example output"))
-        #expect(DraftReplyPrompt.systemPrompt.contains("\"body\""))
+    @Test func systemPromptDoesNotIncludeCopyableExampleBody() {
+        #expect(DraftReplyPrompt.systemPrompt.contains("body"))
+        #expect(!DraftReplyPrompt.systemPrompt.contains("contract today"))
+        #expect(!DraftReplyPrompt.systemPrompt.contains("Example output"))
     }
 
     @Test func taskPromptUsesCompactOutputShapeWithoutRawJSONSchema() {

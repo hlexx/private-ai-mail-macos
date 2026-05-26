@@ -57,9 +57,8 @@ public enum DraftReplyTask: PromptTaskDefinition {
         Fields: body (string, the reply text), evidenceMessageIDs (array of message indices like "msg_1"), \
         detectedReplyLanguage (BCP-47 code like "en" or "ru"), confidence (number 0-1). \
         Rules: write a natural reply to the thread; match the tone instruction; respond in the specified language; \
-        never invent facts not in the thread; keep the reply concise and actionable. \
-        Example output: {"body":"Thanks for the update. I will review the contract today and get back to you by Friday.", \
-        "evidenceMessageIDs":["msg_1"],"detectedReplyLanguage":"en","confidence":0.86}
+        never invent facts not in the thread; keep the reply concise and actionable; never copy schema words, \
+        placeholders, or examples as the reply body.
         """
 
     public static let outputSeed = #"{"body":"#
