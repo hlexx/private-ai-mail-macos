@@ -92,13 +92,13 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 6: Align attachment schema contracts for extraction version
 
-- [ ] Change new-schema definitions in `Packages/Core/Persistence/Sources/Persistence/AttachmentDataPlaneMigrations.swift` so `extraction_version` is text in `attachment_extraction`, `attachment_chunk`, and `attachment_ai_artifact`.
-- [ ] Add a data-preserving migration, for example `M014`, for databases that already applied the integer-affinity tables: rebuild affected tables with text `extraction_version`, copy existing rows, preserve primary keys, foreign keys, indexes, and payload columns.
-- [ ] Keep compatibility with older partially migrated databases that may have `text`, `unsupported_reason`, `content_json`, `task_id`, `prompt_version`, `schema_version`, `input_fingerprint`, or other compatibility columns.
-- [ ] Add `Persistence` tests for a fresh database and for a simulated old database with integer-affinity `extraction_version`.
-- [ ] Verify existing attachment summaries still decode through `AttachmentRAG.fetchCachedSummary`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentRAG && swift test`.
+- [x] Change new-schema definitions in `Packages/Core/Persistence/Sources/Persistence/AttachmentDataPlaneMigrations.swift` so `extraction_version` is text in `attachment_extraction`, `attachment_chunk`, and `attachment_ai_artifact`.
+- [x] Add a data-preserving migration, for example `M014`, for databases that already applied the integer-affinity tables: rebuild affected tables with text `extraction_version`, copy existing rows, preserve primary keys, foreign keys, indexes, and payload columns.
+- [x] Keep compatibility with older partially migrated databases that may have `text`, `unsupported_reason`, `content_json`, `task_id`, `prompt_version`, `schema_version`, `input_fingerprint`, or other compatibility columns.
+- [x] Add `Persistence` tests for a fresh database and for a simulated old database with integer-affinity `extraction_version`.
+- [x] Verify existing attachment summaries still decode through `AttachmentRAG.fetchCachedSummary`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentRAG && swift test`.
 
 ### Task 7: Fix attachment summary idle UI text and ThreadFeature warnings
 

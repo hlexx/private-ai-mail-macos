@@ -1,6 +1,7 @@
 import Testing
 import AIKit
 import AIPrompts
+import AttachmentKit
 import Foundation
 import GRDB
 import Persistence
@@ -161,6 +162,76 @@ struct AttachmentRAGTests {
         #expect(await ai.callCount == 1)
     }
 
+    @Test func summarizeUsesExistingTextExtractionVersionCache() async throws {
+        let db = try makeAttachmentDatabase()
+        let summary = makeSummary()
+        let payload = try String(decoding: JSONEncoder().encode(summary), as: UTF8.self)
+        let fingerprint = "cached-sha"
+        let metadata = AttachmentSummaryTask.metadata
+
+        try await db.dbQueue.write { database in
+            try AttachmentBlobRecord(
+                accountId: "a1",
+                messageId: "m1",
+                attachmentId: "att1",
+                relativePath: "missing-cache-hit-file",
+                byteCount: 24,
+                sha256: fingerprint,
+                storedAt: 1
+            ).insert(database)
+            try AttachmentExtractionRecord(
+                accountId: "a1",
+                messageId: "m1",
+                attachmentId: "att1",
+                extractionVersion: AttachmentTextExtractor.extractionVersion,
+                status: "extracted",
+                contentHash: fingerprint,
+                mime: "text/plain",
+                filename: "invoice.txt",
+                byteCount: 24,
+                createdAt: 2,
+                updatedAt: 2,
+                completedAt: 2,
+                errorCode: nil,
+                errorMessage: nil
+            ).insert(database)
+            try AttachmentAIArtifactRecord(
+                accountId: "a1",
+                messageId: "m1",
+                attachmentId: "att1",
+                extractionVersion: AttachmentTextExtractor.extractionVersion,
+                artifactKind: "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)",
+                artifactVersion: 1,
+                modelId: metadata.modelProfile,
+                contentHash: fingerprint,
+                payloadJSON: payload,
+                createdAt: 3,
+                updatedAt: 3
+            ).insert(database)
+        }
+
+        let ai = SequencedAttachmentAIService(responses: [.summary(makeSummary(summary: "should not be called"))])
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: FakeAttachmentByteProvider(data: Data("unused".utf8))
+        )
+
+        let result = try await orchestrator.summarize(makeRequest())
+
+        guard case .summary(let cachedSummary, let cached) = result else {
+            Issue.record("Expected preexisting cached summary")
+            return
+        }
+        #expect(cached == true)
+        #expect(cachedSummary.summary == "Attachment summary")
+        #expect(await ai.callCount == 0)
+    }
+
     @Test func unsupportedAttachmentDoesNotCallAI() async throws {
         let db = try makeAttachmentDatabase(mime: "application/zip", filename: "archive.zip")
         let provider = FakeAttachmentByteProvider(data: Data([0x00, 0x01]))
@@ -249,10 +320,11 @@ private func attachmentArtifactCount(_ db: AppDatabase) throws -> Int {
 }
 
 private func makeSummary(
+    summary: String = "Attachment summary",
     evidence: [AIAttachmentEvidence] = [AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840")]
 ) -> AIAttachmentSummary {
     AIAttachmentSummary(
-        summary: "Attachment summary",
+        summary: summary,
         keyFields: [AIKeyField(name: "amount", value: "EUR 1840")],
         risks: [],
         nextSteps: ["Pay invoice"],

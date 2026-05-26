@@ -17,6 +17,10 @@ enum Migrator {
         migrator.registerMigration("M011_AttachmentDataPlane", migrate: M011_AttachmentDataPlane.migrate)
         migrator.registerMigration("M012_AttachmentBlobStore", migrate: M012_AttachmentBlobStore.migrate)
         migrator.registerMigration("M013_ThreadBriefCacheIdentity", migrate: M013_ThreadBriefCacheIdentity.migrate)
+        migrator.registerMigration(
+            "M014_AttachmentExtractionVersionText",
+            migrate: M014_AttachmentExtractionVersionText.migrate
+        )
         try migrator.migrate(db)
     }
 }
