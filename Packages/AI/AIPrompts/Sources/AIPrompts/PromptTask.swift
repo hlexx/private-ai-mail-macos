@@ -86,9 +86,24 @@ public enum PromptTextBudget {
 // MARK: - Shared JSON Extraction
 
 enum PromptJSON {
-    static func extractObject(from raw: String) -> String {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    static func objectCandidates(from raw: String) -> [String] {
+        let text = normalized(raw)
+        var candidates: [String] = []
+        var seen: Set<String> = []
 
+        for start in text.indices where text[start] == "{" {
+            guard let end = matchingObjectEnd(in: text, from: start) else { continue }
+            let candidate = String(text[start...end])
+            if seen.insert(candidate).inserted {
+                candidates.append(candidate)
+            }
+        }
+
+        return candidates.isEmpty ? [text] : candidates
+    }
+
+    private static func normalized(_ raw: String) -> String {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.hasPrefix("```") {
             if let firstNewline = text.firstIndex(of: "\n") {
                 text = String(text[text.index(after: firstNewline)...])
@@ -98,13 +113,13 @@ enum PromptJSON {
             }
             text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+        return text
+    }
 
-        guard let start = text.firstIndex(of: "{") else { return text }
-
+    private static func matchingObjectEnd(in text: String, from start: String.Index) -> String.Index? {
         var depth = 0
         var inString = false
         var escaped = false
-        var matchEnd: String.Index?
 
         for i in text.indices[start...] {
             let ch = text[i]
@@ -117,14 +132,12 @@ enum PromptJSON {
             } else if ch == "}" {
                 depth -= 1
                 if depth == 0 {
-                    matchEnd = i
-                    break
+                    return i
                 }
             }
         }
 
-        guard let end = matchEnd else { return text }
-        return String(text[start...end])
+        return nil
     }
 }
 

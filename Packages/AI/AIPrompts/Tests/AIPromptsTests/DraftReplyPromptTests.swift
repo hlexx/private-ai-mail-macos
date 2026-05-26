@@ -24,6 +24,23 @@ struct DraftReplyPromptTests {
         #expect(reply.confidence == 0.7)
     }
 
+    @Test func parserAcceptsSeededDuplicateOpeningBrace() throws {
+        let reply = try DraftReplyParser.parse(#"{{"body":"Thanks, I will update it today.","confidence":0.72}}"#)
+
+        #expect(reply.body == "Thanks, I will update it today.")
+        #expect(reply.confidence == 0.72)
+    }
+
+    @Test func parserAcceptsNestedReplyObject() throws {
+        let reply = try DraftReplyParser.parse(
+            #"{"reply":{"body":"Thanks, I will update the payment method today.","language":"en","confidence":"0.74"}}"#
+        )
+
+        #expect(reply.body == "Thanks, I will update the payment method today.")
+        #expect(reply.detectedReplyLanguage == "en")
+        #expect(reply.confidence == 0.74)
+    }
+
     @Test func parserAcceptsPlainTextReplyFallback() throws {
         let reply = try DraftReplyParser.parse("Thanks, I will review this today.")
 

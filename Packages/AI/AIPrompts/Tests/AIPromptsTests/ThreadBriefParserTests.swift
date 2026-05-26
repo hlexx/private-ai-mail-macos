@@ -150,6 +150,27 @@ struct ThreadBriefParserTests {
         #expect(brief.confidence == 0.6)
     }
 
+    @Test("accepts seeded duplicate opening brace")
+    func acceptsSeededDuplicateOpeningBrace() throws {
+        let json = """
+            {{"summary": "Payment update needed", "evidence": ["Payment failed"], "confidence": 0.8}}
+            """
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.summary == "Payment update needed")
+        #expect(brief.confidence == 0.8)
+    }
+
+    @Test("accepts nested brief object")
+    func acceptsNestedBriefObject() throws {
+        let json = """
+            {"brief": {"summary": "Payment update needed", "evidence": ["Payment failed"], "confidence": "0.75"}}
+            """
+        let brief = try ThreadBriefParser.parse(json)
+        #expect(brief.summary == "Payment update needed")
+        #expect(brief.evidence == ["Payment failed"])
+        #expect(brief.confidence == 0.75)
+    }
+
     @Test("rejects empty object")
     func rejectsEmptyObject() {
         #expect(throws: ThreadBriefParser.ParseError.self) {

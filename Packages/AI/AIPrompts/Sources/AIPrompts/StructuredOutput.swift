@@ -65,100 +65,56 @@ public enum ThreadBriefParser {
     /// Throws `ParseError.invalidJSON` for malformed JSON,
     /// `ParseError.schemaViolation` for missing required fields or out-of-range confidence.
     public static func parse(_ rawOutput: String) throws -> ParsedThreadBrief {
-        let json = extractJSON(from: rawOutput)
+        var firstSchemaViolation: String?
 
-        let data = Data(json.utf8)
-        let decoder = JSONDecoder()
+        for json in PromptJSON.objectCandidates(from: rawOutput) {
+            guard let raw = decodeRawBrief(from: json) else { continue }
 
-        let raw: RawBrief
-        do {
-            raw = try decoder.decode(RawBrief.self, from: data)
-        } catch {
-            let truncated = String(rawOutput.prefix(200))
-            throw ParseError.invalidJSON(truncated)
+            guard raw.hasMeaningfulContent else {
+                firstSchemaViolation = firstSchemaViolation ?? "brief must contain at least one meaningful field"
+                continue
+            }
+
+            let evidence = raw.evidence ?? []
+            let confidence = raw.confidence ?? 0.7
+
+            guard confidence >= 0, confidence <= 1 else {
+                firstSchemaViolation = firstSchemaViolation ?? "confidence must be between 0 and 1, got \(confidence)"
+                continue
+            }
+
+            return ParsedThreadBrief(
+                summary: raw.summary,
+                request: raw.request,
+                deadline: raw.deadline,
+                risk: raw.risk,
+                nextStep: raw.nextStep,
+                evidence: evidence,
+                confidence: confidence
+            )
         }
 
-        guard raw.hasMeaningfulContent else {
-            throw ParseError.schemaViolation("brief must contain at least one meaningful field")
+        if let firstSchemaViolation {
+            throw ParseError.schemaViolation(firstSchemaViolation)
         }
 
-        let evidence = raw.evidence ?? []
-        let confidence = raw.confidence ?? 0.7
-
-        guard confidence >= 0, confidence <= 1 else {
-            throw ParseError.schemaViolation("confidence must be between 0 and 1, got \(confidence)")
-        }
-
-        return ParsedThreadBrief(
-            summary: raw.summary,
-            request: raw.request,
-            deadline: raw.deadline,
-            risk: raw.risk,
-            nextStep: raw.nextStep,
-            evidence: evidence,
-            confidence: confidence
-        )
+        let truncated = String(rawOutput.prefix(200))
+        throw ParseError.invalidJSON(truncated)
     }
 
     // MARK: - Private
 
-    /// Extract the first JSON object from raw LLM output.
-    /// Handles markdown code fences (```json ... ```) and leading/trailing whitespace.
-    private static func extractJSON(from raw: String) -> String {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func decodeRawBrief(from json: String) -> RawBrief? {
+        let data = Data(json.utf8)
+        let decoder = JSONDecoder()
 
-        // Strip markdown code fences
-        if text.hasPrefix("```") {
-            if let firstNewline = text.firstIndex(of: "\n") {
-                text = String(text[text.index(after: firstNewline)...])
-            }
-            if text.hasSuffix("```") {
-                text = String(text.dropLast(3))
-            }
-            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let raw = try? decoder.decode(RawBrief.self, from: data), raw.hasMeaningfulContent {
+            return raw
         }
-
-        // Find first { and its matching } using brace-depth counting
-        guard let start = text.firstIndex(of: "{") else {
-            return text
+        if let wrapper = try? decoder.decode(RawBriefWrapper.self, from: data) {
+            return wrapper.brief
         }
-
-        var depth = 0
-        var inString = false
-        var escaped = false
-        var matchEnd: String.Index?
-
-        for i in text.indices[start...] {
-            let ch = text[i]
-            if escaped {
-                escaped = false
-                continue
-            }
-            if ch == "\\" && inString {
-                escaped = true
-                continue
-            }
-            if ch == "\"" {
-                inString.toggle()
-                continue
-            }
-            if inString { continue }
-            if ch == "{" {
-                depth += 1
-            } else if ch == "}" {
-                depth -= 1
-                if depth == 0 {
-                    matchEnd = i
-                    break
-                }
-            }
-        }
-
-        guard let end = matchEnd else {
-            return text
-        }
-
-        return String(text[start...end])
+        return try? decoder.decode(RawBrief.self, from: data)
     }
 }
 
@@ -205,6 +161,25 @@ private struct RawBrief: Decodable {
     }
 }
 
+private struct RawBriefWrapper: Decodable {
+    let brief: RawBrief?
+
+    enum CodingKeys: String, CodingKey {
+        case brief
+        case threadBrief
+        case thread_brief
+        case result
+        case response
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        brief = try container.decodeFirstBrief(
+            forKeys: [.brief, .threadBrief, .thread_brief, .result, .response]
+        )
+    }
+}
+
 private extension KeyedDecodingContainer where K == RawBrief.CodingKeys {
     func decodeFirstString(forKeys keys: [K]) throws -> String? {
         for key in keys {
@@ -241,6 +216,17 @@ private extension KeyedDecodingContainer where K == RawBrief.CodingKeys {
         if let value = try? decodeIfPresent(String.self, forKey: key) {
             let trimmed = value.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             return trimmed.isEmpty ? [] : [trimmed]
+        }
+        return nil
+    }
+}
+
+private extension KeyedDecodingContainer where K == RawBriefWrapper.CodingKeys {
+    func decodeFirstBrief(forKeys keys: [K]) throws -> RawBrief? {
+        for key in keys where contains(key) {
+            if let value = try? decode(RawBrief.self, forKey: key) {
+                return value
+            }
         }
         return nil
     }

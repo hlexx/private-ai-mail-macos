@@ -142,84 +142,61 @@ public enum DraftReplyParser {
     }
 
     public static func parse(_ rawOutput: String) throws -> ParsedThreadReply {
-        let json = extractJSON(from: rawOutput)
+        var firstSchemaViolation: String?
+
+        for json in PromptJSON.objectCandidates(from: rawOutput) {
+            guard let raw = decodeRawReply(from: json) else { continue }
+
+            guard !raw.body.isEmpty else {
+                firstSchemaViolation = firstSchemaViolation ?? "body must not be empty"
+                continue
+            }
+
+            let confidence = raw.confidence ?? 0.8
+            guard confidence >= 0, confidence <= 1 else {
+                firstSchemaViolation = firstSchemaViolation ?? "confidence must be between 0 and 1, got \(confidence)"
+                continue
+            }
+
+            return ParsedThreadReply(
+                body: raw.body,
+                evidenceMessageIDs: raw.evidenceMessageIDs ?? [],
+                detectedReplyLanguage: raw.detectedReplyLanguage ?? "und",
+                confidence: confidence
+            )
+        }
+
+        if let plainReply = parsePlainReplyFallback(rawOutput) {
+            return plainReply
+        }
+
+        if let firstSchemaViolation {
+            throw ParseError.schemaViolation(firstSchemaViolation)
+        }
+
+        let truncated = String(rawOutput.prefix(200))
+        throw ParseError.invalidJSON(truncated)
+    }
+
+    private static func decodeRawReply(from json: String) -> RawReply? {
         let data = Data(json.utf8)
+        let decoder = JSONDecoder()
 
-        let raw: RawReply
-        do {
-            raw = try JSONDecoder().decode(RawReply.self, from: data)
-        } catch {
-            if let plainReply = parsePlainReplyFallback(rawOutput, extractedText: json) {
-                return plainReply
-            }
-            let truncated = String(rawOutput.prefix(200))
-            throw ParseError.invalidJSON(truncated)
+        if let raw = try? decoder.decode(RawReply.self, from: data), !raw.body.isEmpty {
+            return raw
         }
-
-        guard !raw.body.isEmpty else {
-            throw ParseError.schemaViolation("body must not be empty")
+        if let wrapper = try? decoder.decode(RawReplyWrapper.self, from: data) {
+            return wrapper.reply
         }
-
-        let confidence = raw.confidence ?? 0.8
-        guard confidence >= 0, confidence <= 1 else {
-            throw ParseError.schemaViolation("confidence must be between 0 and 1, got \(confidence)")
-        }
-
-        return ParsedThreadReply(
-            body: raw.body,
-            evidenceMessageIDs: raw.evidenceMessageIDs ?? [],
-            detectedReplyLanguage: raw.detectedReplyLanguage ?? "und",
-            confidence: confidence
-        )
+        return try? decoder.decode(RawReply.self, from: data)
     }
 
-    private static func extractJSON(from raw: String) -> String {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if text.hasPrefix("```") {
-            if let firstNewline = text.firstIndex(of: "\n") {
-                text = String(text[text.index(after: firstNewline)...])
-            }
-            if text.hasSuffix("```") {
-                text = String(text.dropLast(3))
-            }
-            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        guard let start = text.firstIndex(of: "{") else { return text }
-
-        var depth = 0
-        var inString = false
-        var escaped = false
-        var matchEnd: String.Index?
-
-        for i in text.indices[start...] {
-            let ch = text[i]
-            if escaped { escaped = false; continue }
-            if ch == "\\" && inString { escaped = true; continue }
-            if ch == "\"" { inString.toggle(); continue }
-            if inString { continue }
-            if ch == "{" {
-                depth += 1
-            } else if ch == "}" {
-                depth -= 1
-                if depth == 0 { matchEnd = i; break }
-            }
-        }
-
-        guard let end = matchEnd else { return text }
-        return String(text[start...end])
-    }
-
-    private static func parsePlainReplyFallback(
-        _ rawOutput: String,
-        extractedText: String
-    ) -> ParsedThreadReply? {
-        guard !rawOutput.contains("{"), !extractedText.contains("{") else {
+    private static func parsePlainReplyFallback(_ rawOutput: String) -> ParsedThreadReply? {
+        guard !rawOutput.contains("{") else {
             return nil
         }
 
-        var body = extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var body = rawOutput.trimmingCharacters(in: .whitespacesAndNewlines)
         if body.hasPrefix("```") {
             if let firstNewline = body.firstIndex(of: "\n") {
                 body = String(body[body.index(after: firstNewline)...])
@@ -269,6 +246,25 @@ private struct RawReply: Decodable {
     }
 }
 
+private struct RawReplyWrapper: Decodable {
+    let reply: RawReply?
+
+    enum CodingKeys: String, CodingKey {
+        case reply
+        case draft
+        case message
+        case response
+        case result
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        reply = try container.decodeFirstReply(
+            forKeys: [.reply, .draft, .message, .response, .result]
+        )
+    }
+}
+
 private extension KeyedDecodingContainer where K == RawReply.CodingKeys {
     func decodeStringIfPresent(forKeys keys: [K]) throws -> String? {
         for key in keys {
@@ -299,6 +295,17 @@ private extension KeyedDecodingContainer where K == RawReply.CodingKeys {
             if let value = try? decodeIfPresent(String.self, forKey: key),
                let parsed = Double(value.trimmingCharacters(in: .whitespacesAndNewlines)) {
                 return parsed
+            }
+        }
+        return nil
+    }
+}
+
+private extension KeyedDecodingContainer where K == RawReplyWrapper.CodingKeys {
+    func decodeFirstReply(forKeys keys: [K]) throws -> RawReply? {
+        for key in keys where contains(key) {
+            if let value = try? decode(RawReply.self, forKey: key) {
+                return value
             }
         }
         return nil

@@ -38,4 +38,15 @@ struct PromptTaskRegistryTests {
         #expect(parsed.keyFields.first?.name == "amount")
         #expect(parsed.evidence.first?.chunkIndex == 0)
     }
+
+    @Test func attachmentSummaryParserAcceptsSeededDuplicateOpeningBrace() throws {
+        let parsed = try AttachmentSummaryTask.parse(
+            """
+            {{"summary":"Invoice due Friday","keyFields":[],"risks":[],"nextSteps":[],"evidence":[{"chunkIndex":0,"quote":"Due Friday"}],"confidence":0.8}}
+            """
+        )
+
+        #expect(parsed.summary == "Invoice due Friday")
+        #expect(parsed.confidence == 0.8)
+    }
 }

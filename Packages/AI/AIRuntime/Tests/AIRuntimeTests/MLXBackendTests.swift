@@ -98,6 +98,10 @@ private let invalidSchemaJSON = """
 }
 """
 
+private let duplicateBraceDraftJSON = """
+{{"body":"Thanks, I will update the payment method today.","confidence":0.72}}
+"""
+
 private func makeSampleMessages() -> [PromptMessage] {
     [
         PromptMessage(
@@ -309,5 +313,27 @@ struct MLXBackendTests {
         )
 
         #expect(brief.summary == "Contract review discussion")
+    }
+
+    @Test("Draft reply recovers useful JSON from duplicate seeded opening brace")
+    func draftReplyRecoversDuplicateSeededBrace() async throws {
+        let runner = FakeLLMRunner()
+        runner.responses = [duplicateBraceDraftJSON]
+
+        let manager = makeModelManager()
+        let backend = MLXBackend(
+            modelManager: manager,
+            runner: runner
+        )
+
+        let reply = try await backend.draftReply(
+            messages: makeSampleMessages(),
+            tone: "concise",
+            replyLanguage: "en"
+        )
+
+        #expect(reply.body == "Thanks, I will update the payment method today.")
+        #expect(reply.confidence == 0.72)
+        #expect(runner.generateCallCount == 1)
     }
 }

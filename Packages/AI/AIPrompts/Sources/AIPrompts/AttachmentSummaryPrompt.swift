@@ -167,35 +167,54 @@ public enum AttachmentSummaryParser {
     }
 
     public static func parse(_ rawOutput: String) throws -> ParsedAttachmentSummary {
-        let json = PromptJSON.extractObject(from: rawOutput)
+        var firstSchemaViolation: String?
+
+        for json in PromptJSON.objectCandidates(from: rawOutput) {
+            guard let raw = decodeRawAttachmentSummary(from: json) else { continue }
+
+            guard !raw.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                firstSchemaViolation = firstSchemaViolation ?? "summary must not be empty"
+                continue
+            }
+            guard raw.confidence >= 0, raw.confidence <= 1 else {
+                firstSchemaViolation = firstSchemaViolation ?? "confidence must be between 0 and 1, got \(raw.confidence)"
+                continue
+            }
+            guard raw.evidence.allSatisfy({ !$0.quote.isEmpty && $0.chunkIndex >= 0 }) else {
+                firstSchemaViolation = firstSchemaViolation
+                    ?? "evidence entries must include non-empty quotes and non-negative chunk indexes"
+                continue
+            }
+
+            return ParsedAttachmentSummary(
+                summary: raw.summary,
+                keyFields: raw.keyFields,
+                risks: raw.risks,
+                nextSteps: raw.nextSteps,
+                evidence: raw.evidence,
+                confidence: raw.confidence
+            )
+        }
+
+        if let firstSchemaViolation {
+            throw ParseError.schemaViolation(firstSchemaViolation)
+        }
+
+        let truncated = String(rawOutput.prefix(200))
+        throw ParseError.invalidJSON(truncated)
+    }
+
+    private static func decodeRawAttachmentSummary(from json: String) -> RawAttachmentSummary? {
         let data = Data(json.utf8)
+        let decoder = JSONDecoder()
 
-        let raw: RawAttachmentSummary
-        do {
-            raw = try JSONDecoder().decode(RawAttachmentSummary.self, from: data)
-        } catch {
-            let truncated = String(rawOutput.prefix(200))
-            throw ParseError.invalidJSON(truncated)
+        if let raw = try? decoder.decode(RawAttachmentSummary.self, from: data) {
+            return raw
         }
-
-        guard !raw.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw ParseError.schemaViolation("summary must not be empty")
+        if let wrapper = try? decoder.decode(RawAttachmentSummaryWrapper.self, from: data) {
+            return wrapper.summary
         }
-        guard raw.confidence >= 0, raw.confidence <= 1 else {
-            throw ParseError.schemaViolation("confidence must be between 0 and 1, got \(raw.confidence)")
-        }
-        guard raw.evidence.allSatisfy({ !$0.quote.isEmpty && $0.chunkIndex >= 0 }) else {
-            throw ParseError.schemaViolation("evidence entries must include non-empty quotes and non-negative chunk indexes")
-        }
-
-        return ParsedAttachmentSummary(
-            summary: raw.summary,
-            keyFields: raw.keyFields,
-            risks: raw.risks,
-            nextSteps: raw.nextSteps,
-            evidence: raw.evidence,
-            confidence: raw.confidence
-        )
+        return nil
     }
 }
 
@@ -228,5 +247,35 @@ private struct RawAttachmentSummary: Decodable {
         nextSteps = try known.decode([String].self, forKey: .nextSteps)
         evidence = try known.decode([ParsedAttachmentEvidence].self, forKey: .evidence)
         confidence = try known.decode(Double.self, forKey: .confidence)
+    }
+}
+
+private struct RawAttachmentSummaryWrapper: Decodable {
+    let summary: RawAttachmentSummary?
+
+    enum CodingKeys: String, CodingKey {
+        case attachmentSummary
+        case attachment_summary
+        case summary
+        case result
+        case response
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        summary = try container.decodeFirstSummary(
+            forKeys: [.attachmentSummary, .attachment_summary, .summary, .result, .response]
+        )
+    }
+}
+
+private extension KeyedDecodingContainer where K == RawAttachmentSummaryWrapper.CodingKeys {
+    func decodeFirstSummary(forKeys keys: [K]) throws -> RawAttachmentSummary? {
+        for key in keys where contains(key) {
+            if let value = try? decode(RawAttachmentSummary.self, forKey: key) {
+                return value
+            }
+        }
+        return nil
     }
 }
