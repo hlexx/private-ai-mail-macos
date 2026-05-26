@@ -81,14 +81,14 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 5: Validate attachment summary evidence against chunks
 
-- [ ] Add an internal validator in `Packages/Attachments/AttachmentRAG/Sources/AttachmentRAG/AttachmentRAG.swift` that checks every `AIAttachmentEvidence.chunkIndex` exists and every evidence quote appears in that chunk's text after conservative whitespace normalization.
-- [ ] Reject or fail the summary generation when evidence is not grounded; do not persist invalid `attachment_ai_artifact` rows.
-- [ ] Add privacy-safe OSLog for validation failure with attachment id, task id, prompt version, and failure kind only.
-- [ ] Keep `AttachmentSummaryParser` responsible for JSON/schema shape and keep chunk-grounding validation in `AttachmentRAG`, where chunk text is available.
-- [ ] Add `AttachmentRAG` tests for valid grounded evidence, missing chunk index, quote not present in chunk, malformed model output, and cache behavior after a validation failure.
-- [ ] Confirm invalid summary attempts do not create successful summary artifacts and do not poison cache.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentRAG && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIPrompts && swift test`.
+- [x] Add an internal validator in `Packages/Attachments/AttachmentRAG/Sources/AttachmentRAG/AttachmentRAG.swift` that checks every `AIAttachmentEvidence.chunkIndex` exists and every evidence quote appears in that chunk's text after conservative whitespace normalization.
+- [x] Reject or fail the summary generation when evidence is not grounded; do not persist invalid `attachment_ai_artifact` rows.
+- [x] Add privacy-safe OSLog for validation failure with attachment id, task id, prompt version, and failure kind only.
+- [x] Keep `AttachmentSummaryParser` responsible for JSON/schema shape and keep chunk-grounding validation in `AttachmentRAG`, where chunk text is available.
+- [x] Add `AttachmentRAG` tests for valid grounded evidence, missing chunk index, quote not present in chunk, malformed model output, and cache behavior after a validation failure.
+- [x] Confirm invalid summary attempts do not create successful summary artifacts and do not poison cache.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentRAG && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/AI/AIPrompts && swift test`.
 
 ### Task 6: Align attachment schema contracts for extraction version
 

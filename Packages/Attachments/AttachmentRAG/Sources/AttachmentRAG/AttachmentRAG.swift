@@ -42,6 +42,16 @@ public enum AttachmentRAGError: Error, Sendable, Equatable {
     case extractedTextMissing
 }
 
+enum AttachmentSummaryEvidenceValidationFailureKind: String, Sendable, Equatable {
+    case emptyQuote = "empty_quote"
+    case missingChunk = "missing_chunk"
+    case quoteNotFound = "quote_not_found"
+}
+
+struct AttachmentSummaryEvidenceValidationError: Error, Sendable, Equatable {
+    let kind: AttachmentSummaryEvidenceValidationFailureKind
+}
+
 public actor AttachmentSummaryOrchestrator {
     private let db: AppDatabase
     private let byteStore: AttachmentByteStore
@@ -103,6 +113,13 @@ public actor AttachmentSummaryOrchestrator {
             )
         )
 
+        do {
+            try Self.validateSummaryEvidence(summary, chunks: chunks)
+        } catch let error as AttachmentSummaryEvidenceValidationError {
+            Self.logEvidenceValidationFailure(error, request: request)
+            throw error
+        }
+
         try await persistSummary(
             summary,
             request: request,
@@ -130,6 +147,43 @@ public actor AttachmentSummaryOrchestrator {
         }
 
         return chunks
+    }
+
+    static func validateSummaryEvidence(
+        _ summary: AIAttachmentSummary,
+        chunks: [PromptAttachmentChunk]
+    ) throws {
+        var chunksByIndex: [Int: String] = [:]
+        for chunk in chunks {
+            chunksByIndex[chunk.index] = normalizedEvidenceText(chunk.text)
+        }
+
+        for evidence in summary.evidence {
+            let normalizedQuote = normalizedEvidenceText(evidence.quote)
+            guard !normalizedQuote.isEmpty else {
+                throw AttachmentSummaryEvidenceValidationError(kind: .emptyQuote)
+            }
+            guard let chunkText = chunksByIndex[evidence.chunkIndex] else {
+                throw AttachmentSummaryEvidenceValidationError(kind: .missingChunk)
+            }
+            guard chunkText.contains(normalizedQuote) else {
+                throw AttachmentSummaryEvidenceValidationError(kind: .quoteNotFound)
+            }
+        }
+    }
+
+    private static func normalizedEvidenceText(_ text: String) -> String {
+        text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    private static func logEvidenceValidationFailure(
+        _ error: AttachmentSummaryEvidenceValidationError,
+        request: AttachmentSummaryRequest
+    ) {
+        let metadata = AttachmentSummaryTask.metadata
+        logger.warning(
+            "Attachment summary evidence validation failed attachment=\(request.attachmentId, privacy: .public) task=\(metadata.id.rawValue, privacy: .public) prompt=\(metadata.promptVersion, privacy: .public) kind=\(error.kind.rawValue, privacy: .public)"
+        )
     }
 
     private func loadOrFetchBlob(_ request: AttachmentSummaryRequest) async throws -> AttachmentBlobRecord {
