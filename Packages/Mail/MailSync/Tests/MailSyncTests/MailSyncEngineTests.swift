@@ -148,6 +148,139 @@ struct MailSyncEngineTests {
         #expect(syncState?.historyId == "60")
     }
 
+    @Test func incrementalSyncUsesOriginalHistoryIdAcrossPagesAndUpdatesAfterFinalPage() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+
+        try await DatabaseActor.shared.run {
+            try db.write { dbConn in
+                var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
+                syncState.historyId = "50"
+                try syncState.update(dbConn)
+            }
+        }
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        messagesAdded: [
+                            GmailDTO.HistoryMessageAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1")
+                            )
+                        ]
+                    )
+                ],
+                nextPageToken: "page-2",
+                historyId: "60"
+            )),
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "61",
+                        messagesAdded: [
+                            GmailDTO.HistoryMessageAdded(
+                                message: GmailDTO.Message(id: "m2", threadId: "t2")
+                            )
+                        ]
+                    )
+                ],
+                nextPageToken: nil,
+                historyId: "70"
+            )),
+        ]
+        api.getThreadResults = [
+            "t1": .success(makeThread(id: "t1", messageIds: ["m1"])),
+            "t2": .success(makeThread(id: "t2", messageIds: ["m2"])),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        #expect(api.listHistoryCalls.count == 2)
+        #expect(api.listHistoryCalls[0].startHistoryId == "50")
+        #expect(api.listHistoryCalls[0].pageToken == nil)
+        #expect(api.listHistoryCalls[1].startHistoryId == "50")
+        #expect(api.listHistoryCalls[1].pageToken == "page-2")
+
+        let syncState = try db.read { dbConn in
+            try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])
+        }
+        #expect(syncState?.historyId == "70")
+
+        let messageIds = try db.read { dbConn in
+            try MessageRecord
+                .filter(Column("account_id") == "acc1")
+                .fetchAll(dbConn)
+                .map(\.id)
+                .sorted()
+        }
+        #expect(messageIds == ["m1", "m2"])
+    }
+
+    @Test func incrementalSyncDoesNotUseIntermediateHistoryIdForNextPage() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+
+        try await DatabaseActor.shared.run {
+            try db.write { dbConn in
+                var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
+                syncState.historyId = "50"
+                try syncState.update(dbConn)
+            }
+        }
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        labelsAdded: [
+                            GmailDTO.HistoryLabelAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1"),
+                                labelIds: ["STARRED"]
+                            )
+                        ]
+                    )
+                ],
+                nextPageToken: "page-2",
+                historyId: "999"
+            )),
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "52",
+                        labelsRemoved: [
+                            GmailDTO.HistoryLabelRemoved(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1"),
+                                labelIds: ["STARRED"]
+                            )
+                        ]
+                    )
+                ],
+                nextPageToken: nil,
+                historyId: "1000"
+            )),
+        ]
+        api.getThreadResults = [
+            "t1": .success(makeThread(id: "t1", messageIds: ["m1"])),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        #expect(api.listHistoryCalls.map(\.startHistoryId) == ["50", "50"])
+        #expect(api.listHistoryCalls.map(\.pageToken) == [nil, "page-2"])
+
+        let syncState = try db.read { dbConn in
+            try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])
+        }
+        #expect(syncState?.historyId == "1000")
+    }
+
     @Test func incrementalSyncDeletesMessage() async throws {
         let db = try await makeDB()
         try await seedAccount(db)

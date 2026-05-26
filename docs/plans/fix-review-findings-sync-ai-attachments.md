@@ -46,13 +46,13 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 2: Fix Gmail history pagination checkpointing
 
-- [ ] Update `Packages/Mail/MailSync/Sources/MailSync/IncrementalSync.swift` so `api.listHistory(startHistoryId:pageToken:)` always receives the original persisted `historyId` during one paginated run.
-- [ ] Track the newest returned `response.historyId` separately and update `SyncStateRecord.historyId` only after the `nextPageToken` loop is complete.
-- [ ] Preserve existing behavior for single-page history responses, deleted threads, label changes, and `historyExpired`.
-- [ ] Extend `Packages/Mail/MailSync/Tests/MailSyncTests/MockGmailAPI.swift` to record `listHistory` call arguments.
-- [ ] Add a multi-page history test in `Packages/Mail/MailSync/Tests/MailSyncTests/MailSyncEngineTests.swift`: page 1 returns `nextPageToken`, page 2 returns final history id, both pages affect threads, every call uses the original `startHistoryId`, and the local checkpoint advances only after both pages.
-- [ ] Add a regression test where page 1 returns a newer `historyId` but also has `nextPageToken`; the second request must not use that newer id as `startHistoryId`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test` and fix failures.
+- [x] Update `Packages/Mail/MailSync/Sources/MailSync/IncrementalSync.swift` so `api.listHistory(startHistoryId:pageToken:)` always receives the original persisted `historyId` during one paginated run.
+- [x] Track the newest returned `response.historyId` separately and update `SyncStateRecord.historyId` only after the `nextPageToken` loop is complete.
+- [x] Preserve existing behavior for single-page history responses, deleted threads, label changes, and `historyExpired`.
+- [x] Extend `Packages/Mail/MailSync/Tests/MailSyncTests/MockGmailAPI.swift` to record `listHistory` call arguments.
+- [x] Add a multi-page history test in `Packages/Mail/MailSync/Tests/MailSyncTests/MailSyncEngineTests.swift`: page 1 returns `nextPageToken`, page 2 returns final history id, both pages affect threads, every call uses the original `startHistoryId`, and the local checkpoint advances only after both pages.
+- [x] Add a regression test where page 1 returns a newer `historyId` but also has `nextPageToken`; the second request must not use that newer id as `startHistoryId`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test` and fix failures.
 
 ### Task 3: Preserve attachment artifacts during thread upsert
 

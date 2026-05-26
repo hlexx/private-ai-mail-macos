@@ -20,13 +20,13 @@ enum IncrementalSync {
             throw SyncError.historyExpired
         }
 
-        var currentHistoryId = historyId
+        var checkpointHistoryId = historyId
         var pageToken: String?
         var affectedThreadIds = Set<String>()
 
         repeat {
             let response = try await api.listHistory(
-                startHistoryId: currentHistoryId,
+                startHistoryId: historyId,
                 pageToken: pageToken
             )
 
@@ -53,7 +53,7 @@ enum IncrementalSync {
             }
 
             if let newHistoryId = response.historyId {
-                currentHistoryId = newHistoryId
+                checkpointHistoryId = newHistoryId
             }
             pageToken = response.nextPageToken
         } while pageToken != nil
@@ -77,7 +77,7 @@ enum IncrementalSync {
         // Update sync state with new history ID
         try await updateHistoryId(
             accountId: accountId,
-            historyId: currentHistoryId,
+            historyId: checkpointHistoryId,
             db: db
         )
     }

@@ -14,6 +14,7 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     var listMessagesCalled = 0
     var getThreadCalled = 0
     var getThreadCalledIds: [String] = []
+    var listHistoryCalls: [(startHistoryId: String, pageToken: String?)] = []
 
     func listMessages(query: String?, pageToken: String?, maxResults: Int) async throws -> GmailDTO.MessageList {
         listMessagesCalled += 1
@@ -42,6 +43,7 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     }
 
     func listHistory(startHistoryId: String, pageToken: String?) async throws -> GmailDTO.HistoryResponse {
+        listHistoryCalls.append((startHistoryId: startHistoryId, pageToken: pageToken))
         guard listHistoryCallIndex < listHistoryResults.count else {
             return GmailDTO.HistoryResponse(history: nil, nextPageToken: nil, historyId: startHistoryId)
         }
