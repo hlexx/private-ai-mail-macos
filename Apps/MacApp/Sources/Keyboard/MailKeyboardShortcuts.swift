@@ -69,13 +69,16 @@ private struct BareKeyMonitor: NSViewRepresentable {
 
 private final class BareKeyMonitorView: NSView {
     var dispatcher: KeyboardDispatcher?
-    private var monitor: Any?
+    private var monitor: EventMonitorToken?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil && monitor == nil {
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                self?.handleKeyEvent(event) ?? event
+            if let token = NSEvent.addLocalMonitorForEvents(
+                matching: .keyDown,
+                handler: { [weak self] event in self?.handleKeyEvent(event) ?? event }
+            ) {
+                monitor = EventMonitorToken(token)
             }
         } else if window == nil {
             removeMonitor()
@@ -88,12 +91,16 @@ private final class BareKeyMonitorView: NSView {
     }
 
     deinit {
-        removeMonitor()
+        MainActor.assumeIsolated { [monitor] in
+            if let monitor {
+                NSEvent.removeMonitor(monitor.value)
+            }
+        }
     }
 
     private func removeMonitor() {
         if let monitor {
-            NSEvent.removeMonitor(monitor)
+            NSEvent.removeMonitor(monitor.value)
         }
         monitor = nil
     }
@@ -127,5 +134,13 @@ private final class BareKeyMonitorView: NSView {
         // NSTextView covers the common case (SwiftUI TextEditor / TextField field editor).
         // NSTextField covers the brief moment after click but before the field editor activates.
         return responder is NSTextView || responder is NSTextField
+    }
+}
+
+private final class EventMonitorToken: @unchecked Sendable {
+    let value: Any
+
+    init(_ value: Any) {
+        self.value = value
     }
 }

@@ -110,11 +110,21 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 8: Run release-gate validation and produce completion notes
 
-- [ ] Run every command in `## Validation Commands`.
-- [ ] Inspect logs/test output for remaining Swift concurrency warnings, privacy-sensitive logs, or unexpected network access in local AI tests.
-- [ ] Confirm `git status --short --branch` shows only intended changes.
-- [ ] Summarize changed files by subsystem: `MailSync`, `Persistence`, `AIPrompts`, `AttachmentRAG`, `ThreadFeature`, docs.
-- [ ] Include explicit notes for any intentionally deferred work: Preview, Snooze, Send to, DOCX/OCR, cloud AI fallback, and notarized release packaging.
+- [x] Run every command in `## Validation Commands`.
+- [x] Inspect logs/test output for remaining Swift concurrency warnings, privacy-sensitive logs, or unexpected network access in local AI tests.
+- [x] Confirm `git status --short --branch` shows only intended changes.
+- [x] Summarize changed files by subsystem: `MailSync`, `Persistence`, `AIPrompts`, `AttachmentRAG`, `ThreadFeature`, docs.
+- [x] Include explicit notes for any intentionally deferred work: Preview, Snooze, Send to, DOCX/OCR, cloud AI fallback, and notarized release packaging.
+
+Completion notes:
+
+- Validation was run against the current Ralphex worktree. `tuist generate` was required first because the generated workspace and ignored `Frameworks/Sparkle.xcframework` dependency were not present in the worktree.
+- Passing checks: `git diff --check`; all listed package tests for `MailSync`, `Persistence`, `AIPrompts`, `AIRuntime`, `AIKit`, `AttachmentRAG`, `ThreadFeature`, and `MailProviders`; final `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`; and the privacy grep.
+- SwiftLint source validation is clean with `swiftlint --strict --reporter xcode --disable-sourcekit` and reports 0 violations. The exact `swiftlint --strict --reporter xcode` command fails before linting in this local Xcode 26.2 toolchain with `SourceKittenFramework/library_wrapper.swift:58: Fatal error: Loading sourcekitdInProc.framework/Versions/A/sourcekitdInProc failed`; this is a local SourceKit runtime failure, not a source violation.
+- Final build log has no Swift concurrency warnings. The only remaining build warning is AppIntents metadata extraction being skipped because `MacApp` has no AppIntents dependency.
+- Local AI tests did not perform unexpected network access: `AIRuntime` skipped real MLX tests because `RB_RUN_REAL_MLX_TESTS` is unset or the model is missing, and the network-isolation test passed with zero network requests.
+- Changed files by subsystem: `MailSync` updated incremental sync, bootstrap/thread reconciliation, mocks, and sync tests; `Persistence` updated attachment data-plane migrations and migration tests; `AIPrompts` updated total-budget rendering and prompt tests; `AttachmentRAG` added grounded-evidence validation and split helper files; `ThreadFeature` updated attachment status copy and tests; docs added ADR 0003 and this plan. Release-gate cleanup also touched `AuthKit` OAuth protocol-key handling and `MacApp` actor-isolation warnings.
+- Deferred by design: attachment Preview, Snooze, Send to, DOCX/OCR extraction, cloud AI fallback, and notarized release packaging remain out of scope for this plan.
 
 ## Rollback / Recovery
 

@@ -153,6 +153,7 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         Coordinator()
     }
 
+    @MainActor
     class Coordinator: NSObject {
         var onWidthsChanged: ((Double, Double, Double) -> Void)?
         var onCollapseChanged: ((Bool, Bool) -> Void)?
@@ -179,7 +180,8 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         }
 
         deinit {
-            if let splitView = observedSplitView {
+            MainActor.assumeIsolated { [observedSplitView] in
+                guard let splitView = observedSplitView else { return }
                 NotificationCenter.default.removeObserver(
                     self,
                     name: NSSplitView.didResizeSubviewsNotification,

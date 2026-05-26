@@ -75,16 +75,17 @@ public enum DraftReplyTask: PromptTaskDefinition {
         let renderedMessages = PromptTextBudget.renderedSections(
             indexedMessages,
             maxCharacters: metadata.maxInputCharacters,
-            text: { $0.element.bodyText }
-        ) { indexedMessage, body in
-            let idx = indexedMessage.offset
-            let msg = indexedMessage.element
-            let ts = formatter.string(from: msg.sentAt)
-            return """
-                [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
-                \(body)
-                """
-        }
+            text: { $0.element.bodyText },
+            render: { indexedMessage, body in
+                let idx = indexedMessage.offset
+                let msg = indexedMessage.element
+                let ts = formatter.string(from: msg.sentAt)
+                return """
+                    [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
+                    \(body)
+                    """
+            }
+        )
         parts.append(contentsOf: renderedMessages)
 
         parts.append("")

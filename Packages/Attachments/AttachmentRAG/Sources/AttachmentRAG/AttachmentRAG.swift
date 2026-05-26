@@ -42,14 +42,14 @@ public enum AttachmentRAGError: Error, Sendable, Equatable {
     case extractedTextMissing
 }
 
-enum AttachmentSummaryEvidenceValidationFailureKind: String, Sendable, Equatable {
+enum EvidenceValidationFailureKind: String, Sendable, Equatable {
     case emptyQuote = "empty_quote"
     case missingChunk = "missing_chunk"
     case quoteNotFound = "quote_not_found"
 }
 
 struct AttachmentSummaryEvidenceValidationError: Error, Sendable, Equatable {
-    let kind: AttachmentSummaryEvidenceValidationFailureKind
+    let kind: EvidenceValidationFailureKind
 }
 
 public actor AttachmentSummaryOrchestrator {
@@ -128,52 +128,6 @@ public actor AttachmentSummaryOrchestrator {
         )
         Self.logger.info("Attachment summary generated for \(request.attachmentId, privacy: .public)")
         return .summary(summary, cached: false)
-    }
-
-    public static func chunk(_ text: String, maxCharacters: Int) -> [PromptAttachmentChunk] {
-        guard !text.isEmpty else { return [] }
-        var chunks: [PromptAttachmentChunk] = []
-        var start = text.startIndex
-        var offset = 0
-        var index = 0
-
-        while start < text.endIndex {
-            let end = text.index(start, offsetBy: maxCharacters, limitedBy: text.endIndex) ?? text.endIndex
-            let chunkText = String(text[start..<end])
-            chunks.append(PromptAttachmentChunk(index: index, sourceOffset: offset, text: chunkText))
-            offset += chunkText.count
-            index += 1
-            start = end
-        }
-
-        return chunks
-    }
-
-    static func validateSummaryEvidence(
-        _ summary: AIAttachmentSummary,
-        chunks: [PromptAttachmentChunk]
-    ) throws {
-        var chunksByIndex: [Int: String] = [:]
-        for chunk in chunks {
-            chunksByIndex[chunk.index] = normalizedEvidenceText(chunk.text)
-        }
-
-        for evidence in summary.evidence {
-            let normalizedQuote = normalizedEvidenceText(evidence.quote)
-            guard !normalizedQuote.isEmpty else {
-                throw AttachmentSummaryEvidenceValidationError(kind: .emptyQuote)
-            }
-            guard let chunkText = chunksByIndex[evidence.chunkIndex] else {
-                throw AttachmentSummaryEvidenceValidationError(kind: .missingChunk)
-            }
-            guard chunkText.contains(normalizedQuote) else {
-                throw AttachmentSummaryEvidenceValidationError(kind: .quoteNotFound)
-            }
-        }
-    }
-
-    private static func normalizedEvidenceText(_ text: String) -> String {
-        text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
     private static func logEvidenceValidationFailure(
@@ -440,11 +394,5 @@ extension AttachmentSummaryOrchestrator {
             sql: "INSERT OR REPLACE INTO \(table.sqlIdentifier) (\(columns)) VALUES (\(placeholders))",
             arguments: StatementArguments(values.map { $0.1 })
         )
-    }
-}
-
-private extension String {
-    var sqlIdentifier: String {
-        "\"\(replacingOccurrences(of: "\"", with: "\"\""))\""
     }
 }

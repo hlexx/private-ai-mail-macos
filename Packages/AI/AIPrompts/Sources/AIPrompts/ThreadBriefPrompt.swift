@@ -78,14 +78,15 @@ public enum ThreadBriefTask: PromptTaskDefinition {
         let renderedMessages = PromptTextBudget.renderedSections(
             input.messages,
             maxCharacters: metadata.maxInputCharacters,
-            text: { $0.bodyText }
-        ) { msg, body in
-            let ts = formatter.string(from: msg.sentAt)
-            return """
-                [From: \(msg.from) | \(ts)]
-                \(body)
-                """
-        }
+            text: { $0.bodyText },
+            render: { msg, body in
+                let ts = formatter.string(from: msg.sentAt)
+                return """
+                    [From: \(msg.from) | \(ts)]
+                    \(body)
+                    """
+            }
+        )
         parts.append(contentsOf: renderedMessages)
 
         if !input.attachments.isEmpty {
