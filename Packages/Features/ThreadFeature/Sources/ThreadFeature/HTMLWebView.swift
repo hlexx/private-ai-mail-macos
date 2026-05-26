@@ -79,7 +79,7 @@ struct HTMLWebView: NSViewRepresentable {
     }
 
     /// Testable CID resolution: replaces `cid:` references with inline `data:` URLs.
-    static func resolveCIDReferences(in html: String, attachments: [AttachmentData]) -> String {
+    nonisolated static func resolveCIDReferences(in html: String, attachments: [AttachmentData]) -> String {
         var result = html
         for att in attachments {
             let dataURL = "data:\(att.mime);base64,\(att.data.base64EncodedString())"
@@ -150,7 +150,7 @@ struct HTMLWebView: NSViewRepresentable {
 
     // MARK: - JavaScript for DOM-walk Translation
 
-    static let extractionJS = """
+    nonisolated static let extractionJS = """
     (function () {
         var out = [];
         var nodes = [];
@@ -181,7 +181,7 @@ struct HTMLWebView: NSViewRepresentable {
     })();
     """
 
-    static func applyTranslationsJS(map: [String: String]) -> String {
+    nonisolated static func applyTranslationsJS(map: [String: String]) -> String {
         guard let jsonData = try? JSONSerialization.data(withJSONObject: map),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
             return ""
@@ -199,7 +199,7 @@ struct HTMLWebView: NSViewRepresentable {
         """
     }
 
-    static let restoreOriginalsJS = """
+    nonisolated static let restoreOriginalsJS = """
     (function () {
         var spans = document.querySelectorAll('[data-tx-id]');
         for (var i = 0; i < spans.length; i++) {

@@ -102,11 +102,11 @@ Fix the current full-review findings in `private-ai-mail-macos` without changing
 
 ### Task 7: Fix attachment summary idle UI text and ThreadFeature warnings
 
-- [ ] Update `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift` so idle attachment state does not say `local summary ready`; use neutral copy such as `ready to summarize` or no summary status until the user starts summarization.
-- [ ] Add or update `ThreadFeature` tests/snapshots for idle, summarizing, cached summary, unsupported, and failed attachment states.
-- [ ] Fix the current `ThreadFeature` test warnings by marking affected HTMLWebView tests `@MainActor` or by moving pure helpers out of main-actor isolation if that better matches the design.
-- [ ] Keep attachment Preview unchanged unless it is already real; this task must not turn the accepted Preview no-op into new behavior.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ThreadFeature && swift test`.
+- [x] Update `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift` so idle attachment state does not say `local summary ready`; use neutral copy such as `ready to summarize` or no summary status until the user starts summarization.
+- [x] Add or update `ThreadFeature` tests/snapshots for idle, summarizing, cached summary, unsupported, and failed attachment states.
+- [x] Fix the current `ThreadFeature` test warnings by marking affected HTMLWebView tests `@MainActor` or by moving pure helpers out of main-actor isolation if that better matches the design.
+- [x] Keep attachment Preview unchanged unless it is already real; this task must not turn the accepted Preview no-op into new behavior.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 8: Run release-gate validation and produce completion notes
 
