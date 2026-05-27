@@ -103,6 +103,14 @@ public final class InboxStore {
         observationTask?.cancel()
         let currentSelection = selection
         let currentFilter = filter
+        do {
+            let records = try db.read { db in
+                try Self.queryThreads(db: db, selection: currentSelection, filter: currentFilter)
+            }
+            threads = Self.threadRows(from: records)
+        } catch {
+            threads = []
+        }
         observationTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db in
                 try Self.queryThreads(db: db, selection: currentSelection, filter: currentFilter)
@@ -110,9 +118,7 @@ public final class InboxStore {
             do {
                 for try await records in observation.values(in: db.dbQueue) {
                     guard !Task.isCancelled, let self else { return }
-                    self.threads = records.map { thread, fromAddr, attCount in
-                        ThreadRow(record: thread, latestFromAddr: fromAddr, attachmentCount: attCount)
-                    }
+                    self.threads = Self.threadRows(from: records)
                 }
             } catch {
                 // Observation ended
@@ -126,6 +132,14 @@ public final class InboxStore {
         observationTask = nil
         countsTask?.cancel()
         countsTask = nil
+    }
+
+    private nonisolated static func threadRows(
+        from records: [(ThreadRecord, String?, Int)]
+    ) -> [ThreadRow] {
+        records.map { thread, fromAddr, attCount in
+            ThreadRow(record: thread, latestFromAddr: fromAddr, attachmentCount: attCount)
+        }
     }
 
 }

@@ -105,33 +105,36 @@ public enum AttachmentSummaryTask: PromptTaskDefinition {
     public static let jsonSchemaString = AttachmentSummarySchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: AttachmentSummaryTaskInput) -> String {
-        var parts: [String] = []
-        parts.append("## Attachment")
-        parts.append("- Filename: \(input.filename)")
-        parts.append("- MIME: \(input.mime)")
-        parts.append("")
-        parts.append("## Extracted Chunks")
-
-        var remaining = metadata.maxInputCharacters
-        for chunk in input.chunks {
-            guard remaining > 0 else { break }
-            let trimmed = PromptTextBudget.trimmed(chunk.text, maxCharacters: remaining)
-            remaining -= min(chunk.text.count, remaining)
-            parts.append("""
+        let contextSections = input.chunks.enumerated().map { position, chunk in
+            PromptTextBudget.PromptSection(
+                text: """
                 [chunk \(chunk.index) | offset \(chunk.sourceOffset)]
-                \(trimmed)
-                """)
+                \(chunk.text)
+                """,
+                priority: input.chunks.count - position
+            )
         }
 
-        parts.append("")
-        parts.append("## Output JSON")
-        parts.append("Keys: summary, keyFields, risks, nextSteps, evidence, confidence.")
-        parts.append("Evidence entries must include chunkIndex and quote from the extracted text.")
-        parts.append("Continue the seeded JSON object with the actual attachment summary.")
-        parts.append("")
-        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
-
-        return parts.joined(separator: "\n")
+        return PromptTextBudget.renderedPrompt(
+            prefixParts: [
+                "## Attachment",
+                "- Filename: \(input.filename)",
+                "- MIME: \(input.mime)",
+                "",
+                "## Extracted Chunks",
+            ],
+            contextSections: contextSections,
+            suffixParts: [
+                "",
+                "## Output JSON",
+                "Keys: summary, keyFields, risks, nextSteps, evidence, confidence.",
+                "Evidence entries must include chunkIndex and quote from the extracted text.",
+                "Continue the seeded JSON object with the actual attachment summary.",
+                "",
+                "Reply with JSON only. Do not output schema words or placeholders.",
+            ],
+            maxCharacters: metadata.maxInputCharacters
+        )
     }
 
     public static func parse(_ rawOutput: String) throws -> ParsedAttachmentSummary {
