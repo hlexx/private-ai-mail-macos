@@ -104,6 +104,26 @@ struct DraftReplyPromptTests {
         #expect(prompt.contains("[trimmed 10 characters"))
     }
 
+    @Test func taskPromptAppliesTotalBodyBudgetAcrossMessages() {
+        let longBody = String(repeating: "x", count: DraftReplyTask.metadata.maxInputCharacters)
+        let messages = (1...3).map { index in
+            PromptMessage(
+                from: "sender\(index)@example.com",
+                sentAt: Date(timeIntervalSince1970: TimeInterval(index)),
+                bodyText: longBody
+            )
+        }
+
+        let prompt = DraftReplyPrompt.taskPrompt(
+            messages: messages,
+            tone: "warm",
+            replyLanguage: "en"
+        )
+
+        #expect(prompt.contains("[trimmed"))
+        #expect(prompt.count < DraftReplyTask.metadata.maxInputCharacters + 2_000)
+    }
+
     @Test func systemPromptDoesNotIncludeCopyableExampleBody() {
         #expect(DraftReplyPrompt.systemPrompt.contains("body"))
         #expect(!DraftReplyPrompt.systemPrompt.contains("contract today"))

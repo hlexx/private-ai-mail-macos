@@ -120,6 +120,44 @@ struct ThreadFeatureTests {
         #expect(info.formattedSize == "")
     }
 
+    @Test func attachmentStatusCopyCoversSummaryStates() {
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 284_000,
+            mime: "text/plain"
+        )
+        let generatedSummary = AttachmentSummaryViewData(
+            summary: AIAttachmentSummary(summary: "Attachment summary", confidence: 0.9),
+            cached: false
+        )
+        let cachedSummary = AttachmentSummaryViewData(
+            summary: AIAttachmentSummary(summary: "Attachment summary", confidence: 0.9),
+            cached: true
+        )
+
+        #expect(AttachmentSummaryCopy.statusText(for: attachment, state: .idle) == "277 KB \u{00B7} ready to summarize")
+        #expect(AttachmentSummaryCopy.statusText(for: attachment, state: .summarizing) == "277 KB \u{00B7} summarizing locally")
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .summary(generatedSummary))
+                == "277 KB \u{00B7} summarized locally"
+        )
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .summary(cachedSummary))
+                == "277 KB \u{00B7} cached local summary"
+        )
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .unsupported("Unsupported"))
+                == "277 KB \u{00B7} unsupported"
+        )
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .failed("Failed"))
+                == "277 KB \u{00B7} summary failed"
+        )
+    }
+
     @MainActor @Test func attachmentSummaryStoreShowsSummary() async throws {
         let db = try makeAttachmentSummaryDatabase()
         let provider = TestAttachmentByteProvider(data: Data("Amount due: EUR 1840".utf8))
@@ -760,6 +798,7 @@ struct ThreadStoreStarTests {
 // MARK: - CID Image Resolution Tests
 
 @Suite("CID Image Resolution")
+@MainActor
 struct CIDImageResolutionTests {
 
     @Test func resolvedHTMLReplacesCidWithDataURL() {
@@ -828,6 +867,7 @@ struct CIDImageResolutionTests {
 // MARK: - Translation JS Script Tests
 
 @Suite("HTMLWebView Translation Scripts")
+@MainActor
 struct HTMLWebViewTranslationScriptTests {
 
     @Test func extractionJSContainsTreeWalker() {

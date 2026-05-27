@@ -92,4 +92,21 @@ struct ThreadBriefPromptTests {
 
         #expect(prompt.contains("[trimmed 4 characters"))
     }
+
+    @Test("task prompt applies one total body budget across messages")
+    func taskPromptAppliesTotalBodyBudgetAcrossMessages() {
+        let longBody = String(repeating: "x", count: ThreadBriefTask.metadata.maxInputCharacters)
+        let messages = (1...3).map { index in
+            PromptMessage(
+                from: "sender\(index)@example.com",
+                sentAt: Date(timeIntervalSince1970: TimeInterval(index)),
+                bodyText: longBody
+            )
+        }
+
+        let prompt = ThreadBriefPrompt.taskPrompt(messages: messages, attachments: [])
+
+        #expect(prompt.contains("[trimmed"))
+        #expect(prompt.count < ThreadBriefTask.metadata.maxInputCharacters + 2_000)
+    }
 }

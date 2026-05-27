@@ -20,13 +20,13 @@ enum IncrementalSync {
             throw SyncError.historyExpired
         }
 
-        var currentHistoryId = historyId
+        var checkpointHistoryId = historyId
         var pageToken: String?
         var affectedThreadIds = Set<String>()
 
         repeat {
             let response = try await api.listHistory(
-                startHistoryId: currentHistoryId,
+                startHistoryId: historyId,
                 pageToken: pageToken
             )
 
@@ -53,7 +53,7 @@ enum IncrementalSync {
             }
 
             if let newHistoryId = response.historyId {
-                currentHistoryId = newHistoryId
+                checkpointHistoryId = newHistoryId
             }
             pageToken = response.nextPageToken
         } while pageToken != nil
@@ -62,7 +62,7 @@ enum IncrementalSync {
         for threadId in affectedThreadIds {
             do {
                 let dto = try await api.getThread(id: threadId, format: .full)
-                try await upsertThread(dto, accountId: accountId, db: db)
+                try await ThreadPersistence.upsertThread(dto, accountId: accountId, db: db)
                 await onThreadUpserted(threadId)
             } catch let error as GmailAPIError {
                 // Thread may have been deleted entirely - that's OK
@@ -77,51 +77,9 @@ enum IncrementalSync {
         // Update sync state with new history ID
         try await updateHistoryId(
             accountId: accountId,
-            historyId: currentHistoryId,
+            historyId: checkpointHistoryId,
             db: db
         )
-    }
-
-    @DatabaseActor
-    private static func upsertThread(
-        _ dto: GmailDTO.Thread,
-        accountId: String,
-        db: AppDatabase
-    ) throws {
-        let mapped = GmailMapper.mapThread(dto, accountId: accountId)
-        try db.write { dbConn in
-            try makeThreadRecord(from: mapped, accountId: accountId)
-                .save(dbConn, onConflict: .replace)
-
-            // Delete existing messages and re-insert; attachment FK cascade handles cleanup
-            try MessageRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
-                .deleteAll(dbConn)
-
-            var threadLabelIds = Set<String>()
-
-            for dtoMsg in dto.messages ?? [] {
-                let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
-                try makeMessageRecord(from: msg, accountId: accountId)
-                    .save(dbConn, onConflict: .replace)
-
-                for att in msg.attachments {
-                    try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
-                        .save(dbConn, onConflict: .replace)
-                }
-
-                threadLabelIds.formUnion(labelIds)
-            }
-
-            // Replace thread_label rows for this thread+account
-            try ThreadLabelRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
-                .deleteAll(dbConn)
-            for labelId in threadLabelIds {
-                try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
-                    .save(dbConn, onConflict: .replace)
-            }
-        }
     }
 
     @DatabaseActor

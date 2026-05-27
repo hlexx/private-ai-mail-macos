@@ -83,6 +83,29 @@ public enum PromptTextBudget {
         return "\(prefix)\n\n[trimmed \(omitted) characters to fit the local model context]"
     }
 
+    public static func trimmedSections(
+        _ sections: [String],
+        maxCharacters: Int
+    ) -> [String] {
+        var remaining = max(0, maxCharacters)
+
+        return sections.map { section in
+            guard section.count > remaining else {
+                remaining -= section.count
+                return section
+            }
+
+            guard remaining > 0 else {
+                return "[trimmed \(section.count) characters to fit the local model context]"
+            }
+
+            let prefix = section.prefix(remaining)
+            let omitted = section.count - remaining
+            remaining = 0
+            return "\(prefix)\n\n[trimmed \(omitted) characters to fit the local model context]"
+        }
+    }
+
     static func trimmedMessageBody(_ text: String, maxCharacters: Int) -> String {
         trimmed(text, maxCharacters: maxCharacters)
     }

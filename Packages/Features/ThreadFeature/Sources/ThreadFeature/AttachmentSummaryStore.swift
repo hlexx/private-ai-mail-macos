@@ -88,6 +88,8 @@ public final class AttachmentSummaryStore {
                 return String(localized: "thread.attachment.summary.error.bytes", defaultValue: "Attachment data is not available yet.")
             case .extractedTextMissing:
                 return String(localized: "thread.attachment.summary.error.empty", defaultValue: "No readable text was found.")
+            case .invalidAttachmentSummaryEvidence:
+                return String(localized: "thread.attachment.summary.error.evidence", defaultValue: "Summary evidence could not be verified.")
             }
         }
         return String(localized: "thread.attachment.summary.error.generic", defaultValue: "Could not summarize this attachment.")

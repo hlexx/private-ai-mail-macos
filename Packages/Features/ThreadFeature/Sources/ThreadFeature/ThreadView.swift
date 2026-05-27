@@ -278,21 +278,7 @@ private extension ThreadView {
     }
 
     func attachmentStatusText(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
-        let size = attachment.formattedSize.isEmpty ? "File" : attachment.formattedSize
-        switch state {
-        case .idle:
-            return "\(size) \u{00B7} local summary ready"
-        case .summarizing:
-            return "\(size) \u{00B7} summarizing locally"
-        case .summary(let data):
-            return data.cached
-                ? "\(size) \u{00B7} cached local summary"
-                : "\(size) \u{00B7} summarized locally"
-        case .unsupported:
-            return "\(size) \u{00B7} unsupported"
-        case .failed:
-            return "\(size) \u{00B7} summary failed"
-        }
+        AttachmentSummaryCopy.statusText(for: attachment, state: state)
     }
 
     @ViewBuilder
@@ -329,6 +315,26 @@ private extension ThreadView {
             Text(message)
                 .font(.rbGeist(12))
                 .foregroundStyle(Color.rbFg3)
+        }
+    }
+}
+
+enum AttachmentSummaryCopy {
+    static func statusText(for attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
+        let size = attachment.formattedSize.isEmpty ? "File" : attachment.formattedSize
+        switch state {
+        case .idle:
+            return "\(size) \u{00B7} ready to summarize"
+        case .summarizing:
+            return "\(size) \u{00B7} summarizing locally"
+        case .summary(let data):
+            return data.cached
+                ? "\(size) \u{00B7} cached local summary"
+                : "\(size) \u{00B7} summarized locally"
+        case .unsupported:
+            return "\(size) \u{00B7} unsupported"
+        case .failed:
+            return "\(size) \u{00B7} summary failed"
         }
     }
 }

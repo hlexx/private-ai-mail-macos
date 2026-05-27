@@ -31,23 +31,53 @@ struct MailSyncEngineTests {
     }
 
     private func makeThread(id: String, messageIds: [String]) -> GmailDTO.Thread {
+        let messages = messageIds.map { makeMessage(id: $0, threadId: id) }
+        return GmailDTO.Thread(id: id, historyId: "100", messages: messages)
+    }
+
+    private func makeThread(
+        id: String,
+        messageIds: [String],
+        attachmentsByMessage: [String: [String]]
+    ) -> GmailDTO.Thread {
         let messages = messageIds.map { msgId in
-            GmailDTO.Message(
+            makeMessage(
                 id: msgId,
                 threadId: id,
-                labelIds: ["INBOX"],
-                snippet: "snippet-\(msgId)",
-                historyId: "100",
-                internalDate: "\(Int(Date().timeIntervalSince1970 * 1000))",
-                payload: GmailDTO.MessagePart(
-                    headers: [
-                        GmailDTO.MessagePartHeader(name: "Subject", value: "Test subject \(id)"),
-                        GmailDTO.MessagePartHeader(name: "From", value: "sender@example.com"),
-                    ]
-                )
+                attachmentIds: attachmentsByMessage[msgId] ?? []
             )
         }
         return GmailDTO.Thread(id: id, historyId: "100", messages: messages)
+    }
+
+    private func makeMessage(
+        id: String,
+        threadId: String,
+        labelIds: [String] = ["INBOX"],
+        attachmentIds: [String] = []
+    ) -> GmailDTO.Message {
+        let attachmentParts = attachmentIds.map { attachmentId in
+            GmailDTO.MessagePart(
+                mimeType: "application/pdf",
+                filename: "\(attachmentId).pdf",
+                body: GmailDTO.MessagePartBody(attachmentId: attachmentId, size: 42)
+            )
+        }
+        return GmailDTO.Message(
+            id: id,
+            threadId: threadId,
+            labelIds: labelIds,
+            snippet: "snippet-\(id)",
+            historyId: "100",
+            internalDate: "\(Int(Date().timeIntervalSince1970 * 1000))",
+            payload: GmailDTO.MessagePart(
+                headers: [
+                    GmailDTO.MessagePartHeader(name: "Subject", value: "Test subject \(threadId)"),
+                    GmailDTO.MessagePartHeader(name: "From", value: "sender@example.com"),
+                ],
+                parts: attachmentParts
+            )
+        )
     }
 
     @Test func bootstrapInsertsThreadsAndMessages() async throws {
@@ -148,6 +178,95 @@ struct MailSyncEngineTests {
         #expect(syncState?.historyId == "60")
     }
 
+    @Test func incrementalSyncKeepsOriginalHistoryIdAcrossPages() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+        try await setHistoryId("50", db: db)
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        messagesAdded: [
+                            GmailDTO.HistoryMessageAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1")
+                            )
+                        ]
+                    ),
+                ],
+                nextPageToken: "page-2",
+                historyId: "60"
+            )),
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "52",
+                        labelsAdded: [
+                            GmailDTO.HistoryLabelAdded(
+                                message: GmailDTO.Message(id: "m2", threadId: "t2"),
+                                labelIds: ["STARRED"]
+                            )
+                        ]
+                    ),
+                ],
+                nextPageToken: nil,
+                historyId: "70"
+            )),
+        ]
+        api.getThreadResults = [
+            "t1": .success(makeThread(id: "t1", messageIds: ["m1"])),
+            "t2": .success(makeThread(id: "t2", messageIds: ["m2"])),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        #expect(api.listHistoryCallArguments.count == 2)
+        #expect(api.listHistoryCallArguments[0].startHistoryId == "50")
+        #expect(api.listHistoryCallArguments[0].pageToken == nil)
+        #expect(api.listHistoryCallArguments[1].startHistoryId == "50")
+        #expect(api.listHistoryCallArguments[1].pageToken == "page-2")
+
+        let syncState = try db.read { dbConn in
+            try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])
+        }
+        #expect(syncState?.historyId == "70")
+        #expect(Set(api.getThreadCalledIds) == ["t1", "t2"])
+    }
+
+    @Test func incrementalSyncDoesNotUseIntermediateHistoryIdForNextPage() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+        try await setHistoryId("50", db: db)
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [],
+                nextPageToken: "page-2",
+                historyId: "60"
+            )),
+            .success(GmailDTO.HistoryResponse(
+                history: [],
+                nextPageToken: nil,
+                historyId: "70"
+            )),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        #expect(api.listHistoryCallArguments.map(\.startHistoryId) == ["50", "50"])
+        #expect(api.listHistoryCallArguments.map(\.pageToken) == [nil, "page-2"])
+
+        let syncState = try db.read { dbConn in
+            try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])
+        }
+        #expect(syncState?.historyId == "70")
+    }
+
     @Test func incrementalSyncDeletesMessage() async throws {
         let db = try await makeDB()
         try await seedAccount(db)
@@ -202,6 +321,106 @@ struct MailSyncEngineTests {
             try ThreadRecord.fetchOne(dbConn, key: ["account_id": "acc1", "id": "t1"])
         }
         #expect(thread?.messageCount == 1)
+    }
+
+    @Test func incrementalLabelRefreshPreservesAttachmentArtifacts() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+        try await seedThreadWithAttachmentArtifacts(
+            db,
+            threadId: "t1",
+            messageId: "m1",
+            attachmentIds: ["att1"]
+        )
+        try await setHistoryId("50", db: db)
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        labelsAdded: [
+                            GmailDTO.HistoryLabelAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1"),
+                                labelIds: ["STARRED"]
+                            )
+                        ]
+                    ),
+                ],
+                nextPageToken: nil,
+                historyId: "60"
+            )),
+        ]
+        api.getThreadResults = [
+            "t1": .success(makeThread(
+                id: "t1",
+                messageIds: ["m1"],
+                attachmentsByMessage: ["m1": ["att1"]]
+            )),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        let counts = try await artifactCounts(db, attachmentId: "att1")
+        #expect(counts.blobs == 1)
+        #expect(counts.extractions == 1)
+        #expect(counts.chunks == 1)
+        #expect(counts.artifacts == 1)
+    }
+
+    @Test func incrementalRefreshDeletesArtifactsOnlyForRemovedAttachment() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db)
+        try await seedThreadWithAttachmentArtifacts(
+            db,
+            threadId: "t1",
+            messageId: "m1",
+            attachmentIds: ["att1", "att2"]
+        )
+        try await setHistoryId("50", db: db)
+
+        let api = MockGmailAPI()
+        api.listHistoryResults = [
+            .success(GmailDTO.HistoryResponse(
+                history: [
+                    GmailDTO.HistoryRecord(
+                        id: "51",
+                        labelsAdded: [
+                            GmailDTO.HistoryLabelAdded(
+                                message: GmailDTO.Message(id: "m1", threadId: "t1"),
+                                labelIds: ["INBOX"]
+                            )
+                        ]
+                    ),
+                ],
+                nextPageToken: nil,
+                historyId: "60"
+            )),
+        ]
+        api.getThreadResults = [
+            "t1": .success(makeThread(
+                id: "t1",
+                messageIds: ["m1"],
+                attachmentsByMessage: ["m1": ["att1"]]
+            )),
+        ]
+
+        let engine = MailSyncEngine(accountId: "acc1", api: api, db: db)
+        await engine.refresh()
+
+        let preserved = try await artifactCounts(db, attachmentId: "att1")
+        #expect(preserved.blobs == 1)
+        #expect(preserved.extractions == 1)
+        #expect(preserved.chunks == 1)
+        #expect(preserved.artifacts == 1)
+
+        let removed = try await artifactCounts(db, attachmentId: "att2")
+        #expect(removed.blobs == 0)
+        #expect(removed.extractions == 0)
+        #expect(removed.chunks == 0)
+        #expect(removed.artifacts == 0)
     }
 
     @Test func rateLimitedTriggersAPausedState() async throws {
@@ -374,6 +593,122 @@ struct MailSyncEngineTests {
         }
         #expect(syncedThread != nil)
         #expect(syncedThread?.messageCount == 1)
+    }
+}
+
+private func setHistoryId(_ historyId: String, db: AppDatabase) async throws {
+    try await DatabaseActor.shared.run {
+        try db.write { dbConn in
+            var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
+            syncState.historyId = historyId
+            try syncState.update(dbConn)
+        }
+    }
+}
+
+private func seedThreadWithAttachmentArtifacts(
+    _ db: AppDatabase,
+    threadId: String,
+    messageId: String,
+    attachmentIds: [String]
+) async throws {
+    try await DatabaseActor.shared.run {
+        try db.write { dbConn in
+            try ThreadRecord(
+                id: threadId,
+                accountId: "acc1",
+                subject: "Subject",
+                lastMessageAt: 1000,
+                messageCount: 1
+            ).insert(dbConn)
+            try MessageRecord(
+                id: messageId,
+                threadId: threadId,
+                accountId: "acc1",
+                sentAt: 1000
+            ).insert(dbConn)
+
+            for attachmentId in attachmentIds {
+                try AttachmentRecord(
+                    id: attachmentId,
+                    messageId: messageId,
+                    accountId: "acc1",
+                    filename: "\(attachmentId).pdf",
+                    mime: "application/pdf",
+                    sizeBytes: 42
+                ).insert(dbConn)
+                try AttachmentBlobRecord(
+                    accountId: "acc1",
+                    messageId: messageId,
+                    attachmentId: attachmentId,
+                    relativePath: "attachments/\(attachmentId).pdf",
+                    byteCount: 42,
+                    sha256: "sha-\(attachmentId)",
+                    storedAt: 1000
+                ).insert(dbConn)
+                try AttachmentExtractionRecord(
+                    accountId: "acc1",
+                    messageId: messageId,
+                    attachmentId: attachmentId,
+                    extractionVersion: "pdf-text.v1",
+                    status: "completed",
+                    contentHash: "hash-\(attachmentId)",
+                    mime: "application/pdf",
+                    filename: "\(attachmentId).pdf",
+                    byteCount: 42,
+                    createdAt: 1000,
+                    updatedAt: 1000,
+                    completedAt: 1000,
+                    errorCode: nil,
+                    errorMessage: nil
+                ).insert(dbConn)
+                try AttachmentChunkRecord(
+                    accountId: "acc1",
+                    messageId: messageId,
+                    attachmentId: attachmentId,
+                    extractionVersion: "pdf-text.v1",
+                    chunkIndex: 0,
+                    contentText: "Grounded attachment text for \(attachmentId).",
+                    createdAt: 1000
+                ).insert(dbConn)
+                try AttachmentAIArtifactRecord(
+                    accountId: "acc1",
+                    messageId: messageId,
+                    attachmentId: attachmentId,
+                    extractionVersion: "pdf-text.v1",
+                    artifactKind: "attachmentSummary",
+                    artifactVersion: 1,
+                    modelId: "local-test-model",
+                    contentHash: "hash-\(attachmentId)",
+                    payloadJSON: "{}",
+                    createdAt: 1000,
+                    updatedAt: 1000
+                ).insert(dbConn)
+            }
+        }
+    }
+}
+
+private func artifactCounts(
+    _ db: AppDatabase,
+    attachmentId: String
+) async throws -> (blobs: Int, extractions: Int, chunks: Int, artifacts: Int) {
+    try await DatabaseActor.shared.run {
+        try db.read { dbConn in
+            let blobCount = try AttachmentBlobRecord
+                .filter(Column("attachment_id") == attachmentId)
+                .fetchCount(dbConn)
+            let extractionCount = try AttachmentExtractionRecord
+                .filter(Column("attachment_id") == attachmentId)
+                .fetchCount(dbConn)
+            let chunkCount = try AttachmentChunkRecord
+                .filter(Column("attachment_id") == attachmentId)
+                .fetchCount(dbConn)
+            let artifactCount = try AttachmentAIArtifactRecord
+                .filter(Column("attachment_id") == attachmentId)
+                .fetchCount(dbConn)
+            return (blobCount, extractionCount, chunkCount, artifactCount)
+        }
     }
 }
 

@@ -40,6 +40,7 @@ public enum AttachmentSummaryOrchestratorResult: Sendable, Equatable {
 public enum AttachmentRAGError: Error, Sendable, Equatable {
     case attachmentBytesUnavailable
     case extractedTextMissing
+    case invalidAttachmentSummaryEvidence(String)
 }
 
 public actor AttachmentSummaryOrchestrator {
@@ -102,6 +103,20 @@ public actor AttachmentSummaryOrchestrator {
                 }
             )
         )
+
+        if let failure = AttachmentEvidenceValidator.validate(summary.evidence, chunks: chunks) {
+            let metadata = AttachmentSummaryTask.metadata
+            Self.logger.error(
+                """
+                Attachment summary evidence validation failed \
+                attachment_id=\(request.attachmentId, privacy: .public) \
+                task_id=\(metadata.id.rawValue, privacy: .public) \
+                prompt_version=\(metadata.promptVersion, privacy: .public) \
+                failure_kind=\(failure.rawValue, privacy: .public)
+                """
+            )
+            throw AttachmentRAGError.invalidAttachmentSummaryEvidence(failure.rawValue)
+        }
 
         try await persistSummary(
             summary,
@@ -360,37 +375,4 @@ extension AttachmentSummaryOrchestrator {
         "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)"
     }
 
-    private static func tableColumns(_ table: String, db: Database) throws -> Set<String> {
-        let rows = try Row.fetchAll(db, sql: "PRAGMA table_info(\(table.sqlIdentifier))")
-        return Set(rows.compactMap { $0["name"] as String? })
-    }
-
-    private static func append(
-        _ values: inout [(String, DatabaseValueConvertible?)],
-        _ column: String,
-        _ value: DatabaseValueConvertible?,
-        ifPresentIn columns: Set<String>
-    ) {
-        guard columns.contains(column) else { return }
-        values.append((column, value))
-    }
-
-    private static func insertOrReplace(
-        into table: String,
-        values: [(String, DatabaseValueConvertible?)],
-        db: Database
-    ) throws {
-        let columns = values.map { $0.0.sqlIdentifier }.joined(separator: ", ")
-        let placeholders = Array(repeating: "?", count: values.count).joined(separator: ", ")
-        try db.execute(
-            sql: "INSERT OR REPLACE INTO \(table.sqlIdentifier) (\(columns)) VALUES (\(placeholders))",
-            arguments: StatementArguments(values.map { $0.1 })
-        )
-    }
-}
-
-private extension String {
-    var sqlIdentifier: String {
-        "\"\(replacingOccurrences(of: "\"", with: "\"\""))\""
-    }
 }

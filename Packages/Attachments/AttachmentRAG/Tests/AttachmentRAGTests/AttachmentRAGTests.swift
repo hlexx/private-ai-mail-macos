@@ -1,6 +1,8 @@
 import Testing
 import AIKit
+import AIPrompts
 import Foundation
+import GRDB
 import Persistence
 @testable import AttachmentRAG
 
@@ -55,6 +57,93 @@ struct AttachmentRAGTests {
         #expect(await ai.callCount == 1)
     }
 
+    @Test func summarizeRejectsMissingEvidenceChunk() async throws {
+        let db = try makeAttachmentDatabase()
+        let ai = QueuedAttachmentAIService(outcomes: [
+            .summary(makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 99, quote: "Amount due: EUR 1840"),
+            ])),
+        ])
+        let orchestrator = try makeOrchestrator(db: db, aiService: ai)
+
+        do {
+            _ = try await orchestrator.summarize(defaultRequest())
+            Issue.record("Expected missing chunk evidence to fail")
+        } catch AttachmentRAGError.invalidAttachmentSummaryEvidence(let kind) {
+            #expect(kind == "missingChunk")
+        }
+
+        #expect(try artifactCount(db) == 0)
+        #expect(await ai.callCount == 1)
+    }
+
+    @Test func summarizeRejectsQuoteNotPresentInChunk() async throws {
+        let db = try makeAttachmentDatabase()
+        let ai = QueuedAttachmentAIService(outcomes: [
+            .summary(makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Different amount"),
+            ])),
+        ])
+        let orchestrator = try makeOrchestrator(db: db, aiService: ai)
+
+        do {
+            _ = try await orchestrator.summarize(defaultRequest())
+            Issue.record("Expected ungrounded quote evidence to fail")
+        } catch AttachmentRAGError.invalidAttachmentSummaryEvidence(let kind) {
+            #expect(kind == "quoteNotFound")
+        }
+
+        #expect(try artifactCount(db) == 0)
+        #expect(await ai.callCount == 1)
+    }
+
+    @Test func malformedModelOutputDoesNotCreateSummaryArtifact() async throws {
+        let db = try makeAttachmentDatabase()
+        let ai = QueuedAttachmentAIService(outcomes: [
+            .parseFailure(.invalidJSON("not-json")),
+        ])
+        let orchestrator = try makeOrchestrator(db: db, aiService: ai)
+
+        await #expect(throws: AttachmentSummaryParser.ParseError.self) {
+            try await orchestrator.summarize(defaultRequest())
+        }
+
+        #expect(try artifactCount(db) == 0)
+        #expect(await ai.callCount == 1)
+    }
+
+    @Test func invalidEvidenceDoesNotPoisonCache() async throws {
+        let db = try makeAttachmentDatabase()
+        let ai = QueuedAttachmentAIService(outcomes: [
+            .summary(makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Not in chunk"),
+            ])),
+            .summary(makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840"),
+            ])),
+        ])
+        let orchestrator = try makeOrchestrator(db: db, aiService: ai)
+        let request = defaultRequest()
+
+        do {
+            _ = try await orchestrator.summarize(request)
+            Issue.record("Expected invalid evidence to fail")
+        } catch AttachmentRAGError.invalidAttachmentSummaryEvidence(let kind) {
+            #expect(kind == "quoteNotFound")
+        }
+
+        let retry = try await orchestrator.summarize(request)
+        guard case .summary(let summary, let cached) = retry else {
+            Issue.record("Expected retry to generate a summary")
+            return
+        }
+
+        #expect(summary.summary == "Attachment summary")
+        #expect(cached == false)
+        #expect(try artifactCount(db) == 1)
+        #expect(await ai.callCount == 2)
+    }
+
     @Test func unsupportedAttachmentDoesNotCallAI() async throws {
         let db = try makeAttachmentDatabase(mime: "application/zip", filename: "archive.zip")
         let provider = FakeAttachmentByteProvider(data: Data([0x00, 0x01]))
@@ -87,6 +176,48 @@ struct AttachmentRAGTests {
         #expect(reason.contains("Unsupported"))
         #expect(await ai.callCount == 0)
     }
+}
+
+private func makeOrchestrator(
+    db: AppDatabase,
+    aiService: any AIService,
+    data: Data = Data("Amount due: EUR 1840".utf8)
+) throws -> AttachmentSummaryOrchestrator {
+    let storeRoot = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    return AttachmentSummaryOrchestrator(
+        db: db,
+        byteStore: .init(baseURL: storeRoot),
+        aiService: aiService,
+        byteProvider: FakeAttachmentByteProvider(data: data)
+    )
+}
+
+private func defaultRequest() -> AttachmentSummaryRequest {
+    AttachmentSummaryRequest(
+        accountId: "a1",
+        messageId: "m1",
+        attachmentId: "att1",
+        filename: "invoice.txt",
+        mime: "text/plain"
+    )
+}
+
+private func artifactCount(_ db: AppDatabase) throws -> Int {
+    try db.dbQueue.read { database in
+        try AttachmentAIArtifactRecord.fetchCount(database)
+    }
+}
+
+private func makeSummary(evidence: [AIAttachmentEvidence]) -> AIAttachmentSummary {
+    AIAttachmentSummary(
+        summary: "Attachment summary",
+        keyFields: [AIKeyField(name: "amount", value: "EUR 1840")],
+        risks: [],
+        nextSteps: ["Pay invoice"],
+        evidence: evidence,
+        confidence: 0.9
+    )
 }
 
 private func makeAttachmentDatabase(
@@ -136,13 +267,51 @@ private actor CountingAttachmentAIService: AIService {
 
     func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary {
         callCount += 1
-        return AIAttachmentSummary(
-            summary: "Attachment summary",
-            keyFields: [AIKeyField(name: "amount", value: "EUR 1840")],
-            risks: [],
-            nextSteps: ["Pay invoice"],
-            evidence: [AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840")],
-            confidence: 0.9
-        )
+        return makeSummary(evidence: [
+            AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840"),
+        ])
+    }
+}
+
+private actor QueuedAttachmentAIService: AIService {
+    enum Outcome: Sendable {
+        case summary(AIAttachmentSummary)
+        case parseFailure(AttachmentSummaryParser.ParseError)
+    }
+
+    private var outcomes: [Outcome]
+    private(set) var callCount = 0
+
+    init(outcomes: [Outcome]) {
+        self.outcomes = outcomes
+    }
+
+    func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+        AIThreadBrief(summary: "unused", confidence: 0.1)
+    }
+
+    func draftReply(
+        _ input: AIThreadInput,
+        tone: AIReplyTone,
+        locale: Locale,
+        replyLanguage: String?
+    ) async throws -> AIThreadReply {
+        AIThreadReply(body: "unused")
+    }
+
+    func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary {
+        callCount += 1
+        let outcome = outcomes.isEmpty
+            ? .summary(makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840"),
+            ]))
+            : outcomes.removeFirst()
+
+        switch outcome {
+        case .summary(let summary):
+            return summary
+        case .parseFailure(let error):
+            throw error
+        }
     }
 }

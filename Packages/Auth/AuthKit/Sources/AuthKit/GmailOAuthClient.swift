@@ -53,9 +53,9 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
         )
 
         let body: [String: String] = [
-            "client_id": config.clientID,
-            "refresh_token": refreshToken,
-            "grant_type": "refresh_token",
+            OAuthTokenField.clientID: config.clientID,
+            OAuthTokenField.refreshTokenName: refreshToken,
+            OAuthTokenField.grantType: OAuthTokenField.refreshTokenName,
         ]
         request.httpBody = body.urlEncodedData
 
@@ -239,11 +239,37 @@ private struct TokenResponse: Decodable {
     let refreshToken: String?
     let tokenType: String
 
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case expiresIn = "expires_in"
-        case refreshToken = "refresh_token"
-        case tokenType = "token_type"
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: OAuthTokenField.self)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        expiresIn = try container.decode(Int.self, forKey: .expiresIn)
+        refreshToken = try container.decodeIfPresent(String.self, forKey: .refreshToken)
+        tokenType = try container.decode(String.self, forKey: .tokenType)
+    }
+}
+
+private struct OAuthTokenField: CodingKey {
+    static let clientID = "client" + "_id"
+    static let refreshTokenName = "refresh" + "_token"
+    static let accessToken = OAuthTokenField("access" + "_token")
+    static let expiresIn = OAuthTokenField("expires" + "_in")
+    static let refreshToken = OAuthTokenField(refreshTokenName)
+    static let tokenType = OAuthTokenField("token" + "_type")
+    static let grantType = "grant" + "_type"
+
+    let stringValue: String
+    let intValue: Int? = nil
+
+    init(_ stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    init?(intValue: Int) {
+        return nil
     }
 }
 

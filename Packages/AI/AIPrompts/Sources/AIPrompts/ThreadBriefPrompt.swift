@@ -75,12 +75,12 @@ public enum ThreadBriefTask: PromptTaskDefinition {
         parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        for msg in input.messages {
+        let budgetedBodies = PromptTextBudget.trimmedSections(
+            input.messages.map(\.bodyText),
+            maxCharacters: metadata.maxInputCharacters
+        )
+        for (msg, body) in zip(input.messages, budgetedBodies) {
             let ts = formatter.string(from: msg.sentAt)
-            let body = PromptTextBudget.trimmedMessageBody(
-                msg.bodyText,
-                maxCharacters: metadata.maxInputCharacters
-            )
             parts.append("""
                 [From: \(msg.from) | \(ts)]
                 \(body)

@@ -71,12 +71,13 @@ public enum DraftReplyTask: PromptTaskDefinition {
         parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        for (idx, msg) in input.messages.enumerated() {
+        let budgetedBodies = PromptTextBudget.trimmedSections(
+            input.messages.map(\.bodyText),
+            maxCharacters: metadata.maxInputCharacters
+        )
+        for (idx, pair) in zip(input.messages, budgetedBodies).enumerated() {
+            let (msg, body) = pair
             let ts = formatter.string(from: msg.sentAt)
-            let body = PromptTextBudget.trimmedMessageBody(
-                msg.bodyText,
-                maxCharacters: metadata.maxInputCharacters
-            )
             parts.append("""
                 [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
                 \(body)
