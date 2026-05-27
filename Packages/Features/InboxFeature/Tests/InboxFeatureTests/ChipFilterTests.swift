@@ -72,10 +72,9 @@ struct ChipFilterTests {
         store.filter = .needsReply
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
-        #expect(ids == Set(["tA"]))
+        let expected = Set(["tA"])
+        let ids = try await waitForThreadIDs(in: store) { $0 == expected }
+        #expect(ids == expected)
     }
 
     @MainActor
@@ -87,10 +86,9 @@ struct ChipFilterTests {
         store.filter = .hasDeadline
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
-        #expect(ids == Set(["tB"]))
+        let expected = Set(["tB"])
+        let ids = try await waitForThreadIDs(in: store) { $0 == expected }
+        #expect(ids == expected)
     }
 
     @MainActor
@@ -102,11 +100,10 @@ struct ChipFilterTests {
         store.filter = .aiHandled
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
         // tA and tB have briefs, tC does not
-        #expect(ids == Set(["tA", "tB"]))
+        let expected = Set(["tA", "tB"])
+        let ids = try await waitForThreadIDs(in: store) { $0 == expected }
+        #expect(ids == expected)
     }
 
     @MainActor
@@ -119,8 +116,8 @@ struct ChipFilterTests {
         store1.setSelection(.folder(.inbox))
         store1.filter = .needsReply
         store1.startObserving()
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(!store1.threads.map(\.id).contains("tC"))
+        var ids = try await waitForThreadIDs(in: store1) { $0 == Set(["tA"]) }
+        #expect(!ids.contains("tC"))
         store1.stopObserving()
 
         // Check hasDeadline
@@ -128,8 +125,8 @@ struct ChipFilterTests {
         store2.setSelection(.folder(.inbox))
         store2.filter = .hasDeadline
         store2.startObserving()
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(!store2.threads.map(\.id).contains("tC"))
+        ids = try await waitForThreadIDs(in: store2) { $0 == Set(["tB"]) }
+        #expect(!ids.contains("tC"))
         store2.stopObserving()
 
         // Check aiHandled
@@ -137,8 +134,8 @@ struct ChipFilterTests {
         store3.setSelection(.folder(.inbox))
         store3.filter = .aiHandled
         store3.startObserving()
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(!store3.threads.map(\.id).contains("tC"))
+        ids = try await waitForThreadIDs(in: store3) { $0 == Set(["tA", "tB"]) }
+        #expect(!ids.contains("tC"))
         store3.stopObserving()
     }
 
@@ -151,10 +148,9 @@ struct ChipFilterTests {
         store.filter = .all
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
-        #expect(ids == Set(["tA", "tB", "tC"]))
+        let expected = Set(["tA", "tB", "tC"])
+        let ids = try await waitForThreadIDs(in: store) { $0 == expected }
+        #expect(ids == expected)
     }
 
     // MARK: - Folder sidebar filter tests
@@ -167,10 +163,9 @@ struct ChipFilterTests {
         store.setSelection(.folder(.needsReply))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
-        #expect(ids == Set(["tA"]))
+        let expected = Set(["tA"])
+        let ids = try await waitForThreadIDs(in: store) { $0 == expected }
+        #expect(ids == expected)
     }
 
     @MainActor
@@ -181,10 +176,9 @@ struct ChipFilterTests {
         store.setSelection(.folder(.hasDeadline))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
-        #expect(ids == Set(["tB"]))
+        let expected = Set(["tB"])
+        let ids = try await waitForThreadIDs(in: store) { $0 == expected }
+        #expect(ids == expected)
     }
 
     // MARK: - Folder counts include brief-driven counts
@@ -197,10 +191,12 @@ struct ChipFilterTests {
         store.setSelection(.folder(.inbox))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(500))
+        let counts = try await waitForFolderCounts(in: store) {
+            $0[.needsReply] == 1 && $0[.hasDeadline] == 1
+        }
 
-        #expect(store.folderCounts[.needsReply] == 1) // tA
-        #expect(store.folderCounts[.hasDeadline] == 1) // tB
+        #expect(counts[.needsReply] == 1) // tA
+        #expect(counts[.hasDeadline] == 1) // tB
     }
 
     // MARK: - Empty/whitespace brief fields don't count
@@ -237,8 +233,11 @@ struct ChipFilterTests {
         store.filter = .needsReply
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
+        let counts = try await waitForFolderCounts(in: store) {
+            $0[.inbox] == 1 && $0[.needsReply] == 0
+        }
 
+        #expect(counts[.needsReply] == 0)
         #expect(store.threads.isEmpty)
     }
 }
