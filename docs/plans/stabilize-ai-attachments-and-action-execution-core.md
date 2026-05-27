@@ -50,15 +50,15 @@ Implement the next architecture slice for `private-ai-mail-macos`: first complet
 
 ### Task 2: Record ADR 0004 for supervised action execution
 
-- [ ] Create `docs/adr/0004-supervised-action-execution-core.md`.
-- [ ] State the sequence: stabilization first, action core second, UI wiring third, Team Connect providers last.
-- [ ] Define the trust boundary: raw email bodies, attachments, extracted text, local indexes, prompts, model output, and generated drafts stay on device unless a user explicitly sends or approves a minimized payload.
-- [ ] Define the action pipeline: `ActionCommand -> Policy/Approval -> Local Outbox -> Executor -> Result/Audit`.
-- [ ] Define action identity: `op_id`, `account_id`, target ids, action kind, schema version, idempotency key, approval state, status, attempt count, created/updated timestamps, and optional external result id.
-- [ ] Define approval levels for local low-risk actions, send-mail actions, external writes, destructive actions, and sensitive legal/finance/HR actions.
-- [ ] Define out-of-scope work for this plan: no Slack/Notion/CRM provider calls, no cloud broker delivery, no new OAuth scopes, no automatic external writes, no action-router model task.
-- [ ] Document rollback: leave additive action tables dormant and disable UI entry points if action execution blocks release.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check` and fix formatting issues.
+- [x] Create `docs/adr/0004-supervised-action-execution-core.md`.
+- [x] State the sequence: stabilization first, action core second, UI wiring third, Team Connect providers last.
+- [x] Define the trust boundary: raw email bodies, attachments, extracted text, local indexes, prompts, model output, and generated drafts stay on device unless a user explicitly sends or approves a minimized payload.
+- [x] Define the action pipeline: `ActionCommand -> Policy/Approval -> Local Outbox -> Executor -> Result/Audit`.
+- [x] Define action identity: `op_id`, `account_id`, target ids, action kind, schema version, idempotency key, approval state, status, attempt count, created/updated timestamps, and optional external result id.
+- [x] Define approval levels for local low-risk actions, send-mail actions, external writes, destructive actions, and sensitive legal/finance/HR actions.
+- [x] Define out-of-scope work for this plan: no Slack/Notion/CRM provider calls, no cloud broker delivery, no new OAuth scopes, no automatic external writes, no action-router model task.
+- [x] Document rollback: leave additive action tables dormant and disable UI entry points if action execution blocks release.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check` and fix formatting issues.
 
 ### Task 3: Add the supervised action domain model
 
