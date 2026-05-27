@@ -2,6 +2,16 @@ import Foundation
 
 public enum ActionCommandValidationError: Error, Equatable, Sendable {
     case accountMismatch(commandAccountId: String, targetAccountId: String)
+    case approvalRequirementTooWeak(
+        kind: ActionKind,
+        minimum: ApprovalRequirement,
+        provided: ApprovalRequirement
+    )
+    case statusRequiresSatisfiedApproval(
+        status: ActionStatus,
+        requirement: ApprovalRequirement,
+        state: ApprovalState
+    )
 }
 
 public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
@@ -43,8 +53,18 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
             )
         }
 
-        let requirement = approvalRequirement ?? ActionPolicy.defaultApprovalRequirement(for: kind)
+        let defaultRequirement = ActionPolicy.defaultApprovalRequirement(for: kind)
+        let requirement = approvalRequirement ?? defaultRequirement
         let state = approvalState ?? ApprovalState.initial(for: requirement)
+        let commandStatus = status ?? ActionStatus.initial(for: state)
+        try Self.validateApprovalPolicy(
+            kind: kind,
+            defaultRequirement: defaultRequirement,
+            requirement: requirement,
+            state: state,
+            status: commandStatus
+        )
+
         self.opId = opId
         self.accountId = accountId
         self.target = target
@@ -60,7 +80,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         )
         self.approvalRequirement = requirement
         self.approvalState = state
-        self.status = status ?? ActionStatus.initial(for: state)
+        self.status = commandStatus
         self.attemptCount = attemptCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -98,16 +118,63 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         opId = try container.decode(String.self, forKey: .opId)
         self.accountId = accountId
         self.target = target
-        kind = try container.decode(ActionKind.self, forKey: .kind)
+        let decodedKind = try container.decode(ActionKind.self, forKey: .kind)
+        let decodedRequirement = try container.decode(ApprovalRequirement.self, forKey: .approvalRequirement)
+        let decodedState = try container.decode(ApprovalState.self, forKey: .approvalState)
+        let decodedStatus = try container.decode(ActionStatus.self, forKey: .status)
+        try Self.validateApprovalPolicy(
+            kind: decodedKind,
+            defaultRequirement: ActionPolicy.defaultApprovalRequirement(for: decodedKind),
+            requirement: decodedRequirement,
+            state: decodedState,
+            status: decodedStatus
+        )
+
+        kind = decodedKind
         schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
         payload = try container.decode(ActionPayload.self, forKey: .payload)
         idempotencyKey = try container.decode(ActionIdempotencyKey.self, forKey: .idempotencyKey)
-        approvalRequirement = try container.decode(ApprovalRequirement.self, forKey: .approvalRequirement)
-        approvalState = try container.decode(ApprovalState.self, forKey: .approvalState)
-        status = try container.decode(ActionStatus.self, forKey: .status)
+        approvalRequirement = decodedRequirement
+        approvalState = decodedState
+        status = decodedStatus
         attemptCount = try container.decode(Int.self, forKey: .attemptCount)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         externalResultId = try container.decodeIfPresent(String.self, forKey: .externalResultId)
+    }
+
+    private static func validateApprovalPolicy(
+        kind: ActionKind,
+        defaultRequirement: ApprovalRequirement,
+        requirement: ApprovalRequirement,
+        state: ApprovalState,
+        status: ActionStatus
+    ) throws {
+        guard requirement.isAtLeastAsStrict(as: defaultRequirement) else {
+            throw ActionCommandValidationError.approvalRequirementTooWeak(
+                kind: kind,
+                minimum: defaultRequirement,
+                provided: requirement
+            )
+        }
+
+        guard status.requiresSatisfiedApproval == false || state.satisfies(requirement) else {
+            throw ActionCommandValidationError.statusRequiresSatisfiedApproval(
+                status: status,
+                requirement: requirement,
+                state: state
+            )
+        }
+    }
+}
+
+private extension ActionStatus {
+    var requiresSatisfiedApproval: Bool {
+        switch self {
+        case .ready, .executing, .succeeded:
+            true
+        case .pending, .failed, .cancelled, .blocked:
+            false
+        }
     }
 }

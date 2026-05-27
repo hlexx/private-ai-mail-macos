@@ -146,6 +146,56 @@ struct IntegrationDomainTests {
         }
     }
 
+    @Test func commandRejectsApprovalRequirementWeakerThanDefaultPolicy() throws {
+        #expect(throws: ActionCommandValidationError.approvalRequirementTooWeak(
+            kind: .sendReply,
+            minimum: .explicitUserApproval,
+            provided: .notRequired
+        )) {
+            try ActionCommand(
+                opId: "op-1",
+                accountId: "acct-1",
+                target: .message(accountId: "acct-1", threadId: "thread-1", messageId: "msg-1"),
+                kind: .sendReply,
+                approvalRequirement: .notRequired,
+                approvalState: .notRequired,
+                status: .ready
+            )
+        }
+    }
+
+    @Test func commandRejectsExecutableStatusWithoutSatisfiedApproval() throws {
+        #expect(throws: ActionCommandValidationError.statusRequiresSatisfiedApproval(
+            status: .ready,
+            requirement: .explicitUserApproval,
+            state: .pending
+        )) {
+            try ActionCommand(
+                opId: "op-1",
+                accountId: "acct-1",
+                target: .message(accountId: "acct-1", threadId: "thread-1", messageId: "msg-1"),
+                kind: .sendReply,
+                approvalRequirement: .explicitUserApproval,
+                approvalState: .pending,
+                status: .ready
+            )
+        }
+    }
+
+    @Test func commandAllowsStricterApprovalRequirement() throws {
+        let command = try ActionCommand(
+            opId: "op-1",
+            accountId: "acct-1",
+            target: .message(accountId: "acct-1", threadId: "thread-1", messageId: "msg-1"),
+            kind: .sendReply,
+            approvalRequirement: .previewAndConfirm
+        )
+
+        #expect(command.approvalRequirement == .previewAndConfirm)
+        #expect(command.approvalState == .pending)
+        #expect(command.status == .pending)
+    }
+
     @Test func commandDecodeRejectsMismatchedAccountAndTargetAccount() throws {
         let payload = """
         {
@@ -178,6 +228,45 @@ struct IntegrationDomainTests {
         #expect(throws: ActionCommandValidationError.accountMismatch(
             commandAccountId: "acct-2",
             targetAccountId: "acct-1"
+        )) {
+            try JSONDecoder().decode(ActionCommand.self, from: payload)
+        }
+    }
+
+    @Test func commandDecodeRejectsWeakenedApprovalPolicy() throws {
+        let payload = """
+        {
+          "opId": "op-1",
+          "accountId": "acct-1",
+          "target": {
+            "message": {
+              "accountId": "acct-1",
+              "threadId": "thread-1",
+              "messageId": "msg-1"
+            }
+          },
+          "kind": "sendReply",
+          "schemaVersion": 1,
+          "payload": {
+            "schemaVersion": 1,
+            "body": {}
+          },
+          "idempotencyKey": {
+            "rawValue": "action_v1_test"
+          },
+          "approvalRequirement": "notRequired",
+          "approvalState": "notRequired",
+          "status": "ready",
+          "attemptCount": 0,
+          "createdAt": 0,
+          "updatedAt": 0
+        }
+        """.data(using: .utf8)!
+
+        #expect(throws: ActionCommandValidationError.approvalRequirementTooWeak(
+            kind: .sendReply,
+            minimum: .explicitUserApproval,
+            provided: .notRequired
         )) {
             try JSONDecoder().decode(ActionCommand.self, from: payload)
         }
