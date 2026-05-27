@@ -74,16 +74,16 @@ Implement the next architecture slice for `private-ai-mail-macos`: first complet
 
 ### Task 4: Add local action outbox persistence
 
-- [ ] Inspect current GRDB migration numbering in `Packages/Core/Persistence/Sources/Persistence/Migrator.swift` and add the next migration without reusing an existing migration name.
-- [ ] Add `action_outbox` with fields for `op_id`, `account_id`, target kind/id fields, action kind, action schema version, idempotency key, approval state, status, payload JSON, result JSON, last error kind/code, attempt count, created at, updated at, approved at, and completed at.
-- [ ] Add `action_attempt` with one row per execution attempt, linked to `action_outbox`, storing attempt number, status, started/completed timestamps, retryable flag, and privacy-safe error code/message.
-- [ ] Add `action_audit_event` with one row per lifecycle event, linked to `action_outbox`, storing event kind, actor kind, timestamp, and privacy-safe metadata JSON.
-- [ ] Add indexes for account/status, idempotency key, target lookup, and updated-at ordering.
-- [ ] Add record types under `Packages/Core/Persistence/Sources/Persistence/Records` for the new tables.
-- [ ] Ensure payload/result/error JSON fields may store local sensitive content on device, but no logs or test fixtures include private mailbox content.
-- [ ] Add `Persistence` tests for fresh migration, duplicate idempotency handling, status transition persistence, attempt ordering, audit insertion, and cascade behavior on account deletion.
-- [ ] Do not wire `ActionSheetView`, `ThreadView`, `MailMutator`, or external integrations to the outbox in this task unless required to keep the build compiling.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test` and fix failures.
+- [x] Inspect current GRDB migration numbering in `Packages/Core/Persistence/Sources/Persistence/Migrator.swift` and add the next migration without reusing an existing migration name.
+- [x] Add `action_outbox` with fields for `op_id`, `account_id`, target kind/id fields, action kind, action schema version, idempotency key, approval state, status, payload JSON, result JSON, last error kind/code, attempt count, created at, updated at, approved at, and completed at.
+- [x] Add `action_attempt` with one row per execution attempt, linked to `action_outbox`, storing attempt number, status, started/completed timestamps, retryable flag, and privacy-safe error code/message.
+- [x] Add `action_audit_event` with one row per lifecycle event, linked to `action_outbox`, storing event kind, actor kind, timestamp, and privacy-safe metadata JSON.
+- [x] Add indexes for account/status, idempotency key, target lookup, and updated-at ordering.
+- [x] Add record types under `Packages/Core/Persistence/Sources/Persistence/Records` for the new tables.
+- [x] Ensure payload/result/error JSON fields may store local sensitive content on device, but no logs or test fixtures include private mailbox content.
+- [x] Add `Persistence` tests for fresh migration, duplicate idempotency handling, status transition persistence, attempt ordering, audit insertion, and cascade behavior on account deletion.
+- [x] Do not wire `ActionSheetView`, `ThreadView`, `MailMutator`, or external integrations to the outbox in this task unless required to keep the build compiling.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test` and fix failures.
 
 ### Task 5: Run final architecture-gate validation
 

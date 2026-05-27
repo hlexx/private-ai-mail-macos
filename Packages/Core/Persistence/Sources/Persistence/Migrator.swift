@@ -21,6 +21,10 @@ enum Migrator {
             "M014_AttachmentExtractionVersionText",
             migrate: M014_AttachmentExtractionVersionText.migrate
         )
+        migrator.registerMigration(
+            "M015_ActionOutbox",
+            migrate: M015_ActionOutbox.migrate
+        )
         try migrator.migrate(db)
     }
 }
