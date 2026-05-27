@@ -124,6 +124,7 @@ struct InboxViewSnapshotTests {
         host.layout()
     }
 
+    @MainActor
     private func filterChipsView() -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -139,6 +140,7 @@ struct InboxViewSnapshotTests {
         .background(Color.rbBgCanvas)
     }
 
+    @MainActor
     private func headerView() -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Inbox")
