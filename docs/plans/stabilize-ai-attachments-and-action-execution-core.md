@@ -87,11 +87,19 @@ Implement the next architecture slice for `private-ai-mail-macos`: first complet
 
 ### Task 5: Run final architecture-gate validation
 
-- [ ] Run every command in `## Validation Commands`.
-- [ ] Confirm `git status --short --branch` shows only intended doc, domain, persistence, and stabilization changes.
-- [ ] Inspect changed logs for privacy issues: no raw email bodies, raw attachment text/bytes, prompt bodies, model output, bearer tokens, refresh tokens, or connector secrets.
-- [ ] Summarize what is now ready for the next plan: UI wiring to action outbox, local mail action executors, Snooze implementation, and Team Connect broker/provider adapters.
-- [ ] Explicitly list deferred work in completion notes: Slack/Notion/CRM calls, cloud broker delivery, action-router model task, external connector auth, automatic rules, attachment Preview, DOCX/OCR extraction, and notarized release packaging.
+- [x] Run every command in `## Validation Commands`.
+- [x] Confirm `git status --short --branch` shows only intended doc, domain, persistence, and stabilization changes.
+- [x] Inspect changed logs for privacy issues: no raw email bodies, raw attachment text/bytes, prompt bodies, model output, bearer tokens, refresh tokens, or connector secrets.
+- [x] Summarize what is now ready for the next plan: UI wiring to action outbox, local mail action executors, Snooze implementation, and Team Connect broker/provider adapters.
+- [x] Explicitly list deferred work in completion notes: Slack/Notion/CRM calls, cloud broker delivery, action-router model task, external connector auth, automatic rules, attachment Preview, DOCX/OCR extraction, and notarized release packaging.
+
+Completion notes:
+
+- Validation passed from the `stabilize-ai-attachments-action-core` git worktree: repo status, diff whitespace, SwiftLint strict mode, all SwiftPM package tests listed above, the MacApp Debug xcodebuild with code signing disabled, and the privacy log scan.
+- The branch diff is limited to the intended stabilization, ADR, action-domain, action-outbox persistence, and plan files.
+- Privacy review found no logging of raw email bodies, raw attachment text or bytes, prompt bodies, model output, bearer tokens, refresh tokens, or connector secrets. The changed attachment error log uses public attachment ids and error codes only.
+- Ready for the next plan: UI wiring to the action outbox, local mail action executors, Snooze implementation, and Team Connect broker/provider adapters.
+- Deferred work remains: Slack/Notion/CRM calls, cloud broker delivery, action-router model task, external connector auth, automatic rules, attachment Preview, DOCX/OCR extraction, and notarized release packaging.
 
 ## Rollback / Recovery
 
