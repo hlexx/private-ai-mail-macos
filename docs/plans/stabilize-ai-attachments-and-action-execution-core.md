@@ -62,15 +62,15 @@ Implement the next architecture slice for `private-ai-mail-macos`: first complet
 
 ### Task 3: Add the supervised action domain model
 
-- [ ] Replace the `IntegrationDomain` namespace-only stub with a typed action domain surface while preserving `IntegrationDomain.moduleName` for compatibility.
-- [ ] Add action kind/types for at least: `draftReply`, `sendReply`, `archiveThread`, `starThread`, `markRead`, `trashThread`, `snoozeThread`, `sendToSlack`, `createNotionPage`, and `logToCRM`.
-- [ ] Add `ActionTarget` cases for thread, message, attachment, and integration destination targets without importing UI or provider modules.
-- [ ] Add `ActionPayload` or equivalent typed/enveloped payload model with a schema version and JSON-encodable body; keep provider-specific payload details out of UI modules.
-- [ ] Add `ApprovalRequirement`, `ApprovalState`, `ActionStatus`, `ActionFailureKind`, `ActionResult`, and `ActionAuditEvent` types.
-- [ ] Add idempotency helpers so the same user action can produce a stable local idempotency key without embedding raw body text in the key.
-- [ ] Add policy helpers that classify default approval requirements: local label mutations can be low-risk, sending email requires explicit user approval, external writes require preview and confirm, destructive or sensitive actions require explicit confirm.
-- [ ] Add `IntegrationDomain` tests proving all action kinds have stable raw values, approval defaults, status transitions, codable round trips, and privacy-safe idempotency keys.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Integrations/IntegrationDomain && swift test` and fix failures.
+- [x] Replace the `IntegrationDomain` namespace-only stub with a typed action domain surface while preserving `IntegrationDomain.moduleName` for compatibility.
+- [x] Add action kind/types for at least: `draftReply`, `sendReply`, `archiveThread`, `starThread`, `markRead`, `trashThread`, `snoozeThread`, `sendToSlack`, `createNotionPage`, and `logToCRM`.
+- [x] Add `ActionTarget` cases for thread, message, attachment, and integration destination targets without importing UI or provider modules.
+- [x] Add `ActionPayload` or equivalent typed/enveloped payload model with a schema version and JSON-encodable body; keep provider-specific payload details out of UI modules.
+- [x] Add `ApprovalRequirement`, `ApprovalState`, `ActionStatus`, `ActionFailureKind`, `ActionResult`, and `ActionAuditEvent` types.
+- [x] Add idempotency helpers so the same user action can produce a stable local idempotency key without embedding raw body text in the key.
+- [x] Add policy helpers that classify default approval requirements: local label mutations can be low-risk, sending email requires explicit user approval, external writes require preview and confirm, destructive or sensitive actions require explicit confirm.
+- [x] Add `IntegrationDomain` tests proving all action kinds have stable raw values, approval defaults, status transitions, codable round trips, and privacy-safe idempotency keys.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Integrations/IntegrationDomain && swift test` and fix failures.
 
 ### Task 4: Add local action outbox persistence
 
