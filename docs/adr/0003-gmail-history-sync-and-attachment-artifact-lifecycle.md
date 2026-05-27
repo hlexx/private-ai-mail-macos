@@ -31,9 +31,10 @@ on thread briefs, draft replies, or attachment summaries.
   message, or attachment is actually removed.
 - `PromptTaskMetadata.maxInputCharacters` is a total rendered-input budget for a
   model task. It is not a per-message budget.
-- Attachment-summary evidence is accepted only when every referenced
-  `chunkIndex` exists and each evidence quote is found in that chunk after
-  conservative whitespace normalization.
+- Attachment-summary evidence is accepted only when non-empty evidence is
+  present for extracted chunks, every referenced `chunkIndex` exists, and each
+  evidence quote is found in that chunk after conservative whitespace
+  normalization.
 - `extraction_version` is stored as text for attachment extractions, chunks, and
   AI artifacts, matching the runtime version contract.
 

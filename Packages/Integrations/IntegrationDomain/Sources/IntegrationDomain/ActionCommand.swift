@@ -1,5 +1,9 @@
 import Foundation
 
+public enum ActionCommandValidationError: Error, Equatable, Sendable {
+    case accountMismatch(commandAccountId: String, targetAccountId: String)
+}
+
 public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
     public let opId: String
     public let accountId: String
@@ -31,7 +35,14 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         externalResultId: String? = nil
-    ) {
+    ) throws {
+        guard accountId == target.accountId else {
+            throw ActionCommandValidationError.accountMismatch(
+                commandAccountId: accountId,
+                targetAccountId: target.accountId
+            )
+        }
+
         let requirement = approvalRequirement ?? ActionPolicy.defaultApprovalRequirement(for: kind)
         let state = approvalState ?? ApprovalState.initial(for: requirement)
         self.opId = opId
@@ -45,7 +56,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
             kind: kind,
             target: target,
             schemaVersion: payload.schemaVersion,
-            userActionId: userActionId
+            userActionId: userActionId ?? opId
         )
         self.approvalRequirement = requirement
         self.approvalState = state
@@ -54,5 +65,49 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.externalResultId = externalResultId
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case opId
+        case accountId
+        case target
+        case kind
+        case schemaVersion
+        case payload
+        case idempotencyKey
+        case approvalRequirement
+        case approvalState
+        case status
+        case attemptCount
+        case createdAt
+        case updatedAt
+        case externalResultId
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let accountId = try container.decode(String.self, forKey: .accountId)
+        let target = try container.decode(ActionTarget.self, forKey: .target)
+        guard accountId == target.accountId else {
+            throw ActionCommandValidationError.accountMismatch(
+                commandAccountId: accountId,
+                targetAccountId: target.accountId
+            )
+        }
+
+        opId = try container.decode(String.self, forKey: .opId)
+        self.accountId = accountId
+        self.target = target
+        kind = try container.decode(ActionKind.self, forKey: .kind)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        payload = try container.decode(ActionPayload.self, forKey: .payload)
+        idempotencyKey = try container.decode(ActionIdempotencyKey.self, forKey: .idempotencyKey)
+        approvalRequirement = try container.decode(ApprovalRequirement.self, forKey: .approvalRequirement)
+        approvalState = try container.decode(ApprovalState.self, forKey: .approvalState)
+        status = try container.decode(ActionStatus.self, forKey: .status)
+        attemptCount = try container.decode(Int.self, forKey: .attemptCount)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        externalResultId = try container.decodeIfPresent(String.self, forKey: .externalResultId)
     }
 }

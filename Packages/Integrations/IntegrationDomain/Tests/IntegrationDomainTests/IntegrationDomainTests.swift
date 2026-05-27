@@ -101,7 +101,7 @@ struct IntegrationDomainTests {
             ])
         )
         let timestamp = Date(timeIntervalSince1970: 1_800_000_000)
-        let command = ActionCommand(
+        let command = try ActionCommand(
             opId: "op-1",
             accountId: "acct-1",
             target: .thread(accountId: "acct-1", threadId: "thread-1"),
@@ -130,6 +130,84 @@ struct IntegrationDomainTests {
         #expect(try roundTrip(command) == command)
         #expect(try roundTrip(result) == result)
         #expect(try roundTrip(event) == event)
+    }
+
+    @Test func commandRejectsMismatchedAccountAndTargetAccount() throws {
+        #expect(throws: ActionCommandValidationError.accountMismatch(
+            commandAccountId: "acct-2",
+            targetAccountId: "acct-1"
+        )) {
+            try ActionCommand(
+                opId: "op-1",
+                accountId: "acct-2",
+                target: .thread(accountId: "acct-1", threadId: "thread-1"),
+                kind: .archiveThread
+            )
+        }
+    }
+
+    @Test func commandDecodeRejectsMismatchedAccountAndTargetAccount() throws {
+        let payload = """
+        {
+          "opId": "op-1",
+          "accountId": "acct-2",
+          "target": {
+            "thread": {
+              "accountId": "acct-1",
+              "threadId": "thread-1"
+            }
+          },
+          "kind": "archiveThread",
+          "schemaVersion": 1,
+          "payload": {
+            "schemaVersion": 1,
+            "body": {}
+          },
+          "idempotencyKey": {
+            "rawValue": "action_v1_test"
+          },
+          "approvalRequirement": "notRequired",
+          "approvalState": "notRequired",
+          "status": "ready",
+          "attemptCount": 0,
+          "createdAt": 0,
+          "updatedAt": 0
+        }
+        """.data(using: .utf8)!
+
+        #expect(throws: ActionCommandValidationError.accountMismatch(
+            commandAccountId: "acct-2",
+            targetAccountId: "acct-1"
+        )) {
+            try JSONDecoder().decode(ActionCommand.self, from: payload)
+        }
+    }
+
+    @Test func commandDefaultIdempotencyUsesOperationIdentityForRepeatableActions() throws {
+        let target = ActionTarget.message(accountId: "acct-1", threadId: "thread-1", messageId: "msg-1")
+        let first = try ActionCommand(
+            opId: "op-1",
+            accountId: "acct-1",
+            target: target,
+            kind: .sendReply
+        )
+        let second = try ActionCommand(
+            opId: "op-2",
+            accountId: "acct-1",
+            target: target,
+            kind: .sendReply
+        )
+        let retriedFirst = try ActionCommand(
+            opId: "op-1",
+            accountId: "acct-1",
+            target: target,
+            kind: .sendReply
+        )
+
+        #expect(first.idempotencyKey != second.idempotencyKey)
+        #expect(first.idempotencyKey == retriedFirst.idempotencyKey)
+        #expect(!first.idempotencyKey.rawValue.contains("op-1"))
+        #expect(!second.idempotencyKey.rawValue.contains("op-2"))
     }
 
     @Test func idempotencyKeyIsStableAndDoesNotEmbedSensitiveInputs() {

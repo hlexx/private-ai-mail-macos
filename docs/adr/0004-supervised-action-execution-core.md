@@ -39,13 +39,18 @@ bypassed by UI or provider code.
 Action identity must include:
 
 - `op_id`: local operation id for the action record.
-- `account_id`: mailbox account that owns the local context.
+- `account_id`: mailbox account that owns the local context. It must match the
+  account encoded in the action target; mismatched command and target accounts
+  are invalid.
 - Target ids: stable thread, message, attachment, or integration destination
   identifiers needed by the action kind.
 - Action kind: stable typed action enum value.
 - Schema version: payload and result contract version.
 - Idempotency key: stable local key for the same user action, without raw body
-  text, attachment text, prompt content, model output, or secrets.
+  text, attachment text, prompt content, model output, or secrets. Command
+  construction defaults the privacy-safe action instance component to `op_id`,
+  so repeatable actions on the same target can be queued separately while
+  retries of the same operation keep the same key.
 - Approval state: not required, pending, approved, rejected, or expired.
 - Status: pending, ready, executing, succeeded, failed, cancelled, or blocked.
 - Attempt count: total execution attempts recorded for the action.

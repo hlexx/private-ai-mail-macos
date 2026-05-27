@@ -2,6 +2,7 @@ import AIKit
 import AIPrompts
 
 enum AttachmentEvidenceValidationFailure: String {
+    case missingEvidence
     case missingChunk
     case emptyQuote
     case quoteNotFound
@@ -12,6 +13,10 @@ enum AttachmentEvidenceValidator {
         _ evidence: [AIAttachmentEvidence],
         chunks: [PromptAttachmentChunk]
     ) -> AttachmentEvidenceValidationFailure? {
+        if !chunks.isEmpty, evidence.isEmpty {
+            return .missingEvidence
+        }
+
         let chunksByIndex = Dictionary(uniqueKeysWithValues: chunks.map { ($0.index, $0.text) })
 
         for item in evidence {

@@ -78,6 +78,24 @@ struct AttachmentRAGTests {
         #expect(await ai.callCount == 1)
     }
 
+    @Test func summarizeRejectsEmptyEvidenceForExtractedChunks() async throws {
+        let db = try makeAttachmentDatabase()
+        let ai = QueuedAttachmentAIService(outcomes: [
+            .summary(makeSummary(evidence: [])),
+        ])
+        let orchestrator = try makeOrchestrator(db: db, aiService: ai)
+
+        do {
+            _ = try await orchestrator.summarize(defaultRequest())
+            Issue.record("Expected empty evidence to fail")
+        } catch AttachmentRAGError.invalidAttachmentSummaryEvidence(let kind) {
+            #expect(kind == "missingEvidence")
+        }
+
+        #expect(try artifactCount(db) == 0)
+        #expect(await ai.callCount == 1)
+    }
+
     @Test func summarizeRejectsQuoteNotPresentInChunk() async throws {
         let db = try makeAttachmentDatabase()
         let ai = QueuedAttachmentAIService(outcomes: [
@@ -181,6 +199,42 @@ struct AttachmentRAGTests {
         #expect(firstSummary.summary == "Attachment summary")
         #expect(firstCached == false)
         #expect(secondCached == true)
+        #expect(await ai.callCount == 1)
+        #expect(try artifactCount(db) == 1)
+    }
+
+    @Test func emptyEvidenceCachedSummaryIsRevalidatedAndRegenerated() async throws {
+        let db = try makeAttachmentDatabase()
+        let data = Data("Amount due: EUR 1840".utf8)
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let byteStore = AttachmentByteStore(baseURL: storeRoot)
+        let stored = try byteStore.store(data, accountId: "a1", messageId: "m1", attachmentId: "att1")
+        try seedCachedSummary(
+            db,
+            stored: stored,
+            summary: makeSummary(evidence: []),
+            chunkText: "Amount due: EUR 1840"
+        )
+
+        let ai = CountingAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: byteStore,
+            aiService: ai
+        )
+
+        let result = try await orchestrator.summarize(defaultRequest())
+
+        guard case .summary(let summary, let cached) = result else {
+            Issue.record("Expected regenerated summary")
+            return
+        }
+
+        #expect(summary.evidence.count == 1)
+        #expect(cached == false)
         #expect(await ai.callCount == 1)
         #expect(try artifactCount(db) == 1)
     }
