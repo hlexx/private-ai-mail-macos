@@ -45,6 +45,10 @@ Action identity must include:
 - Target ids: stable thread, message, attachment, or integration destination
   identifiers needed by the action kind.
 - Action kind: stable typed action enum value.
+- Sensitivity: standard or sensitive policy context. Sensitive legal, finance,
+  HR, or similarly high-impact actions must preserve this flag from command
+  construction through local outbox persistence so decoders and executors can
+  re-derive the minimum approval requirement.
 - Schema version: payload and result contract version.
 - Idempotency key: stable local key for the same user action, without raw body
   text, attachment text, prompt content, model output, or secrets. Command
@@ -79,7 +83,9 @@ extracted text must not be logged.
 - Send-mail actions: sending or replying to email requires explicit user
   approval of the final recipient list, subject, and body before execution.
 - External writes: Slack, Notion, CRM, broker, or other SaaS writes require a
-  preview and explicit confirm before sending a minimized payload.
+  preview and explicit confirm before sending a minimized payload. This preview
+  requirement is not interchangeable with a generic explicit-confirm state; the
+  action contract must record that the preview-and-confirm policy was required.
 - Destructive actions: trash, delete, purge, or irreversible mailbox/provider
   changes require explicit confirm and must remain auditable.
 - Sensitive legal, finance, HR, or similarly high-impact actions require

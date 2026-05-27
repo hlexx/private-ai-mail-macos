@@ -19,6 +19,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
     public let accountId: String
     public let target: ActionTarget
     public let kind: ActionKind
+    public let sensitivity: ActionSensitivity
     public let schemaVersion: Int
     public let payload: ActionPayload
     public let idempotencyKey: ActionIdempotencyKey
@@ -35,6 +36,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         accountId: String,
         target: ActionTarget,
         kind: ActionKind,
+        sensitivity: ActionSensitivity = .standard,
         payload: ActionPayload = ActionPayload(),
         userActionId: String? = nil,
         idempotencyKey: ActionIdempotencyKey? = nil,
@@ -53,7 +55,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
             )
         }
 
-        let defaultRequirement = ActionPolicy.defaultApprovalRequirement(for: kind)
+        let defaultRequirement = ActionPolicy.defaultApprovalRequirement(for: kind, sensitivity: sensitivity)
         let requirement = approvalRequirement ?? defaultRequirement
         let state = approvalState ?? ApprovalState.initial(for: requirement)
         let commandStatus = status ?? ActionStatus.initial(for: state)
@@ -69,6 +71,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         self.accountId = accountId
         self.target = target
         self.kind = kind
+        self.sensitivity = sensitivity
         self.schemaVersion = payload.schemaVersion
         self.payload = payload
         self.idempotencyKey = idempotencyKey ?? ActionIdempotencyKey.make(
@@ -92,6 +95,7 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         case accountId
         case target
         case kind
+        case sensitivity
         case schemaVersion
         case payload
         case idempotencyKey
@@ -119,18 +123,26 @@ public struct ActionCommand: Codable, Equatable, Hashable, Sendable {
         self.accountId = accountId
         self.target = target
         let decodedKind = try container.decode(ActionKind.self, forKey: .kind)
+        let decodedSensitivity = try container.decodeIfPresent(
+            ActionSensitivity.self,
+            forKey: .sensitivity
+        ) ?? .standard
         let decodedRequirement = try container.decode(ApprovalRequirement.self, forKey: .approvalRequirement)
         let decodedState = try container.decode(ApprovalState.self, forKey: .approvalState)
         let decodedStatus = try container.decode(ActionStatus.self, forKey: .status)
         try Self.validateApprovalPolicy(
             kind: decodedKind,
-            defaultRequirement: ActionPolicy.defaultApprovalRequirement(for: decodedKind),
+            defaultRequirement: ActionPolicy.defaultApprovalRequirement(
+                for: decodedKind,
+                sensitivity: decodedSensitivity
+            ),
             requirement: decodedRequirement,
             state: decodedState,
             status: decodedStatus
         )
 
         kind = decodedKind
+        sensitivity = decodedSensitivity
         schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
         payload = try container.decode(ActionPayload.self, forKey: .payload)
         idempotencyKey = try container.decode(ActionIdempotencyKey.self, forKey: .idempotencyKey)

@@ -103,15 +103,24 @@ public final class InboxStore {
         observationTask?.cancel()
         let currentSelection = selection
         let currentFilter = filter
-        do {
-            let records = try db.read { db in
-                try Self.queryThreads(db: db, selection: currentSelection, filter: currentFilter)
-            }
-            threads = Self.threadRows(from: records)
-        } catch {
-            threads = []
-        }
         observationTask = Task { [weak self, db] in
+            do {
+                let initialRecords = try await Task.detached { [db] in
+                    try db.read { database in
+                        try Self.queryThreads(
+                            db: database,
+                            selection: currentSelection,
+                            filter: currentFilter
+                        )
+                    }
+                }.value
+                guard !Task.isCancelled, let self else { return }
+                self.threads = Self.threadRows(from: initialRecords)
+            } catch {
+                guard !Task.isCancelled, let self else { return }
+                self.threads = []
+            }
+
             let observation = ValueObservation.tracking { db in
                 try Self.queryThreads(db: db, selection: currentSelection, filter: currentFilter)
             }

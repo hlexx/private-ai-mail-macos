@@ -41,6 +41,12 @@ struct IntegrationDomainTests {
         #expect(ActionPolicy.defaultApprovalRequirement(for: .logToCRM) == .previewAndConfirm)
         #expect(
             ActionPolicy.defaultApprovalRequirement(
+                for: .sendToSlack,
+                sensitivity: .sensitive
+            ) == .previewAndConfirm
+        )
+        #expect(
+            ActionPolicy.defaultApprovalRequirement(
                 for: .archiveThread,
                 sensitivity: .sensitive
             ) == .explicitConfirm
@@ -54,6 +60,12 @@ struct IntegrationDomainTests {
         #expect(!ApprovalState.rejected.satisfies(.explicitConfirm))
         #expect(ApprovalState.initial(for: .notRequired) == .notRequired)
         #expect(ApprovalState.initial(for: .previewAndConfirm) == .pending)
+    }
+
+    @Test func approvalRequirementsPreserveExternalPreviewRequirement() {
+        #expect(!ApprovalRequirement.explicitConfirm.isAtLeastAsStrict(as: .previewAndConfirm))
+        #expect(ApprovalRequirement.previewAndConfirm.isAtLeastAsStrict(as: .explicitConfirm))
+        #expect(ApprovalRequirement.previewAndConfirm.isAtLeastAsStrict(as: .explicitUserApproval))
     }
 
     @Test func statusTransitionsAreExplicit() {
@@ -196,6 +208,59 @@ struct IntegrationDomainTests {
         #expect(command.status == .pending)
     }
 
+    @Test func commandRejectsExternalWriteWithoutPreviewRequirement() throws {
+        #expect(throws: ActionCommandValidationError.approvalRequirementTooWeak(
+            kind: .sendToSlack,
+            minimum: .previewAndConfirm,
+            provided: .explicitConfirm
+        )) {
+            try ActionCommand(
+                opId: "op-1",
+                accountId: "acct-1",
+                target: .integrationDestination(
+                    accountId: "acct-1",
+                    destinationKind: .slack,
+                    destinationId: "slack-1"
+                ),
+                kind: .sendToSlack,
+                approvalRequirement: .explicitConfirm,
+                approvalState: .approved,
+                status: .ready
+            )
+        }
+    }
+
+    @Test func commandUsesSensitivityWhenValidatingApprovalPolicy() throws {
+        #expect(throws: ActionCommandValidationError.approvalRequirementTooWeak(
+            kind: .archiveThread,
+            minimum: .explicitConfirm,
+            provided: .notRequired
+        )) {
+            try ActionCommand(
+                opId: "op-1",
+                accountId: "acct-1",
+                target: .thread(accountId: "acct-1", threadId: "thread-1"),
+                kind: .archiveThread,
+                sensitivity: .sensitive,
+                approvalRequirement: .notRequired,
+                approvalState: .notRequired,
+                status: .ready
+            )
+        }
+
+        let command = try ActionCommand(
+            opId: "op-2",
+            accountId: "acct-1",
+            target: .thread(accountId: "acct-1", threadId: "thread-1"),
+            kind: .archiveThread,
+            sensitivity: .sensitive
+        )
+        #expect(command.sensitivity == .sensitive)
+        #expect(command.approvalRequirement == .explicitConfirm)
+        #expect(command.approvalState == .pending)
+        #expect(command.status == .pending)
+    }
+
     @Test func commandDecodeRejectsMismatchedAccountAndTargetAccount() throws {
         let payload = """
         {
@@ -267,6 +332,45 @@ struct IntegrationDomainTests {
             kind: .sendReply,
             minimum: .explicitUserApproval,
             provided: .notRequired
+        )) {
+            try JSONDecoder().decode(ActionCommand.self, from: payload)
+        }
+    }
+
+    @Test func commandDecodeRejectsExternalWriteWithoutPreviewRequirement() throws {
+        let payload = """
+        {
+          "opId": "op-1",
+          "accountId": "acct-1",
+          "target": {
+            "integrationDestination": {
+              "accountId": "acct-1",
+              "destinationKind": "slack",
+              "destinationId": "slack-1"
+            }
+          },
+          "kind": "sendToSlack",
+          "schemaVersion": 1,
+          "payload": {
+            "schemaVersion": 1,
+            "body": {}
+          },
+          "idempotencyKey": {
+            "rawValue": "action_v1_test"
+          },
+          "approvalRequirement": "explicitConfirm",
+          "approvalState": "approved",
+          "status": "ready",
+          "attemptCount": 0,
+          "createdAt": 0,
+          "updatedAt": 0
+        }
+        """.data(using: .utf8)!
+
+        #expect(throws: ActionCommandValidationError.approvalRequirementTooWeak(
+            kind: .sendToSlack,
+            minimum: .previewAndConfirm,
+            provided: .explicitConfirm
         )) {
             try JSONDecoder().decode(ActionCommand.self, from: payload)
         }

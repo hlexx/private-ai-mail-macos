@@ -12,19 +12,15 @@ public enum ApprovalRequirement: String, CaseIterable, Codable, Hashable, Sendab
     case explicitConfirm
 
     public func isAtLeastAsStrict(as minimum: ApprovalRequirement) -> Bool {
-        strictnessRank >= minimum.strictnessRank
-    }
-
-    private var strictnessRank: Int {
-        switch self {
+        switch minimum {
         case .notRequired:
-            0
+            true
         case .explicitUserApproval:
-            1
+            self != .notRequired
         case .previewAndConfirm:
-            2
+            self == .previewAndConfirm
         case .explicitConfirm:
-            3
+            self == .explicitConfirm || self == .previewAndConfirm
         }
     }
 }
@@ -55,14 +51,14 @@ public enum ActionPolicy {
         for kind: ActionKind,
         sensitivity: ActionSensitivity = .standard
     ) -> ApprovalRequirement {
+        if kind.isExternalWrite {
+            return .previewAndConfirm
+        }
         if sensitivity == .sensitive || kind.isDestructive {
             return .explicitConfirm
         }
         if kind.requiresSendApproval {
             return .explicitUserApproval
-        }
-        if kind.isExternalWrite {
-            return .previewAndConfirm
         }
         return .notRequired
     }

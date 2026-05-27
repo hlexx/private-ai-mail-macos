@@ -13,6 +13,7 @@ public struct ActionOutboxRecord: Codable, Sendable, FetchableRecord, Persistabl
     public var destinationKind: String?
     public var destinationId: String?
     public var actionKind: String
+    public var sensitivity: String
     public var actionSchemaVersion: Int
     public var idempotencyKey: String
     public var approvalRequirement: String
@@ -39,6 +40,7 @@ public struct ActionOutboxRecord: Codable, Sendable, FetchableRecord, Persistabl
         destinationKind: String? = nil,
         destinationId: String? = nil,
         actionKind: String,
+        sensitivity: String = "standard",
         actionSchemaVersion: Int,
         idempotencyKey: String,
         approvalRequirement: String,
@@ -64,6 +66,7 @@ public struct ActionOutboxRecord: Codable, Sendable, FetchableRecord, Persistabl
         self.destinationKind = destinationKind
         self.destinationId = destinationId
         self.actionKind = actionKind
+        self.sensitivity = sensitivity
         self.actionSchemaVersion = actionSchemaVersion
         self.idempotencyKey = idempotencyKey
         self.approvalRequirement = approvalRequirement
@@ -91,6 +94,7 @@ public struct ActionOutboxRecord: Codable, Sendable, FetchableRecord, Persistabl
         case destinationKind = "destination_kind"
         case destinationId = "destination_id"
         case actionKind = "action_kind"
+        case sensitivity
         case actionSchemaVersion = "action_schema_version"
         case idempotencyKey = "idempotency_key"
         case approvalRequirement = "approval_requirement"

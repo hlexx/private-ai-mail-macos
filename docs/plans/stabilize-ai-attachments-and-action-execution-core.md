@@ -54,7 +54,7 @@ Implement the next architecture slice for `private-ai-mail-macos`: first complet
 - [x] State the sequence: stabilization first, action core second, UI wiring third, Team Connect providers last.
 - [x] Define the trust boundary: raw email bodies, attachments, extracted text, local indexes, prompts, model output, and generated drafts stay on device unless a user explicitly sends or approves a minimized payload.
 - [x] Define the action pipeline: `ActionCommand -> Policy/Approval -> Local Outbox -> Executor -> Result/Audit`.
-- [x] Define action identity: `op_id`, `account_id`, target ids, action kind, schema version, idempotency key, approval state, status, attempt count, created/updated timestamps, and optional external result id.
+- [x] Define action identity: `op_id`, `account_id`, target ids, action kind, sensitivity, schema version, idempotency key, approval state, status, attempt count, created/updated timestamps, and optional external result id.
 - [x] Define approval levels for local low-risk actions, send-mail actions, external writes, destructive actions, and sensitive legal/finance/HR actions.
 - [x] Define out-of-scope work for this plan: no Slack/Notion/CRM provider calls, no cloud broker delivery, no new OAuth scopes, no automatic external writes, no action-router model task.
 - [x] Document rollback: leave additive action tables dormant and disable UI entry points if action execution blocks release.
@@ -75,7 +75,7 @@ Implement the next architecture slice for `private-ai-mail-macos`: first complet
 ### Task 4: Add local action outbox persistence
 
 - [x] Inspect current GRDB migration numbering in `Packages/Core/Persistence/Sources/Persistence/Migrator.swift` and add the next migration without reusing an existing migration name.
-- [x] Add `action_outbox` with fields for `op_id`, `account_id`, target kind/id fields, action kind, action schema version, idempotency key, approval state, status, payload JSON, result JSON, last error kind/code, attempt count, created at, updated at, approved at, and completed at.
+- [x] Add `action_outbox` with fields for `op_id`, `account_id`, target kind/id fields, action kind, sensitivity, action schema version, idempotency key, approval state, status, payload JSON, result JSON, last error kind/code, attempt count, created at, updated at, approved at, and completed at.
 - [x] Add `action_attempt` with one row per execution attempt, linked to `action_outbox`, storing attempt number, status, started/completed timestamps, retryable flag, and privacy-safe error code/message.
 - [x] Add `action_audit_event` with one row per lifecycle event, linked to `action_outbox`, storing event kind, actor kind, timestamp, and privacy-safe metadata JSON.
 - [x] Add indexes for account/status, idempotency key, target lookup, and updated-at ordering.

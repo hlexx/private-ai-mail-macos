@@ -25,6 +25,10 @@ enum Migrator {
             "M015_ActionOutbox",
             migrate: M015_ActionOutbox.migrate
         )
+        migrator.registerMigration(
+            "M016_ActionOutboxSensitivity",
+            migrate: M016_ActionOutboxSensitivity.migrate
+        )
         try migrator.migrate(db)
     }
 }

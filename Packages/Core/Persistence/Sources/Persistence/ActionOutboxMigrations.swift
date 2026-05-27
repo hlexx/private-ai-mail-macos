@@ -101,3 +101,11 @@ enum M015_ActionOutbox {
         )
     }
 }
+
+enum M016_ActionOutboxSensitivity {
+    static func migrate(_ db: Database) throws {
+        try db.alter(table: "action_outbox") { t in
+            t.add(column: "sensitivity", .text).notNull().defaults(to: "standard")
+        }
+    }
+}

@@ -21,10 +21,11 @@ struct ActionOutboxMigrationTests {
                 "op_id", "account_id", "target_kind", "thread_id",
                 "message_id", "attachment_id", "destination_kind",
                 "destination_id", "action_kind", "action_schema_version",
-                "idempotency_key", "approval_requirement", "approval_state",
-                "status", "payload_json", "result_json", "external_result_id",
-                "last_error_kind", "last_error_code", "attempt_count",
-                "created_at", "updated_at", "approved_at", "completed_at",
+                "idempotency_key", "sensitivity", "approval_requirement",
+                "approval_state", "status", "payload_json", "result_json",
+                "external_result_id", "last_error_kind", "last_error_code",
+                "attempt_count", "created_at", "updated_at", "approved_at",
+                "completed_at",
             ]))
 
             let attemptColumns = try actionTableColumns("action_attempt", database)
@@ -68,6 +69,41 @@ struct ActionOutboxMigrationTests {
 
             #expect(rejectedDuplicate)
             #expect(try ActionOutboxRecord.fetchCount(database) == 1)
+        }
+    }
+
+    @Test func outboxSensitivityPersistsAndDefaultsToStandard() throws {
+        let db = try AppDatabase.openInMemorySync()
+
+        try db.dbQueue.write { database in
+            try seedAccount(database)
+
+            var sensitiveRecord = makeOutboxRecord(opId: "op-sensitive", idempotencyKey: "idem-sensitive")
+            sensitiveRecord.sensitivity = "sensitive"
+            try sensitiveRecord.insert(database)
+
+            let fetchedRecord = try ActionOutboxRecord.fetchOne(database, key: "op-sensitive")
+            let fetched = try #require(fetchedRecord)
+            #expect(fetched.sensitivity == "sensitive")
+
+            try database.execute(
+                sql: """
+                    INSERT INTO action_outbox (
+                        op_id, account_id, target_kind, thread_id, action_kind,
+                        action_schema_version, idempotency_key, approval_requirement,
+                        approval_state, status, payload_json, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                arguments: [
+                    "op-default", "account-1", "thread", "thread-1", "archiveThread",
+                    "1", "idem-default", "notRequired", "notRequired", "ready",
+                    #"{"schemaVersion":1,"body":{}}"#, "10", "10",
+                ]
+            )
+
+            let defaultedRecord = try ActionOutboxRecord.fetchOne(database, key: "op-default")
+            let defaulted = try #require(defaultedRecord)
+            #expect(defaulted.sensitivity == "standard")
         }
     }
 
