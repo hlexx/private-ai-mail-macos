@@ -90,23 +90,36 @@ struct ThreadBriefPromptTests {
             attachments: []
         )
 
-        #expect(prompt.contains("[trimmed 4 characters"))
+        #expect(prompt.contains("[trimmed"))
+        #expect(prompt.count <= ThreadBriefTask.metadata.maxInputCharacters)
     }
 
-    @Test("task prompt applies one total body budget across messages")
-    func taskPromptAppliesTotalBodyBudgetAcrossMessages() {
-        let longBody = String(repeating: "x", count: ThreadBriefTask.metadata.maxInputCharacters)
-        let messages = (1...3).map { index in
+    @Test("task prompt applies one rendered budget and keeps newest messages")
+    func taskPromptAppliesRenderedBudgetAndKeepsNewestMessages() {
+        let messages = [
             PromptMessage(
-                from: "sender\(index)@example.com",
-                sentAt: Date(timeIntervalSince1970: TimeInterval(index)),
-                bodyText: longBody
-            )
-        }
+                from: "oldest@example.com",
+                sentAt: Date(timeIntervalSince1970: 1),
+                bodyText: "oldest context " + String(repeating: "o", count: ThreadBriefTask.metadata.maxInputCharacters)
+            ),
+            PromptMessage(
+                from: "middle@example.com",
+                sentAt: Date(timeIntervalSince1970: 2),
+                bodyText: "middle context " + String(repeating: "m", count: ThreadBriefTask.metadata.maxInputCharacters)
+            ),
+            PromptMessage(
+                from: "latest@example.com",
+                sentAt: Date(timeIntervalSince1970: 3),
+                bodyText: "latest ask needs answer " + String(repeating: "l", count: ThreadBriefTask.metadata.maxInputCharacters)
+            ),
+        ]
 
         let prompt = ThreadBriefPrompt.taskPrompt(messages: messages, attachments: [])
 
         #expect(prompt.contains("[trimmed"))
-        #expect(prompt.count < ThreadBriefTask.metadata.maxInputCharacters + 2_000)
+        #expect(prompt.count <= ThreadBriefTask.metadata.maxInputCharacters)
+        #expect(prompt.contains("latest ask needs answer"))
+        #expect(!prompt.contains("oldest context"))
+        #expect(prompt.contains("## Output JSON"))
     }
 }

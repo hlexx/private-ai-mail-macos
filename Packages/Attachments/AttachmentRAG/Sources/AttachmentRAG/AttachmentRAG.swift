@@ -44,12 +44,12 @@ public enum AttachmentRAGError: Error, Sendable, Equatable {
 }
 
 public actor AttachmentSummaryOrchestrator {
-    private let db: AppDatabase
+    let db: AppDatabase
     private let byteStore: AttachmentByteStore
     private let aiService: any AIService
     private let byteProvider: (any AttachmentByteProvider)?
 
-    private static let logger = Logger(
+    static let logger = Logger(
         subsystem: "com.privateaimail.attachments",
         category: "AttachmentRAG"
     )
@@ -195,77 +195,6 @@ public actor AttachmentSummaryOrchestrator {
 }
 
 extension AttachmentSummaryOrchestrator {
-    private func fetchCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) throws -> AIAttachmentSummary? {
-        let metadata = AttachmentSummaryTask.metadata
-        let payload = try db.dbQueue.read { database -> String? in
-            let columns = try Self.tableColumns("attachment_ai_artifact", db: database)
-            let payloadExpression: String
-            if columns.contains("payload_json"), columns.contains("content_json") {
-                payloadExpression = "COALESCE(payload_json, content_json)"
-            } else if columns.contains("content_json") {
-                payloadExpression = "content_json"
-            } else {
-                payloadExpression = "payload_json"
-            }
-
-            if columns.contains("task_id"), columns.contains("input_fingerprint") {
-                return try String.fetchOne(
-                    database,
-                    sql: """
-                    SELECT \(payloadExpression) FROM attachment_ai_artifact
-                    WHERE account_id = ?
-                      AND message_id = ?
-                      AND attachment_id = ?
-                      AND task_id = ?
-                      AND prompt_version = ?
-                      AND schema_version = ?
-                      AND model_id = ?
-                      AND extraction_version = ?
-                      AND input_fingerprint = ?
-                    """,
-                    arguments: [
-                        request.accountId,
-                        request.messageId,
-                        request.attachmentId,
-                        metadata.id.rawValue,
-                        metadata.promptVersion,
-                        metadata.schemaVersion,
-                        metadata.modelProfile,
-                        AttachmentTextExtractor.extractionVersion,
-                        fingerprint,
-                    ]
-                )
-            }
-
-            return try String.fetchOne(
-                database,
-                sql: """
-                SELECT \(payloadExpression) FROM attachment_ai_artifact
-                WHERE account_id = ?
-                  AND message_id = ?
-                  AND attachment_id = ?
-                  AND extraction_version = ?
-                  AND artifact_kind = ?
-                  AND artifact_version = ?
-                  AND model_id = ?
-                  AND content_hash = ?
-                """,
-                arguments: [
-                    request.accountId,
-                    request.messageId,
-                    request.attachmentId,
-                    AttachmentTextExtractor.extractionVersion,
-                    Self.artifactKind(metadata),
-                    1,
-                    metadata.modelProfile,
-                    fingerprint,
-                ]
-            )
-        }
-        guard let payload else { return nil }
-        return try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(payload.utf8))
-    }
-
     private func persistExtraction(
         _ extraction: AttachmentTextExtractionResult,
         request: AttachmentSummaryRequest,
@@ -371,7 +300,7 @@ extension AttachmentSummaryOrchestrator {
         Int(Date().timeIntervalSince1970)
     }
 
-    private static func artifactKind(_ metadata: PromptTaskMetadata) -> String {
+    static func artifactKind(_ metadata: PromptTaskMetadata) -> String {
         "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)"
     }
 

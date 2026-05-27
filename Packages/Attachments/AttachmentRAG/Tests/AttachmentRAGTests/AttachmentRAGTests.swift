@@ -1,6 +1,7 @@
 import Testing
 import AIKit
 import AIPrompts
+import AttachmentKit
 import Foundation
 import GRDB
 import Persistence
@@ -144,6 +145,46 @@ struct AttachmentRAGTests {
         #expect(await ai.callCount == 2)
     }
 
+    @Test func invalidCachedSummaryIsRevalidatedAndRegenerated() async throws {
+        let db = try makeAttachmentDatabase()
+        let data = Data("Amount due: EUR 1840".utf8)
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let byteStore = AttachmentByteStore(baseURL: storeRoot)
+        let stored = try byteStore.store(data, accountId: "a1", messageId: "m1", attachmentId: "att1")
+        try seedCachedSummary(
+            db,
+            stored: stored,
+            summary: makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Not in chunk"),
+            ]),
+            chunkText: "Amount due: EUR 1840"
+        )
+
+        let ai = CountingAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: byteStore,
+            aiService: ai
+        )
+        let first = try await orchestrator.summarize(defaultRequest())
+        let second = try await orchestrator.summarize(defaultRequest())
+
+        guard case .summary(let firstSummary, let firstCached) = first,
+              case .summary(_, let secondCached) = second else {
+            Issue.record("Expected regenerated and then cached summaries")
+            return
+        }
+
+        #expect(firstSummary.summary == "Attachment summary")
+        #expect(firstCached == false)
+        #expect(secondCached == true)
+        #expect(await ai.callCount == 1)
+        #expect(try artifactCount(db) == 1)
+    }
+
     @Test func unsupportedAttachmentDoesNotCallAI() async throws {
         let db = try makeAttachmentDatabase(mime: "application/zip", filename: "archive.zip")
         let provider = FakeAttachmentByteProvider(data: Data([0x00, 0x01]))
@@ -206,6 +247,68 @@ private func defaultRequest() -> AttachmentSummaryRequest {
 private func artifactCount(_ db: AppDatabase) throws -> Int {
     try db.dbQueue.read { database in
         try AttachmentAIArtifactRecord.fetchCount(database)
+    }
+}
+
+private func seedCachedSummary(
+    _ db: AppDatabase,
+    stored: AttachmentStoredBlob,
+    summary: AIAttachmentSummary,
+    chunkText: String
+) throws {
+    let payload = String(data: try JSONEncoder().encode(summary), encoding: .utf8) ?? "{}"
+    let metadata = AttachmentSummaryTask.metadata
+    try db.dbQueue.write { database in
+        try AttachmentBlobRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            relativePath: stored.relativePath,
+            byteCount: stored.byteCount,
+            sha256: stored.sha256,
+            storedAt: 1
+        ).insert(database)
+        try AttachmentExtractionRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            status: AttachmentTextExtractionStatus.extracted.rawValue,
+            contentHash: stored.sha256,
+            mime: "text/plain",
+            filename: "invoice.txt",
+            byteCount: stored.byteCount,
+            createdAt: 1,
+            updatedAt: 1,
+            completedAt: 1,
+            errorCode: nil,
+            errorMessage: nil
+        ).insert(database)
+        try AttachmentChunkRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            chunkIndex: 0,
+            contentText: chunkText,
+            sourceStart: 0,
+            sourceEnd: chunkText.count,
+            tokenCount: 0,
+            createdAt: 1
+        ).insert(database)
+        try AttachmentAIArtifactRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            artifactKind: "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)",
+            artifactVersion: 1,
+            modelId: metadata.modelProfile,
+            contentHash: stored.sha256,
+            payloadJSON: payload,
+            createdAt: 1,
+            updatedAt: 1
+        ).insert(database)
     }
 }
 

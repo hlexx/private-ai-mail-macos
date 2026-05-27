@@ -101,18 +101,28 @@ struct DraftReplyPromptTests {
             replyLanguage: "en"
         )
 
-        #expect(prompt.contains("[trimmed 10 characters"))
+        #expect(prompt.contains("[trimmed"))
+        #expect(prompt.count <= DraftReplyTask.metadata.maxInputCharacters)
     }
 
-    @Test func taskPromptAppliesTotalBodyBudgetAcrossMessages() {
-        let longBody = String(repeating: "x", count: DraftReplyTask.metadata.maxInputCharacters)
-        let messages = (1...3).map { index in
+    @Test func taskPromptAppliesRenderedBudgetAndKeepsNewestMessages() {
+        let messages = [
             PromptMessage(
-                from: "sender\(index)@example.com",
-                sentAt: Date(timeIntervalSince1970: TimeInterval(index)),
-                bodyText: longBody
-            )
-        }
+                from: "oldest@example.com",
+                sentAt: Date(timeIntervalSince1970: 1),
+                bodyText: "oldest context " + String(repeating: "o", count: DraftReplyTask.metadata.maxInputCharacters)
+            ),
+            PromptMessage(
+                from: "middle@example.com",
+                sentAt: Date(timeIntervalSince1970: 2),
+                bodyText: "middle context " + String(repeating: "m", count: DraftReplyTask.metadata.maxInputCharacters)
+            ),
+            PromptMessage(
+                from: "latest@example.com",
+                sentAt: Date(timeIntervalSince1970: 3),
+                bodyText: "latest ask needs answer " + String(repeating: "l", count: DraftReplyTask.metadata.maxInputCharacters)
+            ),
+        ]
 
         let prompt = DraftReplyPrompt.taskPrompt(
             messages: messages,
@@ -121,7 +131,10 @@ struct DraftReplyPromptTests {
         )
 
         #expect(prompt.contains("[trimmed"))
-        #expect(prompt.count < DraftReplyTask.metadata.maxInputCharacters + 2_000)
+        #expect(prompt.count <= DraftReplyTask.metadata.maxInputCharacters)
+        #expect(prompt.contains("latest ask needs answer"))
+        #expect(!prompt.contains("oldest context"))
+        #expect(prompt.contains("## Instructions"))
     }
 
     @Test func systemPromptDoesNotIncludeCopyableExampleBody() {

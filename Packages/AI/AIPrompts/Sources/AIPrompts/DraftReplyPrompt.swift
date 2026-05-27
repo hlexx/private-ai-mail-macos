@@ -66,36 +66,36 @@ public enum DraftReplyTask: PromptTaskDefinition {
     public static let jsonSchemaString = DraftReplySchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: DraftReplyTaskInput) -> String {
-        var parts: [String] = []
-
-        parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        let budgetedBodies = PromptTextBudget.trimmedSections(
-            input.messages.map(\.bodyText),
-            maxCharacters: metadata.maxInputCharacters
-        )
-        for (idx, pair) in zip(input.messages, budgetedBodies).enumerated() {
-            let (msg, body) = pair
+        let contextSections = input.messages.enumerated().map { idx, msg in
             let ts = formatter.string(from: msg.sentAt)
-            parts.append("""
+            return PromptTextBudget.PromptSection(
+                text: """
                 [msg_\(idx + 1) | From: \(msg.from) | \(ts)]
-                \(body)
-                """)
+                \(msg.bodyText)
+                """,
+                priority: idx + 1
+            )
         }
 
-        parts.append("")
-        parts.append("## Instructions")
-        parts.append("- Tone: \(input.tone)")
-        parts.append("- Respond in: \(input.replyLanguage)")
-        parts.append("")
-        parts.append("## Output JSON")
-        parts.append("Keys: body, evidenceMessageIDs, detectedReplyLanguage, confidence.")
-        parts.append("Continue the seeded JSON object with the actual reply text as body.")
-        parts.append("")
-        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
-
-        return parts.joined(separator: "\n")
+        return PromptTextBudget.renderedPrompt(
+            prefixParts: ["## Thread"],
+            contextSections: contextSections,
+            suffixParts: [
+                "",
+                "## Instructions",
+                "- Tone: \(input.tone)",
+                "- Respond in: \(input.replyLanguage)",
+                "",
+                "## Output JSON",
+                "Keys: body, evidenceMessageIDs, detectedReplyLanguage, confidence.",
+                "Continue the seeded JSON object with the actual reply text as body.",
+                "",
+                "Reply with JSON only. Do not output schema words or placeholders.",
+            ],
+            maxCharacters: metadata.maxInputCharacters
+        )
     }
 
     public static func parse(_ rawOutput: String) throws -> ParsedThreadReply {
