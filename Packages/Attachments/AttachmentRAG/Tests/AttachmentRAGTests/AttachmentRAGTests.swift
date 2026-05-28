@@ -203,6 +203,47 @@ struct AttachmentRAGTests {
         #expect(try artifactCount(db) == 1)
     }
 
+    @Test func malformedCachedSummaryPayloadIsEvictedAndRegenerated() async throws {
+        let db = try makeAttachmentDatabase()
+        let data = Data("Amount due: EUR 1840".utf8)
+        let fingerprint = AttachmentByteStore.sha256Hex(data)
+        try seedCachedSummaryPayload(
+            db,
+            contentHash: fingerprint,
+            payload: "{not-json"
+        )
+
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let provider = CountingAttachmentByteProvider(data: data)
+        let ai = CountingAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+
+        let first = try await orchestrator.summarize(defaultRequest())
+        let second = try await orchestrator.summarize(defaultRequest())
+
+        guard case .summary(let firstSummary, let firstCached) = first,
+              case .summary(let secondSummary, let secondCached) = second else {
+            Issue.record("Expected regenerated and cached summaries")
+            return
+        }
+
+        #expect(firstSummary.summary == "Attachment summary")
+        #expect(firstCached == false)
+        #expect(secondSummary.summary == "Attachment summary")
+        #expect(secondCached == true)
+        #expect(await provider.callCount == 1)
+        #expect(await ai.callCount == 1)
+        #expect(try artifactCount(db) == 1)
+    }
+
     @Test func emptyEvidenceCachedSummaryIsRevalidatedAndRegenerated() async throws {
         let db = try makeAttachmentDatabase()
         let data = Data("Amount due: EUR 1840".utf8)
@@ -270,6 +311,45 @@ struct AttachmentRAGTests {
         }
         #expect(reason.contains("Unsupported"))
         #expect(await ai.callCount == 0)
+    }
+}
+
+private func seedCachedSummaryPayload(
+    _ db: AppDatabase,
+    contentHash: String,
+    payload: String
+) throws {
+    let metadata = AttachmentSummaryTask.metadata
+    try db.dbQueue.write { database in
+        try AttachmentExtractionRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            status: AttachmentTextExtractionStatus.extracted.rawValue,
+            contentHash: contentHash,
+            mime: "text/plain",
+            filename: "invoice.txt",
+            byteCount: 20,
+            createdAt: 1,
+            updatedAt: 1,
+            completedAt: 1,
+            errorCode: nil,
+            errorMessage: nil
+        ).insert(database)
+        try AttachmentAIArtifactRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            artifactKind: "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)",
+            artifactVersion: 1,
+            modelId: metadata.modelProfile,
+            contentHash: contentHash,
+            payloadJSON: payload,
+            createdAt: 1,
+            updatedAt: 1
+        ).insert(database)
     }
 }
 
@@ -403,6 +483,20 @@ private struct FakeAttachmentByteProvider: AttachmentByteProvider {
 
     func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
         data
+    }
+}
+
+private actor CountingAttachmentByteProvider: AttachmentByteProvider {
+    let data: Data
+    private(set) var callCount = 0
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
+        callCount += 1
+        return data
     }
 }
 

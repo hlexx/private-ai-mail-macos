@@ -15,7 +15,24 @@ extension AttachmentSummaryOrchestrator {
         }
         guard let cached else { return nil }
 
-        let summary = try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(cached.payload.utf8))
+        let summary: AIAttachmentSummary
+        do {
+            summary = try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(cached.payload.utf8))
+        } catch {
+            let metadata = AttachmentSummaryTask.metadata
+            Self.logger.error(
+                """
+                Cached attachment summary decode failed \
+                attachment_id=\(request.attachmentId, privacy: .public) \
+                task_id=\(metadata.id.rawValue, privacy: .public) \
+                prompt_version=\(metadata.promptVersion, privacy: .public) \
+                schema_version=\(metadata.schemaVersion, privacy: .public) \
+                failure_kind=\(Self.decodeFailureKind(error), privacy: .public)
+                """
+            )
+            try deleteCachedSummary(request, fingerprint: fingerprint)
+            return nil
+        }
         if let failure = AttachmentEvidenceValidator.validate(summary.evidence, chunks: cached.chunks) {
             let metadata = AttachmentSummaryTask.metadata
             Self.logger.error(
@@ -32,6 +49,21 @@ extension AttachmentSummaryOrchestrator {
         }
 
         return summary
+    }
+
+    private static func decodeFailureKind(_ error: any Error) -> String {
+        switch error {
+        case DecodingError.dataCorrupted(_):
+            return "dataCorrupted"
+        case DecodingError.keyNotFound(_, _):
+            return "keyNotFound"
+        case DecodingError.typeMismatch(_, _):
+            return "typeMismatch"
+        case DecodingError.valueNotFound(_, _):
+            return "valueNotFound"
+        default:
+            return "decodeFailure"
+        }
     }
 
     private struct CachedSummary {
