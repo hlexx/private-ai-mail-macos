@@ -65,10 +65,10 @@ Goal: fix two material attachment-summary integrity issues. A malformed cached a
 
 ### Task 4: Run final integrity checks
 
-- [ ] Run all validation commands from this plan.
-- [ ] Confirm `git diff --check` is clean.
-- [ ] Confirm the privacy grep returns no matches.
-- [ ] Summarize changed files, tests run, and any remaining risk in the final Ralphex report.
+- [x] Run all validation commands from this plan.
+- [x] Confirm `git diff --check` is clean.
+- [x] Confirm the privacy grep returns no matches.
+- [x] Summarize changed files, tests run, and any remaining risk in the final Ralphex report.
 
 ## Rollback / Recovery
 
