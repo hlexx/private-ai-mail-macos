@@ -46,12 +46,12 @@ Goal: fix two material attachment-summary integrity issues. A malformed cached a
 
 ### Task 2: Make new attachment byte paths collision-resistant
 
-- [ ] In `Packages/Attachments/AttachmentKit/Sources/AttachmentKit/AttachmentByteStore.swift`, replace lossy `safePathComponent` path generation for new stores with collision-resistant components, for example `v2/<sha256(accountId)>/<sha256(messageId)>/<sha256(attachmentId)>`.
-- [ ] Keep `load(relativePath:)` and `delete(relativePath:)` unchanged enough to read old paths already stored in the database.
-- [ ] Do not add a database migration; `attachment_blob.relative_path` remains the source of truth for already stored files.
-- [ ] Add an `AttachmentKit` test where two different id sets that previously collapsed to the same sanitized path now produce different `relativePath` values and both files round-trip correctly.
-- [ ] Keep Time Machine exclusion behavior covered by the existing test.
-- [ ] Run `cd Packages/Attachments/AttachmentKit && swift test` and fix failures.
+- [x] In `Packages/Attachments/AttachmentKit/Sources/AttachmentKit/AttachmentByteStore.swift`, replace lossy `safePathComponent` path generation for new stores with collision-resistant components, for example `v2/<sha256(accountId)>/<sha256(messageId)>/<sha256(attachmentId)>`.
+- [x] Keep `load(relativePath:)` and `delete(relativePath:)` unchanged enough to read old paths already stored in the database.
+- [x] Do not add a database migration; `attachment_blob.relative_path` remains the source of truth for already stored files.
+- [x] Add an `AttachmentKit` test where two different id sets that previously collapsed to the same sanitized path now produce different `relativePath` values and both files round-trip correctly.
+- [x] Keep Time Machine exclusion behavior covered by the existing test.
+- [x] Run `cd Packages/Attachments/AttachmentKit && swift test` and fix failures.
 
 ### Task 3: Verify stored blob bytes before extraction on cache miss
 

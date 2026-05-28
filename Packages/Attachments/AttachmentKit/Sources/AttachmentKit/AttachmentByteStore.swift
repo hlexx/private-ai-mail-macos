@@ -33,9 +33,10 @@ public struct AttachmentByteStore: Sendable {
         attachmentId: String
     ) throws -> AttachmentStoredBlob {
         let relativePath = [
-            Self.safePathComponent(accountId),
-            Self.safePathComponent(messageId),
-            Self.safePathComponent(attachmentId),
+            "v2",
+            Self.identifierPathComponent(accountId),
+            Self.identifierPathComponent(messageId),
+            Self.identifierPathComponent(attachmentId),
         ].joined(separator: "/")
         let destination = baseURL.appendingPathComponent(relativePath, isDirectory: false)
         let directory = destination.deletingLastPathComponent()
@@ -66,11 +67,8 @@ public struct AttachmentByteStore: Sendable {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func safePathComponent(_ raw: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
-        let scalars = raw.unicodeScalars.map { allowed.contains($0) ? Character($0) : Character("_") }
-        let result = String(scalars)
-        return result.isEmpty ? "_" : result
+    private static func identifierPathComponent(_ raw: String) -> String {
+        sha256Hex(Data(raw.utf8))
     }
 
     private func excludeFromBackupIfNeeded(_ url: URL) throws {
