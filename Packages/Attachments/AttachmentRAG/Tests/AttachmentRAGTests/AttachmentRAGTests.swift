@@ -280,6 +280,125 @@ struct AttachmentRAGTests {
         #expect(try artifactCount(db) == 1)
     }
 
+    @Test func corruptStoredBlobIsRefetchedAndReplacedOnCacheMiss() async throws {
+        let db = try makeAttachmentDatabase()
+        let staleData = Data("Amount due: USD 1840".utf8)
+        let freshData = Data("Amount due: EUR 1840".utf8)
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let byteStore = AttachmentByteStore(baseURL: storeRoot)
+        let stored = try byteStore.store(staleData, accountId: "a1", messageId: "m1", attachmentId: "att1")
+        try seedBlobRecord(
+            db,
+            stored: stored,
+            byteCount: freshData.count,
+            sha256: AttachmentByteStore.sha256Hex(freshData)
+        )
+
+        let provider = CountingAttachmentByteProvider(data: freshData)
+        let ai = CountingAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: byteStore,
+            aiService: ai,
+            byteProvider: provider
+        )
+
+        let result = try await orchestrator.summarize(defaultRequest())
+
+        guard case .summary(let summary, let cached) = result else {
+            Issue.record("Expected regenerated summary")
+            return
+        }
+        let record = try requireBlobRecord(db)
+        let storedData = try byteStore.load(relativePath: record.relativePath)
+
+        #expect(summary.summary == "Attachment summary")
+        #expect(cached == false)
+        #expect(await provider.callCount == 1)
+        #expect(await ai.callCount == 1)
+        #expect(record.byteCount == freshData.count)
+        #expect(record.sha256 == AttachmentByteStore.sha256Hex(freshData))
+        #expect(storedData == freshData)
+    }
+
+    @Test func corruptStoredBlobWithoutProviderThrowsUnavailable() async throws {
+        let db = try makeAttachmentDatabase()
+        let staleData = Data("Amount due: USD 1840".utf8)
+        let freshData = Data("Amount due: EUR 1840".utf8)
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let byteStore = AttachmentByteStore(baseURL: storeRoot)
+        let stored = try byteStore.store(staleData, accountId: "a1", messageId: "m1", attachmentId: "att1")
+        try seedBlobRecord(
+            db,
+            stored: stored,
+            byteCount: freshData.count,
+            sha256: AttachmentByteStore.sha256Hex(freshData)
+        )
+
+        let ai = CountingAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: byteStore,
+            aiService: ai
+        )
+
+        do {
+            _ = try await orchestrator.summarize(defaultRequest())
+            Issue.record("Expected unavailable bytes error")
+        } catch AttachmentRAGError.attachmentBytesUnavailable {
+        } catch {
+            Issue.record("Expected unavailable bytes error, got \(error)")
+        }
+
+        #expect(await ai.callCount == 0)
+        #expect(try blobCount(db) == 0)
+    }
+
+    @Test func validCachedSummaryReturnsWithoutLoadingAttachmentBytes() async throws {
+        let db = try makeAttachmentDatabase()
+        let data = Data("Amount due: EUR 1840".utf8)
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let byteStore = AttachmentByteStore(baseURL: storeRoot)
+        let stored = try byteStore.store(data, accountId: "a1", messageId: "m1", attachmentId: "att1")
+        try seedCachedSummary(
+            db,
+            stored: stored,
+            summary: makeSummary(evidence: [
+                AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840"),
+            ]),
+            chunkText: "Amount due: EUR 1840"
+        )
+        try FileManager.default.removeItem(
+            at: storeRoot.appendingPathComponent(stored.relativePath, isDirectory: false)
+        )
+
+        let ai = CountingAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: byteStore,
+            aiService: ai
+        )
+
+        let result = try await orchestrator.summarize(defaultRequest())
+
+        guard case .summary(let summary, let cached) = result else {
+            Issue.record("Expected cached summary")
+            return
+        }
+        #expect(summary.summary == "Attachment summary")
+        #expect(cached == true)
+        #expect(await ai.callCount == 0)
+    }
+
     @Test func unsupportedAttachmentDoesNotCallAI() async throws {
         let db = try makeAttachmentDatabase(mime: "application/zip", filename: "archive.zip")
         let provider = FakeAttachmentByteProvider(data: Data([0x00, 0x01]))
@@ -381,6 +500,38 @@ private func defaultRequest() -> AttachmentSummaryRequest {
 private func artifactCount(_ db: AppDatabase) throws -> Int {
     try db.dbQueue.read { database in
         try AttachmentAIArtifactRecord.fetchCount(database)
+    }
+}
+
+private func blobCount(_ db: AppDatabase) throws -> Int {
+    try db.dbQueue.read { database in
+        try AttachmentBlobRecord.fetchCount(database)
+    }
+}
+
+private func requireBlobRecord(_ db: AppDatabase) throws -> AttachmentBlobRecord {
+    try db.dbQueue.read { database in
+        let record = try AttachmentBlobRecord.fetchOne(database)
+        return try #require(record)
+    }
+}
+
+private func seedBlobRecord(
+    _ db: AppDatabase,
+    stored: AttachmentStoredBlob,
+    byteCount: Int,
+    sha256: String
+) throws {
+    try db.dbQueue.write { database in
+        try AttachmentBlobRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            relativePath: stored.relativePath,
+            byteCount: byteCount,
+            sha256: sha256,
+            storedAt: 1
+        ).insert(database)
     }
 }
 

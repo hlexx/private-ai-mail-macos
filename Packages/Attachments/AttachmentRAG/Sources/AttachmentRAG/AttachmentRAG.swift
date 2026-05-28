@@ -73,13 +73,18 @@ public actor AttachmentSummaryOrchestrator {
             return .summary(cached, cached: true)
         }
 
-        let bytes = try byteStore.load(relativePath: blob.relativePath)
+        let verifiedBlob = try await loadVerifiedBlobBytes(blob, request: request)
         let extraction = AttachmentTextExtractor.extract(
-            data: bytes,
+            data: verifiedBlob.data,
             mime: request.mime,
             filename: request.filename
         )
-        try await persistExtraction(extraction, request: request, fingerprint: blob.sha256, byteCount: blob.byteCount)
+        try await persistExtraction(
+            extraction,
+            request: request,
+            fingerprint: verifiedBlob.record.sha256,
+            byteCount: verifiedBlob.record.byteCount
+        )
 
         guard extraction.status == .extracted else {
             let reason = extraction.unsupportedReason ?? "Unsupported attachment"
@@ -122,7 +127,7 @@ public actor AttachmentSummaryOrchestrator {
             summary,
             request: request,
             extractionVersion: extraction.extractionVersion,
-            fingerprint: blob.sha256
+            fingerprint: verifiedBlob.record.sha256
         )
         Self.logger.info("Attachment summary generated for \(request.attachmentId, privacy: .public)")
         return .summary(summary, cached: false)
@@ -151,6 +156,41 @@ public actor AttachmentSummaryOrchestrator {
         if let existing = try fetchBlob(request) {
             return existing
         }
+        return try await fetchAndStoreBlob(request)
+    }
+
+    private func loadVerifiedBlobBytes(
+        _ blob: AttachmentBlobRecord,
+        request: AttachmentSummaryRequest
+    ) async throws -> VerifiedAttachmentBlob {
+        let failureKind: String?
+        do {
+            let data = try byteStore.load(relativePath: blob.relativePath)
+            if data.count != blob.byteCount {
+                failureKind = "byteCountMismatch"
+            } else if AttachmentByteStore.sha256Hex(data) != blob.sha256 {
+                failureKind = "sha256Mismatch"
+            } else {
+                return VerifiedAttachmentBlob(record: blob, data: data)
+            }
+        } catch {
+            failureKind = blobFileExists(blob.relativePath) ? "loadFailed" : "missingFile"
+        }
+
+        Self.logger.error(
+            """
+            Attachment blob integrity check failed \
+            attachment_id=\(request.attachmentId, privacy: .public) \
+            failure_kind=\(failureKind ?? "unknown", privacy: .public)
+            """
+        )
+        try await removeStaleBlob(blob, request: request)
+        let freshBlob = try await fetchAndStoreBlob(request)
+        let freshData = try byteStore.load(relativePath: freshBlob.relativePath)
+        return VerifiedAttachmentBlob(record: freshBlob, data: freshData)
+    }
+
+    private func fetchAndStoreBlob(_ request: AttachmentSummaryRequest) async throws -> AttachmentBlobRecord {
         guard let byteProvider else {
             throw AttachmentRAGError.attachmentBytesUnavailable
         }
@@ -180,6 +220,24 @@ public actor AttachmentSummaryOrchestrator {
         return record
     }
 
+    private func blobFileExists(_ relativePath: String) -> Bool {
+        let url = byteStore.baseURL.appendingPathComponent(relativePath, isDirectory: false)
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    private func removeStaleBlob(_ blob: AttachmentBlobRecord, request: AttachmentSummaryRequest) async throws {
+        try? byteStore.delete(relativePath: blob.relativePath)
+        try await db.write { database in
+            try database.execute(
+                sql: """
+                DELETE FROM attachment_blob
+                WHERE account_id = ? AND message_id = ? AND attachment_id = ?
+                """,
+                arguments: [request.accountId, request.messageId, request.attachmentId]
+            )
+        }
+    }
+
     private func fetchBlob(_ request: AttachmentSummaryRequest) throws -> AttachmentBlobRecord? {
         try db.dbQueue.read { database in
             try AttachmentBlobRecord.fetchOne(
@@ -192,6 +250,11 @@ public actor AttachmentSummaryOrchestrator {
             )
         }
     }
+}
+
+private struct VerifiedAttachmentBlob: Sendable {
+    let record: AttachmentBlobRecord
+    let data: Data
 }
 
 extension AttachmentSummaryOrchestrator {

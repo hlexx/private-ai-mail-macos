@@ -55,13 +55,13 @@ Goal: fix two material attachment-summary integrity issues. A malformed cached a
 
 ### Task 3: Verify stored blob bytes before extraction on cache miss
 
-- [ ] In `Packages/Attachments/AttachmentRAG/Sources/AttachmentRAG/AttachmentRAG.swift`, preserve the existing fast path where a valid cached summary can return without loading attachment bytes.
-- [ ] Before extracting text on a cache miss, load bytes through `AttachmentByteStore.load(relativePath:)` and verify `byteCount` and `AttachmentByteStore.sha256Hex(data)` against `AttachmentBlobRecord`.
-- [ ] If the file is missing or hash/size mismatch occurs, log safe metadata, remove or replace the stale `attachment_blob` record, and fetch fresh bytes through `byteProvider`.
-- [ ] If the file is missing/corrupt and no `byteProvider` is available, return the existing typed unavailable failure rather than extracting from untrusted bytes.
-- [ ] Add an `AttachmentRAG` test where a stored blob record points to bytes with the wrong hash; the orchestrator must refetch, replace the blob record, and summarize the fresh bytes.
-- [ ] Add or preserve a test proving a valid cached summary still works without network/model execution.
-- [ ] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
+- [x] In `Packages/Attachments/AttachmentRAG/Sources/AttachmentRAG/AttachmentRAG.swift`, preserve the existing fast path where a valid cached summary can return without loading attachment bytes.
+- [x] Before extracting text on a cache miss, load bytes through `AttachmentByteStore.load(relativePath:)` and verify `byteCount` and `AttachmentByteStore.sha256Hex(data)` against `AttachmentBlobRecord`.
+- [x] If the file is missing or hash/size mismatch occurs, log safe metadata, remove or replace the stale `attachment_blob` record, and fetch fresh bytes through `byteProvider`.
+- [x] If the file is missing/corrupt and no `byteProvider` is available, return the existing typed unavailable failure rather than extracting from untrusted bytes.
+- [x] Add an `AttachmentRAG` test where a stored blob record points to bytes with the wrong hash; the orchestrator must refetch, replace the blob record, and summarize the fresh bytes.
+- [x] Add or preserve a test proving a valid cached summary still works without network/model execution.
+- [x] Run `cd Packages/Attachments/AttachmentRAG && swift test` and fix failures.
 
 ### Task 4: Run final integrity checks
 
