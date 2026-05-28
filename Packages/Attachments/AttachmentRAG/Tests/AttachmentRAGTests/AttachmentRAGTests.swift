@@ -166,7 +166,8 @@ struct AttachmentRAGTests {
         let db = try makeAttachmentDatabase()
         let summary = makeSummary()
         let payload = try String(decoding: JSONEncoder().encode(summary), as: UTF8.self)
-        let fingerprint = "cached-sha"
+        let data = Data("Amount due: EUR 1840".utf8)
+        let fingerprint = AttachmentByteStore.sha256Hex(data)
         let metadata = AttachmentSummaryTask.metadata
 
         try await db.dbQueue.write { database in
@@ -253,7 +254,8 @@ struct AttachmentRAGTests {
             evidence: [AIAttachmentEvidence(chunkIndex: 0, quote: "Not in the chunk")]
         )
         let payload = try String(decoding: JSONEncoder().encode(invalidSummary), as: UTF8.self)
-        let fingerprint = "cached-sha"
+        let data = Data("Amount due: EUR 1840".utf8)
+        let fingerprint = AttachmentByteStore.sha256Hex(data)
         let metadata = AttachmentSummaryTask.metadata
         let storeRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -263,7 +265,7 @@ struct AttachmentRAGTests {
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try Data("Amount due: EUR 1840".utf8).write(to: fileURL)
+        try data.write(to: fileURL)
         defer { try? FileManager.default.removeItem(at: storeRoot) }
 
         try await db.dbQueue.write { database in
@@ -272,7 +274,7 @@ struct AttachmentRAGTests {
                 messageId: "m1",
                 attachmentId: "att1",
                 relativePath: relativePath,
-                byteCount: 20,
+                byteCount: data.count,
                 sha256: fingerprint,
                 storedAt: 1
             ).insert(database)
@@ -285,7 +287,7 @@ struct AttachmentRAGTests {
                 contentHash: fingerprint,
                 mime: "text/plain",
                 filename: "invoice.txt",
-                byteCount: 20,
+                byteCount: data.count,
                 createdAt: 2,
                 updatedAt: 2,
                 completedAt: 2,
@@ -324,7 +326,7 @@ struct AttachmentRAGTests {
             db: db,
             byteStore: .init(baseURL: storeRoot),
             aiService: ai,
-            byteProvider: FakeAttachmentByteProvider(data: Data("unused".utf8))
+            byteProvider: FakeAttachmentByteProvider(data: data)
         )
 
         let result = try await orchestrator.summarize(makeRequest())
@@ -337,6 +339,167 @@ struct AttachmentRAGTests {
         #expect(cached == false)
         #expect(await ai.callCount == 1)
         #expect(try attachmentArtifactCount(db) == 1)
+    }
+
+    @Test func malformedCachedSummaryPayloadIsEvictedAndRegenerated() async throws {
+        let db = try makeAttachmentDatabase()
+        let data = Data("Amount due: EUR 1840".utf8)
+        let fingerprint = AttachmentByteStore.sha256Hex(data)
+        try seedCachedAttachmentSummary(db, payload: "{not-json", fingerprint: fingerprint)
+
+        let provider = FakeAttachmentByteProvider(data: data)
+        let ai = SequencedAttachmentAIService(responses: [.summary(makeSummary())])
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+
+        let result = try await orchestrator.summarize(makeRequest())
+
+        guard case .summary(let summary, let cached) = result else {
+            Issue.record("Expected regenerated summary")
+            return
+        }
+        #expect(summary.summary == "Attachment summary")
+        #expect(cached == false)
+        #expect(await ai.callCount == 1)
+        #expect(try attachmentArtifactCount(db) == 1)
+
+        let cachedResult = try await orchestrator.summarize(makeRequest())
+        guard case .summary(_, let cachedAgain) = cachedResult else {
+            Issue.record("Expected regenerated artifact to be cache-valid")
+            return
+        }
+        #expect(cachedAgain == true)
+        #expect(await ai.callCount == 1)
+    }
+
+    @Test func corruptStoredBlobIsRefetchedAndReplacedOnCacheMiss() async throws {
+        let db = try makeAttachmentDatabase()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let stalePath = "legacy/bad.txt"
+        let staleURL = storeRoot.appendingPathComponent(stalePath)
+        try FileManager.default.createDirectory(
+            at: staleURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("wrong bytes".utf8).write(to: staleURL)
+
+        try await db.dbQueue.write { database in
+            try AttachmentBlobRecord(
+                accountId: "a1",
+                messageId: "m1",
+                attachmentId: "att1",
+                relativePath: stalePath,
+                byteCount: 999,
+                sha256: "expected-fingerprint",
+                storedAt: 1
+            ).insert(database)
+        }
+
+        let freshData = Data("Amount due: EUR 1840".utf8)
+        let ai = SequencedAttachmentAIService(responses: [.summary(makeSummary())])
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: FakeAttachmentByteProvider(data: freshData)
+        )
+
+        let result = try await orchestrator.summarize(makeRequest())
+
+        guard case .summary(_, let cached) = result else {
+            Issue.record("Expected summary after refetch")
+            return
+        }
+        #expect(cached == false)
+        #expect(await ai.callCount == 1)
+        let replacementBlob = try attachmentBlob(db)
+        let blob = try #require(replacementBlob)
+        #expect(blob.relativePath != stalePath)
+        #expect(blob.byteCount == freshData.count)
+        #expect(blob.sha256 == AttachmentByteStore.sha256Hex(freshData))
+    }
+
+    @Test func corruptStoredBlobWithoutProviderThrowsUnavailable() async throws {
+        let db = try makeAttachmentDatabase()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let stalePath = "legacy/bad.txt"
+        let staleURL = storeRoot.appendingPathComponent(stalePath)
+        try FileManager.default.createDirectory(
+            at: staleURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("wrong bytes".utf8).write(to: staleURL)
+
+        try await db.dbQueue.write { database in
+            try AttachmentBlobRecord(
+                accountId: "a1",
+                messageId: "m1",
+                attachmentId: "att1",
+                relativePath: stalePath,
+                byteCount: 999,
+                sha256: "expected-fingerprint",
+                storedAt: 1
+            ).insert(database)
+        }
+
+        let ai = SequencedAttachmentAIService()
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: nil
+        )
+
+        await #expect(throws: AttachmentRAGError.attachmentBytesUnavailable) {
+            _ = try await orchestrator.summarize(makeRequest())
+        }
+        #expect(try attachmentArtifactCount(db) == 0)
+        #expect(await ai.callCount == 0)
+    }
+
+    @Test func validCachedSummaryReturnsWithoutLoadingAttachmentBytes() async throws {
+        let db = try makeAttachmentDatabase()
+        let summary = makeSummary()
+        let payload = try String(decoding: JSONEncoder().encode(summary), as: UTF8.self)
+        let fingerprint = "cached-sha"
+        try seedCachedAttachmentSummary(
+            db,
+            payload: payload,
+            fingerprint: fingerprint,
+            relativePath: "missing-cache-hit-file"
+        )
+
+        let ai = SequencedAttachmentAIService(responses: [.summary(makeSummary(summary: "should not be called"))])
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: nil
+        )
+
+        let result = try await orchestrator.summarize(makeRequest())
+
+        guard case .summary(let cachedSummary, let cached) = result else {
+            Issue.record("Expected cached summary")
+            return
+        }
+        #expect(cached == true)
+        #expect(cachedSummary.summary == "Attachment summary")
+        #expect(await ai.callCount == 0)
     }
 
     @Test func migratedLegacyIntegerExtractionVersionCacheIsReadable() async throws {
@@ -448,6 +611,81 @@ private func makeOrchestrator(
 private func attachmentArtifactCount(_ db: AppDatabase) throws -> Int {
     try db.dbQueue.read { database in
         try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM attachment_ai_artifact") ?? 0
+    }
+}
+
+private func attachmentBlob(_ db: AppDatabase) throws -> AttachmentBlobRecord? {
+    try db.dbQueue.read { database in
+        try AttachmentBlobRecord.fetchOne(
+            database,
+            sql: """
+            SELECT * FROM attachment_blob
+            WHERE account_id = ? AND message_id = ? AND attachment_id = ?
+            """,
+            arguments: ["a1", "m1", "att1"]
+        )
+    }
+}
+
+private func seedCachedAttachmentSummary(
+    _ db: AppDatabase,
+    payload: String,
+    fingerprint: String,
+    relativePath: String = "seeded-cache-file",
+    byteCount: Int = 20
+) throws {
+    let metadata = AttachmentSummaryTask.metadata
+    try db.dbQueue.write { database in
+        try AttachmentBlobRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            relativePath: relativePath,
+            byteCount: byteCount,
+            sha256: fingerprint,
+            storedAt: 1
+        ).insert(database)
+        try AttachmentExtractionRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            status: "extracted",
+            contentHash: fingerprint,
+            mime: "text/plain",
+            filename: "invoice.txt",
+            byteCount: byteCount,
+            createdAt: 2,
+            updatedAt: 2,
+            completedAt: 2,
+            errorCode: nil,
+            errorMessage: nil
+        ).insert(database)
+        try AttachmentChunkRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            chunkIndex: 0,
+            contentText: "Amount due: EUR 1840",
+            sourceStart: 0,
+            sourceEnd: 20,
+            tokenCount: 4,
+            createdAt: 2
+        ).insert(database)
+        try AttachmentAIArtifactRecord(
+            accountId: "a1",
+            messageId: "m1",
+            attachmentId: "att1",
+            extractionVersion: AttachmentTextExtractor.extractionVersion,
+            artifactKind: "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)",
+            artifactVersion: 1,
+            modelId: metadata.modelProfile,
+            contentHash: fingerprint,
+            payloadJSON: payload,
+            createdAt: 3,
+            updatedAt: 3
+        ).insert(database)
     }
 }
 

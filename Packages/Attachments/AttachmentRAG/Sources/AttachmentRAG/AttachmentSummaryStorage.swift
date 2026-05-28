@@ -13,9 +13,9 @@ extension AttachmentSummaryOrchestrator {
         "input_fingerprint",
     ]
 
-    func fetchCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) throws -> AIAttachmentSummary? {
+    func fetchCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) async throws -> AIAttachmentSummary? {
         let metadata = AttachmentSummaryTask.metadata
-        let payload = try db.dbQueue.read { database -> String? in
+        let payload = try await db.dbQueue.read { database -> String? in
             let columns = try Self.tableColumns("attachment_ai_artifact", db: database)
             let payloadExpression: String
             if columns.contains("payload_json"), columns.contains("content_json") {
@@ -81,7 +81,15 @@ extension AttachmentSummaryOrchestrator {
             )
         }
         guard let payload else { return nil }
-        return try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(payload.utf8))
+        do {
+            return try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(payload.utf8))
+        } catch {
+            Self.logger.warning(
+                "Attachment summary cache decode failed attachment=\(request.attachmentId, privacy: .public) task=\(metadata.id.rawValue, privacy: .public) prompt=\(metadata.promptVersion, privacy: .public) schema=\(metadata.schemaVersion, privacy: .public)"
+            )
+            try await deleteCachedSummary(request, fingerprint: fingerprint)
+            return nil
+        }
     }
 
     func validateCachedSummary(

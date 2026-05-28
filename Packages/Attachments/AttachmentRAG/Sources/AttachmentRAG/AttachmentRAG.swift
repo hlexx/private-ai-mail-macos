@@ -58,7 +58,7 @@ public actor AttachmentSummaryOrchestrator {
     private let aiService: any AIService
     private let byteProvider: (any AttachmentByteProvider)?
 
-    private static let logger = Logger(
+    static let logger = Logger(
         subsystem: "com.privateaimail.attachments",
         category: "AttachmentRAG"
     )
@@ -77,7 +77,7 @@ public actor AttachmentSummaryOrchestrator {
 
     public func summarize(_ request: AttachmentSummaryRequest) async throws -> AttachmentSummaryOrchestratorResult {
         let blob = try await loadOrFetchBlob(request)
-        if let cached = try fetchCachedSummary(request, fingerprint: blob.sha256) {
+        if let cached = try await fetchCachedSummary(request, fingerprint: blob.sha256) {
             do {
                 try validateCachedSummary(cached, request: request)
                 Self.logger.info("Attachment summary cache hit for \(request.attachmentId, privacy: .public)")
@@ -88,13 +88,18 @@ public actor AttachmentSummaryOrchestrator {
             }
         }
 
-        let bytes = try byteStore.load(relativePath: blob.relativePath)
+        let (verifiedBlob, bytes) = try await loadVerifiedBlobBytes(blob, request: request)
         let extraction = AttachmentTextExtractor.extract(
             data: bytes,
             mime: request.mime,
             filename: request.filename
         )
-        try await persistExtraction(extraction, request: request, fingerprint: blob.sha256, byteCount: blob.byteCount)
+        try await persistExtraction(
+            extraction,
+            request: request,
+            fingerprint: verifiedBlob.sha256,
+            byteCount: verifiedBlob.byteCount
+        )
 
         guard extraction.status == .extracted else {
             let reason = extraction.unsupportedReason ?? "Unsupported attachment"
@@ -130,7 +135,7 @@ public actor AttachmentSummaryOrchestrator {
             summary,
             request: request,
             extractionVersion: extraction.extractionVersion,
-            fingerprint: blob.sha256
+            fingerprint: verifiedBlob.sha256
         )
         Self.logger.info("Attachment summary generated for \(request.attachmentId, privacy: .public)")
         return .summary(summary, cached: false)
@@ -150,6 +155,36 @@ public actor AttachmentSummaryOrchestrator {
         if let existing = try fetchBlob(request) {
             return existing
         }
+        let (record, _) = try await fetchAndPersistBlob(request)
+        return record
+    }
+
+    private func loadVerifiedBlobBytes(
+        _ blob: AttachmentBlobRecord,
+        request: AttachmentSummaryRequest
+    ) async throws -> (AttachmentBlobRecord, Data) {
+        do {
+            let data = try byteStore.load(relativePath: blob.relativePath)
+            guard data.count == blob.byteCount,
+                  AttachmentByteStore.sha256Hex(data) == blob.sha256
+            else {
+                Self.logger.warning(
+                    "Attachment blob integrity check failed attachment=\(request.attachmentId, privacy: .public) reason=hash_or_size_mismatch"
+                )
+                try await removeStaleBlob(blob, request: request)
+                return try await fetchAndPersistBlob(request)
+            }
+            return (blob, data)
+        } catch {
+            Self.logger.warning(
+                "Attachment blob load failed attachment=\(request.attachmentId, privacy: .public) reason=missing_or_invalid_path"
+            )
+            try await removeStaleBlob(blob, request: request)
+            return try await fetchAndPersistBlob(request)
+        }
+    }
+
+    private func fetchAndPersistBlob(_ request: AttachmentSummaryRequest) async throws -> (AttachmentBlobRecord, Data) {
         guard let byteProvider else {
             throw AttachmentRAGError.attachmentBytesUnavailable
         }
@@ -176,7 +211,7 @@ public actor AttachmentSummaryOrchestrator {
         try await db.write { database in
             try record.save(database)
         }
-        return record
+        return (record, data)
     }
 
     private func fetchBlob(_ request: AttachmentSummaryRequest) throws -> AttachmentBlobRecord? {
@@ -185,6 +220,19 @@ public actor AttachmentSummaryOrchestrator {
                 database,
                 sql: """
                 SELECT * FROM attachment_blob
+                WHERE account_id = ? AND message_id = ? AND attachment_id = ?
+                """,
+                arguments: [request.accountId, request.messageId, request.attachmentId]
+            )
+        }
+    }
+
+    private func removeStaleBlob(_ blob: AttachmentBlobRecord, request: AttachmentSummaryRequest) async throws {
+        try? byteStore.delete(relativePath: blob.relativePath)
+        try await db.write { database in
+            try database.execute(
+                sql: """
+                DELETE FROM attachment_blob
                 WHERE account_id = ? AND message_id = ? AND attachment_id = ?
                 """,
                 arguments: [request.accountId, request.messageId, request.attachmentId]
