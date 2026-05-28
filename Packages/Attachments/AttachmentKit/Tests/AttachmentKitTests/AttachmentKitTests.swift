@@ -32,27 +32,55 @@ struct AttachmentKitTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let store = AttachmentByteStore(baseURL: root)
-        let firstData = Data("first attachment".utf8)
-        let secondData = Data("second attachment".utf8)
+        let baselineData = Data("baseline attachment".utf8)
+        let accountVariantData = Data("account variant attachment".utf8)
+        let messageVariantData = Data("message variant attachment".utf8)
+        let attachmentVariantData = Data("attachment variant attachment".utf8)
 
-        let firstBlob = try store.store(
-            firstData,
+        let baseline = try store.store(
+            baselineData,
             accountId: "account/1",
             messageId: "message:1",
             attachmentId: "attachment?1"
         )
-        let secondBlob = try store.store(
-            secondData,
+        let repeated = try store.store(
+            baselineData,
+            accountId: "account/1",
+            messageId: "message:1",
+            attachmentId: "attachment?1"
+        )
+        let accountVariant = try store.store(
+            accountVariantData,
             accountId: "account:1",
+            messageId: "message:1",
+            attachmentId: "attachment?1"
+        )
+        let messageVariant = try store.store(
+            messageVariantData,
+            accountId: "account/1",
             messageId: "message/1",
+            attachmentId: "attachment?1"
+        )
+        let attachmentVariant = try store.store(
+            attachmentVariantData,
+            accountId: "account/1",
+            messageId: "message:1",
             attachmentId: "attachment/1"
         )
 
-        #expect(firstBlob.relativePath != secondBlob.relativePath)
-        #expect(firstBlob.relativePath.split(separator: "/").count == 4)
-        #expect(secondBlob.relativePath.split(separator: "/").count == 4)
-        #expect(try store.load(relativePath: firstBlob.relativePath) == firstData)
-        #expect(try store.load(relativePath: secondBlob.relativePath) == secondData)
+        let uniquePaths = Set([
+            baseline.relativePath,
+            accountVariant.relativePath,
+            messageVariant.relativePath,
+            attachmentVariant.relativePath,
+        ])
+        #expect(repeated.relativePath == baseline.relativePath)
+        #expect(uniquePaths.count == 4)
+        #expect(uniquePaths.allSatisfy { $0.split(separator: "/").count == 4 })
+        #expect(try store.load(relativePath: baseline.relativePath) == baselineData)
+        #expect(try store.load(relativePath: accountVariant.relativePath) == accountVariantData)
+        #expect(try store.load(relativePath: messageVariant.relativePath) == messageVariantData)
+        #expect(try store.load(relativePath: attachmentVariant.relativePath) == attachmentVariantData)
     }
 
     @Test func byteStoreLoadsAndDeletesExistingRelativePaths() throws {
@@ -76,6 +104,42 @@ struct AttachmentKitTests {
         try store.delete(relativePath: relativePath)
 
         #expect(FileManager.default.fileExists(atPath: url.path) == false)
+    }
+
+    @Test func byteStoreRejectsUnsafeRelativePaths() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let outsideRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outsideRoot)
+        }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outsideRoot, withIntermediateDirectories: true)
+        let outsideFile = outsideRoot.appendingPathComponent("secret.txt")
+        try Data("outside attachment bytes".utf8).write(to: outsideFile)
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("linked-outside", isDirectory: true),
+            withDestinationURL: outsideRoot
+        )
+
+        let store = AttachmentByteStore(baseURL: root)
+
+        #expect(throws: AttachmentByteStoreError.self) {
+            try store.load(relativePath: "/tmp/secret.txt")
+        }
+        #expect(throws: AttachmentByteStoreError.self) {
+            try store.load(relativePath: "../secret.txt")
+        }
+        #expect(throws: AttachmentByteStoreError.self) {
+            try store.load(relativePath: "linked-outside/secret.txt")
+        }
+        #expect(throws: AttachmentByteStoreError.self) {
+            try store.delete(relativePath: "linked-outside/secret.txt")
+        }
+        #expect(FileManager.default.fileExists(atPath: outsideFile.path))
     }
 
     @Test func textExtractorReadsUTF8Text() {

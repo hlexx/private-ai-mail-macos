@@ -13,6 +13,11 @@ public struct AttachmentStoredBlob: Sendable, Equatable {
     }
 }
 
+public enum AttachmentByteStoreError: Error, Sendable, Equatable {
+    case invalidRelativePath(String)
+    case relativePathEscapesStore(String)
+}
+
 public struct AttachmentByteStore: Sendable {
     public let baseURL: URL
 
@@ -38,7 +43,7 @@ public struct AttachmentByteStore: Sendable {
             Self.identifierPathComponent(messageId),
             Self.identifierPathComponent(attachmentId),
         ].joined(separator: "/")
-        let destination = baseURL.appendingPathComponent(relativePath, isDirectory: false)
+        let destination = try fileURL(for: relativePath)
         let directory = destination.deletingLastPathComponent()
 
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -53,14 +58,19 @@ public struct AttachmentByteStore: Sendable {
     }
 
     public func load(relativePath: String) throws -> Data {
-        try Data(contentsOf: baseURL.appendingPathComponent(relativePath, isDirectory: false))
+        try Data(contentsOf: fileURL(for: relativePath))
     }
 
     public func delete(relativePath: String) throws {
-        let url = baseURL.appendingPathComponent(relativePath, isDirectory: false)
+        let url = try fileURL(for: relativePath)
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
         }
+    }
+
+    public func fileExists(relativePath: String) throws -> Bool {
+        let url = try fileURL(for: relativePath)
+        return FileManager.default.fileExists(atPath: url.path)
     }
 
     public static func sha256Hex(_ data: Data) -> String {
@@ -69,6 +79,28 @@ public struct AttachmentByteStore: Sendable {
 
     private static func identifierPathComponent(_ raw: String) -> String {
         sha256Hex(Data(raw.utf8))
+    }
+
+    private func fileURL(for relativePath: String) throws -> URL {
+        let components = relativePath.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        guard !relativePath.hasPrefix("/"),
+              !components.isEmpty,
+              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+            throw AttachmentByteStoreError.invalidRelativePath(relativePath)
+        }
+
+        let resolvedBase = baseURL.standardizedFileURL.resolvingSymlinksInPath()
+        let candidate = components.reduce(resolvedBase) { partial, component in
+            partial.appendingPathComponent(component, isDirectory: false)
+        }
+        let resolvedCandidate = candidate.standardizedFileURL.resolvingSymlinksInPath()
+        let basePath = resolvedBase.path
+        let candidatePath = resolvedCandidate.path
+
+        guard candidatePath == basePath || candidatePath.hasPrefix(basePath + "/") else {
+            throw AttachmentByteStoreError.relativePathEscapesStore(relativePath)
+        }
+        return resolvedCandidate
     }
 
     private func excludeFromBackupIfNeeded(_ url: URL) throws {

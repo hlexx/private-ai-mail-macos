@@ -221,8 +221,7 @@ public actor AttachmentSummaryOrchestrator {
     }
 
     private func blobFileExists(_ relativePath: String) -> Bool {
-        let url = byteStore.baseURL.appendingPathComponent(relativePath, isDirectory: false)
-        return FileManager.default.fileExists(atPath: url.path)
+        (try? byteStore.fileExists(relativePath: relativePath)) == true
     }
 
     private func removeStaleBlob(_ blob: AttachmentBlobRecord, request: AttachmentSummaryRequest) async throws {
