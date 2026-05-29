@@ -71,14 +71,14 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 
 ### Task 3: Harden optimistic mutations and rollback
 
-- [ ] Ensure every Gmail mutation resolves a real provider client before local
+- [x] Ensure every Gmail mutation resolves a real provider client before local
       optimistic mutation.
-- [ ] For archive/star/read/trash operations, add tests for provider failure,
+- [x] For archive/star/read/trash operations, add tests for provider failure,
       missing credential, rate limit, repeated operation, and local rollback.
-- [ ] Ensure user-visible errors distinguish missing credential, insufficient
+- [x] Ensure user-visible errors distinguish missing credential, insufficient
       scope, rate limit, offline, and provider rejection.
-- [ ] Add privacy-safe logs keyed by account id/thread id or stable hashes only.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
+- [x] Add privacy-safe logs keyed by account id/thread id or stable hashes only.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
 
 ### Task 4: Harden Gmail send and threading
 

@@ -3,6 +3,7 @@ import ComposeFeature
 import DesignSystem
 import GRDB
 import InboxFeature
+import MailSync
 import Persistence
 import SwiftUI
 import ThreadFeature
@@ -196,7 +197,7 @@ extension MainScene {
                 inboxStore.selectedThreadID = nil
                 showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
             } catch {
-                showToast("Archive failed", undo: nil)
+                showMutationError(error, fallback: "Archive failed")
             }
         }
     }
@@ -220,7 +221,7 @@ extension MainScene {
                     showToast("Starred", undo: .unstar(threadId: threadId, accountId: accountId))
                 }
             } catch {
-                showToast("Star failed", undo: nil)
+                showMutationError(error, fallback: "Star failed")
             }
         }
     }
@@ -234,7 +235,7 @@ extension MainScene {
                 try await composition.mailMutator.markRead(threadId, accountId: accountId, read: true)
                 showToast("Marked read", undo: nil)
             } catch {
-                showToast("Mark read failed", undo: nil)
+                showMutationError(error, fallback: "Mark read failed")
             }
         }
     }
@@ -248,13 +249,13 @@ extension MainScene {
                 }
                 showToast("Trashed", undo: .untrash(threadId: threadId, accountId: accountId))
             } catch {
-                showToast("Trash failed", undo: nil)
+                showMutationError(error, fallback: "Trash failed")
             }
         }
     }
 
-    func showToast(_ message: String, undo: ToastState.UndoAction?) {
-        let toast = ToastState(message: message, undoAction: undo)
+    func showToast(_ message: String, undo: ToastState.UndoAction?, kind: ToastState.Kind = .success) {
+        let toast = ToastState(message: message, undoAction: undo, kind: kind)
         // Setting toastMessage cancels the previous dismiss task via didSet
         composition.toastMessage = toast
         composition.toastDismissTask = Task {
@@ -264,6 +265,13 @@ extension MainScene {
                 composition.toastMessage = nil
             }
         }
+    }
+
+    func showMutationError(_ error: any Error, fallback: String) {
+        let message = (error as? MailMutationError)?.localizedDescription
+            ?? (error as? LocalizedError)?.errorDescription
+            ?? fallback
+        showToast(message, undo: nil, kind: .error)
     }
 
     func handleUndo(_ action: ToastState.UndoAction) {
@@ -281,7 +289,7 @@ extension MainScene {
                     try await composition.mailMutator.untrash(threadId, accountId: accountId)
                 }
             } catch {
-                showToast("Undo failed", undo: nil)
+                showMutationError(error, fallback: "Undo failed")
             }
         }
     }

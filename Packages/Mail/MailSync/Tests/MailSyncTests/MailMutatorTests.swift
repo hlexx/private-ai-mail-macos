@@ -1,4 +1,5 @@
 import Testing
+import AuthKit
 import Foundation
 @testable import MailSync
 import MailProviders
@@ -17,7 +18,9 @@ struct MailMutatorTests {
         _ db: AppDatabase,
         threadId: String = "t1",
         accountId: String = "acc1",
-        activeLabels: [String] = ["INBOX", "STARRED"]
+        activeLabels: [String] = ["INBOX", "STARRED"],
+        hasUnread: Int = 1,
+        messageFlags: Int = 0
     ) throws {
         // All system labels that mutations may reference
         let allSystemLabels = ["INBOX", "STARRED", "TRASH", "UNREAD", "SENT", "DRAFT", "SPAM"]
@@ -40,7 +43,7 @@ struct MailMutatorTests {
                 subject: "Test",
                 lastMessageAt: Int(Date().timeIntervalSince1970),
                 messageCount: 1,
-                hasUnread: 1
+                hasUnread: hasUnread
             ).insert(dbConn)
 
             try MessageRecord(
@@ -48,7 +51,7 @@ struct MailMutatorTests {
                 threadId: threadId,
                 accountId: accountId,
                 sentAt: Int(Date().timeIntervalSince1970),
-                flags: 0
+                flags: messageFlags
             ).insert(dbConn)
 
             for labelId in activeLabels {
@@ -64,6 +67,102 @@ struct MailMutatorTests {
                 .fetchAll(dbConn)
             return Set(rows.map(\.labelId))
         }
+    }
+
+    private func hasUnread(_ db: AppDatabase, threadId: String = "t1") throws -> Int? {
+        try db.read { dbConn in
+            try Int.fetchOne(
+                dbConn,
+                sql: "SELECT has_unread FROM thread WHERE id = ?",
+                arguments: [threadId]
+            )
+        }
+    }
+
+    private func messageFlags(_ db: AppDatabase, messageId: String = "m1") throws -> Int? {
+        try db.read { dbConn in
+            try Int.fetchOne(
+                dbConn,
+                sql: "SELECT flags FROM message WHERE id = ?",
+                arguments: [messageId]
+            )
+        }
+    }
+
+    private enum MutationUnderTest: CaseIterable {
+        case archive
+        case star
+        case markRead
+        case trash
+
+        var initialLabels: [String] {
+            switch self {
+            case .archive, .trash:
+                return ["INBOX", "STARRED"]
+            case .star:
+                return ["INBOX", "STARRED"]
+            case .markRead:
+                return ["INBOX", "UNREAD"]
+            }
+        }
+
+        var initialHasUnread: Int {
+            self == .markRead ? 1 : 0
+        }
+
+        var initialMessageFlags: Int {
+            self == .markRead ? 0 : MessageRecord.read
+        }
+
+        var repeatedInitialLabels: [String] {
+            switch self {
+            case .archive:
+                return ["STARRED"]
+            case .star:
+                return ["INBOX", "STARRED"]
+            case .markRead:
+                return ["INBOX"]
+            case .trash:
+                return ["TRASH"]
+            }
+        }
+
+        var repeatedHasUnread: Int {
+            self == .markRead ? 0 : initialHasUnread
+        }
+
+        var repeatedMessageFlags: Int {
+            self == .markRead ? MessageRecord.read : initialMessageFlags
+        }
+    }
+
+    private func perform(
+        _ operation: MutationUnderTest,
+        using mutator: MailMutator,
+        threadId: String = "t1",
+        accountId: String = "acc1"
+    ) async throws {
+        switch operation {
+        case .archive:
+            try await mutator.archive(threadId, accountId: accountId)
+        case .star:
+            try await mutator.star(threadId, accountId: accountId)
+        case .markRead:
+            try await mutator.markRead(threadId, accountId: accountId, read: true)
+        case .trash:
+            try await mutator.trash(threadId, accountId: accountId)
+        }
+    }
+
+    private func assertState(
+        _ db: AppDatabase,
+        labels: [String],
+        hasUnread expectedUnread: Int,
+        messageFlags expectedFlags: Int
+    ) throws {
+        #expect(try threadLabels(db) == Set(labels))
+        #expect(try hasUnread(db) == expectedUnread)
+        #expect(try messageFlags(db) == expectedFlags)
     }
 
     // MARK: - Archive
@@ -243,8 +342,8 @@ struct MailMutatorTests {
         do {
             try await mutator.archive("t1", accountId: "acc1")
             Issue.record("Expected factory error")
-        } catch is FactoryFailure {
-            // Expected
+        } catch let error as MailMutationError {
+            #expect(error.category == .providerUnavailable)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -252,5 +351,140 @@ struct MailMutatorTests {
         let labels = try threadLabels(db)
         #expect(labels.contains("INBOX"))
         #expect(labels.contains("STARRED"))
+    }
+
+    @Test func providerFailureRollsBackArchiveStarReadAndTrash() async throws {
+        for operation in MutationUnderTest.allCases {
+            let db = try await makeDB()
+            try seedThreadWithLabels(
+                db,
+                activeLabels: operation.initialLabels,
+                hasUnread: operation.initialHasUnread,
+                messageFlags: operation.initialMessageFlags
+            )
+
+            let api = MockGmailAPI()
+            api.modifyThreadResult = .failure(GmailAPIError.serverError(statusCode: 500))
+            let mutator = MailMutator(db: db, apiFactory: { _ in api })
+
+            do {
+                try await perform(operation, using: mutator)
+                Issue.record("Expected provider failure for \(operation)")
+            } catch let error as MailMutationError {
+                #expect(error.category == .providerUnavailable)
+            } catch {
+                Issue.record("Expected MailMutationError, got \(error)")
+            }
+
+            try assertState(
+                db,
+                labels: operation.initialLabels,
+                hasUnread: operation.initialHasUnread,
+                messageFlags: operation.initialMessageFlags
+            )
+        }
+    }
+
+    @Test func missingCredentialDoesNotOptimisticallyMutateArchiveStarReadAndTrash() async throws {
+        for operation in MutationUnderTest.allCases {
+            let db = try await makeDB()
+            try seedThreadWithLabels(
+                db,
+                activeLabels: operation.initialLabels,
+                hasUnread: operation.initialHasUnread,
+                messageFlags: operation.initialMessageFlags
+            )
+
+            let mutator = MailMutator(db: db, apiFactory: { accountId in
+                throw AuthError.missingCredential(accountID: accountId)
+            })
+
+            do {
+                try await perform(operation, using: mutator)
+                Issue.record("Expected missing credential for \(operation)")
+            } catch let error as MailMutationError {
+                #expect(error.category == .missingCredential)
+            } catch {
+                Issue.record("Expected MailMutationError, got \(error)")
+            }
+
+            try assertState(
+                db,
+                labels: operation.initialLabels,
+                hasUnread: operation.initialHasUnread,
+                messageFlags: operation.initialMessageFlags
+            )
+        }
+    }
+
+    @Test func rateLimitRollsBackArchiveStarReadAndTrash() async throws {
+        for operation in MutationUnderTest.allCases {
+            let db = try await makeDB()
+            try seedThreadWithLabels(
+                db,
+                activeLabels: operation.initialLabels,
+                hasUnread: operation.initialHasUnread,
+                messageFlags: operation.initialMessageFlags
+            )
+
+            let api = MockGmailAPI()
+            api.modifyThreadResult = .failure(GmailAPIError.rateLimited(retryAfter: 30))
+            let mutator = MailMutator(db: db, apiFactory: { _ in api })
+
+            do {
+                try await perform(operation, using: mutator)
+                Issue.record("Expected rate limit for \(operation)")
+            } catch let error as MailMutationError {
+                #expect(error.category == .rateLimited)
+            } catch {
+                Issue.record("Expected MailMutationError, got \(error)")
+            }
+
+            try assertState(
+                db,
+                labels: operation.initialLabels,
+                hasUnread: operation.initialHasUnread,
+                messageFlags: operation.initialMessageFlags
+            )
+        }
+    }
+
+    @Test func repeatedOperationsKeepLocalStateStable() async throws {
+        for operation in MutationUnderTest.allCases {
+            let db = try await makeDB()
+            try seedThreadWithLabels(
+                db,
+                activeLabels: operation.repeatedInitialLabels,
+                hasUnread: operation.repeatedHasUnread,
+                messageFlags: operation.repeatedMessageFlags
+            )
+
+            let api = MockGmailAPI()
+            let mutator = MailMutator(db: db, apiFactory: { _ in api })
+
+            try await perform(operation, using: mutator)
+
+            try assertState(
+                db,
+                labels: operation.repeatedInitialLabels,
+                hasUnread: operation.repeatedHasUnread,
+                messageFlags: operation.repeatedMessageFlags
+            )
+        }
+    }
+
+    @Test func mutationErrorsExposeDistinctUserVisibleMessages() {
+        let samples: [(MailProviderErrorCategory, String)] = [
+            (.missingCredential, "Reconnect Gmail"),
+            (.insufficientScope, "re-authorization"),
+            (.rateLimited, "rate-limited"),
+            (.offline, "offline"),
+            (.providerUnavailable, "rejected")
+        ]
+
+        for (category, fragment) in samples {
+            let error = MailMutationError(operation: .archive, category: category)
+            #expect(error.localizedDescription.contains(fragment))
+        }
     }
 }

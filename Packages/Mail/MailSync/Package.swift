@@ -26,6 +26,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "MailSyncTests", dependencies: ["MailSync"]),
+        .testTarget(name: "MailSyncTests", dependencies: ["MailSync", "AuthKit"]),
     ]
 )
