@@ -84,7 +84,7 @@ extension MailMutationError {
 private extension AuthError {
     var mailProviderCategory: MailProviderErrorCategory {
         switch self {
-        case .missingCredential:
+        case .missingCredential, .missingProviderCredential:
             return .missingCredential
         case .denied, .missingRefreshToken:
             return .authExpired
@@ -92,7 +92,7 @@ private extension AuthError {
             return .offline
         case .decode, .invalidResponse:
             return .invalidResponse
-        case .keychain, .cancelled:
+        case .keychain, .cancelled, .invalidConfiguration:
             return .providerUnavailable
         }
     }

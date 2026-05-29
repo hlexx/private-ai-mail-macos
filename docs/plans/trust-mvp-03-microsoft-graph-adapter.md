@@ -73,15 +73,15 @@ enterprise governance out of scope.
 
 ### Task 3: Add Outlook auth scaffolding
 
-- [ ] Inspect `AuthKit` and current Gmail OAuth flow before adding Microsoft
+- [x] Inspect `AuthKit` and current Gmail OAuth flow before adding Microsoft
       types.
-- [ ] Add Microsoft OAuth config and token storage types without weakening
+- [x] Add Microsoft OAuth config and token storage types without weakening
       existing Gmail token handling.
-- [ ] Ensure account records store provider as Outlook/Graph and keep display
+- [x] Ensure account records store provider as Outlook/Graph and keep display
       identity separate from provider credentials.
-- [ ] Add tests for config validation, token store isolation by provider/account,
+- [x] Add tests for config validation, token store isolation by provider/account,
       missing credential errors, and re-consent signals.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Auth/AuthKit && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Auth/AuthKit && swift test`.
 
 ### Task 4: Implement Graph mapping to canonical mail records
 
