@@ -105,13 +105,13 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 
 ### Task 6: Validate Gmail privacy and release readiness
 
-- [ ] Run the privacy grep command from Validation Commands and fix any real
+- [x] Run the privacy grep command from Validation Commands and fix any real
       leaks. Do not silence it by removing useful privacy-safe logs.
-- [ ] Add or update a manual Gmail smoke checklist under `docs/` covering fresh
+- [x] Add or update a manual Gmail smoke checklist under `docs/` covering fresh
       sync, search placeholder state, send, reply, archive, star, read/unread,
       trash, attachment open, HTML remote image blocking, offline open, auth
       expiry, and rate limit.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 

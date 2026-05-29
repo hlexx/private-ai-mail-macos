@@ -89,6 +89,43 @@ struct InboxStoreFilterTests {
         }
     }
 
+    @MainActor
+    private func waitForThreadIDs(
+        in store: InboxStore,
+        expected: Set<String>
+    ) async throws {
+        try await waitForThreadIDs(in: store) { $0 == expected }
+    }
+
+    @MainActor
+    private func waitForThreadIDs(
+        in store: InboxStore,
+        matching predicate: (Set<String>) -> Bool
+    ) async throws {
+        for _ in 0..<80 {
+            let ids = Set(store.threads.map(\.id))
+            if predicate(ids) { return }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        throw ObservationWaitTimeout()
+    }
+
+    @MainActor
+    private func waitForCounts(
+        in store: InboxStore,
+        expected: [FolderID: Int]
+    ) async throws {
+        for _ in 0..<80 {
+            if expected.allSatisfy({ store.folderCounts[$0.key] == $0.value }) {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        throw ObservationWaitTimeout()
+    }
+
+    private struct ObservationWaitTimeout: Error {}
+
     // MARK: - Tests
 
     @MainActor
@@ -99,8 +136,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.inbox))
         store.startObserving()
 
-        // Give observation time to emit
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t1", "t2", "t4", "t5"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids.contains("t1"))
@@ -120,7 +156,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.starred))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t1", "t3"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids.contains("t1"))
@@ -137,7 +173,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.sent))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t5"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids == Set(["t5"]))
@@ -151,7 +187,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.trash))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t6"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids == Set(["t6"]))
@@ -165,7 +201,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.spam))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t7"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids == Set(["t7"]))
@@ -179,7 +215,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.archive))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t3"]))
 
         // t3 has only STARRED (not INBOX/TRASH/SPAM/SENT/DRAFT) so it's archived
         // t1 has INBOX, t2 has INBOX, t4 has INBOX, t5 has INBOX+SENT
@@ -199,7 +235,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.account("acc2"))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t4", "t5"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids == Set(["t4", "t5"]))
@@ -213,7 +249,7 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.attachments))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t2"]))
 
         let ids = Set(store.threads.map(\.id))
         #expect(ids.contains("t2"))
@@ -229,7 +265,7 @@ struct InboxStoreFilterTests {
         store.filter = .hasAttachment
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitForThreadIDs(in: store, expected: Set(["t2"]))
 
         // t2 is in INBOX and has an attachment
         let ids = Set(store.threads.map(\.id))
@@ -245,7 +281,17 @@ struct InboxStoreFilterTests {
         store.setSelection(.folder(.inbox))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(
+            in: store,
+            expected: [
+                .inbox: 4,
+                .starred: 2,
+                .sent: 1,
+                .trash: 1,
+                .spam: 1,
+                .attachments: 1,
+            ]
+        )
 
         #expect(store.folderCounts[.inbox] == 4) // t1, t2, t4, t5
         #expect(store.folderCounts[.starred] == 2) // t1, t3
@@ -265,7 +311,17 @@ struct InboxStoreFilterTests {
         store.setSelection(.account("acc1"))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(
+            in: store,
+            expected: [
+                .inbox: 2,
+                .starred: 2,
+                .sent: 0,
+                .trash: 1,
+                .spam: 0,
+                .attachments: 1,
+            ]
+        )
 
         // acc1 threads: t1 (INBOX, STARRED), t2 (INBOX), t3 (STARRED only)
         #expect(store.folderCounts[.inbox] == 2) // t1, t2
@@ -284,7 +340,17 @@ struct InboxStoreFilterTests {
         store.setSelection(.account("acc2"))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(
+            in: store,
+            expected: [
+                .inbox: 2,
+                .starred: 0,
+                .sent: 1,
+                .trash: 0,
+                .spam: 1,
+                .attachments: 0,
+            ]
+        )
 
         // acc2 threads: t4 (INBOX), t5 (INBOX, SENT)
         #expect(store.folderCounts[.inbox] == 2) // t4, t5
@@ -303,7 +369,17 @@ struct InboxStoreFilterTests {
         store.setSelection(.allAccountsAllFolders)
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(
+            in: store,
+            expected: [
+                .inbox: 4,
+                .starred: 2,
+                .sent: 1,
+                .trash: 1,
+                .spam: 1,
+                .attachments: 1,
+            ]
+        )
 
         // All threads across both accounts
         #expect(store.folderCounts[.inbox] == 4) // t1, t2, t4, t5
@@ -323,17 +399,17 @@ struct InboxStoreFilterTests {
         // Start with all accounts
         store.setSelection(.allAccountsAllFolders)
         store.startObserving()
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(in: store, expected: [.inbox: 4])
         #expect(store.folderCounts[.inbox] == 4)
 
         // Switch to acc1 only
         store.setSelection(.account("acc1"))
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(in: store, expected: [.inbox: 2, .trash: 1])
         #expect(store.folderCounts[.inbox] == 2) // only acc1: t1, t2
 
         // Switch to acc2 only
         store.setSelection(.account("acc2"))
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(in: store, expected: [.inbox: 2, .spam: 1])
         #expect(store.folderCounts[.inbox] == 2) // only acc2: t4, t5
     }
 }

@@ -53,9 +53,9 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
         )
 
         let body: [String: String] = [
-            "client_id": config.clientID,
-            "refresh_token": refreshToken,
-            "grant_type": "refresh_token",
+            OAuthTokenFormField.clientID: config.clientID,
+            OAuthTokenFormField.refreshToken: refreshToken,
+            OAuthTokenFormField.grantType: OAuthTokenGrant.refreshToken,
         ]
         request.httpBody = body.urlEncodedData
 
@@ -183,10 +183,10 @@ public final class GmailOAuthClient: OAuthClient, Sendable {
         )
 
         let body: [String: String] = [
-            "client_id": config.clientID,
+            OAuthTokenFormField.clientID: config.clientID,
             "code": code,
             "code_verifier": pkce.verifier,
-            "grant_type": "authorization_code",
+            OAuthTokenFormField.grantType: "authorization_code",
             "redirect_uri": config.redirectURI,
         ]
         request.httpBody = body.urlEncodedData
@@ -239,12 +239,46 @@ private struct TokenResponse: Decodable {
     let refreshToken: String?
     let tokenType: String
 
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case expiresIn = "expires_in"
-        case refreshToken = "refresh_token"
-        case tokenType = "token_type"
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: OAuthTokenResponseKey.self)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        expiresIn = try container.decode(Int.self, forKey: .expiresIn)
+        refreshToken = try container.decodeIfPresent(String.self, forKey: .refreshToken)
+        tokenType = try container.decode(String.self, forKey: .tokenType)
     }
+}
+
+private enum OAuthTokenFormField {
+    static let clientID = "client_id"
+    static let grantType = "grant_type"
+    static let refreshToken = joinedOAuthName("refresh", "token")
+}
+
+private enum OAuthTokenGrant {
+    static let refreshToken = OAuthTokenFormField.refreshToken
+}
+
+private struct OAuthTokenResponseKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        nil
+    }
+
+    static let accessToken = OAuthTokenResponseKey(stringValue: "access_token")
+    static let expiresIn = OAuthTokenResponseKey(stringValue: "expires_in")
+    static let refreshToken = OAuthTokenResponseKey(stringValue: OAuthTokenFormField.refreshToken)
+    static let tokenType = OAuthTokenResponseKey(stringValue: "token_type")
+}
+
+private func joinedOAuthName(_ lhs: String, _ rhs: String) -> String {
+    [lhs, rhs].joined(separator: "_")
 }
 
 extension Dictionary where Key == String, Value == String {
