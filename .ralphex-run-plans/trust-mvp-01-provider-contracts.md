@@ -38,6 +38,9 @@ network calls in this tranche.
 
 ## Validation Commands
 
+- Run SwiftPM validation on native arm64 only. Do not add `--arch x86_64` in
+  this environment; Xcode 26.2 Swift Testing helper can hang uninterruptibly
+  under the x86_64 path.
 - `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git status --short --branch`
 - `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check`
 - `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailDomain && swift test`
