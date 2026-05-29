@@ -100,16 +100,16 @@ network calls in this tranche.
 
 ### Task 4: Define shared provider error and capability contracts
 
-- [ ] Add or update shared types for provider capabilities: supports labels,
+- [x] Add or update shared types for provider capabilities: supports labels,
       supports folders, supports categories, supports send, supports attachment
       download, supports delta sync, supports server search, supports aliases.
-- [ ] Add shared provider error categories: missing credential, insufficient
+- [x] Add shared provider error categories: missing credential, insufficient
       scope, auth expired, rate limited, offline, provider unavailable,
       not found, invalid response, unsupported operation, and conflict.
-- [ ] Map existing `GmailAPIError` into the shared taxonomy without deleting
+- [x] Map existing `GmailAPIError` into the shared taxonomy without deleting
       Gmail-specific error details.
-- [ ] Add tests that Gmail errors map to user-actionable shared categories.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
+- [x] Add tests that Gmail errors map to user-actionable shared categories.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
 
 ### Task 5: Make persistence compatible with Outlook account rows
 
