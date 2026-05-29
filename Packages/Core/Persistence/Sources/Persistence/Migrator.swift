@@ -17,6 +17,7 @@ enum Migrator {
         migrator.registerMigration("M011_AttachmentDataPlane", migrate: M011_AttachmentDataPlane.migrate)
         migrator.registerMigration("M012_AttachmentBlobStore", migrate: M012_AttachmentBlobStore.migrate)
         migrator.registerMigration("M013_ThreadBriefCacheIdentity", migrate: M013_ThreadBriefCacheIdentity.migrate)
+        migrator.registerMigration("M014_AccountProviderOutlook", migrate: M014_AccountProviderOutlook.migrate)
         try migrator.migrate(db)
     }
 }
@@ -25,8 +26,6 @@ enum M001_InitialSchema {
     static func migrate(_ db: Database) throws {
         try db.create(table: "account") { t in
             t.primaryKey("id", .text)
-            // TODO(trust-mvp-01): Broaden provider constraint via additive migration
-            // to include Outlook once provider identifiers are formalized.
             t.column("provider", .text).notNull().check { $0 == "gmail" }
             t.column("email", .text).notNull()
             t.column("display_name", .text)
@@ -246,6 +245,29 @@ enum M013_ThreadBriefCacheIdentity {
             on: "thread_brief",
             columns: ["account_id", "thread_id", "prompt_version", "schema_version"]
         )
+    }
+}
+
+enum M014_AccountProviderOutlook {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "account_new") { t in
+            t.primaryKey("id", .text)
+            t.column("provider", .text).notNull().check(sql: "provider IN ('gmail', 'outlook')")
+            t.column("email", .text).notNull()
+            t.column("display_name", .text)
+            t.column("created_at", .integer).notNull()
+            t.column("last_synced_at", .integer)
+            t.uniqueKey(["provider", "email"])
+        }
+
+        try db.execute(sql: """
+            INSERT INTO account_new (id, provider, email, display_name, created_at, last_synced_at)
+            SELECT id, provider, email, display_name, created_at, last_synced_at
+            FROM account
+            """)
+
+        try db.drop(table: "account")
+        try db.rename(table: "account_new", to: "account")
     }
 }
 

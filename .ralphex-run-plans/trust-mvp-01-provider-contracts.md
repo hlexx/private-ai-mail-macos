@@ -113,15 +113,15 @@ network calls in this tranche.
 
 ### Task 5: Make persistence compatible with Outlook account rows
 
-- [ ] Inspect the `account.provider` schema constraint in the initial migration
+- [x] Inspect the `account.provider` schema constraint in the initial migration
       and the live `AccountRecord` contract.
-- [ ] If the schema still restricts provider to only `gmail`, add a
+- [x] If the schema still restricts provider to only `gmail`, add a
       data-preserving migration that allows at least `gmail` and `outlook`.
-- [ ] Keep existing Gmail accounts unchanged and prove existing fixtures or
+- [x] Keep existing Gmail accounts unchanged and prove existing fixtures or
       tests still pass.
-- [ ] Add `PersistenceTests` covering Gmail and Outlook account insert/fetch,
+- [x] Add `PersistenceTests` covering Gmail and Outlook account insert/fetch,
       duplicate `(provider, email)` uniqueness, and cascade behavior.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
 
 ### Task 6: Add the implementation sequencing document
 
