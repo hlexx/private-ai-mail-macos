@@ -1,5 +1,7 @@
 import Foundation
+import GRDB
 import MailDomain
+import Persistence
 
 // MARK: - Public API
 
@@ -215,7 +217,7 @@ public enum MailSearchResultSource: Sendable, Equatable {
 }
 
 public struct MailSearchResult: Sendable, Equatable, Identifiable {
-    public var id: String { threadID }
+    public var id: String { "\(accountID):\(threadID)" }
 
     public let threadID: String
     public let accountID: String
@@ -357,4 +359,448 @@ public protocol MailIndexing: Sendable {
 
 public protocol MailSearching: Sendable {
     func search(_ query: MailSearchQuery) async throws -> MailSearchResponse
+}
+
+// MARK: - Local Search Execution
+
+public struct MailSearchService: MailSearching {
+    private let database: AppDatabase
+
+    public init(database: AppDatabase) {
+        self.database = database
+    }
+
+    public func search(_ query: MailSearchQuery) async throws -> MailSearchResponse {
+        guard query.mode == .localFullText else {
+            return MailSearchResponse(
+                query: query,
+                results: [],
+                localResultsComplete: false,
+                totalResultCount: 0
+            )
+        }
+
+        guard query.text != nil || !query.filters.isEmpty else {
+            return MailSearchResponse(query: query, results: [], totalResultCount: 0)
+        }
+
+        let rows = try database.read { db in
+            try SearchSQL(query: query).fetchRows(in: db)
+        }
+        let ranked = SearchResultBuilder(query: query).makeResults(from: rows)
+        let sliced = Array(ranked.dropFirst(query.offset).prefix(query.limit))
+
+        return MailSearchResponse(
+            query: query,
+            results: sliced,
+            totalResultCount: ranked.count
+        )
+    }
+}
+
+private struct SearchSQL {
+    let query: MailSearchQuery
+
+    func fetchRows(in db: Database) throws -> [SearchRow] {
+        let filter = FilterSQL(filters: query.filters)
+        let sql: String
+        var arguments: [DatabaseValueConvertible] = []
+
+        if let text = query.text {
+            let ftsQuery = FTSQueryBuilder.makeQuery(text)
+            guard !ftsQuery.isEmpty else { return [] }
+            arguments.append(ftsQuery)
+            arguments.append(contentsOf: filter.arguments)
+            sql = """
+                SELECT
+                    d.account_id,
+                    d.message_id,
+                    d.thread_id,
+                    d.provider,
+                    d.subject,
+                    d.from_addr,
+                    d.to_addr,
+                    d.cc_addr,
+                    d.snippet,
+                    d.body_text,
+                    d.normalized_body_text,
+                    d.attachment_filenames,
+                    d.attachment_mimes,
+                    d.canonical_mailboxes,
+                    d.sent_at,
+                    d.is_unread,
+                    d.is_sent,
+                    d.has_attachment,
+                    -bm25(mail_search_fts, 6.0, 5.0, 2.5, 1.5, 1.0, 1.0, 1.0, 2.0, 1.0) AS fts_score
+                FROM mail_search_fts
+                JOIN mail_search_document d ON d.id = mail_search_fts.rowid
+                \(filter.joinedWhere(prefix: "mail_search_fts MATCH ?"))
+                """
+        } else {
+            arguments.append(contentsOf: filter.arguments)
+            sql = """
+                SELECT
+                    d.account_id,
+                    d.message_id,
+                    d.thread_id,
+                    d.provider,
+                    d.subject,
+                    d.from_addr,
+                    d.to_addr,
+                    d.cc_addr,
+                    d.snippet,
+                    d.body_text,
+                    d.normalized_body_text,
+                    d.attachment_filenames,
+                    d.attachment_mimes,
+                    d.canonical_mailboxes,
+                    d.sent_at,
+                    d.is_unread,
+                    d.is_sent,
+                    d.has_attachment,
+                    0.0 AS fts_score
+                FROM mail_search_document d
+                \(filter.joinedWhere())
+                """
+        }
+
+        return try SearchRow.fetchAll(db, sql: sql, arguments: StatementArguments(arguments))
+    }
+}
+
+private struct FilterSQL {
+    let whereClauses: [String]
+    let arguments: [DatabaseValueConvertible]
+
+    init(filters: MailSearchFilter) {
+        var clauses: [String] = []
+        var args: [DatabaseValueConvertible] = []
+
+        Self.appendInClause("d.account_id", values: filters.accountIDs.sorted(), clauses: &clauses, arguments: &args)
+        Self.appendInClause("d.provider", values: filters.providers.map(\.rawValue).sorted(), clauses: &clauses, arguments: &args)
+
+        if !filters.canonicalMailboxes.isEmpty {
+            let tokens = filters.canonicalMailboxes
+                .flatMap(Self.mailboxTokens)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            if !tokens.isEmpty {
+                let parts = tokens.map { _ in "(' ' || COALESCE(d.canonical_mailboxes, '') || ' ') LIKE ?" }
+                clauses.append("(\(parts.joined(separator: " OR ")))")
+                args.append(contentsOf: tokens.map { "% \($0) %" })
+            }
+        }
+
+        Self.appendLikeClause("d.from_addr", values: filters.from.sorted(), clauses: &clauses, arguments: &args)
+        Self.appendLikeClause("d.to_addr", values: filters.to.sorted(), clauses: &clauses, arguments: &args)
+
+        if let start = filters.dateRange?.start {
+            clauses.append("d.sent_at >= ?")
+            args.append(Int(start.timeIntervalSince1970))
+        }
+        if let end = filters.dateRange?.end {
+            clauses.append("d.sent_at <= ?")
+            args.append(Int(end.timeIntervalSince1970))
+        }
+        if let isUnread = filters.isUnread {
+            clauses.append("d.is_unread = ?")
+            args.append(isUnread ? 1 : 0)
+        }
+        if let isSent = filters.isSent {
+            clauses.append("d.is_sent = ?")
+            args.append(isSent ? 1 : 0)
+        }
+        if let hasAttachment = filters.hasAttachment {
+            clauses.append("d.has_attachment = ?")
+            args.append(hasAttachment ? 1 : 0)
+        }
+
+        Self.appendLikeClause("d.attachment_filenames", values: filters.attachmentFilenames.sorted(), clauses: &clauses, arguments: &args)
+        Self.appendLikeClause("d.attachment_mimes", values: filters.attachmentMIMETypes.sorted(), clauses: &clauses, arguments: &args)
+
+        whereClauses = clauses
+        arguments = args
+    }
+
+    func joinedWhere(prefix: String? = nil) -> String {
+        var clauses = whereClauses
+        if let prefix {
+            clauses.insert(prefix, at: 0)
+        }
+        return clauses.isEmpty ? "" : "WHERE \(clauses.joined(separator: " AND "))"
+    }
+
+    private static func appendInClause(
+        _ column: String,
+        values: [String],
+        clauses: inout [String],
+        arguments: inout [DatabaseValueConvertible]
+    ) {
+        guard !values.isEmpty else { return }
+        clauses.append("\(column) IN (\(Array(repeating: "?", count: values.count).joined(separator: ", ")))")
+        arguments.append(contentsOf: values)
+    }
+
+    private static func appendLikeClause(
+        _ column: String,
+        values: [String],
+        clauses: inout [String],
+        arguments: inout [DatabaseValueConvertible]
+    ) {
+        guard !values.isEmpty else { return }
+        clauses.append("(\(values.map { _ in "LOWER(COALESCE(\(column), '')) LIKE ?" }.joined(separator: " OR ")))")
+        arguments.append(contentsOf: values.map { "%\($0.lowercased())%" })
+    }
+
+    private static func mailboxTokens(for mailbox: CanonicalMailbox) -> [String] {
+        switch mailbox {
+        case .inbox:
+            return ["INBOX"]
+        case .sent:
+            return ["SENT"]
+        case .drafts:
+            return ["DRAFT"]
+        case .trash:
+            return ["TRASH"]
+        case .spam:
+            return ["SPAM"]
+        case .archive:
+            return ["ARCHIVE"]
+        case .starred, .flagged:
+            return ["STARRED"]
+        case .userDefined(let id, _, _):
+            return [id]
+        }
+    }
+}
+
+private enum FTSQueryBuilder {
+    static func makeQuery(_ text: String) -> String {
+        let tokens = text
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return tokens.map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }
+            .joined(separator: " AND ")
+    }
+}
+
+private struct SearchRow: FetchableRecord {
+    let accountID: String
+    let messageID: String
+    let threadID: String
+    let provider: MailProviderIdentifier
+    let subject: String?
+    let from: String?
+    let to: String?
+    let cc: String?
+    let snippet: String?
+    let bodyText: String?
+    let normalizedBodyText: String?
+    let attachmentFilenames: String?
+    let attachmentMIMEs: String?
+    let canonicalMailboxes: String?
+    let sentAt: Int
+    let isUnread: Bool
+    let isSent: Bool
+    let hasAttachment: Bool
+    let ftsScore: Double
+
+    init(row: Row) {
+        accountID = row["account_id"]
+        messageID = row["message_id"]
+        threadID = row["thread_id"]
+        provider = MailProviderIdentifier(rawValue: row["provider"])
+        subject = row["subject"]
+        from = row["from_addr"]
+        to = row["to_addr"]
+        cc = row["cc_addr"]
+        snippet = row["snippet"]
+        bodyText = row["body_text"]
+        normalizedBodyText = row["normalized_body_text"]
+        attachmentFilenames = row["attachment_filenames"]
+        attachmentMIMEs = row["attachment_mimes"]
+        canonicalMailboxes = row["canonical_mailboxes"]
+        sentAt = row["sent_at"]
+        isUnread = (row["is_unread"] as Int) != 0
+        isSent = (row["is_sent"] as Int) != 0
+        hasAttachment = (row["has_attachment"] as Int) != 0
+        ftsScore = row["fts_score"] ?? 0
+    }
+}
+
+private struct SearchResultBuilder {
+    let query: MailSearchQuery
+
+    func makeResults(from rows: [SearchRow]) -> [MailSearchResult] {
+        let groups = Dictionary(grouping: rows) { row in
+            ResultKey(accountID: row.accountID, threadID: row.threadID)
+        }
+
+        return groups.values
+            .map(makeResult)
+            .sorted(by: sortResults)
+    }
+
+    private func makeResult(from rows: [SearchRow]) -> MailSearchResult {
+        let sortedRows = rows.sorted {
+            if $0.sentAt == $1.sentAt { return $0.messageID < $1.messageID }
+            return $0.sentAt > $1.sentAt
+        }
+        let displayRow = sortedRows.first!
+        let bestScore = rows.map(score).max() ?? 0
+        let matchedMessageIDs = sortedRows.map(\.messageID)
+        let snippets = rows
+            .sorted { score($0) > score($1) }
+            .flatMap(makeSnippets)
+            .prefix(4)
+
+        return MailSearchResult(
+            threadID: displayRow.threadID,
+            accountID: displayRow.accountID,
+            provider: displayRow.provider,
+            subject: displayRow.subject,
+            sender: displayRow.from.flatMap(Address.init(rfc822:)),
+            recipients: parseAddresses(displayRow.to),
+            sentAt: Date(timeIntervalSince1970: TimeInterval(sortedRows.map(\.sentAt).max() ?? displayRow.sentAt)),
+            matchedMessageIDs: matchedMessageIDs,
+            snippets: Array(snippets),
+            canonicalMailboxes: Set(rows.flatMap { parseMailboxes($0.canonicalMailboxes) }),
+            isUnread: rows.contains { $0.isUnread },
+            hasAttachments: rows.contains { $0.hasAttachment },
+            score: bestScore
+        )
+    }
+
+    private func sortResults(_ lhs: MailSearchResult, _ rhs: MailSearchResult) -> Bool {
+        switch query.sort {
+        case .relevanceThenNewest:
+            let leftScore = lhs.score ?? 0
+            let rightScore = rhs.score ?? 0
+            if abs(leftScore - rightScore) > 0.0001 { return leftScore > rightScore }
+            if lhs.sentAt != rhs.sentAt { return lhs.sentAt > rhs.sentAt }
+            return lhs.id < rhs.id
+        case .newestFirst:
+            if lhs.sentAt != rhs.sentAt { return lhs.sentAt > rhs.sentAt }
+            return lhs.id < rhs.id
+        case .oldestFirst:
+            if lhs.sentAt != rhs.sentAt { return lhs.sentAt < rhs.sentAt }
+            return lhs.id < rhs.id
+        }
+    }
+
+    private func score(_ row: SearchRow) -> Double {
+        guard let text = query.text?.lowercased(), !text.isEmpty else {
+            return Double(row.sentAt) / 1_000_000_000
+        }
+
+        var score = row.ftsScore
+        if contains(row.subject, text) { score += 80 }
+        if contains(row.from, text) { score += 60 }
+        if contains(row.to, text) { score += 20 }
+        if contains(row.cc, text) { score += 15 }
+        if contains(row.snippet, text) { score += 15 }
+        if contains(row.bodyText, text) || contains(row.normalizedBodyText, text) { score += 10 }
+        if contains(row.attachmentFilenames, text) { score += 12 }
+        score += Double(row.sentAt) / 1_000_000_000
+        return score
+    }
+
+    private func makeSnippets(for row: SearchRow) -> [MailSearchSnippet] {
+        let candidates: [(MailSearchSnippetField, String?)] = [
+            (.subject, row.subject),
+            (.sender, row.from),
+            (.recipient, row.to),
+            (.cc, row.cc),
+            (.snippet, row.snippet),
+            (.body, row.bodyText ?? row.normalizedBodyText),
+            (.attachmentFilename, row.attachmentFilenames),
+        ]
+        let matched = candidates.compactMap { field, value -> MailSearchSnippet? in
+            guard let value, !value.isEmpty else { return nil }
+            if !matchesQuery(value) {
+                return nil
+            }
+            return MailSearchSnippet(
+                messageID: row.messageID,
+                field: field,
+                text: excerpt(value, around: query.text)
+            )
+        }
+
+        if !matched.isEmpty { return Array(matched.prefix(2)) }
+        if let snippet = row.snippet, !snippet.isEmpty {
+            return [MailSearchSnippet(messageID: row.messageID, field: .snippet, text: excerpt(snippet, around: nil))]
+        }
+        if let subject = row.subject, !subject.isEmpty {
+            return [MailSearchSnippet(messageID: row.messageID, field: .subject, text: excerpt(subject, around: nil))]
+        }
+        return []
+    }
+
+    private func parseAddresses(_ value: String?) -> [Address] {
+        guard let value else { return [] }
+        return value
+            .split(separator: ",")
+            .compactMap { Address(rfc822: String($0).trimmingCharacters(in: .whitespacesAndNewlines)) }
+    }
+
+    private func parseMailboxes(_ value: String?) -> [CanonicalMailbox] {
+        guard let value else { return [] }
+        return value
+            .split(separator: " ")
+            .map(String.init)
+            .map { token in
+                switch token {
+                case "INBOX":
+                    return .inbox
+                case "SENT":
+                    return .sent
+                case "DRAFT":
+                    return .drafts
+                case "TRASH":
+                    return .trash
+                case "SPAM":
+                    return .spam
+                case "ARCHIVE":
+                    return .archive
+                case "STARRED":
+                    return .starred
+                default:
+                    return .userDefined(id: token, name: nil, kind: .label)
+                }
+            }
+    }
+
+    private func contains(_ value: String?, _ text: String) -> Bool {
+        value?.localizedCaseInsensitiveContains(text) == true
+    }
+
+    private func matchesQuery(_ value: String) -> Bool {
+        guard let text = query.text?.lowercased(), !text.isEmpty else { return true }
+        if contains(value, text) { return true }
+        let lowered = value.lowercased()
+        let tokens = text
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        return !tokens.isEmpty && tokens.allSatisfy { lowered.contains($0) }
+    }
+
+    private func excerpt(_ value: String, around text: String?) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 180 else { return trimmed }
+        guard let text,
+              let range = trimmed.range(of: text, options: [.caseInsensitive, .diacriticInsensitive]) else {
+            return String(trimmed.prefix(180))
+        }
+        let lowerBound = trimmed.index(range.lowerBound, offsetBy: -60, limitedBy: trimmed.startIndex) ?? trimmed.startIndex
+        let upperBound = trimmed.index(range.upperBound, offsetBy: 100, limitedBy: trimmed.endIndex) ?? trimmed.endIndex
+        return String(trimmed[lowerBound..<upperBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private struct ResultKey: Hashable {
+    let accountID: String
+    let threadID: String
 }

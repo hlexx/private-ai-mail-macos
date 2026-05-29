@@ -81,16 +81,16 @@ Trust MVP tranche.
 
 ### Task 4: Implement local search execution
 
-- [ ] Implement a `MailSearchService` in `MailIndex` that queries FTS and joins
+- [x] Implement a `MailSearchService` in `MailIndex` that queries FTS and joins
       to canonical thread/message/account data.
-- [ ] Return stable thread-level results with message hits, snippets, dates,
+- [x] Return stable thread-level results with message hits, snippets, dates,
       account ids, mailbox hints, and attachment indicators.
-- [ ] Add ranking that favors subject/from matches, recent messages, and exact
+- [x] Add ranking that favors subject/from matches, recent messages, and exact
       phrase matches where reasonable.
-- [ ] Add tests for body search, subject search, sender search, recipient
+- [x] Add tests for body search, subject search, sender search, recipient
       search, date filter, account filter, mailbox filter, unread filter, has
       attachment filter, deletion, and empty query behavior.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
 
 ### Task 5: Add provider fallback seam
 
