@@ -58,18 +58,18 @@ enterprise governance out of scope.
 
 ### Task 2: Add Graph DTOs and API client seam
 
-- [ ] Create `Packages/Mail/MailProviders/Sources/MailProviders/Graph/`.
-- [ ] Add Graph DTOs for mail folder, message, recipient/address, body,
+- [x] Create `Packages/Mail/MailProviders/Sources/MailProviders/Graph/`.
+- [x] Add Graph DTOs for mail folder, message, recipient/address, body,
       attachment metadata, delta response, error response, and send result.
-- [ ] Add a `GraphAPI` protocol covering folder list, folder message delta,
+- [x] Add a `GraphAPI` protocol covering folder list, folder message delta,
       message get, attachment get, send mail or create/send draft, mark read,
       move/archive/trash, flag/unflag where supported, and category operations
       only if needed for canonical starred/flagged behavior.
-- [ ] Add a `GraphAPIClient` with request construction, auth header injection,
+- [x] Add a `GraphAPIClient` with request construction, auth header injection,
       JSON decoding, status/error mapping, and no raw content logging.
-- [ ] Add tests using `MockURLProtocol` or existing test helpers for successful
+- [x] Add tests using `MockURLProtocol` or existing test helpers for successful
       decode, error mapping, rate limit, auth failure, and privacy-safe logs.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
 
 ### Task 3: Add Outlook auth scaffolding
 
