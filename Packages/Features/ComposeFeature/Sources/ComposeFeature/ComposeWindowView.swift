@@ -172,12 +172,16 @@ public struct ComposeWindowView: View {
             HStack(spacing: RBSpace.s2) {
                 Button(String(localized: "compose.cta.saveDraft", defaultValue: "Save draft")) {}
                     .buttonStyle(.rbGhost)
+                    .disabled(true)
+                    .help(String(localized: "compose.cta.saveDraft.help", defaultValue: "Draft saving is not available yet"))
 
                 Button {
                 } label: {
                     Label(String(localized: "compose.cta.rewrite", defaultValue: "Rewrite"), systemImage: "sparkle")
                 }
                 .buttonStyle(.rbSecondary)
+                .disabled(true)
+                .help(String(localized: "compose.cta.rewrite.help", defaultValue: "Rewrite is not available yet"))
 
                 Button {
                     viewModel.requestSend()

@@ -7,6 +7,21 @@ public enum ActionID: String, CaseIterable, Sendable {
     case reply, snooze, log, task, archive, unsub, rule, share
 }
 
+public enum ActionExecutionSupport {
+    public static func isEnabled(_ action: ActionID) -> Bool {
+        switch action {
+        case .reply, .archive:
+            return true
+        case .snooze, .log, .task, .unsub, .rule, .share:
+            return false
+        }
+    }
+
+    static func preview(for action: ActionID) -> String {
+        previews[action] ?? ""
+    }
+}
+
 struct ActionItem: Identifiable {
     let id: ActionID
     let label: String
@@ -43,6 +58,7 @@ private let previews: [ActionID: String] = [
 struct ActionTile: View {
     let item: ActionItem
     let isSelected: Bool
+    let isEnabled: Bool
     let onTap: () -> Void
 
     @State private var isHovered = false
@@ -60,14 +76,14 @@ struct ActionTile: View {
             VStack(spacing: RBSpace.s2) {
                 Image(systemName: item.systemName)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(isEnabled ? Color.white : Color.rbFg3)
                     .frame(width: 28, height: 28)
-                    .background(item.color)
+                    .background(isEnabled ? item.color : Color.rbBgElev2)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Text(item.label)
                     .font(.rbGeist(11.5, weight: .medium))
-                    .foregroundStyle(Color.rbFg1)
+                    .foregroundStyle(isEnabled ? Color.rbFg1 : Color.rbFg3)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, RBSpace.s3)
@@ -80,6 +96,8 @@ struct ActionTile: View {
             .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .help(isEnabled ? item.label : String(localized: "action.unavailable.help", defaultValue: "Not available yet"))
         .onHover { isHovered = $0 }
     }
 }
@@ -90,7 +108,7 @@ public struct ActionSheetView: View {
     let threadSubject: String
     let onAction: (ActionID?) -> Void
 
-    @State private var picked: ActionID = .snooze
+    @State private var picked: ActionID = .reply
 
     public init(threadSubject: String, onAction: @escaping (ActionID?) -> Void) {
         self.threadSubject = threadSubject
@@ -130,7 +148,11 @@ public struct ActionSheetView: View {
                     // 4x2 grid
                     LazyVGrid(columns: columns, spacing: RBSpace.s2) {
                         ForEach(ActionItem.all) { item in
-                            ActionTile(item: item, isSelected: picked == item.id) {
+                            ActionTile(
+                                item: item,
+                                isSelected: picked == item.id,
+                                isEnabled: ActionExecutionSupport.isEnabled(item.id)
+                            ) {
                                 picked = item.id
                             }
                         }
@@ -153,7 +175,7 @@ public struct ActionSheetView: View {
                                 .foregroundStyle(Color.rbFg3)
                         }
 
-                        Text(previews[picked] ?? "")
+                        Text(ActionExecutionSupport.preview(for: picked))
                             .rbTextStyle(.bodySM)
                             .foregroundStyle(Color.rbFg2)
                             .lineSpacing(4)
@@ -178,6 +200,7 @@ public struct ActionSheetView: View {
                             .buttonStyle(.rbGhost)
                         Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) { onAction(picked) }
                             .buttonStyle(.rbPrimary)
+                            .disabled(!ActionExecutionSupport.isEnabled(picked))
                     }
                     .padding(.top, RBSpace.s3)
                 }

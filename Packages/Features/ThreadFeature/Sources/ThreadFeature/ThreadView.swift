@@ -142,19 +142,23 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 .buttonStyle(.rbGhost)
                 .disabled(onStar == nil)
 
-                Button { /* Snooze stub */ } label: {
+                Button {} label: {
                     Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
                 }
                 .buttonStyle(.rbGhost)
+                .disabled(true)
+                .help(String(localized: "thread.action.snooze.help", defaultValue: "Not available yet"))
 
-                Button { /* Send-to stub */ } label: {
+                Button {} label: {
                     Label {
-                        Text(String(localized: "thread.action.sendTo", defaultValue: "Send to \u{2197}"))
+                        Text(String(localized: "thread.action.sendTo", defaultValue: "Send to"))
                     } icon: {
                         Image(systemName: "paperplane")
                     }
                 }
                 .buttonStyle(.rbGhost)
+                .disabled(true)
+                .help(String(localized: "thread.action.sendTo.help", defaultValue: "Not available yet"))
             }
         }
         .padding(.horizontal, 28)
@@ -246,10 +250,12 @@ private extension ThreadView {
 
                     Spacer()
 
-                    Button { /* Preview stub */ } label: {
+                    Button {} label: {
                         Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
                     }
                     .buttonStyle(.rbGhost)
+                    .disabled(true)
+                    .help(String(localized: "thread.attachment.open.help", defaultValue: "Attachment opening is not available yet"))
 
                     Button { attachmentSummaryStore?.summarize(att) } label: {
                         Label(

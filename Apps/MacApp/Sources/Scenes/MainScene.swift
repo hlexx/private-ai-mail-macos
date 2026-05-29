@@ -180,8 +180,9 @@ struct MainScene: View {
             if composition.showActionSheet {
                 ActionSheetView(
                     threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
-                    onAction: { _ in
+                    onAction: { action in
                         composition.showActionSheet = false
+                        handleActionSheet(action)
                     }
                 )
             }
@@ -252,6 +253,22 @@ struct MainScene: View {
         return folders
     }
 
+}
+
+// MARK: - Action Sheet
+
+extension MainScene {
+    func handleActionSheet(_ action: ActionID?) {
+        guard let action else { return }
+        switch action {
+        case .reply:
+            draftReply()
+        case .archive:
+            archiveSelectedThread()
+        case .snooze, .log, .task, .unsub, .rule, .share:
+            showToast("Action not available yet", undo: nil)
+        }
+    }
 }
 
 // MARK: - Compose Helpers

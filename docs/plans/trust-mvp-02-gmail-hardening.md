@@ -45,15 +45,15 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 
 ### Task 1: Audit Gmail UI actions end to end
 
-- [ ] Trace archive, unarchive, star, unstar, read/unread, trash, untrash,
+- [x] Trace archive, unarchive, star, unstar, read/unread, trash, untrash,
       send, refresh, attachment download, and reconnect from UI/store to Gmail
       API and local persistence.
-- [ ] Create a short `docs/trust-mvp-gmail-baseline.md` table with each action,
+- [x] Create a short `docs/trust-mvp-gmail-baseline.md` table with each action,
       current code path, expected provider call, expected local state, expected
       user-visible failure, and test coverage.
-- [ ] Replace any remaining no-op UI path for Gmail P0 actions with either a
+- [x] Replace any remaining no-op UI path for Gmail P0 actions with either a
       real handler or a disabled state with honest copy.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check`.
 
 ### Task 2: Harden Gmail label and folder behavior
 
