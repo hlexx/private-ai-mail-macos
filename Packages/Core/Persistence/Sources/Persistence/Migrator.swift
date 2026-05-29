@@ -18,6 +18,7 @@ enum Migrator {
         migrator.registerMigration("M012_AttachmentBlobStore", migrate: M012_AttachmentBlobStore.migrate)
         migrator.registerMigration("M013_ThreadBriefCacheIdentity", migrate: M013_ThreadBriefCacheIdentity.migrate)
         migrator.registerMigration("M014_AccountProviderOutlook", migrate: M014_AccountProviderOutlook.migrate)
+        migrator.registerMigration("M015_GraphDeltaCheckpoints", migrate: M015_GraphDeltaCheckpoints.migrate)
         try migrator.migrate(db)
     }
 }
@@ -268,6 +269,25 @@ enum M014_AccountProviderOutlook {
 
         try db.drop(table: "account")
         try db.rename(table: "account_new", to: "account")
+    }
+}
+
+enum M015_GraphDeltaCheckpoints {
+    static func migrate(_ db: Database) throws {
+        try db.create(table: "graph_delta_checkpoint") { t in
+            t.column("account_id", .text)
+                .notNull()
+                .references("account", onDelete: .cascade)
+            t.column("folder_id", .text).notNull()
+            t.column("delta_url", .text).notNull()
+            t.column("updated_at", .integer).notNull()
+            t.primaryKey(["account_id", "folder_id"])
+        }
+        try db.create(
+            index: "idx_graph_delta_checkpoint_account",
+            on: "graph_delta_checkpoint",
+            columns: ["account_id"]
+        )
     }
 }
 

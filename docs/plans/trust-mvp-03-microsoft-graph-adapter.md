@@ -96,17 +96,17 @@ enterprise governance out of scope.
 
 ### Task 5: Add Graph sync engine support behind a flag
 
-- [ ] Extend `MailSync` with a provider-neutral sync runner or a Graph-specific
+- [x] Extend `MailSync` with a provider-neutral sync runner or a Graph-specific
       engine that still emits existing `SyncEvent` semantics.
-- [ ] Persist Graph folder checkpoints as opaque delta URLs per account/folder;
+- [x] Persist Graph folder checkpoints as opaque delta URLs per account/folder;
       never parse token contents.
-- [ ] Implement initial sync over selected folders and incremental delta using
+- [x] Implement initial sync over selected folders and incremental delta using
       nextLink until deltaLink completes.
-- [ ] Add tests for initial sync, multi-page nextLink, final deltaLink,
+- [x] Add tests for initial sync, multi-page nextLink, final deltaLink,
       deletion/tombstone, rate limit pause, auth failure, and folder checkpoint
       isolation.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
 
 ### Task 6: Wire Outlook account UI as disabled-by-default or feature-gated
 
