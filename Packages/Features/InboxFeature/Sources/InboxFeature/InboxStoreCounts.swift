@@ -40,7 +40,8 @@ extension InboxStore {
         let accountFilter = aid != nil ? " WHERE tl.account_id = ? AND" : " WHERE"
         let accountArgs: [DatabaseValueConvertible] = aid.map { [$0] } ?? []
 
-        for (label, folder) in [("INBOX", FolderID.inbox), ("STARRED", .starred), ("SENT", .sent)] {
+        for folder in [FolderID.inbox, .starred, .sent, .trash, .spam] {
+            guard let label = folder.gmailLabel else { continue }
             counts[folder] = try Int.fetchOne(
                 db,
                 sql: "SELECT COUNT(*) FROM thread_label tl" + accountFilter + " tl.label_id = ?",

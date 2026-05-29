@@ -29,7 +29,9 @@ struct InboxStoreFilterTests {
                 ('t2', 'acc1', 'Thread 2', 'snippet2', 2000, 2, 0),
                 ('t3', 'acc1', 'Thread 3', 'snippet3', 3000, 1, 1),
                 ('t4', 'acc2', 'Thread 4', 'snippet4', 4000, 1, 0),
-                ('t5', 'acc2', 'Thread 5', 'snippet5', 5000, 1, 1)
+                ('t5', 'acc2', 'Thread 5', 'snippet5', 5000, 1, 1),
+                ('t6', 'acc1', 'Thread 6', 'snippet6', 6000, 1, 0),
+                ('t7', 'acc2', 'Thread 7', 'snippet7', 7000, 1, 0)
                 """)
 
             // Create messages
@@ -39,7 +41,9 @@ struct InboxStoreFilterTests {
                 ('m2', 't2', 'acc1', 'sender@b.com', 'user@example.com', 2000, 0),
                 ('m3', 't3', 'acc1', 'sender@c.com', 'user@example.com', 3000, 0),
                 ('m4', 't4', 'acc2', 'sender@d.com', 'other@example.com', 4000, 0),
-                ('m5', 't5', 'acc2', 'sender@e.com', 'other@example.com', 5000, 0)
+                ('m5', 't5', 'acc2', 'sender@e.com', 'other@example.com', 5000, 0),
+                ('m6', 't6', 'acc1', 'sender@f.com', 'user@example.com', 6000, 0),
+                ('m7', 't7', 'acc2', 'sender@g.com', 'other@example.com', 7000, 0)
                 """)
 
             // Create labels
@@ -47,7 +51,13 @@ struct InboxStoreFilterTests {
                 INSERT INTO label (id, account_id, name, type, messages_unread_count, messages_total_count) VALUES
                 ('INBOX', 'acc1', 'Inbox', 'system', 0, 0),
                 ('STARRED', 'acc1', 'Starred', 'system', 0, 0),
-                ('SENT', 'acc1', 'Sent', 'system', 0, 0)
+                ('SENT', 'acc1', 'Sent', 'system', 0, 0),
+                ('TRASH', 'acc1', 'Trash', 'system', 0, 0),
+                ('SPAM', 'acc1', 'Spam', 'system', 0, 0),
+                ('INBOX', 'acc2', 'Inbox', 'system', 0, 0),
+                ('SENT', 'acc2', 'Sent', 'system', 0, 0),
+                ('TRASH', 'acc2', 'Trash', 'system', 0, 0),
+                ('SPAM', 'acc2', 'Spam', 'system', 0, 0)
                 """)
 
             // Assign labels to threads
@@ -56,6 +66,8 @@ struct InboxStoreFilterTests {
             // t3: STARRED (not in INBOX = archived but starred)
             // t4: INBOX
             // t5: INBOX, SENT
+            // t6: TRASH
+            // t7: SPAM
             try dbConn.execute(sql: """
                 INSERT INTO thread_label (account_id, thread_id, label_id) VALUES
                 ('acc1', 't1', 'INBOX'),
@@ -64,7 +76,9 @@ struct InboxStoreFilterTests {
                 ('acc2', 't4', 'INBOX'),
                 ('acc2', 't5', 'INBOX'),
                 ('acc2', 't5', 'SENT'),
-                ('acc1', 't3', 'STARRED')
+                ('acc1', 't3', 'STARRED'),
+                ('acc1', 't6', 'TRASH'),
+                ('acc2', 't7', 'SPAM')
                 """)
 
             // Create an attachment for t2
@@ -94,6 +108,8 @@ struct InboxStoreFilterTests {
         #expect(ids.contains("t4"))
         #expect(ids.contains("t5"))
         #expect(!ids.contains("t3")) // t3 is only STARRED, not INBOX
+        #expect(!ids.contains("t6")) // t6 is Trash
+        #expect(!ids.contains("t7")) // t7 is Spam
     }
 
     @MainActor
@@ -128,6 +144,34 @@ struct InboxStoreFilterTests {
     }
 
     @MainActor
+    @Test func trashFolderShowsOnlyTrashThreads() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+        store.setSelection(.folder(.trash))
+        store.startObserving()
+
+        try await Task.sleep(for: .milliseconds(200))
+
+        let ids = Set(store.threads.map(\.id))
+        #expect(ids == Set(["t6"]))
+    }
+
+    @MainActor
+    @Test func spamFolderShowsOnlySpamThreads() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+        store.setSelection(.folder(.spam))
+        store.startObserving()
+
+        try await Task.sleep(for: .milliseconds(200))
+
+        let ids = Set(store.threads.map(\.id))
+        #expect(ids == Set(["t7"]))
+    }
+
+    @MainActor
     @Test func archiveFolderExcludesSystemLabels() async throws {
         let db = try makeDB()
         try seedData(db: db)
@@ -143,6 +187,8 @@ struct InboxStoreFilterTests {
         #expect(ids.contains("t3"))
         #expect(!ids.contains("t1"))
         #expect(!ids.contains("t2"))
+        #expect(!ids.contains("t6"))
+        #expect(!ids.contains("t7"))
     }
 
     @MainActor
@@ -204,6 +250,8 @@ struct InboxStoreFilterTests {
         #expect(store.folderCounts[.inbox] == 4) // t1, t2, t4, t5
         #expect(store.folderCounts[.starred] == 2) // t1, t3
         #expect(store.folderCounts[.sent] == 1) // t5
+        #expect(store.folderCounts[.trash] == 1) // t6
+        #expect(store.folderCounts[.spam] == 1) // t7
         #expect(store.folderCounts[.attachments] == 1) // t2
     }
 
@@ -223,6 +271,8 @@ struct InboxStoreFilterTests {
         #expect(store.folderCounts[.inbox] == 2) // t1, t2
         #expect(store.folderCounts[.starred] == 2) // t1, t3
         #expect(store.folderCounts[.sent] == 0)
+        #expect(store.folderCounts[.trash] == 1) // t6
+        #expect(store.folderCounts[.spam] == 0)
         #expect(store.folderCounts[.attachments] == 1) // t2
     }
 
@@ -240,6 +290,8 @@ struct InboxStoreFilterTests {
         #expect(store.folderCounts[.inbox] == 2) // t4, t5
         #expect(store.folderCounts[.starred] == 0)
         #expect(store.folderCounts[.sent] == 1) // t5
+        #expect(store.folderCounts[.trash] == 0)
+        #expect(store.folderCounts[.spam] == 1) // t7
         #expect(store.folderCounts[.attachments] == 0)
     }
 
@@ -257,6 +309,8 @@ struct InboxStoreFilterTests {
         #expect(store.folderCounts[.inbox] == 4) // t1, t2, t4, t5
         #expect(store.folderCounts[.starred] == 2) // t1, t3
         #expect(store.folderCounts[.sent] == 1) // t5
+        #expect(store.folderCounts[.trash] == 1) // t6
+        #expect(store.folderCounts[.spam] == 1) // t7
         #expect(store.folderCounts[.attachments] == 1) // t2
     }
 

@@ -53,6 +53,8 @@ public struct InboxView: View {
             case .logged: return String(localized: "inbox.header.logged", defaultValue: "Logged")
             case .starred: return String(localized: "inbox.header.starred", defaultValue: "Starred")
             case .sent: return String(localized: "inbox.header.sent", defaultValue: "Sent")
+            case .trash: return String(localized: "inbox.header.trash", defaultValue: "Trash")
+            case .spam: return String(localized: "inbox.header.spam", defaultValue: "Spam")
             case .archive: return String(localized: "inbox.header.archive", defaultValue: "Archive")
             }
         case .account:

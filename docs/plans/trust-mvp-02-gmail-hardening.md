@@ -57,17 +57,17 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 
 ### Task 2: Harden Gmail label and folder behavior
 
-- [ ] Ensure `InboxStore` and sidebar filtering use canonical mailbox concepts
+- [x] Ensure `InboxStore` and sidebar filtering use canonical mailbox concepts
       while preserving Gmail label semantics.
-- [ ] Add or extend tests for Inbox, Sent, Archive, Starred, Trash, Spam, Needs
+- [x] Add or extend tests for Inbox, Sent, Archive, Starred, Trash, Spam, Needs
       reply, Has deadline, and Has attachment filters where current code
       supports them.
-- [ ] Verify archived Gmail threads do not appear in Inbox after a fresh sync or
+- [x] Verify archived Gmail threads do not appear in Inbox after a fresh sync or
       after label reconciliation.
-- [ ] Verify label-only refresh does not delete unchanged attachments or AI
+- [x] Verify label-only refresh does not delete unchanged attachments or AI
       artifacts.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/InboxFeature && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/InboxFeature && swift test`.
 
 ### Task 3: Harden optimistic mutations and rollback
 

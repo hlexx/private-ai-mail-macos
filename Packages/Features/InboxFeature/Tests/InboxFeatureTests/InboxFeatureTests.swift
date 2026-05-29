@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 @testable import InboxFeature
 import DesignSystem
+import MailDomain
 
 @Suite("InboxFeature")
 struct InboxFeatureTests {
@@ -48,6 +49,23 @@ struct InboxFeatureTests {
         for f in ThreadFilter.allCases {
             #expect(!f.label.isEmpty, "Filter \(f) should have a non-empty label")
         }
+    }
+
+    @Test func folderIDsExposeCanonicalMailboxAndGmailLabelMapping() {
+        #expect(FolderID.inbox.canonicalMailbox == .inbox)
+        #expect(FolderID.sent.canonicalMailbox == .sent)
+        #expect(FolderID.starred.canonicalMailbox == .starred)
+        #expect(FolderID.trash.canonicalMailbox == .trash)
+        #expect(FolderID.spam.canonicalMailbox == .spam)
+        #expect(FolderID.archive.canonicalMailbox == .archive)
+
+        #expect(FolderID.inbox.gmailLabel == "INBOX")
+        #expect(FolderID.sent.gmailLabel == "SENT")
+        #expect(FolderID.starred.gmailLabel == "STARRED")
+        #expect(FolderID.trash.gmailLabel == "TRASH")
+        #expect(FolderID.spam.gmailLabel == "SPAM")
+        #expect(FolderID.archive.gmailLabel == nil)
+        #expect(FolderID.needsReply.gmailLabel == nil)
     }
 }
 

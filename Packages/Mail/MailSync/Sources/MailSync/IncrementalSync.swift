@@ -93,24 +93,42 @@ enum IncrementalSync {
             try makeThreadRecord(from: mapped, accountId: accountId)
                 .save(dbConn, onConflict: .replace)
 
-            // Delete existing messages and re-insert; attachment FK cascade handles cleanup
-            try MessageRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
-                .deleteAll(dbConn)
-
             var threadLabelIds = Set<String>()
+            var currentMessageIds = Set<String>()
+            var currentAttachmentIdsByMessage: [String: Set<String>] = [:]
 
             for dtoMsg in dto.messages ?? [] {
                 let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
-                try makeMessageRecord(from: msg, accountId: accountId)
-                    .save(dbConn, onConflict: .replace)
+                currentMessageIds.insert(msg.id)
+                try upsertMessageRecord(makeMessageRecord(from: msg, accountId: accountId), db: dbConn)
 
                 for att in msg.attachments {
-                    try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
-                        .save(dbConn, onConflict: .replace)
+                    currentAttachmentIdsByMessage[msg.id, default: []].insert(att.id)
+                    try upsertAttachmentRecord(
+                        makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId),
+                        db: dbConn
+                    )
                 }
 
                 threadLabelIds.formUnion(labelIds)
+            }
+
+            let existingMessages = try MessageRecord
+                .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
+                .fetchAll(dbConn)
+
+            for message in existingMessages where !currentMessageIds.contains(message.id) {
+                try message.delete(dbConn)
+            }
+
+            for messageId in currentMessageIds {
+                let currentAttachmentIds = currentAttachmentIdsByMessage[messageId] ?? []
+                let existingAttachments = try AttachmentRecord
+                    .filter(Column("account_id") == accountId && Column("message_id") == messageId)
+                    .fetchAll(dbConn)
+                for attachment in existingAttachments where !currentAttachmentIds.contains(attachment.id) {
+                    try attachment.delete(dbConn)
+                }
             }
 
             // Replace thread_label rows for this thread+account
@@ -121,6 +139,25 @@ enum IncrementalSync {
                 try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
                     .save(dbConn, onConflict: .replace)
             }
+        }
+    }
+
+    private static func upsertMessageRecord(_ record: MessageRecord, db: Database) throws {
+        if try MessageRecord.fetchOne(db, key: ["account_id": record.accountId, "id": record.id]) != nil {
+            try record.update(db)
+        } else {
+            try record.insert(db)
+        }
+    }
+
+    private static func upsertAttachmentRecord(_ record: AttachmentRecord, db: Database) throws {
+        if try AttachmentRecord.fetchOne(
+            db,
+            key: ["account_id": record.accountId, "message_id": record.messageId, "id": record.id]
+        ) != nil {
+            try record.update(db)
+        } else {
+            try record.insert(db)
         }
     }
 

@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../Mail/MailSync"),
+        .package(path: "../../Mail/MailDomain"),
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Core/DesignSystem"),
         .package(path: "../../Core/Persistence"),
@@ -18,6 +19,7 @@ let package = Package(
             name: "InboxFeature",
             dependencies: [
                 "MailSync",
+                "MailDomain",
                 "AIKit",
                 "DesignSystem",
                 "Persistence",

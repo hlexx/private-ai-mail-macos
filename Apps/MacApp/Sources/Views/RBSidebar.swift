@@ -19,6 +19,8 @@ struct FolderItem: Identifiable, Hashable {
         FolderItem(id: .logged, name: String(localized: "sidebar.folder.logged", defaultValue: "Logged"), icon: "checkmark.circle"),
         FolderItem(id: .starred, name: String(localized: "sidebar.folder.starred", defaultValue: "Starred"), icon: "star"),
         FolderItem(id: .sent, name: String(localized: "sidebar.folder.sent", defaultValue: "Sent"), icon: "paperplane"),
+        FolderItem(id: .trash, name: String(localized: "sidebar.folder.trash", defaultValue: "Trash"), icon: "trash"),
+        FolderItem(id: .spam, name: String(localized: "sidebar.folder.spam", defaultValue: "Spam"), icon: "exclamationmark.octagon"),
         FolderItem(id: .archive, name: String(localized: "sidebar.folder.archive", defaultValue: "Archive"), icon: "archivebox"),
     ]
 }

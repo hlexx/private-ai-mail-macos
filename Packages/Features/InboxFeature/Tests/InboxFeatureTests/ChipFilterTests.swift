@@ -13,6 +13,17 @@ struct ChipFilterTests {
         try AppDatabase.openInMemorySync()
     }
 
+    private func queriedIDs(
+        db: AppDatabase,
+        selection: SidebarSelection,
+        filter: ThreadFilter = .all
+    ) throws -> Set<String> {
+        try db.dbQueue.read { dbConn in
+            let rows = try InboxStore.queryThreads(db: dbConn, selection: selection, filter: filter)
+            return Set(rows.map { $0.0.id })
+        }
+    }
+
     /// Seeds 3 threads in account acc1, all in INBOX.
     /// - threadA: has a brief with request = "approve invoice"
     /// - threadB: has a brief with deadline = "Friday"
@@ -67,14 +78,8 @@ struct ChipFilterTests {
     @Test func needsReplyChipReturnsThreadsWithRequest() async throws {
         let db = try makeDB()
         try seedWithBriefs(db: db)
-        let store = InboxStore(db: db)
-        store.setSelection(.folder(.inbox))
-        store.filter = .needsReply
-        store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
+        let ids = try queriedIDs(db: db, selection: .folder(.inbox), filter: .needsReply)
         #expect(ids == Set(["tA"]))
     }
 
@@ -82,14 +87,8 @@ struct ChipFilterTests {
     @Test func hasDeadlineChipReturnsThreadsWithDeadline() async throws {
         let db = try makeDB()
         try seedWithBriefs(db: db)
-        let store = InboxStore(db: db)
-        store.setSelection(.folder(.inbox))
-        store.filter = .hasDeadline
-        store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
+        let ids = try queriedIDs(db: db, selection: .folder(.inbox), filter: .hasDeadline)
         #expect(ids == Set(["tB"]))
     }
 
@@ -97,14 +96,8 @@ struct ChipFilterTests {
     @Test func aiHandledChipReturnsAllThreadsWithBriefs() async throws {
         let db = try makeDB()
         try seedWithBriefs(db: db)
-        let store = InboxStore(db: db)
-        store.setSelection(.folder(.inbox))
-        store.filter = .aiHandled
-        store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
+        let ids = try queriedIDs(db: db, selection: .folder(.inbox), filter: .aiHandled)
         // tA and tB have briefs, tC does not
         #expect(ids == Set(["tA", "tB"]))
     }
@@ -115,45 +108,21 @@ struct ChipFilterTests {
         try seedWithBriefs(db: db)
 
         // Check needsReply
-        let store1 = InboxStore(db: db)
-        store1.setSelection(.folder(.inbox))
-        store1.filter = .needsReply
-        store1.startObserving()
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(!store1.threads.map(\.id).contains("tC"))
-        store1.stopObserving()
+        #expect(!((try queriedIDs(db: db, selection: .folder(.inbox), filter: .needsReply)).contains("tC")))
 
         // Check hasDeadline
-        let store2 = InboxStore(db: db)
-        store2.setSelection(.folder(.inbox))
-        store2.filter = .hasDeadline
-        store2.startObserving()
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(!store2.threads.map(\.id).contains("tC"))
-        store2.stopObserving()
+        #expect(!((try queriedIDs(db: db, selection: .folder(.inbox), filter: .hasDeadline)).contains("tC")))
 
         // Check aiHandled
-        let store3 = InboxStore(db: db)
-        store3.setSelection(.folder(.inbox))
-        store3.filter = .aiHandled
-        store3.startObserving()
-        try await Task.sleep(for: .milliseconds(300))
-        #expect(!store3.threads.map(\.id).contains("tC"))
-        store3.stopObserving()
+        #expect(!((try queriedIDs(db: db, selection: .folder(.inbox), filter: .aiHandled)).contains("tC")))
     }
 
     @MainActor
     @Test func allChipShowsEverything() async throws {
         let db = try makeDB()
         try seedWithBriefs(db: db)
-        let store = InboxStore(db: db)
-        store.setSelection(.folder(.inbox))
-        store.filter = .all
-        store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
+        let ids = try queriedIDs(db: db, selection: .folder(.inbox))
         #expect(ids == Set(["tA", "tB", "tC"]))
     }
 
@@ -163,13 +132,8 @@ struct ChipFilterTests {
     @Test func needsReplyFolderShowsThreadsWithRequest() async throws {
         let db = try makeDB()
         try seedWithBriefs(db: db)
-        let store = InboxStore(db: db)
-        store.setSelection(.folder(.needsReply))
-        store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
+        let ids = try queriedIDs(db: db, selection: .folder(.needsReply))
         #expect(ids == Set(["tA"]))
     }
 
@@ -177,13 +141,8 @@ struct ChipFilterTests {
     @Test func hasDeadlineFolderShowsThreadsWithDeadline() async throws {
         let db = try makeDB()
         try seedWithBriefs(db: db)
-        let store = InboxStore(db: db)
-        store.setSelection(.folder(.hasDeadline))
-        store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(300))
-
-        let ids = Set(store.threads.map(\.id))
+        let ids = try queriedIDs(db: db, selection: .folder(.hasDeadline))
         #expect(ids == Set(["tB"]))
     }
 

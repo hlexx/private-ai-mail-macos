@@ -69,22 +69,15 @@ extension InboxStore {
     }
 
     private nonisolated static func appendFolderCondition(_ folderID: FolderID, to cond: inout FilterCondition) {
+        if let label = folderID.gmailLabel {
+            cond.sql.append("""
+                t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
+                """)
+            cond.arguments.append(label)
+            return
+        }
+
         switch folderID {
-        case .inbox:
-            cond.sql.append("""
-                t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
-                """)
-            cond.arguments.append("INBOX")
-        case .starred:
-            cond.sql.append("""
-                t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
-                """)
-            cond.arguments.append("STARRED")
-        case .sent:
-            cond.sql.append("""
-                t.id IN (SELECT thread_id FROM thread_label WHERE account_id = t.account_id AND label_id = ?)
-                """)
-            cond.arguments.append("SENT")
         case .archive:
             cond.sql.append("""
                 NOT EXISTS (
@@ -126,6 +119,8 @@ extension InboxStore {
                 """)
         case .logged:
             cond.sql.append("1 = 0")
+        case .inbox, .starred, .sent, .trash, .spam:
+            break
         }
     }
 
