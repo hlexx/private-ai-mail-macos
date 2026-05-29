@@ -85,14 +85,14 @@ enterprise governance out of scope.
 
 ### Task 4: Implement Graph mapping to canonical mail records
 
-- [ ] Add `GraphMapper` that maps Graph folders, messages, body content,
+- [x] Add `GraphMapper` that maps Graph folders, messages, body content,
       recipients, read state, sent state, attachments, flagged state, categories,
       and deleted/moved items into canonical records.
-- [ ] Preserve provider-specific external ids in existing ids or mapping records
+- [x] Preserve provider-specific external ids in existing ids or mapping records
       without colliding with Gmail ids across accounts.
-- [ ] Add tests for HTML body, text body, attachments, unread, sent,
+- [x] Add tests for HTML body, text body, attachments, unread, sent,
       flagged/starred mapping, trash/deleted items, and category preservation.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
 
 ### Task 5: Add Graph sync engine support behind a flag
 
