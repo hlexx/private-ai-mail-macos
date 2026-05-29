@@ -80,20 +80,20 @@ network calls in this tranche.
 
 ### Task 3: Add canonical provider identifiers and mailbox vocabulary
 
-- [ ] Add a provider-neutral type in `MailDomain` or `MailProviders` for
+- [x] Add a provider-neutral type in `MailDomain` or `MailProviders` for
       supported providers: Gmail and Microsoft Graph/Outlook. Preserve string
       compatibility with existing account records.
-- [ ] Add canonical mailbox concepts for inbox, sent, drafts, trash, spam,
+- [x] Add canonical mailbox concepts for inbox, sent, drafts, trash, spam,
       archive/all-mail where representable, starred/flagged, and user-defined
       labels/categories.
-- [ ] Document Gmail mapping: labels are many-to-many, archive means no `INBOX`
+- [x] Document Gmail mapping: labels are many-to-many, archive means no `INBOX`
       label, starred maps to `STARRED`, sent maps to `SENT`.
-- [ ] Document Graph mapping: folders are hierarchical, categories are
+- [x] Document Graph mapping: folders are hierarchical, categories are
       user-defined metadata, flagged is not the same as Gmail `STARRED`, and
       archive is a folder/move behavior, not a missing label.
-- [ ] Add unit tests for provider identifier and canonical mailbox mapping
+- [x] Add unit tests for provider identifier and canonical mailbox mapping
       round trips.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailDomain && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailDomain && swift test`.
 
 ### Task 4: Define shared provider error and capability contracts
 
