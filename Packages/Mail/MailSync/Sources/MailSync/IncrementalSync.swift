@@ -118,6 +118,7 @@ enum IncrementalSync {
                 .fetchAll(dbConn)
 
             for message in existingMessages where !currentMessageIds.contains(message.id) {
+                try SearchIndexMaintenance.deleteMessage(accountId: accountId, messageId: message.id, db: dbConn)
                 try message.delete(dbConn)
             }
 
@@ -135,10 +136,15 @@ enum IncrementalSync {
             try ThreadLabelRecord
                 .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
                 .deleteAll(dbConn)
-            for labelId in threadLabelIds {
+            for labelId in threadLabelIds.sorted() {
                 try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
                     .save(dbConn, onConflict: .replace)
             }
+            try SearchIndexMaintenance.upsertMessages(
+                accountId: accountId,
+                messageIds: currentMessageIds,
+                db: dbConn
+            )
         }
     }
 
@@ -168,6 +174,13 @@ enum IncrementalSync {
         db: AppDatabase
     ) throws {
         try db.write { dbConn in
+            let existingMessages = try MessageRecord
+                .filter(Column("account_id") == accountId && Column("thread_id") == threadId)
+                .fetchAll(dbConn)
+            for message in existingMessages {
+                try SearchIndexMaintenance.deleteMessage(accountId: accountId, messageId: message.id, db: dbConn)
+            }
+
             // Delete thread_label rows (no FK cascade from thread), messages (FK cascade
             // removes their attachments), then the thread record itself.
             try ThreadLabelRecord

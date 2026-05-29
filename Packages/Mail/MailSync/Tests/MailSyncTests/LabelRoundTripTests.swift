@@ -234,6 +234,18 @@ struct LabelRoundTripTests {
                 .sorted()
         }
         #expect(labelIds == ["INBOX", "Label_x"])
+
+        let indexedMailboxes = try db.read { dbConn in
+            try String.fetchOne(
+                dbConn,
+                sql: """
+                SELECT canonical_mailboxes FROM mail_search_document
+                WHERE account_id = ? AND message_id = ?
+                """,
+                arguments: ["acc1", "m1"]
+            )
+        }
+        #expect(indexedMailboxes == "INBOX Label_x")
     }
 
     @Test func labelTypeMappingIsCorrect() async throws {

@@ -83,6 +83,10 @@ struct MailSyncEngineTests {
 
         #expect(threadCount == 2)
         #expect(messageCount == 3)
+        let searchDocumentCount = try db.read { dbConn in
+            try MailSearchDocumentRecord.filter(Column("account_id") == "acc1").fetchCount(dbConn)
+        }
+        #expect(searchDocumentCount == 3)
         let state = await engine.state
         #expect(state == .live)
     }
@@ -162,6 +166,7 @@ struct MailSyncEngineTests {
                 try thread.insert(dbConn)
                 try MessageRecord(id: "m1", threadId: "t1", accountId: "acc1", sentAt: 1000).insert(dbConn)
                 try MessageRecord(id: "m2", threadId: "t1", accountId: "acc1", sentAt: 2000).insert(dbConn)
+                try LocalSearchIndexPersistence.rebuildAll(in: dbConn, now: 1)
                 var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
                 syncState.historyId = "50"
                 try syncState.update(dbConn)
@@ -202,6 +207,19 @@ struct MailSyncEngineTests {
             try ThreadRecord.fetchOne(dbConn, key: ["account_id": "acc1", "id": "t1"])
         }
         #expect(thread?.messageCount == 1)
+
+        let searchMessageIds = try db.read { dbConn in
+            try String.fetchAll(
+                dbConn,
+                sql: """
+                SELECT message_id FROM mail_search_document
+                WHERE account_id = ?
+                ORDER BY message_id
+                """,
+                arguments: ["acc1"]
+            )
+        }
+        #expect(searchMessageIds == ["m1"])
     }
 
     @Test func rateLimitedTriggersAPausedState() async throws {
@@ -269,11 +287,15 @@ struct MailSyncEngineTests {
         let msgCountAfterSecond = try db.read { dbConn in
             try MessageRecord.filter(Column("account_id") == "acc1").fetchCount(dbConn)
         }
+        let searchCountAfterSecond = try db.read { dbConn in
+            try MailSearchDocumentRecord.filter(Column("account_id") == "acc1").fetchCount(dbConn)
+        }
 
         #expect(countAfterFirst == countAfterSecond)
         #expect(msgCountAfterFirst == msgCountAfterSecond)
         #expect(countAfterSecond == 1)
         #expect(msgCountAfterSecond == 2)
+        #expect(searchCountAfterSecond == 2)
     }
     @Test func syncReplacesLocalSentMessageWithCanonical() async throws {
         let db = try await makeDB()
@@ -297,6 +319,7 @@ struct MailSyncEngineTests {
                     flags: MessageRecord.sentByMe | MessageRecord.read
                 )
                 try msg.insert(dbConn)
+                try LocalSearchIndexPersistence.upsertMessage(accountId: "acc1", messageId: "m1", in: dbConn, now: 1)
                 var syncState = try SyncStateRecord.fetchOne(dbConn, key: ["account_id": "acc1"])!
                 syncState.historyId = "50"
                 try syncState.update(dbConn)
@@ -374,6 +397,17 @@ struct MailSyncEngineTests {
         }
         #expect(syncedThread != nil)
         #expect(syncedThread?.messageCount == 1)
+
+        let indexed = try db.read { dbConn in
+            try MailSearchDocumentRecord.fetchOne(
+                dbConn,
+                sql: "SELECT * FROM mail_search_document WHERE account_id = ? AND message_id = ?",
+                arguments: ["acc1", "m1"]
+            )
+        }
+        #expect(indexed?.snippet == "canonical snippet from Gmail")
+        #expect(indexed?.isSent == 1)
+        #expect(indexed?.canonicalMailboxes == "SENT")
     }
 }
 

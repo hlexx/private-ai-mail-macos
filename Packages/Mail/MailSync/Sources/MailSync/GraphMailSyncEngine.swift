@@ -335,6 +335,7 @@ enum GraphFolderSync {
             }
 
             try refreshThreadAggregate(threadId: message.threadId, accountId: accountId, subject: source.subject, db: dbConn)
+            try SearchIndexMaintenance.upsertMessage(accountId: accountId, messageId: message.id, db: dbConn)
         }
     }
 
@@ -346,6 +347,9 @@ enum GraphFolderSync {
     ) throws -> String? {
         try db.write { dbConn in
             let existing = try MessageRecord.fetchOne(dbConn, key: ["account_id": accountId, "id": removed.id])
+            if existing != nil {
+                try SearchIndexMaintenance.deleteMessage(accountId: accountId, messageId: removed.id, db: dbConn)
+            }
             try MessageRecord.deleteOne(dbConn, key: ["account_id": accountId, "id": removed.id])
             guard let threadId = existing?.threadId else { return nil }
 

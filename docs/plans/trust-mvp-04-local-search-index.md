@@ -71,13 +71,13 @@ Trust MVP tranche.
 
 ### Task 3: Maintain the index during sync
 
-- [ ] Wire index updates after Gmail and Graph message persistence without
+- [x] Wire index updates after Gmail and Graph message persistence without
       making providers depend on UI.
-- [ ] Ensure bootstrap, incremental upsert, label/folder changes, sent-message
+- [x] Ensure bootstrap, incremental upsert, label/folder changes, sent-message
       insertion, and deletion update the index.
-- [ ] Add tests that indexing survives repeated sync and does not duplicate
+- [x] Add tests that indexing survives repeated sync and does not duplicate
       rows.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailSync && swift test`.
 
 ### Task 4: Implement local search execution
 

@@ -73,6 +73,11 @@ struct GraphMailSyncEngineTests {
                 try GraphDeltaCheckpointRecord.fetchOne(
                     dbConn,
                     key: ["account_id": "outlook-1", "folder_id": "inbox"]
+                ),
+                try MailSearchDocumentRecord.fetchOne(
+                    dbConn,
+                    sql: "SELECT * FROM mail_search_document WHERE account_id = ? AND message_id = ?",
+                    arguments: ["outlook-1", messageID]
                 )
             )
         }
@@ -83,6 +88,9 @@ struct GraphMailSyncEngineTests {
         #expect(snapshot.1?.hasUnread == 1)
         #expect(snapshot.2 == ["Client", "INBOX", "STARRED"])
         #expect(snapshot.3?.deltaURL.contains("opaque-final") == true)
+        #expect(snapshot.4?.provider == "outlook")
+        #expect(snapshot.4?.canonicalMailboxes == "Client INBOX STARRED")
+        #expect(snapshot.4?.hasAttachment == 1)
         #expect(await engine.state == .live)
     }
 
@@ -191,6 +199,7 @@ struct GraphMailSyncEngineTests {
                 try ThreadRecord(id: threadID, accountId: "outlook-1", lastMessageAt: 100, messageCount: 1).insert(dbConn)
                 try MessageRecord(id: messageID, threadId: threadID, accountId: "outlook-1", sentAt: 100).insert(dbConn)
                 try ThreadLabelRecord(accountId: "outlook-1", threadId: threadID, labelId: "INBOX").insert(dbConn)
+                try LocalSearchIndexPersistence.upsertMessage(accountId: "outlook-1", messageId: messageID, in: dbConn, now: 1)
                 try GraphDeltaCheckpointRecord(accountId: "outlook-1", folderId: "inbox", deltaURL: checkpoint, updatedAt: 1)
                     .insert(dbConn)
             }
@@ -224,12 +233,16 @@ struct GraphMailSyncEngineTests {
                 try ThreadRecord.fetchOne(dbConn, key: ["account_id": "outlook-1", "id": threadID]),
                 try ThreadLabelRecord
                     .filter(Column("account_id") == "outlook-1" && Column("thread_id") == threadID)
+                    .fetchCount(dbConn),
+                try MailSearchDocumentRecord
+                    .filter(Column("account_id") == "outlook-1" && Column("message_id") == messageID)
                     .fetchCount(dbConn)
             )
         }
         #expect(remaining.0 == nil)
         #expect(remaining.1 == nil)
         #expect(remaining.2 == 0)
+        #expect(remaining.3 == 0)
     }
 
     @Test func rateLimitPausesGraphEngine() async throws {
