@@ -28,6 +28,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "AIKit", "AttachmentRAG", "Persistence"]),
+        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "AIKit", "AttachmentKit", "AttachmentRAG", "Persistence"]),
     ]
 )

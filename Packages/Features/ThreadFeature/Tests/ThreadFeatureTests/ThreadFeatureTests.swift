@@ -2,6 +2,7 @@ import Testing
 import SwiftUI
 import AppKit
 import AIKit
+import AttachmentKit
 import AttachmentRAG
 @testable import ThreadFeature
 import DesignSystem
@@ -122,7 +123,7 @@ struct ThreadFeatureTests {
 
     @MainActor @Test func attachmentSummaryStoreShowsSummary() async throws {
         let db = try makeAttachmentSummaryDatabase()
-        let provider = TestAttachmentByteProvider(data: Data("Amount due: EUR 1840".utf8))
+        let provider = TestAttachmentByteProvider(result: .success(Data("Amount due: EUR 1840".utf8)))
         let ai = TestAttachmentAIService()
         let storeRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -163,7 +164,7 @@ struct ThreadFeatureTests {
 
     @MainActor @Test func attachmentSummaryStoreShowsUnsupportedState() async throws {
         let db = try makeAttachmentSummaryDatabase(mime: "application/zip", filename: "archive.zip")
-        let provider = TestAttachmentByteProvider(data: Data([0x00, 0x01]))
+        let provider = TestAttachmentByteProvider(result: .success(Data([0x00, 0x01])))
         let ai = TestAttachmentAIService()
         let storeRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -197,21 +198,144 @@ struct ThreadFeatureTests {
         #expect(reason.contains("Unsupported"))
         #expect(await ai.callCount == 0)
     }
+
+    @MainActor @Test func attachmentSummaryStoreShowsDownloadFailure() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        let provider = TestAttachmentByteProvider(result: .failure(.unavailable))
+        let ai = TestAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+        let store = AttachmentSummaryStore(orchestrator: orchestrator)
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 10,
+            mime: "text/plain"
+        )
+
+        store.summarize(attachment)
+        let finalState = try await waitForAttachmentState(store: store, attachment: attachment) { state in
+            if case .failed = state { return true }
+            return false
+        }
+
+        guard case .failed(let message) = finalState else {
+            Issue.record("Expected failed state")
+            return
+        }
+        #expect(message == "Could not summarize this attachment.")
+        #expect(await ai.callCount == 0)
+    }
+
+    @MainActor @Test func attachmentSummaryStoreRejectsMissingAttachmentId() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        let provider = TestAttachmentByteProvider(result: .success(Data("should not be fetched".utf8)))
+        let ai = TestAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+        let store = AttachmentSummaryStore(orchestrator: orchestrator)
+        let attachment = AttachmentInfo(
+            id: "",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 10,
+            mime: "text/plain"
+        )
+
+        store.summarize(attachment)
+        let finalState = try await waitForAttachmentState(store: store, attachment: attachment) { state in
+            if case .failed = state { return true }
+            return false
+        }
+
+        guard case .failed(let message) = finalState else {
+            Issue.record("Expected failed state")
+            return
+        }
+        #expect(message == "Attachment is missing a download identifier.")
+        #expect(await ai.callCount == 0)
+    }
+
+    @MainActor @Test func attachmentDownloadStoresLocalBlobAtSafePath() async throws {
+        let accountId = "a/1"
+        let messageId = "m:1"
+        let attachmentId = "att?1"
+        let bytes = Data("Amount due: EUR 1840".utf8)
+        let db = try makeAttachmentSummaryDatabase(
+            accountId: accountId,
+            messageId: messageId,
+            attachmentId: attachmentId
+        )
+        let provider = TestAttachmentByteProvider(result: .success(bytes))
+        let ai = TestAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let byteStore = AttachmentByteStore(baseURL: storeRoot)
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: byteStore,
+            aiService: ai,
+            byteProvider: provider
+        )
+
+        let result = try await orchestrator.summarize(
+            AttachmentSummaryRequest(
+                accountId: accountId,
+                messageId: messageId,
+                attachmentId: attachmentId,
+                filename: "invoice.txt",
+                mime: "text/plain"
+            )
+        )
+
+        guard case .summary = result else {
+            Issue.record("Expected summary result")
+            return
+        }
+        let blob = try await db.dbQueue.read { database in
+            try AttachmentBlobRecord.fetchOne(database)
+        }
+        #expect(blob?.relativePath == "a_1/m_1/att_1")
+        #expect(blob?.byteCount == bytes.count)
+        #expect(blob?.sha256 == AttachmentByteStore.sha256Hex(bytes))
+        #expect(try byteStore.load(relativePath: blob?.relativePath ?? "") == bytes)
+    }
 }
 
 private func makeAttachmentSummaryDatabase(
+    accountId: String = "a1",
+    messageId: String = "m1",
+    attachmentId: String = "att1",
     mime: String = "text/plain",
     filename: String = "invoice.txt"
 ) throws -> AppDatabase {
     let db = try AppDatabase.openInMemorySync()
     try db.dbQueue.write { database in
-        try AccountRecord(id: "a1", email: "a@example.com", createdAt: 1).insert(database)
-        try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 1).insert(database)
-        try MessageRecord(id: "m1", threadId: "t1", accountId: "a1", sentAt: 1).insert(database)
+        try AccountRecord(id: accountId, email: "a@example.com", createdAt: 1).insert(database)
+        try ThreadRecord(id: "t1", accountId: accountId, lastMessageAt: 1).insert(database)
+        try MessageRecord(id: messageId, threadId: "t1", accountId: accountId, sentAt: 1).insert(database)
         try AttachmentRecord(
-            id: "att1",
-            messageId: "m1",
-            accountId: "a1",
+            id: attachmentId,
+            messageId: messageId,
+            accountId: accountId,
             filename: filename,
             mime: mime,
             sizeBytes: 10
@@ -234,11 +358,15 @@ private func waitForAttachmentState(
     return store.state(for: attachment)
 }
 
+private enum TestAttachmentByteError: Error, Sendable {
+    case unavailable
+}
+
 private struct TestAttachmentByteProvider: AttachmentByteProvider {
-    let data: Data
+    let result: Result<Data, TestAttachmentByteError>
 
     func fetchAttachmentData(accountId _: String, messageId _: String, attachmentId _: String) async throws -> Data {
-        data
+        try result.get()
     }
 }
 
@@ -755,11 +883,51 @@ struct ThreadStoreStarTests {
         store.stopObserving()
         #expect(store.isStarred == false)
     }
+
+    @Test func observesAttachmentMetadataAndSeparatesInlineCidImages() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, starred: false)
+        try await db.dbQueue.write { dbConn in
+            try AttachmentRecord(
+                id: "att-report",
+                messageId: "m1",
+                accountId: "acc1",
+                filename: "report.pdf",
+                mime: "application/pdf",
+                sizeBytes: 284_000
+            ).insert(dbConn)
+            try AttachmentRecord(
+                id: "inline-logo",
+                messageId: "m1",
+                accountId: "acc1",
+                filename: "logo.png",
+                mime: "image/png",
+                sizeBytes: 4,
+                contentId: "logo@example",
+                dataBase64: "iVBORw0KGgo="
+            ).insert(dbConn)
+        }
+
+        let store = ThreadStore(db: db)
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty && !store.attachments.isEmpty }
+
+        #expect(store.attachments.count == 1)
+        #expect(store.attachments[0].id == "att-report")
+        #expect(store.attachments[0].filename == "report.pdf")
+        #expect(store.attachments[0].mime == "application/pdf")
+        #expect(store.attachments[0].formattedSize == "277 KB")
+        #expect(store.messages[0].inlineAttachments.count == 1)
+        #expect(store.messages[0].inlineAttachments[0].contentId == "logo@example")
+
+        store.stopObserving()
+    }
 }
 
 // MARK: - CID Image Resolution Tests
 
 @Suite("CID Image Resolution")
+@MainActor
 struct CIDImageResolutionTests {
 
     @Test func resolvedHTMLReplacesCidWithDataURL() {
@@ -823,11 +991,46 @@ struct CIDImageResolutionTests {
         #expect(attData.mime == "image/gif")
         #expect(!attData.data.isEmpty)
     }
+
+    @Test func remoteContentStateBlocksTrackersByDefault() {
+        let html = """
+        <p>Newsletter</p>
+        <img src="https://tracker.example/open.gif" width="1" height="1">
+        <img src="//cdn.example/banner.png">
+        """
+
+        #expect(HTMLWebView.remoteContentState(for: html, allowRemoteImages: false) == .blocked)
+        #expect(HTMLWebView.remoteContentState(for: html, allowRemoteImages: true) == .allowed)
+        #expect(HTMLWebView.remoteContentState(for: "<img src=\"cid:logo@example\">", allowRemoteImages: false) == .none)
+    }
+
+    @Test func defaultHTMLWrapperBlocksRemoteImagesAndKeepsCidData() {
+        let wrapped = HTMLWebView.wrappedHTML(
+            """
+            <html><head><base href="https://tracker.example/"><meta http-equiv="Content-Security-Policy" content="img-src *"></head>
+            <body><img src="cid:logo@example"><img src="https://tracker.example/open.gif"></body></html>
+            """,
+            allowRemoteImages: false
+        )
+
+        #expect(wrapped.contains("default-src 'none'; img-src cid: data:;"))
+        #expect(!wrapped.contains("img-src *"))
+        #expect(!wrapped.contains("<base"))
+        #expect(!wrapped.contains("http-equiv=\"Content-Security-Policy\" content=\"img-src *\""))
+        #expect(wrapped.contains("cid:logo@example"))
+    }
+
+    @Test func htmlWrapperCanExplicitlyAllowRemoteImages() {
+        let csp = HTMLWebView.contentSecurityPolicy(allowRemoteImages: true)
+
+        #expect(csp.contains("img-src * cid: data: blob:;"))
+    }
 }
 
 // MARK: - Translation JS Script Tests
 
 @Suite("HTMLWebView Translation Scripts")
+@MainActor
 struct HTMLWebViewTranslationScriptTests {
 
     @Test func extractionJSContainsTreeWalker() {

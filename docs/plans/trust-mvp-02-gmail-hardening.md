@@ -95,13 +95,13 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 
 ### Task 5: Harden Gmail attachment and HTML basics
 
-- [ ] Verify attachment metadata, inline CID attachments, remote-image blocking,
+- [x] Verify attachment metadata, inline CID attachments, remote-image blocking,
       attachment byte download, unsupported states, and local byte cache paths.
-- [ ] Add tests for attachment download failure, unsupported attachment
+- [x] Add tests for attachment download failure, unsupported attachment
       extraction, missing attachment id, and no raw attachment content in logs.
-- [ ] Ensure HTML rendering remains tracker-safe by default and has a clear
+- [x] Ensure HTML rendering remains tracker-safe by default and has a clear
       blocked-remote-content state.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ThreadFeature && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 6: Validate Gmail privacy and release readiness
 

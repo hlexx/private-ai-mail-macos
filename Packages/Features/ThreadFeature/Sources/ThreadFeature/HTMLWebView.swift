@@ -31,6 +31,12 @@ struct HTMLWebView: NSViewRepresentable {
         let data: Data
     }
 
+    enum RemoteContentState: Equatable {
+        case none
+        case blocked
+        case allowed
+    }
+
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         let prefs = WKWebpagePreferences()
@@ -58,7 +64,7 @@ struct HTMLWebView: NSViewRepresentable {
             coordinator.pendingTranslations = translatedNodes
             coordinator.lastTranslatedNodes = translatedNodes
             coordinator.hasExtracted = false
-            webView.loadHTMLString(wrapHTML(processed), baseURL: nil)
+            webView.loadHTMLString(Self.wrappedHTML(processed, allowRemoteImages: allowRemoteImages), baseURL: nil)
         } else if translationsChanged {
             coordinator.lastTranslatedNodes = translatedNodes
             if let nodes = translatedNodes, !nodes.isEmpty {
@@ -89,9 +95,24 @@ struct HTMLWebView: NSViewRepresentable {
         return result
     }
 
-    /// Strip injected `<meta http-equiv=...>`, `<base>`, and `</head>` / `<head>` tags
+    static func remoteContentState(for html: String, allowRemoteImages: Bool) -> RemoteContentState {
+        guard containsRemoteImages(html) else { return .none }
+        return allowRemoteImages ? .allowed : .blocked
+    }
+
+    static func containsRemoteImages(_ html: String) -> Bool {
+        let pattern = #"<img[^>]+src\s*=\s*["'](https?://|//)"#
+        return html.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+    }
+
+    static func contentSecurityPolicy(allowRemoteImages: Bool) -> String {
+        let imgSrc = allowRemoteImages ? "img-src * cid: data: blob:;" : "img-src cid: data:;"
+        return "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:; frame-src 'none'; form-action 'none';"
+    }
+
+    /// Strip injected `<meta http-equiv=...>`, `<base>`, and structural tags
     /// from email body to prevent CSP override and URL redirection via HTML injection.
-    private func sanitizeBody(_ body: String) -> String {
+    static func sanitizeBody(_ body: String) -> String {
         var result = body
         // Remove any <meta http-equiv=...> tags that could override our CSP
         let metaPattern = #"<meta\s+[^>]*http-equiv\s*=[^>]*>"#
@@ -108,10 +129,9 @@ struct HTMLWebView: NSViewRepresentable {
         return result
     }
 
-    private func wrapHTML(_ body: String) -> String {
+    static func wrappedHTML(_ body: String, allowRemoteImages: Bool) -> String {
         let sanitized = sanitizeBody(body)
-        let imgSrc = allowRemoteImages ? "img-src * cid: data: blob:;" : "img-src cid: data:;"
-        let csp = "default-src 'none'; \(imgSrc) style-src 'unsafe-inline'; font-src data:; frame-src 'none'; form-action 'none';"
+        let csp = contentSecurityPolicy(allowRemoteImages: allowRemoteImages)
         return """
         <!DOCTYPE html>
         <html>

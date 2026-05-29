@@ -1,6 +1,7 @@
 import AIKit
 import AIPrompts
 import AttachmentKit
+import CryptoKit
 import Foundation
 import GRDB
 import os
@@ -38,6 +39,7 @@ public enum AttachmentSummaryOrchestratorResult: Sendable, Equatable {
 }
 
 public enum AttachmentRAGError: Error, Sendable, Equatable {
+    case missingAttachmentIdentifier
     case attachmentBytesUnavailable
     case extractedTextMissing
 }
@@ -68,7 +70,7 @@ public actor AttachmentSummaryOrchestrator {
     public func summarize(_ request: AttachmentSummaryRequest) async throws -> AttachmentSummaryOrchestratorResult {
         let blob = try await loadOrFetchBlob(request)
         if let cached = try fetchCachedSummary(request, fingerprint: blob.sha256) {
-            Self.logger.info("Attachment summary cache hit for \(request.attachmentId, privacy: .public)")
+            Self.logger.info("Attachment summary cache hit for \(Self.privacyLogKey(for: request), privacy: .public)")
             return .summary(cached, cached: true)
         }
 
@@ -82,7 +84,7 @@ public actor AttachmentSummaryOrchestrator {
 
         guard extraction.status == .extracted else {
             let reason = extraction.unsupportedReason ?? "Unsupported attachment"
-            Self.logger.info("Attachment summary unsupported for \(request.attachmentId, privacy: .public)")
+            Self.logger.info("Attachment summary unsupported for \(Self.privacyLogKey(for: request), privacy: .public)")
             return .unsupported(reason)
         }
 
@@ -109,7 +111,7 @@ public actor AttachmentSummaryOrchestrator {
             extractionVersion: extraction.extractionVersion,
             fingerprint: blob.sha256
         )
-        Self.logger.info("Attachment summary generated for \(request.attachmentId, privacy: .public)")
+        Self.logger.info("Attachment summary generated for \(Self.privacyLogKey(for: request), privacy: .public)")
         return .summary(summary, cached: false)
     }
 
@@ -133,17 +135,26 @@ public actor AttachmentSummaryOrchestrator {
     }
 
     private func loadOrFetchBlob(_ request: AttachmentSummaryRequest) async throws -> AttachmentBlobRecord {
+        guard !request.attachmentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AttachmentRAGError.missingAttachmentIdentifier
+        }
         if let existing = try fetchBlob(request) {
             return existing
         }
         guard let byteProvider else {
             throw AttachmentRAGError.attachmentBytesUnavailable
         }
-        let data = try await byteProvider.fetchAttachmentData(
-            accountId: request.accountId,
-            messageId: request.messageId,
-            attachmentId: request.attachmentId
-        )
+        let data: Data
+        do {
+            data = try await byteProvider.fetchAttachmentData(
+                accountId: request.accountId,
+                messageId: request.messageId,
+                attachmentId: request.attachmentId
+            )
+        } catch {
+            Self.logger.error("Attachment byte fetch failed for \(Self.privacyLogKey(for: request), privacy: .public)")
+            throw error
+        }
         let stored = try byteStore.store(
             data,
             accountId: request.accountId,
@@ -358,6 +369,15 @@ extension AttachmentSummaryOrchestrator {
 
     private static func artifactKind(_ metadata: PromptTaskMetadata) -> String {
         "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)"
+    }
+
+    static func privacyLogKey(for request: AttachmentSummaryRequest) -> String {
+        let raw = "\(request.accountId):\(request.messageId):\(request.attachmentId)"
+        let digest = SHA256.hash(data: Data(raw.utf8))
+            .prefix(8)
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return "attachment:\(digest)"
     }
 
     private static func tableColumns(_ table: String, db: Database) throws -> Set<String> {

@@ -84,6 +84,8 @@ public final class AttachmentSummaryStore {
     private static func userMessage(for error: any Error) -> String {
         if let ragError = error as? AttachmentRAGError {
             switch ragError {
+            case .missingAttachmentIdentifier:
+                return String(localized: "thread.attachment.summary.error.missingId", defaultValue: "Attachment is missing a download identifier.")
             case .attachmentBytesUnavailable:
                 return String(localized: "thread.attachment.summary.error.bytes", defaultValue: "Attachment data is not available yet.")
             case .extractedTextMissing:

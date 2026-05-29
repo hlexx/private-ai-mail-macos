@@ -18,7 +18,7 @@ struct MessageBodyView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let html = bodyHtml, !html.isEmpty {
-                if hasRemoteImages(html) {
+                if HTMLWebView.remoteContentState(for: html, allowRemoteImages: allowRemoteImages) != .none {
                     remoteImagesPill
                 }
                 HTMLWebView(
@@ -72,11 +72,6 @@ struct MessageBodyView: View {
         .clipShape(Capsule())
     }
 
-    private func hasRemoteImages(_ html: String) -> Bool {
-        // Check for <img src="http..."> or <img src="//..."> patterns
-        let pattern = #"<img[^>]+src\s*=\s*["'](https?://|//)"#
-        return html.range(of: pattern, options: .regularExpression) != nil
-    }
 }
 
 // MARK: - Plain text extraction from HTML

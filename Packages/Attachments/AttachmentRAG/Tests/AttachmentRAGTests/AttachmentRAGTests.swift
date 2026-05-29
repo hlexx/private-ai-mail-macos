@@ -87,6 +87,54 @@ struct AttachmentRAGTests {
         #expect(reason.contains("Unsupported"))
         #expect(await ai.callCount == 0)
     }
+
+    @Test func missingAttachmentIdFailsBeforeByteProvider() async throws {
+        let db = try makeAttachmentDatabase()
+        let provider = FakeAttachmentByteProvider(data: Data("raw private attachment text".utf8))
+        let ai = CountingAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+
+        await #expect(throws: AttachmentRAGError.missingAttachmentIdentifier) {
+            try await orchestrator.summarize(
+                AttachmentSummaryRequest(
+                    accountId: "a1",
+                    messageId: "m1",
+                    attachmentId: " ",
+                    filename: "invoice.txt",
+                    mime: "text/plain"
+                )
+            )
+        }
+        #expect(await ai.callCount == 0)
+    }
+
+    @Test func privacyLogKeyDoesNotExposeRawAttachmentContentOrIdentifiers() {
+        let request = AttachmentSummaryRequest(
+            accountId: "acct-private",
+            messageId: "message-private",
+            attachmentId: "att-private",
+            filename: "wire-instructions.txt",
+            mime: "text/plain"
+        )
+
+        let key = AttachmentSummaryOrchestrator.privacyLogKey(for: request)
+
+        #expect(key.hasPrefix("attachment:"))
+        #expect(!key.contains(request.accountId))
+        #expect(!key.contains(request.messageId))
+        #expect(!key.contains(request.attachmentId))
+        #expect(!key.contains("wire-instructions"))
+        #expect(!key.contains("raw private attachment text"))
+    }
 }
 
 private func makeAttachmentDatabase(
