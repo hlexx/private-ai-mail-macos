@@ -46,14 +46,14 @@ enterprise governance out of scope.
 
 ### Task 1: Record Graph scope and source constraints
 
-- [ ] Update ADR 0005 or add `docs/trust-mvp-graph-notes.md` with Microsoft
+- [x] Update ADR 0005 or add `docs/trust-mvp-graph-notes.md` with Microsoft
       Graph constraints from official Microsoft docs.
-- [ ] State that message delta query is per-folder, uses opaque next/delta
+- [x] State that message delta query is per-folder, uses opaque next/delta
       links, and must track each synced folder independently.
-- [ ] State least-privilege delegated scopes for Trust MVP: read/write mail as
+- [x] State least-privilege delegated scopes for Trust MVP: read/write mail as
       needed for sync and mutations, send mail for sending, offline access for
       refresh, and OpenID profile/email for account identity.
-- [ ] State non-goals: shared/delegated mailboxes, application permissions,
+- [x] State non-goals: shared/delegated mailboxes, application permissions,
       tenant admin flows, calendar/contacts, and enterprise policy UI.
 
 ### Task 2: Add Graph DTOs and API client seam

@@ -28,12 +28,37 @@ struct TrustMVPSequencingDocumentTests {
         #expect(document.contains("`../EMAIL_ALF/10_roadmap.md`"))
     }
 
+    @Test func adrRecordsMicrosoftGraphDeltaScopesAndNonGoals() throws {
+        let document = try Self.loadADR0005()
+
+        #expect(document.contains("Message delta is scoped to one mail folder at a time."))
+        #expect(document.contains("`@odata.nextLink`"))
+        #expect(document.contains("`@odata.deltaLink`"))
+        #expect(document.contains("opaque to the client"))
+        #expect(document.contains("`Mail.ReadWrite`"))
+        #expect(document.contains("`Mail.Send`"))
+        #expect(document.contains("`offline_access`"))
+        #expect(document.contains("`openid`, `profile`, and `email`"))
+        #expect(document.contains("Application permissions and app-only daemon access are"))
+        #expect(document.contains("shared mailboxes, delegated"))
+        #expect(document.contains("https://learn.microsoft.com/en-us/graph/delta-query-messages"))
+        #expect(document.contains("https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc"))
+    }
+
     private static func loadSequencingDocument() throws -> String {
+        try loadDocument("docs/trust-mvp-sequencing.md")
+    }
+
+    private static func loadADR0005() throws -> String {
+        try loadDocument("docs/adr/0005-trust-mvp-gmail-outlook-provider-contracts.md")
+    }
+
+    private static func loadDocument(_ relativePath: String) throws -> String {
         var url = URL(fileURLWithPath: #filePath)
         for _ in 0..<6 {
             url.deleteLastPathComponent()
         }
-        url.append(path: "docs/trust-mvp-sequencing.md")
+        url.append(path: relativePath)
         return try String(contentsOf: url, encoding: .utf8)
     }
 }

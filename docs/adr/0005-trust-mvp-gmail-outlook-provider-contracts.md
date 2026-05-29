@@ -30,6 +30,60 @@ work can proceed safely.
   - UI and feature modules must not inspect provider-specific checkpoint
     payloads and must operate only on shared checkpoint abstractions.
 
+## Microsoft Graph Source Constraints (Task 1)
+
+Official Microsoft documentation records the following constraints for the
+Trust MVP Graph adapter:
+
+- Message delta is scoped to one mail folder at a time. A folder hierarchy sync
+  must track every selected folder independently; there is no provider-neutral
+  global history cursor equivalent to Gmail History API.
+- Graph message delta returns either `@odata.nextLink` while a sync round still
+  has more pages, or `@odata.deltaLink` when the current round is complete.
+  Both URLs contain provider state tokens, are opaque to the client, and must be
+  persisted and replayed as returned for the same account and folder.
+- Initial sync and later incremental sync use the same per-folder delta
+  endpoint. Query options such as `$select`, `$top`, limited `$filter`,
+  limited `$orderby`, and `changeType` are encoded into the returned
+  next/delta links by Microsoft Graph, so adapter code must not reconstruct
+  those URLs from token fragments.
+- Trust MVP uses delegated access only: the signed-in user authorizes the app,
+  and the app can act only within both the granted Graph scopes and that user's
+  mailbox privileges. Application permissions and app-only daemon access are
+  outside the product boundary.
+- Least-privilege delegated scopes for Trust MVP are:
+  - `Mail.ReadWrite` for reading, creating, updating, moving, marking,
+    deleting, and folder-scoped sync/mutation workflows in the signed-in user's
+    mailbox. This scope does not grant send permission.
+  - `Mail.Send` for sending as the signed-in user and saving the provider copy
+    to Sent Items. This scope is requested separately from `Mail.ReadWrite`.
+  - `offline_access` for refresh-token based reconnect and background sync after
+    the authorization-code flow.
+  - `openid`, `profile`, and `email` for account identity. The `email` claim is
+    optional in Microsoft identity tokens, so account records must tolerate a
+    missing email claim and fall back to a verified profile/mailbox identity
+    fetch when auth scaffolding adds that call.
+- Shared or delegated mailbox access requires the `Mail.Read.Shared`,
+  `Mail.ReadWrite.Shared`, or related shared send scopes and different
+  addressing paths. These are non-goals for this MVP.
+- Non-goals for the Graph adapter tranche are shared mailboxes, delegated
+  mailboxes, application permissions, tenant admin or admin-consent flows,
+  calendar, contacts, Teams, OneDrive, SharePoint, enterprise policy UI, and
+  Exchange governance controls.
+
+Sources:
+
+- Microsoft Graph: Get incremental changes to messages in a folder:
+  https://learn.microsoft.com/en-us/graph/delta-query-messages
+- Microsoft Graph permissions reference:
+  https://learn.microsoft.com/en-us/graph/permissions-reference
+- Microsoft identity platform scopes and OpenID Connect scopes:
+  https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc
+- Microsoft identity platform permissions and consent overview:
+  https://learn.microsoft.com/en-us/entra/identity-platform/permissions-consent-overview
+- Microsoft Graph shared and delegated folders:
+  https://learn.microsoft.com/en-us/graph/outlook-share-messages-folders
+
 ## Gmail-Only Assumptions Kept In Adapter Boundaries (Task 2 Audit)
 
 - `MailProviders/Gmail/*` keeps Gmail DTOs, endpoint wiring, and
