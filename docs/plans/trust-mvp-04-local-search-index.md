@@ -94,13 +94,13 @@ Trust MVP tranche.
 
 ### Task 5: Add provider fallback seam
 
-- [ ] Add a provider fallback protocol that can ask Gmail or Graph for server
+- [x] Add a provider fallback protocol that can ask Gmail or Graph for server
       search when local search is incomplete or explicitly requested.
-- [ ] Keep fallback results marked as remote and do not merge them silently into
+- [x] Keep fallback results marked as remote and do not merge them silently into
       local DB without normal sync/fetch.
-- [ ] Add tests proving fallback is not used for normal local queries and that
+- [x] Add tests proving fallback is not used for normal local queries and that
       fallback errors are user-visible but do not break local results.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
 
 ### Task 6: Wire search into InboxFeature
 

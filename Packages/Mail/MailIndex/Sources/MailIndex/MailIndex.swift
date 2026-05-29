@@ -272,17 +272,56 @@ public struct MailSearchResponse: Sendable, Equatable {
     public let results: [MailSearchResult]
     public let localResultsComplete: Bool
     public let totalResultCount: Int?
+    public let providerFallbackFailures: [MailSearchProviderFallbackFailure]
 
     public init(
         query: MailSearchQuery,
         results: [MailSearchResult],
         localResultsComplete: Bool = true,
-        totalResultCount: Int? = nil
+        totalResultCount: Int? = nil,
+        providerFallbackFailures: [MailSearchProviderFallbackFailure] = []
     ) {
         self.query = query
         self.results = results
         self.localResultsComplete = localResultsComplete
         self.totalResultCount = totalResultCount
+        self.providerFallbackFailures = providerFallbackFailures
+    }
+}
+
+public struct MailSearchProviderFallbackRequest: Sendable, Equatable {
+    public let provider: MailProviderIdentifier
+    public let query: MailSearchQuery
+
+    public init(provider: MailProviderIdentifier, query: MailSearchQuery) {
+        self.provider = provider
+        self.query = query
+    }
+}
+
+public struct MailSearchProviderFallbackResponse: Sendable, Equatable {
+    public let provider: MailProviderIdentifier
+    public let results: [MailSearchResult]
+    public let totalResultCount: Int?
+
+    public init(
+        provider: MailProviderIdentifier,
+        results: [MailSearchResult],
+        totalResultCount: Int? = nil
+    ) {
+        self.provider = provider
+        self.results = results
+        self.totalResultCount = totalResultCount
+    }
+}
+
+public struct MailSearchProviderFallbackFailure: Sendable, Equatable {
+    public let provider: MailProviderIdentifier
+    public let userVisibleMessage: String
+
+    public init(provider: MailProviderIdentifier, userVisibleMessage: String) {
+        self.provider = provider
+        self.userVisibleMessage = userVisibleMessage
     }
 }
 
@@ -361,25 +400,45 @@ public protocol MailSearching: Sendable {
     func search(_ query: MailSearchQuery) async throws -> MailSearchResponse
 }
 
+public protocol MailProviderSearchFallback: Sendable {
+    var provider: MailProviderIdentifier { get }
+
+    func search(_ request: MailSearchProviderFallbackRequest) async throws -> MailSearchProviderFallbackResponse
+}
+
 // MARK: - Local Search Execution
 
 public struct MailSearchService: MailSearching {
     private let database: AppDatabase
+    private let providerFallbacks: [any MailProviderSearchFallback]
 
-    public init(database: AppDatabase) {
+    public init(database: AppDatabase, providerFallbacks: [any MailProviderSearchFallback] = []) {
         self.database = database
+        self.providerFallbacks = providerFallbacks
     }
 
     public func search(_ query: MailSearchQuery) async throws -> MailSearchResponse {
-        guard query.mode == .localFullText else {
-            return MailSearchResponse(
-                query: query,
-                results: [],
-                localResultsComplete: false,
-                totalResultCount: 0
-            )
+        let localResponse = try localSearch(query)
+
+        guard query.mode == .providerFallbackRequest else {
+            return localResponse
         }
 
+        let fallbackResponse = await searchProviderFallbacks(for: query)
+        let results = localResponse.results + fallbackResponse.results
+        let totalResultCount = fallbackResponse.totalResultCount.map {
+            (localResponse.totalResultCount ?? localResponse.results.count) + $0
+        }
+        return MailSearchResponse(
+            query: query,
+            results: results,
+            localResultsComplete: false,
+            totalResultCount: totalResultCount ?? results.count,
+            providerFallbackFailures: fallbackResponse.failures
+        )
+    }
+
+    private func localSearch(_ query: MailSearchQuery) throws -> MailSearchResponse {
         guard query.text != nil || !query.filters.isEmpty else {
             return MailSearchResponse(query: query, results: [], totalResultCount: 0)
         }
@@ -396,6 +455,66 @@ public struct MailSearchService: MailSearching {
             totalResultCount: ranked.count
         )
     }
+
+    private func searchProviderFallbacks(for query: MailSearchQuery) async -> ProviderFallbackAggregate {
+        var results: [MailSearchResult] = []
+        var failures: [MailSearchProviderFallbackFailure] = []
+        var totalResultCount = 0
+        var hasUnknownTotalResultCount = false
+        for fallback in providerFallbacksForQuery(query) {
+            do {
+                let request = MailSearchProviderFallbackRequest(provider: fallback.provider, query: query)
+                let response = try await fallback.search(request)
+                results.append(contentsOf: response.results.map(remoteProviderResult))
+                if let responseTotal = response.totalResultCount {
+                    totalResultCount += responseTotal
+                } else {
+                    totalResultCount += response.results.count
+                    hasUnknownTotalResultCount = true
+                }
+            } catch {
+                failures.append(MailSearchProviderFallbackFailure(
+                    provider: fallback.provider,
+                    userVisibleMessage: "Remote \(fallback.provider.rawValue) search failed."
+                ))
+            }
+        }
+        return ProviderFallbackAggregate(
+            results: results,
+            failures: failures,
+            totalResultCount: hasUnknownTotalResultCount ? nil : totalResultCount
+        )
+    }
+
+    private func providerFallbacksForQuery(_ query: MailSearchQuery) -> [any MailProviderSearchFallback] {
+        guard !query.filters.providers.isEmpty else { return providerFallbacks }
+        return providerFallbacks.filter { query.filters.providers.contains($0.provider) }
+    }
+
+    private func remoteProviderResult(_ result: MailSearchResult) -> MailSearchResult {
+        MailSearchResult(
+            threadID: result.threadID,
+            accountID: result.accountID,
+            provider: result.provider,
+            subject: result.subject,
+            sender: result.sender,
+            recipients: result.recipients,
+            sentAt: result.sentAt,
+            matchedMessageIDs: result.matchedMessageIDs,
+            snippets: result.snippets,
+            canonicalMailboxes: result.canonicalMailboxes,
+            isUnread: result.isUnread,
+            hasAttachments: result.hasAttachments,
+            source: .remoteProvider,
+            score: result.score
+        )
+    }
+}
+
+private struct ProviderFallbackAggregate {
+    let results: [MailSearchResult]
+    let failures: [MailSearchProviderFallbackFailure]
+    let totalResultCount: Int?
 }
 
 private struct SearchSQL {

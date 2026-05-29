@@ -250,6 +250,72 @@ struct MailIndexTests {
         #expect(response.totalResultCount == 0)
     }
 
+    @Test func serviceDoesNotUseProviderFallbackForNormalLocalQueries() async throws {
+        let fallback = StubProviderSearchFallback(provider: .gmail, results: [Self.remoteResult()])
+        let service = MailSearchService(
+            database: try makeIndexedSearchDatabase(),
+            providerFallbacks: [fallback]
+        )
+
+        let response = try await service.search(try MailSearchQuery(text: "launch"))
+
+        #expect(await fallback.requestCount == 0)
+        #expect(response.providerFallbackFailures.isEmpty)
+        #expect(response.results.allSatisfy { $0.source == .local })
+    }
+
+    @Test func serviceUsesExplicitProviderFallbackWithoutPersistingRemoteResults() async throws {
+        let db = try makeIndexedSearchDatabase()
+        let fallback = StubProviderSearchFallback(provider: .gmail, results: [
+            Self.remoteResult(
+                threadID: "remote-thread",
+                messageID: "remote-message",
+                subject: "Remote only provider result",
+                score: 99
+            )
+        ])
+        let service = MailSearchService(database: db, providerFallbacks: [fallback])
+
+        let response = try await service.search(try MailSearchQuery(
+            text: "provider-only",
+            filters: MailSearchFilter(providers: [.gmail]),
+            mode: .providerFallbackRequest
+        ))
+
+        #expect(await fallback.requestCount == 1)
+        #expect(response.localResultsComplete == false)
+        #expect(response.results.map(\.threadID) == ["remote-thread"])
+        #expect(response.results.first?.source == .remoteProvider)
+        #expect(response.providerFallbackFailures.isEmpty)
+
+        let localOnly = try await service.search(try MailSearchQuery(text: "provider-only"))
+        #expect(localOnly.results.isEmpty)
+    }
+
+    @Test func serviceKeepsLocalResultsWhenProviderFallbackFails() async throws {
+        let fallback = StubProviderSearchFallback(provider: .gmail, error: StubProviderSearchError())
+        let service = MailSearchService(
+            database: try makeIndexedSearchDatabase(),
+            providerFallbacks: [fallback]
+        )
+
+        let response = try await service.search(try MailSearchQuery(
+            text: "launch",
+            filters: MailSearchFilter(providers: [.gmail]),
+            mode: .providerFallbackRequest
+        ))
+
+        #expect(await fallback.requestCount == 1)
+        #expect(response.results.contains { $0.threadID == "t-subject" && $0.source == .local })
+        #expect(response.providerFallbackFailures == [
+            MailSearchProviderFallbackFailure(
+                provider: .gmail,
+                userVisibleMessage: "Remote gmail search failed."
+            ),
+        ])
+        #expect(response.localResultsComplete == false)
+    }
+
     private func makeSearchService() throws -> MailSearchService {
         MailSearchService(database: try makeIndexedSearchDatabase())
     }
@@ -478,5 +544,66 @@ struct MailIndexTests {
         if let attachment {
             try attachment.insert(database)
         }
+    }
+
+    private static func remoteResult(
+        threadID: String = "remote-thread",
+        messageID: String = "remote-message",
+        subject: String = "Remote provider result",
+        score: Double? = nil
+    ) -> MailSearchResult {
+        MailSearchResult(
+            threadID: threadID,
+            accountID: "gmail-1",
+            provider: .gmail,
+            subject: subject,
+            sender: Address(name: "Remote", email: "remote@example.com"),
+            recipients: [Address(name: "Team", email: "team@example.com")],
+            sentAt: Date(timeIntervalSince1970: 2_000),
+            matchedMessageIDs: [messageID],
+            snippets: [
+                MailSearchSnippet(messageID: messageID, field: .snippet, text: "remote snippet"),
+            ],
+            canonicalMailboxes: [.inbox],
+            isUnread: false,
+            hasAttachments: false,
+            source: .local,
+            score: score
+        )
+    }
+}
+
+private struct StubProviderSearchError: Error {}
+
+private actor StubProviderSearchFallback: MailProviderSearchFallback {
+    nonisolated let provider: MailProviderIdentifier
+    private let results: [MailSearchResult]
+    private let error: (any Error)?
+    private var requests: [MailSearchProviderFallbackRequest] = []
+
+    init(
+        provider: MailProviderIdentifier,
+        results: [MailSearchResult] = [],
+        error: (any Error)? = nil
+    ) {
+        self.provider = provider
+        self.results = results
+        self.error = error
+    }
+
+    var requestCount: Int {
+        requests.count
+    }
+
+    func search(_ request: MailSearchProviderFallbackRequest) async throws -> MailSearchProviderFallbackResponse {
+        requests.append(request)
+        if let error {
+            throw error
+        }
+        return MailSearchProviderFallbackResponse(
+            provider: provider,
+            results: results,
+            totalResultCount: results.count
+        )
     }
 }
