@@ -42,16 +42,16 @@ Trust MVP tranche.
 
 ### Task 1: Define search contracts
 
-- [ ] Replace the `MailIndex` namespace-only stub with typed contracts:
+- [x] Replace the `MailIndex` namespace-only stub with typed contracts:
       `MailSearchQuery`, `MailSearchFilter`, `MailSearchSort`,
       `MailSearchResult`, `MailSearchSnippet`, `MailIndexing`, and
       `MailSearching`.
-- [ ] Support filters for account ids, provider, canonical mailbox, from, to,
+- [x] Support filters for account ids, provider, canonical mailbox, from, to,
       date range, unread, sent, has attachment, and attachment filename/mime.
-- [ ] Support query modes for local full-text and provider fallback request.
-- [ ] Add tests for query construction, default sorting, filter validation, and
+- [x] Support query modes for local full-text and provider fallback request.
+- [x] Add tests for query construction, default sorting, filter validation, and
       privacy-safe redaction of query descriptions.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
 
 ### Task 2: Add FTS persistence
 
