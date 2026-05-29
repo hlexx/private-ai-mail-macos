@@ -103,4 +103,3 @@ logging raw mail content.
 
 If optional telemetry or privacy UI blocks release, disable export and keep
 static local privacy copy. Do not weaken the no-raw-content logging rule.
-

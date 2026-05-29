@@ -123,4 +123,3 @@ enterprise governance out of scope.
 
 If Graph blocks release, disable the Graph feature flag and leave schema and
 provider code dormant. Do not remove Gmail hardening or provider contracts.
-

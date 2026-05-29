@@ -106,4 +106,3 @@ workflow automation.
 
 If preview or download is unsafe, keep metadata visible and disable download or
 preview actions. Never hide a failed attachment behind an AI summary.
-

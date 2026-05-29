@@ -118,4 +118,3 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 If a Gmail hardening change blocks release, revert that action path and leave
 the UI disabled rather than shipping a misleading control. Do not revert
 provider-neutral contracts from tranche 01 unless they are the direct failure.
-

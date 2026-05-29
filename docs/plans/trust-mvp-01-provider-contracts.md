@@ -136,4 +136,3 @@ If contract changes destabilize the app, revert this tranche before running
 later Trust MVP plans. If only the provider schema migration ships, keep it:
 allowing the extra provider value is backwards-compatible while Graph remains
 feature-gated.
-

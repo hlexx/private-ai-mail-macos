@@ -103,4 +103,3 @@ and Outlook. This tranche does not add send later or AI auto-send.
 
 If queue execution is unsafe, disable send execution and leave drafts editable.
 Never ship a known duplicate-send path. Queue tables can remain dormant.
-
