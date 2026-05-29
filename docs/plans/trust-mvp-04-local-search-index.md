@@ -55,19 +55,19 @@ Trust MVP tranche.
 
 ### Task 2: Add FTS persistence
 
-- [ ] Add an additive migration for local search tables, using SQLite FTS5 if
+- [x] Add an additive migration for local search tables, using SQLite FTS5 if
       available in the target runtime.
-- [ ] Index message subject, from, to, cc, snippet, body text, normalized body
+- [x] Index message subject, from, to, cc, snippet, body text, normalized body
       extracted from HTML where available, attachment filenames, and canonical
       mailbox fields needed for filtering.
-- [ ] Do not index attachment bytes or extracted attachment full text in this
+- [x] Do not index attachment bytes or extracted attachment full text in this
       tranche unless existing attachment extraction contracts already provide a
       safe chunk table and tests.
-- [ ] Add rebuild metadata so the index can be rebuilt if the schema or
+- [x] Add rebuild metadata so the index can be rebuilt if the schema or
       tokenizer changes.
-- [ ] Add `PersistenceTests` proving migration, insert/update/delete, cascade
+- [x] Add `PersistenceTests` proving migration, insert/update/delete, cascade
       delete on account removal, and rebuild idempotency.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
 
 ### Task 3: Maintain the index during sync
 

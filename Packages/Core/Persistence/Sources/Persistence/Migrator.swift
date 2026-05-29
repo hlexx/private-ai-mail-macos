@@ -19,6 +19,7 @@ enum Migrator {
         migrator.registerMigration("M013_ThreadBriefCacheIdentity", migrate: M013_ThreadBriefCacheIdentity.migrate)
         migrator.registerMigration("M014_AccountProviderOutlook", migrate: M014_AccountProviderOutlook.migrate)
         migrator.registerMigration("M015_GraphDeltaCheckpoints", migrate: M015_GraphDeltaCheckpoints.migrate)
+        migrator.registerMigration("M016_LocalSearchIndex", migrate: M016_LocalSearchIndex.migrate)
         try migrator.migrate(db)
     }
 }
