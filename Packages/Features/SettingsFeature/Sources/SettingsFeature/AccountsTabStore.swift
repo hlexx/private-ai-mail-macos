@@ -15,12 +15,34 @@ public enum AddAccountPhase: Sendable, Equatable {
     case error(String)
 }
 
+public struct AccountProviderOption: Identifiable, Sendable, Equatable {
+    public enum Availability: Sendable, Equatable {
+        case enabled
+        case disabled(reason: String)
+    }
+
+    public let provider: AuthProvider
+    public let title: String
+    public let subtitle: String
+    public let actionTitle: String
+    public let systemImage: String
+    public let availability: Availability
+
+    public var id: String { provider.rawValue }
+
+    public var isEnabled: Bool {
+        if case .enabled = availability { return true }
+        return false
+    }
+}
+
 @Observable
 @MainActor
 public final class AccountsTabStore {
     public private(set) var accounts: [AccountRecord] = []
     public private(set) var addPhase: AddAccountPhase = .idle
     public private(set) var syncStates: [String: SyncState] = [:]
+    public private(set) var providerOptions: [AccountProviderOption]
 
     private let db: AppDatabase
     private let oauthClient: any OAuthClient
@@ -35,12 +57,46 @@ public final class AccountsTabStore {
         db: AppDatabase,
         oauthClient: any OAuthClient,
         tokenStore: any TokenStore,
-        syncSupervisor: SyncSupervisor
+        syncSupervisor: SyncSupervisor,
+        providerOptions: [AccountProviderOption] = AccountsTabStore.defaultProviderOptions()
     ) {
         self.db = db
         self.oauthClient = oauthClient
         self.tokenStore = tokenStore
         self.syncSupervisor = syncSupervisor
+        self.providerOptions = providerOptions
+    }
+
+    public static func defaultProviderOptions() -> [AccountProviderOption] {
+        [
+            AccountProviderOption(
+                provider: .gmail,
+                title: "Gmail",
+                subtitle: "Connect a Gmail account.",
+                actionTitle: "Add Gmail account",
+                systemImage: "envelope",
+                availability: .enabled
+            ),
+            AccountProviderOption(
+                provider: .outlook,
+                title: "Outlook",
+                subtitle: "Beta support is disabled until real account smoke tests pass.",
+                actionTitle: "Add Outlook account",
+                systemImage: "envelope.badge",
+                availability: .disabled(reason: "Internal beta")
+            ),
+        ]
+    }
+
+    public func addAccount(provider: AuthProvider) {
+        switch provider {
+        case .gmail:
+            addGmailAccount()
+        case .outlook:
+            addPhase = .error("Outlook support is in beta and disabled until real account smoke tests pass.")
+        default:
+            addPhase = .error("This mail provider is not supported yet.")
+        }
     }
 
     public func startObserving() {

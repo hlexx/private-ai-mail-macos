@@ -79,10 +79,15 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
 
 // MARK: - Helpers
 
-private func insertAccount(id: String, email: String, into db: AppDatabase) throws {
+private func insertAccount(
+    id: String,
+    email: String,
+    provider: String = "gmail",
+    into db: AppDatabase
+) throws {
     let account = AccountRecord(
         id: id,
-        provider: "gmail",
+        provider: provider,
         email: email,
         createdAt: Int(Date().timeIntervalSince1970)
     )
@@ -115,6 +120,30 @@ struct AccountsTabStoreTests {
     }
 
     @Test @MainActor
+    func defaultProviderOptionsKeepGmailEnabledAndOutlookDisabledBeta() async throws {
+        let (store, _, _, _) = try await makeStore()
+
+        #expect(store.providerOptions.map(\.provider) == [.gmail, .outlook])
+
+        let gmail = try #require(store.providerOptions.first { $0.provider == .gmail })
+        #expect(gmail.title == "Gmail")
+        #expect(gmail.actionTitle == "Add Gmail account")
+        #expect(gmail.isEnabled)
+
+        let outlook = try #require(store.providerOptions.first { $0.provider == .outlook })
+        #expect(outlook.title == "Outlook")
+        #expect(outlook.actionTitle == "Add Outlook account")
+        #expect(!outlook.isEnabled)
+        #expect(outlook.subtitle.contains("Beta"))
+
+        if case .disabled(let reason) = outlook.availability {
+            #expect(reason == "Internal beta")
+        } else {
+            Issue.record("Expected Outlook beta provider to be disabled by default")
+        }
+    }
+
+    @Test @MainActor
     func addAccountCancelledResetsToIdle() async throws {
         let (store, _, oauth, _) = try await makeStore()
 
@@ -124,6 +153,32 @@ struct AccountsTabStoreTests {
         try await Task.sleep(for: .milliseconds(200))
 
         #expect(store.addPhase == .idle)
+    }
+
+    @Test @MainActor
+    func addAccountProviderRoutesGmailWithoutRegressingCancellation() async throws {
+        let (store, _, oauth, _) = try await makeStore()
+
+        oauth.authorizeResult = .failure(AuthError.cancelled)
+
+        store.addAccount(provider: .gmail)
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(store.addPhase == .idle)
+    }
+
+    @Test @MainActor
+    func addAccountProviderKeepsOutlookDisabledUntilSmokeTestsPass() async throws {
+        let (store, _, _, _) = try await makeStore()
+
+        store.addAccount(provider: .outlook)
+
+        if case .error(let message) = store.addPhase {
+            #expect(message.contains("Outlook support is in beta"))
+            #expect(message.contains("disabled until real account smoke tests pass"))
+        } else {
+            Issue.record("Expected disabled Outlook beta error, got \(store.addPhase)")
+        }
     }
 
     @Test @MainActor

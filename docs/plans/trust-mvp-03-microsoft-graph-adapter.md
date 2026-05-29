@@ -110,14 +110,14 @@ enterprise governance out of scope.
 
 ### Task 6: Wire Outlook account UI as disabled-by-default or feature-gated
 
-- [ ] Add provider selection UI in Settings or onboarding only if the Graph auth
+- [x] Add provider selection UI in Settings or onboarding only if the Graph auth
       and sync seams are complete enough for a test account. Otherwise show an
       internal feature flag path only.
-- [ ] Make user-facing copy honest: Outlook support is beta until real account
+- [x] Make user-facing copy honest: Outlook support is beta until real account
       smoke tests pass.
-- [ ] Add SettingsFeature tests for provider list, disabled state, and no Gmail
+- [x] Add SettingsFeature tests for provider list, disabled state, and no Gmail
       regression.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 
