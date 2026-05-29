@@ -82,16 +82,16 @@ and privacy-safe observability. Do not add Microsoft Graph code here.
 
 ### Task 4: Harden Gmail send and threading
 
-- [ ] Verify `ComposeService` builds RFC-compliant `In-Reply-To` and
+- [x] Verify `ComposeService` builds RFC-compliant `In-Reply-To` and
       `References` headers for replies and passes the Gmail `threadId`.
-- [ ] Add tests for new message send, reply send, missing recipients,
+- [x] Add tests for new message send, reply send, missing recipients,
       insufficient `gmail.send` scope, API failure, and local sent-record
       insertion.
-- [ ] Prevent duplicate local sent rows if Gmail returns the same sent message
+- [x] Prevent duplicate local sent rows if Gmail returns the same sent message
       again through incremental sync.
-- [ ] Ensure failed sends are visible to the user and do not look sent locally.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ComposeFeature && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
+- [x] Ensure failed sends are visible to the user and do not look sent locally.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ComposeFeature && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
 
 ### Task 5: Harden Gmail attachment and HTML basics
 

@@ -146,6 +146,8 @@ public final class LiveComposeService: ComposeService, Sendable {
         let isNewThread = draft.replyContext == nil
         let threadId = sent.threadId
         let accountID = draft.accountID
+        var labelIds = Set(sent.labelIds ?? [])
+        labelIds.insert("SENT")
 
         try await Self.insertSentRecord(
             record: record,
@@ -153,6 +155,7 @@ public final class LiveComposeService: ComposeService, Sendable {
             threadId: threadId,
             accountID: accountID,
             subject: subject,
+            labelIds: labelIds,
             sentAtUnix: sentAtUnix,
             db: db
         )
@@ -167,11 +170,22 @@ public final class LiveComposeService: ComposeService, Sendable {
         threadId: String,
         accountID: String,
         subject: String,
+        labelIds: Set<String>,
         sentAtUnix: Int,
         db: AppDatabase
     ) throws {
         try db.write { dbConn in
+            let messageAlreadyExists = try MessageRecord.fetchOne(
+                dbConn,
+                key: ["account_id": record.accountId, "id": record.id]
+            ) != nil
+
             try record.save(dbConn, onConflict: .replace)
+
+            for labelId in labelIds {
+                try ThreadLabelRecord(accountId: accountID, threadId: threadId, labelId: labelId)
+                    .save(dbConn, onConflict: .replace)
+            }
 
             if isNewThread {
                 let thread = ThreadRecord(
@@ -187,7 +201,9 @@ public final class LiveComposeService: ComposeService, Sendable {
                 .filter(Column("id") == threadId && Column("account_id") == accountID)
                 .fetchOne(dbConn) {
                 existing.lastMessageAt = sentAtUnix
-                existing.messageCount += 1
+                if !messageAlreadyExists {
+                    existing.messageCount += 1
+                }
                 existing.snippet = record.snippet
                 try existing.update(dbConn)
             }

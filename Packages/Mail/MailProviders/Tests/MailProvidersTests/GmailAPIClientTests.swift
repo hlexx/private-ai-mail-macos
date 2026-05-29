@@ -126,6 +126,33 @@ struct GmailAPIClientTests {
         #expect(result.labelIds == ["SENT"])
     }
 
+    @Test func sendMessageIncludesThreadIdInRequestBodyForReplies() async throws {
+        MockURLProtocol.reset()
+        var capturedBody: Data?
+        MockURLProtocol.handlers.append { request in
+            guard let url = request.url, url.path.contains("/messages/send") else { return nil }
+            capturedBody = Self.requestBodyData(from: request)
+            let data = """
+            {"id": "reply001", "threadId": "thread001", "labelIds": ["SENT"]}
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (data, response)
+        }
+
+        let client = makeClient()
+        _ = try await client.sendMessage(raw: "dGVzdA", threadId: "thread001")
+
+        let body = try #require(capturedBody)
+        let object = try JSONSerialization.jsonObject(with: body) as? [String: String]
+        #expect(object?["raw"] == "dGVzdA")
+        #expect(object?["threadId"] == "thread001")
+    }
+
     // MARK: - sendMessage 403 insufficient scope
 
     @Test func sendMessageInsufficientScopeThrows() async throws {
@@ -247,6 +274,35 @@ struct GmailAPIClientTests {
         let result = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
 
         #expect(result.id == "sent002")
+    }
+
+    private static func requestBodyData(from request: URLRequest) -> Data? {
+        if let body = request.httpBody {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            return nil
+        }
+
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+
+        while stream.hasBytesAvailable {
+            let count = stream.read(buffer, maxLength: bufferSize)
+            if count < 0 {
+                return nil
+            }
+            if count == 0 {
+                break
+            }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }
 
