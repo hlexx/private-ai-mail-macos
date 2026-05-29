@@ -125,13 +125,13 @@ network calls in this tranche.
 
 ### Task 6: Add the implementation sequencing document
 
-- [ ] Add `docs/trust-mvp-sequencing.md` or update `NOTES.md` with the eight
+- [x] Add `docs/trust-mvp-sequencing.md` or update `NOTES.md` with the eight
       Trust MVP tranches and their release gates.
-- [ ] Mark Microsoft Graph, full local search, send queue, and broad attachment
+- [x] Mark Microsoft Graph, full local search, send queue, and broad attachment
       preview as planned or in progress unless implemented in code.
-- [ ] Avoid editing `../EMAIL_ALF` from this app plan. If product docs need
+- [x] Avoid editing `../EMAIL_ALF` from this app plan. If product docs need
       follow-up, add a note naming the exact EMAIL_ALF files to update later.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 
