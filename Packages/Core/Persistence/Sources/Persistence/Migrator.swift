@@ -25,6 +25,8 @@ enum M001_InitialSchema {
     static func migrate(_ db: Database) throws {
         try db.create(table: "account") { t in
             t.primaryKey("id", .text)
+            // TODO(trust-mvp-01): Broaden provider constraint via additive migration
+            // to include Outlook once provider identifiers are formalized.
             t.column("provider", .text).notNull().check { $0 == "gmail" }
             t.column("email", .text).notNull()
             t.column("display_name", .text)

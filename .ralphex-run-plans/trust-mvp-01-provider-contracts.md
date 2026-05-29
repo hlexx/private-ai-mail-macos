@@ -66,16 +66,16 @@ network calls in this tranche.
 
 ### Task 2: Audit and name the current Gmail-only assumptions
 
-- [ ] Inspect `Packages/Mail/MailDomain`, `Packages/Mail/MailProviders`,
+- [x] Inspect `Packages/Mail/MailDomain`, `Packages/Mail/MailProviders`,
       `Packages/Mail/MailSync`, `Packages/Core/Persistence`,
       `Packages/Auth/AuthKit`, `Apps/MacApp/Sources/CompositionRoot.swift`,
       and feature stores for hard-coded `gmail`, Gmail label IDs, Gmail errors,
       and direct `GmailAPI` references crossing shared boundaries.
-- [ ] Add a short checklist section to the ADR listing the assumptions that are
+- [x] Add a short checklist section to the ADR listing the assumptions that are
       intentionally kept in Gmail-specific adapters.
-- [ ] Add focused TODO comments only where a shared layer still has a provider
+- [x] Add focused TODO comments only where a shared layer still has a provider
       leak that cannot be removed safely in this tranche.
-- [ ] Do not add comments in UI files unless the code path is genuinely
+- [x] Do not add comments in UI files unless the code path is genuinely
       provider-specific and actionable.
 
 ### Task 3: Add canonical provider identifiers and mailbox vocabulary

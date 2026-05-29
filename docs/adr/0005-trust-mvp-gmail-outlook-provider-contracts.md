@@ -30,6 +30,23 @@ work can proceed safely.
   - UI and feature modules must not inspect provider-specific checkpoint
     payloads and must operate only on shared checkpoint abstractions.
 
+## Gmail-Only Assumptions Kept In Adapter Boundaries (Task 2 Audit)
+
+- `MailProviders/Gmail/*` keeps Gmail DTOs, endpoint wiring, and
+  `GmailAPIError` details.
+- `AuthKit/GmailOAuthConfig` and Gmail profile fetch endpoints remain
+  Gmail-specific until Outlook auth wiring is introduced.
+- App composition (`CompositionRoot`) keeps Gmail-specific runtime wiring
+  (`GmailOAuthClient`, `GmailAPIClient`, attachment byte provider) outside
+  shared domain contracts.
+- Settings account onboarding remains Gmail-only (`addGmailAccount`) in this
+  tranche; multi-provider account UX is deferred to later Trust MVP steps.
+- Label reconciliation and mutation behavior that relies on Gmail system label
+  IDs (`INBOX`, `STARRED`, `SENT`, etc.) stays in Gmail-oriented sync components
+  until canonical mailbox abstractions land.
+- Persistence migrations that backfill Gmail label semantics remain unchanged in
+  this tranche; they are tracked for provider-neutral follow-up.
+
 ## Consequences
 
 - Shared domain and sync contracts can stay provider-neutral while Gmail and
