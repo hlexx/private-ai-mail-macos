@@ -68,12 +68,12 @@ and Outlook. This tranche does not add send later or AI auto-send.
 
 ### Task 3: Build provider-neutral send execution
 
-- [ ] Extract send execution so Gmail and Graph can implement a shared provider
+- [x] Extract send execution so Gmail and Graph can implement a shared provider
       send contract while preserving Gmail MIME builder behavior.
-- [ ] Map provider errors into shared send failure categories.
-- [ ] Add tests for Gmail send success/failure and Graph send test doubles if
+- [x] Map provider errors into shared send failure categories.
+- [x] Add tests for Gmail send success/failure and Graph send test doubles if
       Graph adapter exists from tranche 03.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
 
 ### Task 4: Implement SendQueue service
 

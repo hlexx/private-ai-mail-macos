@@ -220,24 +220,116 @@ public struct SanitizedSendFailure: Codable, Equatable, Sendable {
 
 public struct ProviderSendResult: Codable, Equatable, Sendable {
     public let provider: MailProviderIdentifier
-    public let providerMessageID: String
+    public let providerMessageID: String?
     public let providerThreadID: String?
     public let rfcMessageID: String?
+    public let providerRequestID: String?
     public let sentAt: Date
 
     public init(
         provider: MailProviderIdentifier,
-        providerMessageID: String,
+        providerMessageID: String? = nil,
         providerThreadID: String? = nil,
         rfcMessageID: String? = nil,
+        providerRequestID: String? = nil,
         sentAt: Date
     ) {
         self.provider = provider
         self.providerMessageID = providerMessageID
         self.providerThreadID = providerThreadID
         self.rfcMessageID = rfcMessageID
+        self.providerRequestID = providerRequestID
         self.sentAt = sentAt
     }
+}
+
+public struct ProviderSendRequest: Codable, Equatable, Sendable {
+    public let provider: MailProviderIdentifier
+    public let accountID: String
+    public let idempotencyKey: SendIdempotencyKey
+    public let from: Address
+    public let to: [Address]
+    public let cc: [Address]
+    public let bcc: [Address]
+    public let subject: String
+    public let bodyText: String?
+    public let bodyHTML: String?
+    public let threadID: String?
+    public let replyToProviderMessageID: String?
+    public let rfcMessageID: String?
+    public let rfcInReplyTo: String?
+    public let rfcReferences: [String]
+
+    public init(
+        provider: MailProviderIdentifier,
+        accountID: String,
+        idempotencyKey: SendIdempotencyKey,
+        from: Address,
+        to: [Address],
+        cc: [Address] = [],
+        bcc: [Address] = [],
+        subject: String,
+        bodyText: String? = nil,
+        bodyHTML: String? = nil,
+        threadID: String? = nil,
+        replyToProviderMessageID: String? = nil,
+        rfcMessageID: String? = nil,
+        rfcInReplyTo: String? = nil,
+        rfcReferences: [String] = []
+    ) {
+        self.provider = provider
+        self.accountID = accountID
+        self.idempotencyKey = idempotencyKey
+        self.from = from
+        self.to = to
+        self.cc = cc
+        self.bcc = bcc
+        self.subject = subject
+        self.bodyText = bodyText
+        self.bodyHTML = bodyHTML
+        self.threadID = threadID
+        self.replyToProviderMessageID = replyToProviderMessageID
+        self.rfcMessageID = rfcMessageID
+        self.rfcInReplyTo = rfcInReplyTo
+        self.rfcReferences = rfcReferences
+    }
+
+    public init(queuedMessage: QueuedOutgoingMessage) {
+        self.init(
+            provider: queuedMessage.provider,
+            accountID: queuedMessage.accountID,
+            idempotencyKey: queuedMessage.idempotencyKey,
+            from: queuedMessage.from,
+            to: queuedMessage.to,
+            cc: queuedMessage.cc,
+            bcc: queuedMessage.bcc,
+            subject: queuedMessage.subject,
+            bodyText: queuedMessage.bodyText,
+            bodyHTML: queuedMessage.bodyHTML,
+            threadID: queuedMessage.threadID,
+            replyToProviderMessageID: queuedMessage.replyToProviderMessageID,
+            rfcMessageID: queuedMessage.rfcMessageID,
+            rfcInReplyTo: queuedMessage.rfcInReplyTo,
+            rfcReferences: queuedMessage.rfcReferences
+        )
+    }
+
+    public var bodyForPlainTextProvider: String {
+        bodyText ?? bodyHTML ?? ""
+    }
+}
+
+public struct ProviderSendError: Error, Equatable, Sendable {
+    public let failure: SanitizedSendFailure
+
+    public init(failure: SanitizedSendFailure) {
+        self.failure = failure
+    }
+}
+
+public protocol MailSendProvider: Sendable {
+    var provider: MailProviderIdentifier { get }
+    func send(_ request: ProviderSendRequest) async throws -> ProviderSendResult
 }
 
 public struct QueuedOutgoingMessage: Codable, Equatable, Identifiable, Sendable {

@@ -1,4 +1,5 @@
 import Foundation
+import MailDomain
 import Testing
 @testable import MailProviders
 
@@ -45,5 +46,42 @@ struct ProviderContractsTests {
     ])
     func gmailErrorsMapToSharedCategory(input: GmailAPIError, expected: MailProviderErrorCategory) {
         #expect(input.sharedCategory == expected)
+    }
+
+    @Test func gmailErrorsMapToSendQueueFailureCategories() {
+        #expect(GmailAPIError.unauthorized.sendFailureCategory == .authExpired)
+        #expect(GmailAPIError.insufficientScope.sendFailureCategory == .insufficientScope)
+        #expect(GmailAPIError.rateLimited(retryAfter: 30).sendFailureCategory == .rateLimited)
+        #expect(GmailAPIError.networkError(URLError(.timedOut)).sendFailureCategory == .timeout)
+        #expect(GmailAPIError.networkError(URLError(.notConnectedToInternet)).sendFailureCategory == .offline)
+        #expect(GmailAPIError.serverError(statusCode: 400).sendFailureCategory == .validation)
+        #expect(GmailAPIError.serverError(statusCode: 404).sendFailureCategory == .notFound)
+        #expect(GmailAPIError.serverError(statusCode: 409).sendFailureCategory == .conflict)
+        #expect(GmailAPIError.serverError(statusCode: 503).sendFailureCategory == .providerUnavailable)
+
+        let failure = GmailAPIError.rateLimited(retryAfter: 30).sanitizedSendFailure(
+            occurredAt: Date(timeIntervalSince1970: 10)
+        )
+        #expect(failure.category == .rateLimited)
+        #expect(failure.providerErrorCode == "429")
+        #expect(failure.retryAfterSeconds == 30)
+    }
+
+    @Test func graphErrorsMapToSendQueueFailureCategories() {
+        #expect(GraphAPIError.unauthorized.sendFailureCategory == .authExpired)
+        #expect(GraphAPIError.insufficientScope.sendFailureCategory == .insufficientScope)
+        #expect(GraphAPIError.rateLimited(retryAfter: 45).sendFailureCategory == .rateLimited)
+        #expect(GraphAPIError.networkError("timed out").sendFailureCategory == .timeout)
+        #expect(GraphAPIError.networkError("offline").sendFailureCategory == .offline)
+        #expect(GraphAPIError.serverError(statusCode: 400, code: "ErrorInvalidRecipients").sendFailureCategory == .validation)
+        #expect(GraphAPIError.serverError(statusCode: 404, code: "ErrorItemNotFound").sendFailureCategory == .notFound)
+        #expect(GraphAPIError.serverError(statusCode: 409, code: "Conflict").sendFailureCategory == .conflict)
+        #expect(GraphAPIError.serverError(statusCode: 503, code: "ServiceUnavailable").sendFailureCategory == .providerUnavailable)
+
+        let failure = GraphAPIError.serverError(statusCode: 503, code: "ServiceUnavailable").sanitizedSendFailure(
+            occurredAt: Date(timeIntervalSince1970: 10)
+        )
+        #expect(failure.category == .providerUnavailable)
+        #expect(failure.providerErrorCode == "ServiceUnavailable")
     }
 }

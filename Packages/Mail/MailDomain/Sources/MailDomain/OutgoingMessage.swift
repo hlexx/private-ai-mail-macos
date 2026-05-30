@@ -10,6 +10,7 @@ public struct OutgoingMessage: Sendable, Equatable {
     public let inReplyTo: String?
     public let references: [String]
     public let messageIDSeed: String?
+    public let messageIDHeader: String?
 
     public init(
         from: Address,
@@ -20,7 +21,8 @@ public struct OutgoingMessage: Sendable, Equatable {
         body: String,
         inReplyTo: String? = nil,
         references: [String] = [],
-        messageIDSeed: String? = nil
+        messageIDSeed: String? = nil,
+        messageIDHeader: String? = nil
     ) {
         self.from = from
         self.to = to
@@ -31,5 +33,6 @@ public struct OutgoingMessage: Sendable, Equatable {
         self.inReplyTo = inReplyTo
         self.references = references
         self.messageIDSeed = messageIDSeed
+        self.messageIDHeader = messageIDHeader
     }
 }

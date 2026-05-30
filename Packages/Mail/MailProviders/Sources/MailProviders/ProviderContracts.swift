@@ -106,3 +106,168 @@ public extension GmailAPIError {
         }
     }
 }
+
+public extension GmailAPIError {
+    var sendFailureCategory: SendFailureCategory {
+        switch self {
+        case .unauthorized:
+            return .authExpired
+        case .rateLimited:
+            return .rateLimited
+        case .serverError(let statusCode):
+            return Self.mapServerStatusToSendFailureCategory(statusCode)
+        case .networkError(let error):
+            return Self.mapNetworkError(error)
+        case .decodingError, .invalidResponse:
+            return .invalidResponse
+        case .insufficientScope:
+            return .insufficientScope
+        case .exhaustedRetries:
+            return .providerUnavailable
+        }
+    }
+
+    func sanitizedSendFailure(occurredAt: Date = Date()) -> SanitizedSendFailure {
+        SanitizedSendFailure(
+            category: sendFailureCategory,
+            providerErrorCode: sendProviderErrorCode,
+            retryAfterSeconds: sendRetryAfterSeconds,
+            occurredAt: occurredAt
+        )
+    }
+
+    private var sendProviderErrorCode: String? {
+        switch self {
+        case .unauthorized:
+            return "401"
+        case .rateLimited:
+            return "429"
+        case .serverError(let statusCode):
+            return "\(statusCode)"
+        case .networkError(let error):
+            if let urlError = error as? URLError {
+                return urlError.code.rawValue.description
+            }
+            return "network"
+        case .decodingError:
+            return "decoding"
+        case .insufficientScope:
+            return "insufficient_scope"
+        case .exhaustedRetries:
+            return "exhausted_retries"
+        case .invalidResponse:
+            return "invalid_response"
+        }
+    }
+
+    private var sendRetryAfterSeconds: Int? {
+        guard case .rateLimited(let retryAfter) = self,
+              let retryAfter else {
+            return nil
+        }
+        return Int(retryAfter)
+    }
+
+    private static func mapServerStatusToSendFailureCategory(_ statusCode: Int) -> SendFailureCategory {
+        switch statusCode {
+        case 400 ... 499 where statusCode != 404 && statusCode != 409 && statusCode != 429:
+            return .validation
+        case 404:
+            return .notFound
+        case 409:
+            return .conflict
+        case 429:
+            return .rateLimited
+        case 501:
+            return .unsupportedOperation
+        case 500 ... 599:
+            return .providerUnavailable
+        default:
+            return .providerUnavailable
+        }
+    }
+
+    private static func mapNetworkError(_ error: any Error) -> SendFailureCategory {
+        guard let urlError = error as? URLError else {
+            return .offline
+        }
+        return urlError.code == .timedOut ? .timeout : .offline
+    }
+}
+
+public extension GraphAPIError {
+    var sendFailureCategory: SendFailureCategory {
+        switch self {
+        case .unauthorized:
+            return .authExpired
+        case .rateLimited:
+            return .rateLimited
+        case .serverError(let statusCode, _):
+            return Self.mapServerStatusToSendFailureCategory(statusCode)
+        case .networkError(let description):
+            return description.localizedCaseInsensitiveContains("timedout")
+                || description.localizedCaseInsensitiveContains("timed out")
+                ? .timeout
+                : .offline
+        case .decodingError, .invalidResponse:
+            return .invalidResponse
+        case .insufficientScope:
+            return .insufficientScope
+        }
+    }
+
+    func sanitizedSendFailure(occurredAt: Date = Date()) -> SanitizedSendFailure {
+        SanitizedSendFailure(
+            category: sendFailureCategory,
+            providerErrorCode: sendProviderErrorCode,
+            retryAfterSeconds: sendRetryAfterSeconds,
+            occurredAt: occurredAt
+        )
+    }
+
+    private var sendProviderErrorCode: String? {
+        switch self {
+        case .unauthorized:
+            return "401"
+        case .rateLimited:
+            return "429"
+        case .serverError(let statusCode, let code):
+            return code ?? "\(statusCode)"
+        case .networkError:
+            return "network"
+        case .decodingError:
+            return "decoding"
+        case .insufficientScope:
+            return "insufficient_scope"
+        case .invalidResponse:
+            return "invalid_response"
+        }
+    }
+
+    private var sendRetryAfterSeconds: Int? {
+        guard case .rateLimited(let retryAfter) = self,
+              let retryAfter else {
+            return nil
+        }
+        return Int(retryAfter)
+    }
+
+    private static func mapServerStatusToSendFailureCategory(_ statusCode: Int) -> SendFailureCategory {
+        switch statusCode {
+        case 400 ... 499 where statusCode != 404 && statusCode != 409 && statusCode != 429:
+            return .validation
+        case 404:
+            return .notFound
+        case 409:
+            return .conflict
+        case 429:
+            return .rateLimited
+        case 501:
+            return .unsupportedOperation
+        case 500 ... 599:
+            return .providerUnavailable
+        default:
+            return .providerUnavailable
+        }
+    }
+}

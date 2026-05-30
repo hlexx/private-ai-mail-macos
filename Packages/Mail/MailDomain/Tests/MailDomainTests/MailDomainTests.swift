@@ -139,4 +139,37 @@ struct MailDomainTests {
         #expect(result.providerMessageID == "graph-message")
         #expect(result.rfcMessageID == "<sent@example.com>")
     }
+
+    @Test func providerSendRequestCanBeDerivedFromQueuedMessageWithoutQueueState() {
+        let now = Date(timeIntervalSince1970: 3_000)
+        let queued = QueuedOutgoingMessage(
+            id: "queue-3",
+            draftID: "draft-3",
+            provider: .gmail,
+            accountID: "account-3",
+            idempotencyKey: "idem-3",
+            status: .pending,
+            from: Address(email: "me@example.com"),
+            to: [Address(email: "recipient@example.com")],
+            cc: [Address(email: "cc@example.com")],
+            subject: "Boundary",
+            bodyText: "Provider payload",
+            threadID: "thread-3",
+            replyToProviderMessageID: "provider-parent",
+            rfcMessageID: "<idem-3@hlexx.privateaimail>",
+            rfcInReplyTo: "<parent@example.com>",
+            rfcReferences: ["<root@example.com>"],
+            createdAt: now,
+            updatedAt: now
+        )
+
+        let request = ProviderSendRequest(queuedMessage: queued)
+
+        #expect(request.provider == .gmail)
+        #expect(request.accountID == "account-3")
+        #expect(request.idempotencyKey == "idem-3")
+        #expect(request.threadID == "thread-3")
+        #expect(request.rfcInReplyTo == "<parent@example.com>")
+        #expect(request.bodyForPlainTextProvider == "Provider payload")
+    }
 }
