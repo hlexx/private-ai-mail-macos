@@ -104,13 +104,13 @@ Trust MVP tranche.
 
 ### Task 6: Wire search into InboxFeature
 
-- [ ] Replace any search field placeholder behavior with `MailSearchService`
+- [x] Replace any search field placeholder behavior with `MailSearchService`
       results or an honest disabled state if service injection is unavailable.
-- [ ] Ensure search can be cleared and normal inbox filters return.
-- [ ] Add feature tests for search state, loading, empty results, local results,
+- [x] Ensure search can be cleared and normal inbox filters return.
+- [x] Add feature tests for search state, loading, empty results, local results,
       fallback failure, and filter interaction.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/InboxFeature && swift test`.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/InboxFeature && swift test`.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 

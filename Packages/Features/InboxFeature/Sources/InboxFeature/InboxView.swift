@@ -20,6 +20,7 @@ public struct InboxView: View {
         VStack(spacing: 0) {
             threadListHeader
             filterChipsRow
+            searchWarningBanner
             threadList
 
             // Trailing flexible spacer keeps the header pinned directly
@@ -70,7 +71,7 @@ public struct InboxView: View {
                 .font(.rbGeist(18, weight: .semibold))
                 .foregroundStyle(Color.rbFg1)
             Spacer()
-            Text("\(store.filteredThreads.count) threads")
+            Text(headerCountText)
                 .font(.rbMono(11))
                 .foregroundStyle(Color.rbFg3)
         }
@@ -80,6 +81,13 @@ public struct InboxView: View {
         .overlay(alignment: .bottom) {
             Color.rbStroke1.frame(height: 1)
         }
+    }
+
+    private var headerCountText: String {
+        if store.activeSearchText != nil {
+            return "\(store.filteredThreads.count) results"
+        }
+        return "\(store.filteredThreads.count) threads"
     }
 
     // MARK: - Filter Chips
@@ -104,11 +112,64 @@ public struct InboxView: View {
         }
     }
 
+    @ViewBuilder
+    private var searchWarningBanner: some View {
+        if let warning = store.searchWarningText {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(warning)
+                    .font(.rbGeist(12))
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Color.rbToneCoral600)
+            .padding(.horizontal, RBSpace.s4)
+            .padding(.vertical, 8)
+            .background(Color.rbToneCoral600.opacity(0.08))
+            .overlay(alignment: .bottom) {
+                Color.rbStroke1.frame(height: 1)
+            }
+        }
+    }
+
     // MARK: - Thread List
 
     private var threadList: some View {
         Group {
-            if store.filteredThreads.isEmpty {
+            if case .loading = store.searchState {
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text(String(localized: "threads.search.loading", defaultValue: "Searching"))
+                        .font(.rbGeist(13, weight: .medium))
+                        .foregroundStyle(Color.rbFg2)
+                }
+                .frame(maxWidth: .infinity, minHeight: 220)
+            } else if store.searchState == .disabled && store.activeSearchText != nil {
+                ContentUnavailableView(
+                    String(localized: "threads.search.disabled.title", defaultValue: "Search unavailable"),
+                    systemImage: "magnifyingglass",
+                    description: Text(String(
+                        localized: "threads.search.disabled.description",
+                        defaultValue: "Local search is not available in this build."
+                    ))
+                )
+            } else if case .failed(_, let message) = store.searchState {
+                ContentUnavailableView(
+                    String(localized: "threads.search.failed.title", defaultValue: "Search failed"),
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(message)
+                )
+            } else if case .empty = store.searchState {
+                ContentUnavailableView(
+                    String(localized: "threads.search.empty.title", defaultValue: "No search results"),
+                    systemImage: "magnifyingglass",
+                    description: Text(String(
+                        localized: "threads.search.empty.description",
+                        defaultValue: "No indexed threads match this search."
+                    ))
+                )
+            } else if store.filteredThreads.isEmpty {
                 if store.filter != .all && !store.threads.isEmpty {
                     ContentUnavailableView(
                         String(localized: "threads.filter.empty.title", defaultValue: "No matching threads"),
@@ -265,6 +326,9 @@ private struct ThreadRowView: View {
         var chips: [SignalChip.Kind] = []
         if thread.attachmentCount > 0 {
             chips.append(.att(pages: nil))
+        }
+        if thread.isRemoteSearchResult {
+            chips.append(.ai(label: "remote"))
         }
         if thread.messageCount > 1 {
             // Show message count as a subtle indicator

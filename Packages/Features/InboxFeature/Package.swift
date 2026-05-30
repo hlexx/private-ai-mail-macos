@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "InboxFeature", targets: ["InboxFeature"]),
     ],
     dependencies: [
+        .package(path: "../../Mail/MailIndex"),
         .package(path: "../../Mail/MailSync"),
         .package(path: "../../Mail/MailDomain"),
         .package(path: "../../AI/AIKit"),
@@ -18,6 +19,7 @@ let package = Package(
         .target(
             name: "InboxFeature",
             dependencies: [
+                "MailIndex",
                 "MailSync",
                 "MailDomain",
                 "AIKit",
@@ -26,6 +28,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "Persistence"]),
+        .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "MailIndex", "MailDomain", "Persistence"]),
     ]
 )

@@ -45,23 +45,7 @@ struct MainScene: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            RBToolbar(
-                accounts: accounts,
-                activeAccountID: composition.activeAccountID,
-                onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
-                onToggleTheme: { toggleTheme() },
-                onOpenSettings: { openSettings() },
-                onCompose: {
-                    prepareNewCompose()
-                    composition.showCompose = true
-                },
-                onOpenActionSheet: { composition.showActionSheet = true },
-                onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
-                onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
-                sidebarWidth: CGFloat(sidebarWidth),
-                sidebarCollapsed: sidebarCollapsed,
-                searchFocused: $searchFocused
-            )
+            toolbar
 
             MainSplitController(
                 sidebarCollapsed: $sidebarCollapsed,
@@ -268,6 +252,34 @@ extension MainScene {
         case .snooze, .log, .task, .unsub, .rule, .share:
             showToast("Action not available yet", undo: nil)
         }
+    }
+
+    private var toolbarSearchText: Binding<String> {
+        Binding(
+            get: { inboxStore.searchText },
+            set: { inboxStore.searchText = $0 }
+        )
+    }
+
+    private var toolbar: some View {
+        RBToolbar(
+            accounts: accounts,
+            activeAccountID: composition.activeAccountID,
+            onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
+            onToggleTheme: { toggleTheme() },
+            onOpenSettings: { openSettings() },
+            onCompose: {
+                prepareNewCompose()
+                composition.showCompose = true
+            },
+            onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
+            onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
+            sidebarWidth: CGFloat(sidebarWidth),
+            sidebarCollapsed: sidebarCollapsed,
+            searchFocused: $searchFocused,
+            searchText: toolbarSearchText,
+            onSubmitSearch: { inboxStore.submitSearch() }
+        )
     }
 }
 
