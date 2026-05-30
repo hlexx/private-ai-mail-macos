@@ -77,15 +77,15 @@ and Outlook. This tranche does not add send later or AI auto-send.
 
 ### Task 4: Implement SendQueue service
 
-- [ ] Add a `SendQueueService` or actor that enqueues drafts, executes the next
+- [x] Add a `SendQueueService` or actor that enqueues drafts, executes the next
       eligible item, marks success/failure, schedules retry, and prevents
       duplicate execution for the same idempotency key.
-- [ ] Ensure the executor checks credentials/scopes before sending and fails
+- [x] Ensure the executor checks credentials/scopes before sending and fails
       without mutating local sent state if credentials are missing.
-- [ ] Insert or reconcile the local sent message only after provider success.
-- [ ] Add tests for offline, provider failure, rate limit retry, duplicate
+- [x] Insert or reconcile the local sent message only after provider success.
+- [x] Add tests for offline, provider failure, rate limit retry, duplicate
       enqueue, duplicate provider success, cancellation, and app restart fetch.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ComposeFeature && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ComposeFeature && swift test`.
 
 ### Task 5: Wire composer UX to queue states
 

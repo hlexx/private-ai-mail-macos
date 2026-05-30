@@ -125,99 +125,13 @@ public final class LiveComposeService: ComposeService, Sendable {
         }
 
         let now = Date()
-        let sentAtUnix = Int(now.timeIntervalSince1970)
-
         let generatedMessageId = "<\(messageIDSeed)@hlexx.privateaimail>"
-        let record = MessageRecord(
-            id: sent.id,
-            threadId: sent.threadId,
-            accountId: draft.accountID,
-            messageIdHeader: generatedMessageId,
-            fromAddr: formatAddr(draft.from),
-            toAddr: formatAddrList(draft.to),
-            ccAddr: draft.cc.isEmpty ? nil : formatAddrList(draft.cc),
-            sentAt: sentAtUnix,
-            snippet: String(draft.body.prefix(200)),
-            bodyText: draft.body,
-            flags: MessageRecord.sentByMe | MessageRecord.read
+
+        return try await LocalSentMessageReconciler(db: db).reconcileGmailDirectSend(
+            draft: draft,
+            sent: sent,
+            rfcMessageID: generatedMessageId,
+            sentAt: now
         )
-
-        let subject = draft.subject
-        let isNewThread = draft.replyContext == nil
-        let threadId = sent.threadId
-        let accountID = draft.accountID
-        var labelIds = Set(sent.labelIds ?? [])
-        labelIds.insert("SENT")
-
-        try await Self.insertSentRecord(
-            record: record,
-            isNewThread: isNewThread,
-            threadId: threadId,
-            accountID: accountID,
-            subject: subject,
-            labelIds: labelIds,
-            sentAtUnix: sentAtUnix,
-            db: db
-        )
-
-        return SentEcho(messageID: sent.id, threadID: sent.threadId, sentAt: now)
-    }
-
-    @DatabaseActor
-    private static func insertSentRecord(
-        record: MessageRecord,
-        isNewThread: Bool,
-        threadId: String,
-        accountID: String,
-        subject: String,
-        labelIds: Set<String>,
-        sentAtUnix: Int,
-        db: AppDatabase
-    ) throws {
-        try db.write { dbConn in
-            let messageAlreadyExists = try MessageRecord.fetchOne(
-                dbConn,
-                key: ["account_id": record.accountId, "id": record.id]
-            ) != nil
-
-            try record.save(dbConn, onConflict: .replace)
-
-            for labelId in labelIds {
-                try ThreadLabelRecord(accountId: accountID, threadId: threadId, labelId: labelId)
-                    .save(dbConn, onConflict: .replace)
-            }
-
-            if isNewThread {
-                let thread = ThreadRecord(
-                    id: threadId,
-                    accountId: accountID,
-                    subject: subject,
-                    snippet: String(record.snippet?.prefix(200) ?? ""),
-                    lastMessageAt: sentAtUnix,
-                    messageCount: 1
-                )
-                try thread.save(dbConn, onConflict: .replace)
-            } else if var existing = try ThreadRecord
-                .filter(Column("id") == threadId && Column("account_id") == accountID)
-                .fetchOne(dbConn) {
-                existing.lastMessageAt = sentAtUnix
-                if !messageAlreadyExists {
-                    existing.messageCount += 1
-                }
-                existing.snippet = record.snippet
-                try existing.update(dbConn)
-            }
-        }
-    }
-
-    private func formatAddr(_ addr: Address) -> String {
-        if let name = addr.name {
-            return "\(name) <\(addr.email)>"
-        }
-        return addr.email
-    }
-
-    private func formatAddrList(_ addrs: [Address]) -> String {
-        addrs.map { formatAddr($0) }.joined(separator: ", ")
     }
 }
