@@ -6,6 +6,7 @@ import AuthKit
 import BriefFeature
 import ComposeFeature
 import InboxFeature
+import MailDomain
 import MailProviders
 import MailSync
 import Persistence
@@ -95,8 +96,14 @@ final class CompositionRoot {
         let capturedOAuth = oauthClient
         let capturedTokenStore = tokenStore
         self.composeViewModel = ComposeViewModel(
-            composeServiceFactory: { accountId in
-                LiveComposeService(api: try capturedFactory(accountId), db: capturedDB)
+            sendQueueFactory: { _ in
+                SendQueueService(
+                    db: capturedDB,
+                    providers: [
+                        LazyGmailSendProvider(apiFactory: capturedFactory)
+                    ],
+                    credentialAuthorizer: TokenStoreSendQueueCredentialAuthorizer(tokenStore: capturedTokenStore)
+                )
             },
             reauthorizeHandler: { @MainActor accountId in
                 let newCredential = try await capturedOAuth.reauthorize(
@@ -199,6 +206,16 @@ final class CompositionRoot {
         LiveComposeService(api: try apiFactory(accountId), db: db)
     }
 
+    func makeSendQueueService() -> SendQueueService {
+        SendQueueService(
+            db: db,
+            providers: [
+                LazyGmailSendProvider(apiFactory: apiFactory)
+            ],
+            credentialAuthorizer: TokenStoreSendQueueCredentialAuthorizer(tokenStore: tokenStore)
+        )
+    }
+
     func refreshAllAccounts() {
         Task {
             let accounts = try? db.read { db in try AccountRecord.fetchAll(db) }
@@ -260,5 +277,36 @@ private struct GmailAttachmentByteProvider: AttachmentByteProvider {
     func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
         let api = try apiFactory(accountId)
         return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
+    }
+}
+
+private struct LazyGmailSendProvider: MailSendProvider {
+    let provider = MailProviderIdentifier.gmail
+    let apiFactory: GmailAPIFactory
+
+    func send(_ request: ProviderSendRequest) async throws -> ProviderSendResult {
+        let api = try apiFactory(request.accountID)
+        return try await GmailSendExecutor(api: api).send(request)
+    }
+}
+
+private struct TokenStoreSendQueueCredentialAuthorizer: SendQueueCredentialAuthorizing {
+    let tokenStore: any TokenStore
+
+    func authorization(for item: QueuedOutgoingMessage) async -> SendQueueCredentialAuthorization {
+        do {
+            guard try tokenStore.load(for: item.accountID) != nil else {
+                return SendQueueCredentialAuthorization(
+                    status: .missingCredential,
+                    providerErrorCode: "missing_credential"
+                )
+            }
+            return .authorized
+        } catch {
+            return SendQueueCredentialAuthorization(
+                status: .missingCredential,
+                providerErrorCode: "credential_lookup_failed"
+            )
+        }
     }
 }

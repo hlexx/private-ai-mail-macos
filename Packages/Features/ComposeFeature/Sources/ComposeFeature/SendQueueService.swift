@@ -145,11 +145,41 @@ public actor SendQueueService {
         }
     }
 
+    public func retry(id: SendQueueItemID) async throws -> QueuedOutgoingMessage? {
+        guard let item = try await storage.fetch(id: id) else {
+            return nil
+        }
+        switch item.status {
+        case .failed, .needsConsent, .retryScheduled:
+            return try await storage.save(
+                item.updating(
+                    status: .pending,
+                    nextAttemptAt: nil,
+                    updatedAt: now(),
+                    sanitizedFailure: nil
+                )
+            )
+        case .pending, .sending, .sent, .canceled, .duplicateSuppressed:
+            return item
+        }
+    }
+
+    public func execute(id: SendQueueItemID) async throws -> SendQueueExecutionOutcome {
+        guard let item = try await storage.fetch(id: id),
+              item.isEligibleToExecute(at: now()) else {
+            return .noEligibleItem
+        }
+        return try await execute(item)
+    }
+
     public func executeNextEligible() async throws -> SendQueueExecutionOutcome {
         guard let item = try await storage.fetchNextEligible(now: now()) else {
             return .noEligibleItem
         }
+        return try await execute(item)
+    }
 
+    private func execute(_ item: QueuedOutgoingMessage) async throws -> SendQueueExecutionOutcome {
         let authorization = await credentialAuthorizer.authorization(for: item)
         if authorization.status != .authorized {
             return try await applyPreflightFailure(authorization, to: item)
@@ -655,6 +685,17 @@ private extension SendFailureCategory {
 }
 
 private extension QueuedOutgoingMessage {
+    func isEligibleToExecute(at date: Date) -> Bool {
+        switch status {
+        case .pending:
+            return true
+        case .retryScheduled:
+            return nextAttemptAt.map { $0 <= date } ?? true
+        case .sending, .needsConsent, .failed, .sent, .canceled, .duplicateSuppressed:
+            return false
+        }
+    }
+
     func updating(
         status: SendQueueStatus,
         providerMessageID: String? = nil,

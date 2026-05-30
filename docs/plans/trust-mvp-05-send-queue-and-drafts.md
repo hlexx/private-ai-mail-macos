@@ -89,15 +89,15 @@ and Outlook. This tranche does not add send later or AI auto-send.
 
 ### Task 5: Wire composer UX to queue states
 
-- [ ] Update full compose and inline compose flows to enqueue and show pending,
+- [x] Update full compose and inline compose flows to enqueue and show pending,
       sending, sent, failed, retrying, and needs re-consent states.
-- [ ] Ensure user cannot accidentally click Send twice and produce duplicate
+- [x] Ensure user cannot accidentally click Send twice and produce duplicate
       provider sends.
-- [ ] Keep manual retry explicit for non-transient failures.
-- [ ] Add tests for disabled send button during sending, retry action, failure
+- [x] Keep manual retry explicit for non-transient failures.
+- [x] Add tests for disabled send button during sending, retry action, failure
       display, and no duplicate local sent rows.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ComposeFeature && swift test`.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ComposeFeature && swift test`.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 

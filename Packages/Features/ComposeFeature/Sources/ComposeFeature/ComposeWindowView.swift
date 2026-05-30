@@ -53,7 +53,10 @@ public struct ComposeWindowView: View {
         }
         .onChange(of: viewModel.sendState.key) { _, newKey in
             if newKey == "sent" {
-                dismiss()
+                Task {
+                    try? await Task.sleep(for: .milliseconds(700))
+                    dismiss()
+                }
             }
         }
         .animation(RBEase.out(duration: RBDuration.d3), value: viewModel.sendState.key)
@@ -199,10 +202,7 @@ public struct ComposeWindowView: View {
     }
 
     private var isSendEnabled: Bool {
-        if case .idle = viewModel.sendState {
-            return !viewModel.toField.trimmingCharacters(in: .whitespaces).isEmpty
-        }
-        return false
+        viewModel.canRequestSend
     }
 }
 

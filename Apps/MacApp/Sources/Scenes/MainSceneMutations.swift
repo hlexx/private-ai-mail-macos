@@ -3,6 +3,7 @@ import ComposeFeature
 import DesignSystem
 import GRDB
 import InboxFeature
+import MailDomain
 import MailSync
 import Persistence
 import SwiftUI
@@ -109,7 +110,14 @@ extension MainScene {
             lastMessageID: inReplyToID,
             referencesChain: referencesChain
         )
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let accountID = replyAccountId {
             vm.selectedAccountID = accountID
             vm.selectedAccountEmail = replyAccountEmail
@@ -161,7 +169,14 @@ extension MainScene {
             lastMessageID: inReplyToID,
             referencesChain: referencesChain
         )
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let accountID = fwdAccountId {
             vm.selectedAccountID = accountID
             vm.selectedAccountEmail = fwdAccountEmail

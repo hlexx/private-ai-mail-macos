@@ -123,6 +123,7 @@ struct MainScene: View {
                                     accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
                                     replyLanguage: detectReplyLanguage(),
                                     replyStore: composition.replyStore,
+                                    sendState: composition.composeViewModel.sendState,
                                     onEditInFull: { draftText in
                                         prefillComposeForReply()
                                         composition.composeViewModel.bodyText = draftText
@@ -132,7 +133,11 @@ struct MainScene: View {
                                         prefillComposeForReply()
                                         composition.composeViewModel.bodyText = bodyText
                                         composition.composeViewModel.requestSend()
-                                    }
+                                    },
+                                    onCancelSend: { composition.composeViewModel.cancelSend() },
+                                    onRetrySend: { composition.composeViewModel.retrySend() },
+                                    onConfirmSendNow: { composition.composeViewModel.confirmSendNow() },
+                                    onReauthorize: { composition.composeViewModel.reauthorizeAndRetry() }
                                 )
                             }
                         },
@@ -289,7 +294,14 @@ extension MainScene {
     func prepareNewCompose() {
         let vm = composition.composeViewModel
         vm.reset()
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let activeID = composition.activeAccountID ?? accounts.first?.id {
             vm.selectedAccountID = activeID
             vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
@@ -323,7 +335,14 @@ extension MainScene {
             lastMessageID: inReplyToID,
             referencesChain: referencesChain
         )
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let accountID = replyAccountId {
             vm.selectedAccountID = accountID
             vm.selectedAccountEmail = replyAccountEmail
