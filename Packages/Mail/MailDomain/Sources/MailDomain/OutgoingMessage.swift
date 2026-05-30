@@ -1,6 +1,6 @@
 import Foundation
 
-public struct OutgoingMessage: Sendable {
+public struct OutgoingMessage: Sendable, Equatable {
     public let from: Address
     public let to: [Address]
     public let cc: [Address]

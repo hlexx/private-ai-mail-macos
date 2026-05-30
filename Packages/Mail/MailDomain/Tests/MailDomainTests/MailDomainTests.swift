@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import MailDomain
 
@@ -74,5 +75,68 @@ struct MailDomainTests {
 
         #expect(GraphMailboxMapper.canonicalFlaggedMailbox(isFlagged: true) == .flagged)
         #expect(GraphMailboxMapper.canonicalFlaggedMailbox(isFlagged: false) == nil)
+    }
+
+    @Test func sendQueueDomainContractsCaptureIdentityRetryAndSanitizedFailure() throws {
+        let createdAt = Date(timeIntervalSince1970: 1_000)
+        let retryAt = Date(timeIntervalSince1970: 1_060)
+        let failure = SanitizedSendFailure(
+            category: .rateLimited,
+            providerErrorCode: "429",
+            userVisibleMessage: "Provider asked us to retry later.",
+            retryAfterSeconds: 60,
+            occurredAt: createdAt
+        )
+
+        let queued = QueuedOutgoingMessage(
+            id: "queue-1",
+            draftID: "draft-1",
+            provider: .gmail,
+            accountID: "account-1",
+            idempotencyKey: "idem-1",
+            status: .retryScheduled,
+            from: Address(name: "User", email: "user@example.com"),
+            to: [Address(email: "recipient@example.com")],
+            subject: "Status",
+            bodyText: "Local body",
+            threadID: "thread-1",
+            replyToProviderMessageID: "provider-original",
+            rfcMessageID: "<local@hlexx.privateaimail>",
+            rfcInReplyTo: "<parent@example.com>",
+            rfcReferences: ["<parent@example.com>"],
+            attempts: 1,
+            nextAttemptAt: retryAt,
+            createdAt: createdAt,
+            updatedAt: retryAt,
+            sanitizedFailure: failure
+        )
+
+        #expect(queued.bodyStorage == .sqlite)
+        #expect(queued.retryPolicy.delaySeconds(forNextAttemptAfter: 1) == 60)
+        #expect(queued.retryPolicy.delaySeconds(forNextAttemptAfter: 5) == nil)
+        #expect(queued.sanitizedFailure?.category == .rateLimited)
+        #expect(queued.sanitizedFailure?.providerErrorCode == "429")
+
+        let encoded = try JSONEncoder().encode(queued)
+        let decoded = try JSONDecoder().decode(QueuedOutgoingMessage.self, from: encoded)
+        #expect(decoded == queued)
+    }
+
+    @Test func draftIdentityAndProviderSendResultStayProviderNeutral() {
+        let identity = DraftIdentity(provider: .outlook, accountID: "account-2", id: "draft-2")
+        let sentAt = Date(timeIntervalSince1970: 2_000)
+        let result = ProviderSendResult(
+            provider: .outlook,
+            providerMessageID: "graph-message",
+            providerThreadID: "graph-thread",
+            rfcMessageID: "<sent@example.com>",
+            sentAt: sentAt
+        )
+
+        #expect(identity.provider == .outlook)
+        #expect(identity.id.rawValue == "draft-2")
+        #expect(result.provider == .outlook)
+        #expect(result.providerMessageID == "graph-message")
+        #expect(result.rfcMessageID == "<sent@example.com>")
     }
 }

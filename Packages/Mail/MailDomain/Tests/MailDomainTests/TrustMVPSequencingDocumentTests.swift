@@ -80,6 +80,8 @@ struct TrustMVPSequencingDocumentTests {
         #expect(document.contains("insufficient scope transitions the item to `needsConsent`"))
         #expect(document.contains("Users can cancel `pending`,"))
         #expect(document.contains("Draft bodies and queued outgoing bodies remain local"))
+        #expect(document.contains("SQLite `AppDatabase`"))
+        #expect(document.contains("`body_storage = sqlite`"))
         #expect(document.contains("send later, background delivery while the app is"))
         #expect(document.contains("AI auto-send, shared mailbox send-as, enterprise delegated send"))
     }

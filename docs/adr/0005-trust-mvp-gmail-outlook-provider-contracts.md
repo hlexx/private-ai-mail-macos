@@ -173,6 +173,10 @@ re-consent succeeds and the same queued item resumes.
 
 Draft bodies and queued outgoing bodies remain local. This ADR does not permit
 cloud draft storage, server-side draft synchronization, or raw body logging.
+Task 2 stores draft bodies and queued outgoing body snapshots in the local
+SQLite `AppDatabase` (`body_text` / `body_html` columns) with
+`body_storage = sqlite`; no local file store or cloud draft store is introduced
+in this tranche.
 Queue observability may include provider, local account id or account hash,
 queue status, retry count, sanitized failure category, and timestamps, but must
 not include body, HTML, raw MIME, recipient lists, tokens, or provider URLs with

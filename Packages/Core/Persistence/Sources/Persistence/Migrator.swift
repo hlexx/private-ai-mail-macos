@@ -20,6 +20,7 @@ enum Migrator {
         migrator.registerMigration("M014_AccountProviderOutlook", migrate: M014_AccountProviderOutlook.migrate)
         migrator.registerMigration("M015_GraphDeltaCheckpoints", migrate: M015_GraphDeltaCheckpoints.migrate)
         migrator.registerMigration("M016_LocalSearchIndex", migrate: M016_LocalSearchIndex.migrate)
+        migrator.registerMigration("M017_DraftsAndSendQueue", migrate: M017_DraftsAndSendQueue.migrate)
         try migrator.migrate(db)
     }
 }

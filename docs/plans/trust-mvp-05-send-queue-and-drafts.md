@@ -53,18 +53,18 @@ and Outlook. This tranche does not add send later or AI auto-send.
 
 ### Task 2: Add domain and persistence models
 
-- [ ] Add domain types for draft identity, queued outgoing message, send queue
+- [x] Add domain types for draft identity, queued outgoing message, send queue
       status, retry policy, provider send result, and sanitized failure.
-- [ ] Add additive persistence tables for drafts and send queue items with
+- [x] Add additive persistence tables for drafts and send queue items with
       provider, account id, message ids, thread id, RFC header ids,
       idempotency key, status, attempts, created/updated/sent timestamps, and
       sanitized error fields.
-- [ ] Keep body storage local and document whether it is stored in SQLite or a
+- [x] Keep body storage local and document whether it is stored in SQLite or a
       local file store. Do not introduce cloud draft storage.
-- [ ] Add tests for migrations, draft save/fetch/delete, queue insert/fetch,
+- [x] Add tests for migrations, draft save/fetch/delete, queue insert/fetch,
       idempotency uniqueness, account cascade, and retry metadata.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailDomain && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailDomain && swift test`.
 
 ### Task 3: Build provider-neutral send execution
 
