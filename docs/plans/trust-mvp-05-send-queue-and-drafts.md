@@ -43,12 +43,12 @@ and Outlook. This tranche does not add send later or AI auto-send.
 
 ### Task 1: Record queue semantics
 
-- [ ] Update ADR 0005 or add a focused send queue section to
+- [x] Update ADR 0005 or add a focused send queue section to
       `docs/trust-mvp-sequencing.md`.
-- [ ] Define queue states, retry policy, idempotency key, duplicate prevention,
+- [x] Define queue states, retry policy, idempotency key, duplicate prevention,
       user cancellation, offline behavior, insufficient-scope behavior, and
       provider reconciliation after send.
-- [ ] State non-goals: send later, background delivery while app is quit, AI
+- [x] State non-goals: send later, background delivery while app is quit, AI
       auto-send, shared mailbox send-as, and enterprise delegated send.
 
 ### Task 2: Add domain and persistence models

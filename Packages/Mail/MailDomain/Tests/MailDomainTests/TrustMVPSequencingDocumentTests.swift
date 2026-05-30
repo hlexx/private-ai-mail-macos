@@ -45,6 +45,45 @@ struct TrustMVPSequencingDocumentTests {
         #expect(document.contains("https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc"))
     }
 
+    @Test func adrRecordsSendQueueSemanticsAndNonGoals() throws {
+        let document = try Self.loadADR0005()
+
+        #expect(document.contains("## Send Queue and Draft Reliability (Task 5)"))
+        #expect(document.contains("`ComposeFeature` owns editing and"))
+        #expect(document.contains("`MailDomain` owns draft identity"))
+        #expect(document.contains("`Persistence` owns local draft and queue storage"))
+
+        for state in [
+            "`pending`",
+            "`sending`",
+            "`retryScheduled`",
+            "`needsConsent`",
+            "`failed`",
+            "`sent`",
+            "`canceled`",
+            "`duplicateSuppressed`"
+        ] {
+            #expect(document.contains(state))
+        }
+
+        #expect(document.contains("1 minute, 5 minute, 15 minute, 1 hour, and 4 hour backoff"))
+        #expect(document.contains("stable idempotency key"))
+        #expect(document.contains("uniqueness for provider, account id, and"))
+        #expect(document.contains("A duplicate Send click returns the existing queue row"))
+        #expect(document.contains("Local sent rows may be"))
+        #expect(document.contains("only after provider success is confirmed"))
+        #expect(document.contains("provider-specific reconciliation"))
+        #expect(document.contains("Gmail send"))
+        #expect(document.contains("Microsoft Graph"))
+        #expect(document.contains("delegated `Mail.Send` scope"))
+        #expect(document.contains("Missing or"))
+        #expect(document.contains("insufficient scope transitions the item to `needsConsent`"))
+        #expect(document.contains("Users can cancel `pending`,"))
+        #expect(document.contains("Draft bodies and queued outgoing bodies remain local"))
+        #expect(document.contains("send later, background delivery while the app is"))
+        #expect(document.contains("AI auto-send, shared mailbox send-as, enterprise delegated send"))
+    }
+
     private static func loadSequencingDocument() throws -> String {
         try loadDocument("docs/trust-mvp-sequencing.md")
     }

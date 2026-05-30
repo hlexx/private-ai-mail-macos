@@ -101,6 +101,87 @@ Sources:
 - Persistence migrations that backfill Gmail label semantics remain unchanged in
   this tranche; they are tracked for provider-neutral follow-up.
 
+## Send Queue and Draft Reliability (Task 5)
+
+Trust MVP send reliability moves from direct composer-to-provider calls into a
+durable local draft and send queue contract. `ComposeFeature` owns editing and
+visible recovery UI. `MailDomain` owns draft identity, queued outgoing message,
+send status, retry policy, provider send result, and sanitized failure
+contracts. `Persistence` owns local draft and queue storage. Provider adapters
+own the final Gmail or Microsoft Graph send call and map provider responses back
+to the shared send result contract.
+
+Queue state is explicit and durable:
+
+- `pending`: the user requested send and the item is eligible for execution
+  when provider capability, credentials, scopes, and network preconditions pass.
+- `sending`: one executor has leased the item for a provider send attempt.
+- `retryScheduled`: the last attempt hit a transient condition such as offline,
+  rate limit, timeout, provider unavailable, or checkpoint-style ambiguous
+  completion that requires reconciliation before another attempt.
+- `needsConsent`: credentials are missing, expired, revoked, or lack the
+  required Gmail or Graph send scope. No provider send call is allowed in this
+  state.
+- `failed`: a non-transient provider or validation failure needs explicit user
+  action before another send attempt.
+- `sent`: the provider accepted the send and local sent-state reconciliation
+  completed.
+- `canceled`: the user canceled before the provider accepted the message.
+- `duplicateSuppressed`: an enqueue or execution request matched an existing
+  idempotency key and must not create a second provider send.
+
+The default retry policy is bounded and visible. Transient failures schedule
+retry attempts using 1 minute, 5 minute, 15 minute, 1 hour, and 4 hour backoff
+intervals. After the fifth failed provider attempt, the item becomes `failed`
+unless the user explicitly retries. Offline detection records an offline
+sanitized failure and schedules the item for retry when connectivity returns or
+the next backoff interval elapses; it must not mark the draft sent or mutate
+local sent records.
+
+Idempotency is required for every send intent. The app creates and persists a
+stable idempotency key when the user first enqueues a draft. Retries for the
+same queued item reuse that key across app restarts. Editing a saved draft after
+a canceled or terminally failed send creates a new send intent and a new key.
+The persistence layer enforces uniqueness for provider, account id, and
+idempotency key, and the executor must lease by queue row rather than by mutable
+draft content. A duplicate Send click returns the existing queue row and never
+starts a second provider send.
+
+Provider reconciliation is part of the send contract. Local sent rows may be
+inserted or updated only after provider success is confirmed. Successful sends
+persist provider message id, provider thread id when available, RFC header ids
+when available, sent timestamp, final status, and sanitized provider result.
+If the provider response is lost or ambiguous after a send attempt starts, the
+executor must try provider-specific reconciliation using stored provider ids,
+RFC header ids, and the idempotency key before retrying. If reconciliation
+cannot prove the message was not sent, the item stays visible for manual
+recovery instead of blindly resending.
+
+Cancellation is best-effort and state-dependent. Users can cancel `pending`,
+`retryScheduled`, or `needsConsent` items before provider execution. Once an item
+is `sending`, cancellation may only abort the local attempt if the provider call
+has not been accepted. If the provider accepts the message, the queue must
+reconcile to `sent` even if the user requested cancellation during the in-flight
+attempt.
+
+Send scope and credential checks happen before each provider call. Gmail send
+requires the Gmail send capability configured for the account. Microsoft Graph
+send requires the delegated `Mail.Send` scope for the signed-in user. Missing or
+insufficient scope transitions the item to `needsConsent`, records only a
+sanitized required-scope failure, and leaves local sent state untouched until
+re-consent succeeds and the same queued item resumes.
+
+Draft bodies and queued outgoing bodies remain local. This ADR does not permit
+cloud draft storage, server-side draft synchronization, or raw body logging.
+Queue observability may include provider, local account id or account hash,
+queue status, retry count, sanitized failure category, and timestamps, but must
+not include body, HTML, raw MIME, recipient lists, tokens, or provider URLs with
+embedded tokens.
+
+Non-goals for this tranche are send later, background delivery while the app is
+quit, AI auto-send, shared mailbox send-as, enterprise delegated send, server
+draft storage, and hidden provider-specific resend fallbacks.
+
 ## Consequences
 
 - Shared domain and sync contracts can stay provider-neutral while Gmail and
