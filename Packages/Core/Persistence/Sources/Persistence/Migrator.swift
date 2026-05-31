@@ -21,6 +21,7 @@ enum Migrator {
         migrator.registerMigration("M015_GraphDeltaCheckpoints", migrate: M015_GraphDeltaCheckpoints.migrate)
         migrator.registerMigration("M016_LocalSearchIndex", migrate: M016_LocalSearchIndex.migrate)
         migrator.registerMigration("M017_DraftsAndSendQueue", migrate: M017_DraftsAndSendQueue.migrate)
+        migrator.registerMigration("M018_LocalSearchAttachmentBuckets", migrate: M018_LocalSearchAttachmentBuckets.migrate)
         try migrator.migrate(db)
     }
 }

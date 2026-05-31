@@ -85,11 +85,11 @@ workflow automation.
 
 ### Task 5: Connect attachment metadata to search
 
-- [ ] Ensure `MailIndex` indexes attachment filename, MIME, size bucket, and has
+- [x] Ensure `MailIndex` indexes attachment filename, MIME, size bucket, and has
       attachment flags after tranche 04 search exists.
-- [ ] Add tests for `has:attachment`, filename query, MIME filter, and thread
+- [x] Add tests for `has:attachment`, filename query, MIME filter, and thread
       result attachment indicator.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailIndex && swift test`.
 
 ### Task 6: Keep AI attachment summaries honest
 

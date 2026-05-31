@@ -35,7 +35,8 @@ struct MailIndexTests {
             isSent: false,
             hasAttachment: true,
             attachmentFilenames: ["invoice.pdf"],
-            attachmentMIMETypes: ["application/pdf"]
+            attachmentMIMETypes: ["application/pdf"],
+            attachmentSizeBuckets: [.small]
         )
 
         let query = try MailSearchQuery(
@@ -58,6 +59,7 @@ struct MailIndexTests {
         #expect(query.filters.hasAttachment == true)
         #expect(query.filters.attachmentFilenames == ["invoice.pdf"])
         #expect(query.filters.attachmentMIMETypes == ["application/pdf"])
+        #expect(query.filters.attachmentSizeBuckets == [.small])
         #expect(query.mode == .providerFallbackRequest)
         #expect(query.sort == .newestFirst)
         #expect(query.limit == 25)
@@ -70,6 +72,13 @@ struct MailIndexTests {
         #expect(query.text == nil)
         #expect(query.limit == 1)
         #expect(query.offset == 0)
+    }
+
+    @Test func queryParsesHasAttachmentOperatorIntoStructuredFilter() throws {
+        let query = try MailSearchQuery(text: "  has:attachment  ")
+
+        #expect(query.text == nil)
+        #expect(query.filters.hasAttachment == true)
     }
 
     @Test func filterRejectsEmptyValues() {
@@ -123,7 +132,8 @@ struct MailIndexTests {
                 isSent: false,
                 hasAttachment: true,
                 attachmentFilenames: ["secret-plan.pdf"],
-                attachmentMIMETypes: ["application/pdf"]
+                attachmentMIMETypes: ["application/pdf"],
+                attachmentSizeBuckets: [.small]
             )
         )
 
@@ -137,6 +147,8 @@ struct MailIndexTests {
         #expect(description.contains("to=1"))
         #expect(description.contains("dateRange=set"))
         #expect(description.contains("attachmentFilenames=1"))
+        #expect(description.contains("attachmentMIMETypes=1"))
+        #expect(description.contains("attachmentSizeBuckets=1"))
         #expect(!description.contains("secret acquisition plan"))
         #expect(!description.contains("private-account"))
         #expect(!description.contains("ceo@example.com"))
@@ -200,6 +212,26 @@ struct MailIndexTests {
         #expect(unreadFiltered.results.first?.isUnread == true)
         #expect(attachmentFiltered.results.map(\.threadID) == ["t-attachment"])
         #expect(attachmentFiltered.results.first?.hasAttachments == true)
+    }
+
+    @Test func serviceSearchesAttachmentMetadataAndIndicators() async throws {
+        let service = try makeSearchService()
+
+        let hasAttachment = try await service.search(try MailSearchQuery(text: "has:attachment"))
+        let filename = try await service.search(try MailSearchQuery(text: "invoice.pdf"))
+        let mime = try await service.search(try MailSearchQuery(filters: MailSearchFilter(
+            attachmentMIMETypes: ["application/pdf"]
+        )))
+        let sizeBucket = try await service.search(try MailSearchQuery(filters: MailSearchFilter(
+            attachmentSizeBuckets: [.small]
+        )))
+
+        #expect(hasAttachment.results.map(\.threadID) == ["t-attachment"])
+        #expect(filename.results.map(\.threadID) == ["t-attachment"])
+        #expect(filename.results.first?.hasAttachments == true)
+        #expect(filename.results.first?.snippets.contains { $0.field == .attachmentFilename && $0.text == "invoice.pdf" } == true)
+        #expect(mime.results.map(\.threadID) == ["t-attachment"])
+        #expect(sizeBucket.results.map(\.threadID) == ["t-attachment"])
     }
 
     @Test func serviceRanksSubjectThenSenderThenBodyForRelevantSearch() async throws {

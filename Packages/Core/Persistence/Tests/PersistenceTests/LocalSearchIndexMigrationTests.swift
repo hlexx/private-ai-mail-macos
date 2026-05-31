@@ -53,6 +53,7 @@ struct LocalSearchIndexMigrationTests {
         #expect(document?.normalizedBodyText == "Quarterly revenue deck")
         #expect(document?.attachmentFilenames == "roadmap.pdf")
         #expect(document?.attachmentMimes == "application/pdf")
+        #expect(document?.attachmentSizeBuckets == "small")
         #expect(document?.canonicalMailboxes == "INBOX")
         #expect(document?.isUnread == 1)
         #expect(document?.isSent == 0)
@@ -68,7 +69,7 @@ struct LocalSearchIndexMigrationTests {
                     WHERE mail_search_fts MATCH ?
                     ORDER BY d.message_id
                     """,
-                arguments: ["revenue OR roadmap OR INBOX"]
+                arguments: ["revenue OR roadmap OR application OR small OR INBOX"]
             )
         }
         #expect(matches == ["m1"])

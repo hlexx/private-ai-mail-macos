@@ -20,6 +20,28 @@ public enum MailSearchSort: Sendable, Equatable {
     case oldestFirst
 }
 
+public enum MailAttachmentSizeBucket: String, Sendable, Equatable, CaseIterable {
+    case unknown
+    case small
+    case medium
+    case large
+
+    public init(sizeBytes: Int?) {
+        guard let sizeBytes, sizeBytes >= 0 else {
+            self = .unknown
+            return
+        }
+
+        if sizeBytes < 100 * 1024 {
+            self = .small
+        } else if sizeBytes < 1024 * 1024 {
+            self = .medium
+        } else {
+            self = .large
+        }
+    }
+}
+
 public struct MailSearchDateRange: Sendable, Equatable {
     public let start: Date?
     public let end: Date?
@@ -63,6 +85,7 @@ public struct MailSearchFilter: Sendable, Equatable {
     public let hasAttachment: Bool?
     public let attachmentFilenames: Set<String>
     public let attachmentMIMETypes: Set<String>
+    public let attachmentSizeBuckets: Set<MailAttachmentSizeBucket>
 
     public init(
         accountIDs: Set<String> = [],
@@ -75,7 +98,8 @@ public struct MailSearchFilter: Sendable, Equatable {
         isSent: Bool? = nil,
         hasAttachment: Bool? = nil,
         attachmentFilenames: Set<String> = [],
-        attachmentMIMETypes: Set<String> = []
+        attachmentMIMETypes: Set<String> = [],
+        attachmentSizeBuckets: Set<MailAttachmentSizeBucket> = []
     ) {
         self.accountIDs = accountIDs
         self.providers = providers
@@ -88,6 +112,7 @@ public struct MailSearchFilter: Sendable, Equatable {
         self.hasAttachment = hasAttachment
         self.attachmentFilenames = attachmentFilenames
         self.attachmentMIMETypes = attachmentMIMETypes
+        self.attachmentSizeBuckets = attachmentSizeBuckets
     }
 
     public var isEmpty: Bool {
@@ -102,6 +127,7 @@ public struct MailSearchFilter: Sendable, Equatable {
             && hasAttachment == nil
             && attachmentFilenames.isEmpty
             && attachmentMIMETypes.isEmpty
+            && attachmentSizeBuckets.isEmpty
     }
 
     public func validate() throws {
@@ -120,7 +146,7 @@ public struct MailSearchFilter: Sendable, Equatable {
         }
 
         if hasAttachment == false,
-           !attachmentFilenames.isEmpty || !attachmentMIMETypes.isEmpty {
+           !attachmentFilenames.isEmpty || !attachmentMIMETypes.isEmpty || !attachmentSizeBuckets.isEmpty {
             throw MailSearchValidationError.incompatibleAttachmentFilter
         }
     }
@@ -138,6 +164,7 @@ public struct MailSearchFilter: Sendable, Equatable {
             "hasAttachment=\(redactedBoolean(hasAttachment))",
             "attachmentFilenames=\(attachmentFilenames.count)",
             "attachmentMIMETypes=\(attachmentMIMETypes.count)",
+            "attachmentSizeBuckets=\(attachmentSizeBuckets.count)",
         ].joined(separator: ",")
     }
 
@@ -170,13 +197,16 @@ public struct MailSearchQuery: Sendable, Equatable, CustomStringConvertible {
         offset: Int = 0
     ) throws {
         let normalizedText = text?.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.text = normalizedText?.isEmpty == false ? normalizedText : nil
-        self.filters = filters
+        let parsedText = MailSearchTextOperatorParser.parse(normalizedText)
+        let effectiveFilters = try filters.applying(parsedText)
+        try effectiveFilters.validate()
+
+        self.text = parsedText.text
+        self.filters = effectiveFilters
         self.mode = mode
         self.sort = sort
         self.limit = max(1, limit)
         self.offset = max(0, offset)
-        try filters.validate()
     }
 
     public var redactedDescription: String {
@@ -186,6 +216,64 @@ public struct MailSearchQuery: Sendable, Equatable, CustomStringConvertible {
 
     public var description: String {
         redactedDescription
+    }
+}
+
+private struct ParsedMailSearchText {
+    let text: String?
+    let hasAttachment: Bool?
+}
+
+private enum MailSearchTextOperatorParser {
+    static func parse(_ text: String?) -> ParsedMailSearchText {
+        guard let text, !text.isEmpty else {
+            return ParsedMailSearchText(text: nil, hasAttachment: nil)
+        }
+
+        var hasAttachment: Bool?
+        var remainingTokens: [String] = []
+        for token in text.split(whereSeparator: \.isWhitespace) {
+            switch token.lowercased() {
+            case "has:attachment", "has:attachments":
+                hasAttachment = true
+            default:
+                remainingTokens.append(String(token))
+            }
+        }
+
+        let remainingText = remainingTokens.joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return ParsedMailSearchText(
+            text: remainingText.isEmpty ? nil : remainingText,
+            hasAttachment: hasAttachment
+        )
+    }
+}
+
+private extension MailSearchFilter {
+    func applying(_ parsedText: ParsedMailSearchText) throws -> MailSearchFilter {
+        var effectiveHasAttachment = hasAttachment
+        if let parsedHasAttachment = parsedText.hasAttachment {
+            if let hasAttachment, hasAttachment != parsedHasAttachment {
+                throw MailSearchValidationError.incompatibleAttachmentFilter
+            }
+            effectiveHasAttachment = parsedHasAttachment
+        }
+
+        return MailSearchFilter(
+            accountIDs: accountIDs,
+            providers: providers,
+            canonicalMailboxes: canonicalMailboxes,
+            from: from,
+            to: to,
+            dateRange: dateRange,
+            isUnread: isUnread,
+            isSent: isSent,
+            hasAttachment: effectiveHasAttachment,
+            attachmentFilenames: attachmentFilenames,
+            attachmentMIMETypes: attachmentMIMETypes,
+            attachmentSizeBuckets: attachmentSizeBuckets
+        )
     }
 }
 
@@ -328,10 +416,16 @@ public struct MailSearchProviderFallbackFailure: Sendable, Equatable {
 public struct MailIndexedAttachment: Sendable, Equatable {
     public let filename: String?
     public let mime: String?
+    public let sizeBytes: Int?
 
-    public init(filename: String? = nil, mime: String? = nil) {
+    public init(filename: String? = nil, mime: String? = nil, sizeBytes: Int? = nil) {
         self.filename = filename
         self.mime = mime
+        self.sizeBytes = sizeBytes
+    }
+
+    public var sizeBucket: MailAttachmentSizeBucket {
+        MailAttachmentSizeBucket(sizeBytes: sizeBytes)
     }
 }
 
@@ -545,12 +639,13 @@ private struct SearchSQL {
                     d.normalized_body_text,
                     d.attachment_filenames,
                     d.attachment_mimes,
+                    d.attachment_size_buckets,
                     d.canonical_mailboxes,
                     d.sent_at,
                     d.is_unread,
                     d.is_sent,
                     d.has_attachment,
-                    -bm25(mail_search_fts, 6.0, 5.0, 2.5, 1.5, 1.0, 1.0, 1.0, 2.0, 1.0) AS fts_score
+                    -bm25(mail_search_fts, 6.0, 5.0, 2.5, 1.5, 1.0, 1.0, 1.0, 2.0, 1.2, 0.5, 1.0) AS fts_score
                 FROM mail_search_fts
                 JOIN mail_search_document d ON d.id = mail_search_fts.rowid
                 \(filter.joinedWhere(prefix: "mail_search_fts MATCH ?"))
@@ -572,6 +667,7 @@ private struct SearchSQL {
                     d.normalized_body_text,
                     d.attachment_filenames,
                     d.attachment_mimes,
+                    d.attachment_size_buckets,
                     d.canonical_mailboxes,
                     d.sent_at,
                     d.is_unread,
@@ -636,6 +732,12 @@ private struct FilterSQL {
 
         Self.appendLikeClause("d.attachment_filenames", values: filters.attachmentFilenames.sorted(), clauses: &clauses, arguments: &args)
         Self.appendLikeClause("d.attachment_mimes", values: filters.attachmentMIMETypes.sorted(), clauses: &clauses, arguments: &args)
+        Self.appendTokenClause(
+            "d.attachment_size_buckets",
+            values: filters.attachmentSizeBuckets.map(\.rawValue).sorted(),
+            clauses: &clauses,
+            arguments: &args
+        )
 
         whereClauses = clauses
         arguments = args
@@ -669,6 +771,17 @@ private struct FilterSQL {
         guard !values.isEmpty else { return }
         clauses.append("(\(values.map { _ in "LOWER(COALESCE(\(column), '')) LIKE ?" }.joined(separator: " OR ")))")
         arguments.append(contentsOf: values.map { "%\($0.lowercased())%" })
+    }
+
+    private static func appendTokenClause(
+        _ column: String,
+        values: [String],
+        clauses: inout [String],
+        arguments: inout [DatabaseValueConvertible]
+    ) {
+        guard !values.isEmpty else { return }
+        clauses.append("(\(values.map { _ in "(' ' || COALESCE(\(column), '') || ' ') LIKE ?" }.joined(separator: " OR ")))")
+        arguments.append(contentsOf: values.map { "% \($0) %" })
     }
 
     private static func mailboxTokens(for mailbox: CanonicalMailbox) -> [String] {
@@ -719,6 +832,7 @@ private struct SearchRow: FetchableRecord {
     let normalizedBodyText: String?
     let attachmentFilenames: String?
     let attachmentMIMEs: String?
+    let attachmentSizeBuckets: String?
     let canonicalMailboxes: String?
     let sentAt: Int
     let isUnread: Bool
@@ -740,6 +854,7 @@ private struct SearchRow: FetchableRecord {
         normalizedBodyText = row["normalized_body_text"]
         attachmentFilenames = row["attachment_filenames"]
         attachmentMIMEs = row["attachment_mimes"]
+        attachmentSizeBuckets = row["attachment_size_buckets"]
         canonicalMailboxes = row["canonical_mailboxes"]
         sentAt = row["sent_at"]
         isUnread = (row["is_unread"] as Int) != 0
@@ -822,6 +937,8 @@ private struct SearchResultBuilder {
         if contains(row.snippet, text) { score += 15 }
         if contains(row.bodyText, text) || contains(row.normalizedBodyText, text) { score += 10 }
         if contains(row.attachmentFilenames, text) { score += 12 }
+        if contains(row.attachmentMIMEs, text) { score += 8 }
+        if contains(row.attachmentSizeBuckets, text) { score += 3 }
         score += Double(row.sentAt) / 1_000_000_000
         return score
     }
