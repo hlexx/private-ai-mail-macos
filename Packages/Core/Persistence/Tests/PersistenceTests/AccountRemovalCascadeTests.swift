@@ -25,7 +25,11 @@ struct AccountRemovalCascadeTests {
                 removedAccountRows: try countAccountScopedRows(accountId: "a1", in: database),
                 remainingAccountRows: try countAccountScopedRows(accountId: "a2", in: database),
                 removedSearchMatches: try ftsMatchCount("accountoneunique", in: database),
-                remainingSearchMatches: try ftsMatchCount("accounttwounique", in: database)
+                remainingSearchMatches: try ftsMatchCount("accounttwounique", in: database),
+                removedActionAttemptRows: try countActionAttemptRows(accountId: "a1", in: database),
+                remainingActionAttemptRows: try countActionAttemptRows(accountId: "a2", in: database),
+                removedActionAuditEventRows: try countActionAuditEventRows(accountId: "a1", in: database),
+                remainingActionAuditEventRows: try countActionAuditEventRows(accountId: "a2", in: database)
             )
         }
 
@@ -34,6 +38,10 @@ struct AccountRemovalCascadeTests {
         #expect(result.remainingAccountRows.allSatisfy { $0.value == 1 })
         #expect(result.removedSearchMatches == 0)
         #expect(result.remainingSearchMatches == 1)
+        #expect(result.removedActionAttemptRows == 0)
+        #expect(result.remainingActionAttemptRows == 1)
+        #expect(result.removedActionAuditEventRows == 0)
+        #expect(result.remainingActionAuditEventRows == 1)
     }
 
     private func seedAccountScopedData(
@@ -47,6 +55,7 @@ struct AccountRemovalCascadeTests {
         let messageId = "message-\(accountId)"
         let attachmentId = "attachment-\(accountId)"
         let draftId = "draft-\(accountId)"
+        let actionOpId = "action-\(accountId)"
 
         try AccountRecord(id: accountId, provider: provider, email: email, createdAt: 1).insert(database)
         try SyncStateRecord(accountId: accountId, historyId: "history-\(accountId)", status: "live").insert(database)
@@ -169,6 +178,36 @@ struct AccountRemovalCascadeTests {
             createdAt: 5,
             updatedAt: 5
         ).insert(database)
+        try ActionOutboxRecord(
+            opId: actionOpId,
+            accountId: accountId,
+            targetKind: "thread",
+            threadId: threadId,
+            actionKind: "archiveThread",
+            actionSchemaVersion: 1,
+            idempotencyKey: "action-idempotency-\(accountId)",
+            approvalRequirement: "notRequired",
+            approvalState: "notRequired",
+            status: "ready",
+            payloadJSON: #"{"schemaVersion":1,"body":{"reason":"userAction"}}"#,
+            createdAt: 6,
+            updatedAt: 6
+        ).insert(database)
+        try ActionAttemptRecord(
+            opId: actionOpId,
+            attemptNumber: 1,
+            status: "succeeded",
+            startedAt: 6,
+            completedAt: 7
+        ).insert(database)
+        try ActionAuditEventRecord(
+            eventId: "action-event-\(accountId)",
+            opId: actionOpId,
+            eventKind: "executionSucceeded",
+            actorKind: "executor",
+            occurredAt: 7,
+            metadataJSON: #"{"source":"accountRemovalCascade"}"#
+        ).insert(database)
     }
 
     private func countAccountScopedRows(accountId: String, in database: Database) throws -> [String: Int] {
@@ -220,9 +259,26 @@ struct AccountRemovalCascadeTests {
         ) ?? -1
     }
 
+    private func countActionAttemptRows(accountId: String, in database: Database) throws -> Int {
+        try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM action_attempt WHERE op_id = ?",
+            arguments: ["action-\(accountId)"]
+        ) ?? -1
+    }
+
+    private func countActionAuditEventRows(accountId: String, in database: Database) throws -> Int {
+        try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM action_audit_event WHERE op_id = ?",
+            arguments: ["action-\(accountId)"]
+        ) ?? -1
+    }
+
     private var accountScopedTables: [String] {
         [
             "account",
+            "action_outbox",
             "sync_state",
             "thread",
             "message",
@@ -250,6 +306,10 @@ private struct AccountRemovalCounts {
     let remainingAccountRows: [String: Int]
     let removedSearchMatches: Int
     let remainingSearchMatches: Int
+    let removedActionAttemptRows: Int
+    let remainingActionAttemptRows: Int
+    let removedActionAuditEventRows: Int
+    let remainingActionAuditEventRows: Int
 }
 
 private extension String {

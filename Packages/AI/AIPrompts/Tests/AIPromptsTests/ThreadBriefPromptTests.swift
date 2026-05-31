@@ -90,6 +90,36 @@ struct ThreadBriefPromptTests {
             attachments: []
         )
 
-        #expect(prompt.contains("[trimmed 4 characters"))
+        #expect(prompt.contains("[trimmed"))
+        #expect(prompt.count <= ThreadBriefTask.metadata.maxInputCharacters)
+    }
+
+    @Test("task prompt applies one rendered budget and keeps newest messages")
+    func taskPromptAppliesRenderedBudgetAndKeepsNewestMessages() {
+        let messages = [
+            PromptMessage(
+                from: "oldest@example.com",
+                sentAt: Date(timeIntervalSince1970: 1),
+                bodyText: "oldest context " + String(repeating: "o", count: ThreadBriefTask.metadata.maxInputCharacters)
+            ),
+            PromptMessage(
+                from: "middle@example.com",
+                sentAt: Date(timeIntervalSince1970: 2),
+                bodyText: "middle context " + String(repeating: "m", count: ThreadBriefTask.metadata.maxInputCharacters)
+            ),
+            PromptMessage(
+                from: "latest@example.com",
+                sentAt: Date(timeIntervalSince1970: 3),
+                bodyText: "latest ask needs answer " + String(repeating: "l", count: ThreadBriefTask.metadata.maxInputCharacters)
+            ),
+        ]
+
+        let prompt = ThreadBriefPrompt.taskPrompt(messages: messages, attachments: [])
+
+        #expect(prompt.contains("[trimmed"))
+        #expect(prompt.count <= ThreadBriefTask.metadata.maxInputCharacters)
+        #expect(prompt.contains("latest ask needs answer"))
+        #expect(!prompt.contains("oldest context"))
+        #expect(prompt.contains("## Output JSON"))
     }
 }

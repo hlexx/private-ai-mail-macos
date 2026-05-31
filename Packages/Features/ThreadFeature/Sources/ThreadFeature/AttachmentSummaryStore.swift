@@ -96,12 +96,11 @@ public final class AttachmentSummaryStore {
                     operation: .attachment
                 ).message
             case .extractedTextMissing:
-                return UserActionableFailure(
-                    category: .unsupportedOperation,
-                    operation: .attachment
-                ).message
+                return String(localized: "thread.attachment.summary.error.empty", defaultValue: "No readable text was found.")
             case .summaryEvidenceMissing:
-                return UserActionableFailure(category: .unknown, operation: .attachment).message
+                return String(localized: "thread.attachment.summary.error.evidence", defaultValue: "Summary evidence could not be verified.")
+            case .invalidAttachmentSummaryEvidence:
+                return String(localized: "thread.attachment.summary.error.evidence", defaultValue: "Summary evidence could not be verified.")
             }
         }
         return UserActionableFailure.coerce(error, operation: .attachment).message

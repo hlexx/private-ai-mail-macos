@@ -242,15 +242,30 @@ public final class InboxStore {
         let currentSelection = selection
         let currentFilter = filter
         observationTask = Task { [weak self, db] in
+            do {
+                let initialRecords = try await Task.detached { [db] in
+                    try db.read { database in
+                        try Self.queryThreads(
+                            db: database,
+                            selection: currentSelection,
+                            filter: currentFilter
+                        )
+                    }
+                }.value
+                guard !Task.isCancelled, let self else { return }
+                self.threads = Self.threadRows(from: initialRecords)
+            } catch {
+                guard !Task.isCancelled, let self else { return }
+                self.threads = []
+            }
+
             let observation = ValueObservation.tracking { db in
                 try Self.queryThreads(db: db, selection: currentSelection, filter: currentFilter)
             }
             do {
                 for try await records in observation.values(in: db.dbQueue) {
                     guard !Task.isCancelled, let self else { return }
-                    self.threads = records.map { thread, fromAddr, attCount in
-                        ThreadRow(record: thread, latestFromAddr: fromAddr, attachmentCount: attCount)
-                    }
+                    self.threads = Self.threadRows(from: records)
                 }
             } catch {
                 // Observation ended
@@ -284,7 +299,10 @@ public final class InboxStore {
         searchState = searchService == nil ? .disabled : .idle
     }
 
-    private nonisolated static func searchFilter(
+}
+
+private extension InboxStore {
+    nonisolated static func searchFilter(
         selection: SidebarSelection,
         filter: ThreadFilter
     ) -> MailSearchFilter {
@@ -307,7 +325,7 @@ public final class InboxStore {
         )
     }
 
-    private nonisolated static func userActionableSearchFailure(for error: any Error) -> UserActionableFailure {
+    nonisolated static func userActionableSearchFailure(for error: any Error) -> UserActionableFailure {
         if let validationError = error as? MailSearchValidationError {
             switch validationError {
             case .incompatibleAttachmentFilter:
@@ -319,7 +337,7 @@ public final class InboxStore {
         return UserActionableFailure.coerce(error, operation: .search)
     }
 
-    private nonisolated static func isSearchResultVisible(
+    nonisolated static func isSearchResultVisible(
         _ result: MailSearchResult,
         visibleKeys: Set<ThreadSearchKey>,
         selection: SidebarSelection,
@@ -332,7 +350,7 @@ public final class InboxStore {
             && remoteSearchResultMatchesFilter(result, filter: filter)
     }
 
-    private nonisolated static func remoteSearchResultMatchesSelection(
+    nonisolated static func remoteSearchResultMatchesSelection(
         _ result: MailSearchResult,
         selection: SidebarSelection
     ) -> Bool {
@@ -352,7 +370,7 @@ public final class InboxStore {
         }
     }
 
-    private nonisolated static func remoteSearchResultMatchesFilter(
+    nonisolated static func remoteSearchResultMatchesFilter(
         _ result: MailSearchResult,
         filter: ThreadFilter
     ) -> Bool {
@@ -363,6 +381,14 @@ public final class InboxStore {
             return result.hasAttachments
         case .needsReply, .hasDeadline, .aiHandled:
             return false
+        }
+    }
+
+    nonisolated static func threadRows(
+        from records: [(ThreadRecord, String?, Int)]
+    ) -> [ThreadRow] {
+        records.map { thread, fromAddr, attCount in
+            ThreadRow(record: thread, latestFromAddr: fromAddr, attachmentCount: attCount)
         }
     }
 }

@@ -70,41 +70,46 @@ public enum ThreadBriefTask: PromptTaskDefinition {
     public static let jsonSchemaString = ThreadBriefSchema.jsonSchemaString
 
     public static func renderUserPrompt(_ input: ThreadBriefTaskInput) -> String {
-        var parts: [String] = []
-
-        parts.append("## Thread")
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        for msg in input.messages {
+        var contextSections: [PromptTextBudget.PromptSection] = []
+
+        for (index, msg) in input.messages.enumerated() {
             let ts = formatter.string(from: msg.sentAt)
-            let body = PromptTextBudget.trimmedMessageBody(
-                msg.bodyText,
-                maxCharacters: metadata.maxInputCharacters
-            )
-            parts.append("""
+            contextSections.append(.init(
+                text: """
                 [From: \(msg.from) | \(ts)]
-                \(body)
-                """)
+                \(msg.bodyText)
+                """,
+                priority: index + 1
+            ))
         }
 
         if !input.attachments.isEmpty {
-            parts.append("")
-            parts.append("## Attachments")
-            for att in input.attachments {
+            let attachmentLines = input.attachments.map { att in
                 let pages = att.pageCount.map { " (\($0) pages)" } ?? ""
-                parts.append("- \(att.filename) [\(att.mime)]\(pages)")
+                return "- \(att.filename) [\(att.mime)]\(pages)"
             }
+            contextSections.append(.init(
+                text: (["", "## Attachments"] + attachmentLines).joined(separator: "\n"),
+                priority: 0
+            ))
         }
 
-        parts.append("")
-        parts.append("## Output JSON")
-        parts.append("Keys: summary, request, deadline, risk, nextStep, evidence, confidence.")
-        parts.append("Use null for unknown request, deadline, risk, and nextStep.")
-        parts.append("Continue the seeded JSON object with the actual thread summary.")
-        parts.append("")
-        parts.append("Reply with JSON only. Do not output schema words or placeholders.")
-
-        return parts.joined(separator: "\n")
+        return PromptTextBudget.renderedPrompt(
+            prefixParts: ["## Thread"],
+            contextSections: contextSections,
+            suffixParts: [
+                "",
+                "## Output JSON",
+                "Keys: summary, request, deadline, risk, nextStep, evidence, confidence.",
+                "Use null for unknown request, deadline, risk, and nextStep.",
+                "Continue the seeded JSON object with the actual thread summary.",
+                "",
+                "Reply with JSON only. Do not output schema words or placeholders.",
+            ],
+            maxCharacters: metadata.maxInputCharacters
+        )
     }
 
     public static func parse(_ rawOutput: String) throws -> ParsedThreadBrief {

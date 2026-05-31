@@ -42,10 +42,11 @@ public enum AttachmentRAGError: Error, Sendable, Equatable {
     case attachmentBytesUnavailable
     case extractedTextMissing
     case summaryEvidenceMissing
+    case invalidAttachmentSummaryEvidence(String)
 }
 
 public actor AttachmentSummaryOrchestrator {
-    private let db: AppDatabase
+    let db: AppDatabase
     private let byteStore: AttachmentByteStore
     private let aiService: any AIService
     private let byteProvider: (any AttachmentByteProvider)?
@@ -65,27 +66,22 @@ public actor AttachmentSummaryOrchestrator {
     public func summarize(_ request: AttachmentSummaryRequest) async throws -> AttachmentSummaryOrchestratorResult {
         let blob = try await loadOrFetchBlob(request)
         if let cached = try fetchCachedSummary(request, fingerprint: blob.sha256) {
-            do {
-                try Self.validateSummary(cached)
-                Self.logSummary(status: "cache_hit", request: request, sizeBucket: Self.sizeBucket(blob.byteCount))
-                return .summary(cached, cached: true)
-            } catch {
-                Self.logSummary(
-                    status: "cache_ignored_missing_evidence",
-                    request: request,
-                    errorCategory: "summary_evidence_missing",
-                    sizeBucket: Self.sizeBucket(blob.byteCount)
-                )
-            }
+            Self.logSummary(status: "cache_hit", request: request, sizeBucket: Self.sizeBucket(blob.byteCount))
+            return .summary(cached, cached: true)
         }
 
-        let bytes = try byteStore.load(relativePath: blob.relativePath, expectedSHA256: blob.sha256)
+        let verifiedBlob = try await loadVerifiedBlobBytes(blob, request: request)
         let extraction = AttachmentTextExtractor.extract(
-            data: bytes,
+            data: verifiedBlob.data,
             mime: request.mime,
             filename: request.filename
         )
-        try await persistExtraction(extraction, request: request, fingerprint: blob.sha256, byteCount: blob.byteCount)
+        try await persistExtraction(
+            extraction,
+            request: request,
+            fingerprint: verifiedBlob.record.sha256,
+            byteCount: verifiedBlob.record.byteCount
+        )
 
         guard extraction.status == .extracted else {
             let reason = extraction.unsupportedReason ?? "Unsupported attachment"
@@ -114,13 +110,25 @@ public actor AttachmentSummaryOrchestrator {
                 }
             )
         )
-        try Self.validateSummary(summary, chunks: chunks)
+
+        do {
+            try Self.validateSummary(summary, chunks: chunks)
+        } catch AttachmentRAGError.invalidAttachmentSummaryEvidence(let failureKind) {
+            Self.logSummary(
+                status: "failed",
+                request: request,
+                severity: .error,
+                errorCategory: failureKind,
+                sizeBucket: Self.sizeBucket(blob.byteCount)
+            )
+            throw AttachmentRAGError.invalidAttachmentSummaryEvidence(failureKind)
+        }
 
         try await persistSummary(
             summary,
             request: request,
             extractionVersion: extraction.extractionVersion,
-            fingerprint: blob.sha256
+            fingerprint: verifiedBlob.record.sha256
         )
         Self.logSummary(status: "generated", request: request, sizeBucket: Self.sizeBucket(blob.byteCount))
         return .summary(summary, cached: false)
@@ -152,6 +160,40 @@ public actor AttachmentSummaryOrchestrator {
         if let existing = try fetchBlob(request) {
             return existing
         }
+        return try await fetchAndStoreBlob(request)
+    }
+
+    private func loadVerifiedBlobBytes(
+        _ blob: AttachmentBlobRecord,
+        request: AttachmentSummaryRequest
+    ) async throws -> VerifiedAttachmentBlob {
+        let failureKind: String?
+        do {
+            let data = try byteStore.load(relativePath: blob.relativePath)
+            if data.count != blob.byteCount {
+                failureKind = "byteCountMismatch"
+            } else if AttachmentByteStore.sha256Hex(data) != blob.sha256 {
+                failureKind = "sha256Mismatch"
+            } else {
+                return VerifiedAttachmentBlob(record: blob, data: data)
+            }
+        } catch {
+            failureKind = blobFileExists(blob.relativePath) ? "loadFailed" : "missingFile"
+        }
+
+        Self.logSummary(
+            status: "cache_invalidated",
+            request: request,
+            severity: .error,
+            errorCategory: failureKind ?? "unknown"
+        )
+        try await removeStaleBlob(blob, request: request)
+        let freshBlob = try await fetchAndStoreBlob(request)
+        let freshData = try byteStore.load(relativePath: freshBlob.relativePath)
+        return VerifiedAttachmentBlob(record: freshBlob, data: freshData)
+    }
+
+    private func fetchAndStoreBlob(_ request: AttachmentSummaryRequest) async throws -> AttachmentBlobRecord {
         guard let byteProvider else {
             throw AttachmentRAGError.attachmentBytesUnavailable
         }
@@ -192,6 +234,23 @@ public actor AttachmentSummaryOrchestrator {
         return record
     }
 
+    private func blobFileExists(_ relativePath: String) -> Bool {
+        (try? byteStore.fileExists(relativePath: relativePath)) == true
+    }
+
+    private func removeStaleBlob(_ blob: AttachmentBlobRecord, request: AttachmentSummaryRequest) async throws {
+        try? byteStore.delete(relativePath: blob.relativePath)
+        try await db.write { database in
+            try database.execute(
+                sql: """
+                DELETE FROM attachment_blob
+                WHERE account_id = ? AND message_id = ? AND attachment_id = ?
+                """,
+                arguments: [request.accountId, request.messageId, request.attachmentId]
+            )
+        }
+    }
+
     private func fetchBlob(_ request: AttachmentSummaryRequest) throws -> AttachmentBlobRecord? {
         try db.dbQueue.read { database in
             try AttachmentBlobRecord.fetchOne(
@@ -206,296 +265,7 @@ public actor AttachmentSummaryOrchestrator {
     }
 }
 
-extension AttachmentSummaryOrchestrator {
-    private func fetchCachedSummary(_ request: AttachmentSummaryRequest, fingerprint: String) throws -> AIAttachmentSummary? {
-        let metadata = AttachmentSummaryTask.metadata
-        let payload = try db.dbQueue.read { database -> String? in
-            let columns = try Self.tableColumns("attachment_ai_artifact", db: database)
-            let payloadExpression: String
-            if columns.contains("payload_json"), columns.contains("content_json") {
-                payloadExpression = "COALESCE(payload_json, content_json)"
-            } else if columns.contains("content_json") {
-                payloadExpression = "content_json"
-            } else {
-                payloadExpression = "payload_json"
-            }
-
-            if columns.contains("task_id"), columns.contains("input_fingerprint") {
-                return try String.fetchOne(
-                    database,
-                    sql: """
-                    SELECT \(payloadExpression) FROM attachment_ai_artifact
-                    WHERE account_id = ?
-                      AND message_id = ?
-                      AND attachment_id = ?
-                      AND task_id = ?
-                      AND prompt_version = ?
-                      AND schema_version = ?
-                      AND model_id = ?
-                      AND extraction_version = ?
-                      AND input_fingerprint = ?
-                    """,
-                    arguments: [
-                        request.accountId,
-                        request.messageId,
-                        request.attachmentId,
-                        metadata.id.rawValue,
-                        metadata.promptVersion,
-                        metadata.schemaVersion,
-                        metadata.modelProfile,
-                        AttachmentTextExtractor.extractionVersion,
-                        fingerprint,
-                    ]
-                )
-            }
-
-            return try String.fetchOne(
-                database,
-                sql: """
-                SELECT \(payloadExpression) FROM attachment_ai_artifact
-                WHERE account_id = ?
-                  AND message_id = ?
-                  AND attachment_id = ?
-                  AND extraction_version = ?
-                  AND artifact_kind = ?
-                  AND artifact_version = ?
-                  AND model_id = ?
-                  AND content_hash = ?
-                """,
-                arguments: [
-                    request.accountId,
-                    request.messageId,
-                    request.attachmentId,
-                    AttachmentTextExtractor.extractionVersion,
-                    Self.artifactKind(metadata),
-                    1,
-                    metadata.modelProfile,
-                    fingerprint,
-                ]
-            )
-        }
-        guard let payload else { return nil }
-        return try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(payload.utf8))
-    }
-
-    private func persistExtraction(
-        _ extraction: AttachmentTextExtractionResult,
-        request: AttachmentSummaryRequest,
-        fingerprint: String,
-        byteCount: Int
-    ) async throws {
-        try await db.write { database in
-            let columns = try Self.tableColumns("attachment_extraction", db: database)
-            let now = Self.now()
-            var values: [(String, DatabaseValueConvertible?)] = [
-                ("account_id", request.accountId),
-                ("message_id", request.messageId),
-                ("attachment_id", request.attachmentId),
-                ("extraction_version", extraction.extractionVersion),
-                ("status", extraction.status.rawValue),
-            ]
-            Self.append(&values, "content_hash", fingerprint, ifPresentIn: columns)
-            Self.append(&values, "mime", request.mime, ifPresentIn: columns)
-            Self.append(&values, "filename", request.filename, ifPresentIn: columns)
-            Self.append(&values, "byte_count", byteCount, ifPresentIn: columns)
-            Self.append(&values, "created_at", now, ifPresentIn: columns)
-            Self.append(&values, "updated_at", now, ifPresentIn: columns)
-            Self.append(&values, "completed_at", now, ifPresentIn: columns)
-            Self.append(&values, "error_code", extraction.status == .unsupported ? "unsupported" : nil, ifPresentIn: columns)
-            Self.append(&values, "error_message", extraction.unsupportedReason, ifPresentIn: columns)
-            Self.append(&values, "text", extraction.text, ifPresentIn: columns)
-            Self.append(&values, "unsupported_reason", extraction.unsupportedReason, ifPresentIn: columns)
-            Self.append(&values, "generated_at", now, ifPresentIn: columns)
-            try Self.insertOrReplace(into: "attachment_extraction", values: values, db: database)
-        }
-    }
-
-    private func persistChunks(
-        _ chunks: [PromptAttachmentChunk],
-        request: AttachmentSummaryRequest,
-        extractionVersion: String
-    ) async throws {
-        try await db.write { database in
-            try database.execute(
-                sql: """
-                DELETE FROM attachment_chunk
-                WHERE account_id = ? AND message_id = ? AND attachment_id = ? AND extraction_version = ?
-                """,
-                arguments: [request.accountId, request.messageId, request.attachmentId, extractionVersion]
-            )
-            for chunk in chunks {
-                let columns = try Self.tableColumns("attachment_chunk", db: database)
-                var values: [(String, DatabaseValueConvertible?)] = [
-                    ("account_id", request.accountId),
-                    ("message_id", request.messageId),
-                    ("attachment_id", request.attachmentId),
-                    ("extraction_version", extractionVersion),
-                    ("chunk_index", chunk.index),
-                ]
-                Self.append(&values, "content_text", chunk.text, ifPresentIn: columns)
-                Self.append(&values, "text", chunk.text, ifPresentIn: columns)
-                Self.append(&values, "source_offset", chunk.sourceOffset, ifPresentIn: columns)
-                Self.append(&values, "source_start", chunk.sourceOffset, ifPresentIn: columns)
-                Self.append(&values, "source_end", chunk.sourceOffset + chunk.text.count, ifPresentIn: columns)
-                Self.append(&values, "token_count", 0, ifPresentIn: columns)
-                Self.append(&values, "created_at", Self.now(), ifPresentIn: columns)
-                try Self.insertOrReplace(into: "attachment_chunk", values: values, db: database)
-            }
-        }
-    }
-
-    private func persistSummary(
-        _ summary: AIAttachmentSummary,
-        request: AttachmentSummaryRequest,
-        extractionVersion: String,
-        fingerprint: String
-    ) async throws {
-        let metadata = AttachmentSummaryTask.metadata
-        let data = try JSONEncoder().encode(summary)
-        let payload = String(data: data, encoding: .utf8) ?? "{}"
-        try await db.write { database in
-            let columns = try Self.tableColumns("attachment_ai_artifact", db: database)
-            let now = Self.now()
-            var values: [(String, DatabaseValueConvertible?)] = [
-                ("account_id", request.accountId),
-                ("message_id", request.messageId),
-                ("attachment_id", request.attachmentId),
-                ("extraction_version", extractionVersion),
-            ]
-            Self.append(&values, "artifact_kind", Self.artifactKind(metadata), ifPresentIn: columns)
-            Self.append(&values, "artifact_version", 1, ifPresentIn: columns)
-            Self.append(&values, "model_id", metadata.modelProfile, ifPresentIn: columns)
-            Self.append(&values, "content_hash", fingerprint, ifPresentIn: columns)
-            Self.append(&values, "payload_json", payload, ifPresentIn: columns)
-            Self.append(&values, "created_at", now, ifPresentIn: columns)
-            Self.append(&values, "updated_at", now, ifPresentIn: columns)
-            Self.append(&values, "task_id", metadata.id.rawValue, ifPresentIn: columns)
-            Self.append(&values, "prompt_version", metadata.promptVersion, ifPresentIn: columns)
-            Self.append(&values, "schema_version", metadata.schemaVersion, ifPresentIn: columns)
-            Self.append(&values, "input_fingerprint", fingerprint, ifPresentIn: columns)
-            Self.append(&values, "content_json", payload, ifPresentIn: columns)
-            Self.append(&values, "generated_at", now, ifPresentIn: columns)
-            try Self.insertOrReplace(into: "attachment_ai_artifact", values: values, db: database)
-        }
-    }
-
-    private static func now() -> Int {
-        Int(Date().timeIntervalSince1970)
-    }
-
-    private static func artifactKind(_ metadata: PromptTaskMetadata) -> String {
-        "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)"
-    }
-
-    private static func validateSummary(
-        _ summary: AIAttachmentSummary,
-        chunks: [PromptAttachmentChunk]? = nil
-    ) throws {
-        guard !summary.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              summary.confidence >= 0,
-              summary.confidence <= 1,
-              !summary.evidence.isEmpty else {
-            throw AttachmentRAGError.summaryEvidenceMissing
-        }
-
-        let chunkTextByIndex = chunks.map { Dictionary(uniqueKeysWithValues: $0.map { ($0.index, $0.text) }) }
-        for evidence in summary.evidence {
-            let quote = evidence.quote.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard evidence.chunkIndex >= 0, !quote.isEmpty else {
-                throw AttachmentRAGError.summaryEvidenceMissing
-            }
-            if let chunkTextByIndex {
-                guard let chunkText = chunkTextByIndex[evidence.chunkIndex],
-                      chunkText.contains(evidence.quote) || chunkText.contains(quote) else {
-                    throw AttachmentRAGError.summaryEvidenceMissing
-                }
-            }
-        }
-    }
-
-    private static func logSummary(
-        status: String,
-        request: AttachmentSummaryRequest,
-        severity: PrivacyObservabilitySeverity = .info,
-        errorCategory: String? = nil,
-        sizeBucket: String? = nil
-    ) {
-        PrivacyObservability.log(
-            Self.observabilityEvent(
-                status: status,
-                request: request,
-                errorCategory: errorCategory,
-                sizeBucket: sizeBucket
-            ),
-            severity: severity
-        )
-    }
-
-    static func observabilityEvent(
-        status: String,
-        request: AttachmentSummaryRequest,
-        errorCategory: String? = nil,
-        sizeBucket: String? = nil
-    ) -> PrivacyObservabilityEvent {
-        var fields: [PrivacyObservabilityField: String] = [
-            .accountID: request.accountId,
-            .operation: "attachment_summary",
-            .status: status,
-            .attachmentCount: "1"
-        ]
-        if let errorCategory {
-            fields[.errorCategory] = errorCategory
-        }
-        if let sizeBucket {
-            fields[.sizeBucket] = sizeBucket
-        }
-        return PrivacyObservabilityEvent(category: .attachment, name: "attachment.summary", fields: fields)
-    }
-
-    private static func sizeBucket(_ byteCount: Int) -> String {
-        switch byteCount {
-        case ..<16_384:
-            return "lt_16kb"
-        case ..<1_048_576:
-            return "lt_1mb"
-        case ..<10_485_760:
-            return "lt_10mb"
-        default:
-            return "gte_10mb"
-        }
-    }
-
-    private static func tableColumns(_ table: String, db: Database) throws -> Set<String> {
-        let rows = try Row.fetchAll(db, sql: "PRAGMA table_info(\(table.sqlIdentifier))")
-        return Set(rows.compactMap { $0["name"] as String? })
-    }
-
-    private static func append(
-        _ values: inout [(String, DatabaseValueConvertible?)],
-        _ column: String,
-        _ value: DatabaseValueConvertible?,
-        ifPresentIn columns: Set<String>
-    ) {
-        guard columns.contains(column) else { return }
-        values.append((column, value))
-    }
-
-    private static func insertOrReplace(
-        into table: String,
-        values: [(String, DatabaseValueConvertible?)],
-        db: Database
-    ) throws {
-        let columns = values.map { $0.0.sqlIdentifier }.joined(separator: ", ")
-        let placeholders = Array(repeating: "?", count: values.count).joined(separator: ", ")
-        try db.execute(
-            sql: "INSERT OR REPLACE INTO \(table.sqlIdentifier) (\(columns)) VALUES (\(placeholders))",
-            arguments: StatementArguments(values.map { $0.1 })
-        )
-    }
-}
-
-private extension String {
-    var sqlIdentifier: String {
-        "\"\(replacingOccurrences(of: "\"", with: "\"\""))\""
-    }
+private struct VerifiedAttachmentBlob: Sendable {
+    let record: AttachmentBlobRecord
+    let data: Data
 }

@@ -76,6 +76,16 @@ public enum PromptTaskRegistry {
 // MARK: - Text Budget
 
 public enum PromptTextBudget {
+    struct PromptSection: Sendable, Equatable {
+        let text: String
+        let priority: Int
+
+        init(text: String, priority: Int) {
+            self.text = text
+            self.priority = priority
+        }
+    }
+
     public static func trimmed(_ text: String, maxCharacters: Int) -> String {
         guard text.count > maxCharacters else { return text }
         let prefix = text.prefix(maxCharacters)
@@ -83,8 +93,126 @@ public enum PromptTextBudget {
         return "\(prefix)\n\n[trimmed \(omitted) characters to fit the local model context]"
     }
 
+    public static func trimmedSections(
+        _ sections: [String],
+        maxCharacters: Int
+    ) -> [String] {
+        var remaining = max(0, maxCharacters)
+
+        return sections.map { section in
+            guard remaining > 0 else { return "" }
+
+            let rendered = trimmedToFit(section, maxCharacters: remaining)
+            remaining -= rendered.count
+            return rendered
+        }
+    }
+
+    static func renderedPrompt(
+        prefixParts: [String],
+        contextSections: [PromptSection],
+        suffixParts: [String],
+        maxCharacters: Int
+    ) -> String {
+        let fullPrompt = joined(prefixParts + contextSections.map(\.text) + suffixParts)
+        guard fullPrompt.count > maxCharacters else { return fullPrompt }
+
+        var selectedSections = [String?](repeating: nil, count: contextSections.count)
+        func candidatePrompt() -> String {
+            joined(prefixParts + selectedSections.compactMap { $0 } + suffixParts)
+        }
+
+        guard candidatePrompt().count < maxCharacters else {
+            return trimmedToFit(joined(prefixParts + suffixParts), maxCharacters: maxCharacters)
+        }
+
+        let priorityOrder = contextSections.indices.sorted {
+            let lhs = contextSections[$0]
+            let rhs = contextSections[$1]
+            if lhs.priority == rhs.priority {
+                return $0 > $1
+            }
+            return lhs.priority > rhs.priority
+        }
+
+        for index in priorityOrder {
+            selectedSections[index] = contextSections[index].text
+            if candidatePrompt().count <= maxCharacters {
+                continue
+            }
+
+            selectedSections[index] = fittedSection(
+                contextSections[index].text,
+                selectedSections: selectedSections,
+                sectionIndex: index,
+                prefixParts: prefixParts,
+                suffixParts: suffixParts,
+                maxCharacters: maxCharacters,
+            )
+        }
+
+        return candidatePrompt()
+    }
+
     static func trimmedMessageBody(_ text: String, maxCharacters: Int) -> String {
         trimmed(text, maxCharacters: maxCharacters)
+    }
+
+    private static func joined(_ parts: [String]) -> String {
+        parts.joined(separator: "\n")
+    }
+
+    private static func fittedSection(
+        _ text: String,
+        selectedSections: [String?],
+        sectionIndex: Int,
+        prefixParts: [String],
+        suffixParts: [String],
+        maxCharacters: Int,
+    ) -> String? {
+        var low = 1
+        var high = text.count
+        var best: String?
+
+        while low <= high {
+            let mid = (low + high) / 2
+            let candidate = trimmedToFit(text, maxCharacters: mid)
+            var trialSections = selectedSections
+            trialSections[sectionIndex] = candidate.isEmpty ? nil : candidate
+            let rendered = joined(prefixParts + trialSections.compactMap { $0 } + suffixParts)
+
+            if rendered.count <= maxCharacters {
+                best = candidate.isEmpty ? nil : candidate
+                low = mid + 1
+            } else {
+                high = mid - 1
+            }
+        }
+
+        return best
+    }
+
+    private static func trimmedToFit(_ text: String, maxCharacters: Int) -> String {
+        guard maxCharacters > 0 else { return "" }
+        guard text.count > maxCharacters else { return text }
+
+        var prefixLength = maxCharacters
+        while prefixLength > 0 {
+            let omitted = text.count - prefixLength
+            let marker = "\n\n[trimmed \(omitted) characters to fit the local model context]"
+            let candidate = "\(text.prefix(prefixLength))\(marker)"
+            if candidate.count <= maxCharacters {
+                return candidate
+            }
+            prefixLength -= 1
+        }
+
+        let omitted = text.count
+        let marker = "[trimmed \(omitted) characters to fit the local model context]"
+        guard marker.count <= maxCharacters else {
+            return String(text.prefix(maxCharacters))
+        }
+        return marker
     }
 }
 

@@ -142,45 +142,7 @@ enum Bootstrap {
         accountId: String,
         db: AppDatabase
     ) throws {
-        try db.write { dbConn in
-            for dto in dtoThreads {
-                let mapped = GmailMapper.mapThread(dto, accountId: accountId)
-                try makeThreadRecord(from: mapped, accountId: accountId)
-                    .save(dbConn, onConflict: .replace)
-
-                // Collect thread-level labels (union of all message labels)
-                var threadLabelIds = Set<String>()
-                var currentMessageIds = Set<String>()
-
-                for dtoMsg in dto.messages ?? [] {
-                    let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
-                    currentMessageIds.insert(msg.id)
-                    try makeMessageRecord(from: msg, accountId: accountId)
-                        .save(dbConn, onConflict: .replace)
-
-                    for att in msg.attachments {
-                        try makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId)
-                            .save(dbConn, onConflict: .replace)
-                    }
-
-                    threadLabelIds.formUnion(labelIds)
-                }
-
-                // Replace thread_label rows for this thread+account
-                try ThreadLabelRecord
-                    .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
-                    .deleteAll(dbConn)
-                for labelId in threadLabelIds.sorted() {
-                    try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
-                        .save(dbConn, onConflict: .replace)
-                }
-                try SearchIndexMaintenance.upsertMessages(
-                    accountId: accountId,
-                    messageIds: currentMessageIds,
-                    db: dbConn
-                )
-            }
-        }
+        try ThreadPersistence.upsertThreads(dtoThreads, accountId: accountId, db: db)
     }
 
     @DatabaseActor

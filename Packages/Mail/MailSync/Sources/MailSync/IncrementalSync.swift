@@ -20,13 +20,13 @@ enum IncrementalSync {
             throw SyncError.historyExpired
         }
 
-        var currentHistoryId = historyId
+        var checkpointHistoryId = historyId
         var pageToken: String?
         var affectedThreadIds = Set<String>()
 
         repeat {
             let response = try await api.listHistory(
-                startHistoryId: currentHistoryId,
+                startHistoryId: historyId,
                 pageToken: pageToken
             )
 
@@ -53,7 +53,7 @@ enum IncrementalSync {
             }
 
             if let newHistoryId = response.historyId {
-                currentHistoryId = newHistoryId
+                checkpointHistoryId = newHistoryId
             }
             pageToken = response.nextPageToken
         } while pageToken != nil
@@ -62,7 +62,7 @@ enum IncrementalSync {
         for threadId in affectedThreadIds {
             do {
                 let dto = try await api.getThread(id: threadId, format: .full)
-                try await upsertThread(dto, accountId: accountId, db: db)
+                try await ThreadPersistence.upsertThread(dto, accountId: accountId, db: db)
                 await onThreadUpserted(threadId)
             } catch let error as GmailAPIError {
                 // Thread may have been deleted entirely - that's OK
@@ -77,94 +77,9 @@ enum IncrementalSync {
         // Update sync state with new history ID
         try await updateHistoryId(
             accountId: accountId,
-            historyId: currentHistoryId,
+            historyId: checkpointHistoryId,
             db: db
         )
-    }
-
-    @DatabaseActor
-    private static func upsertThread(
-        _ dto: GmailDTO.Thread,
-        accountId: String,
-        db: AppDatabase
-    ) throws {
-        let mapped = GmailMapper.mapThread(dto, accountId: accountId)
-        try db.write { dbConn in
-            try makeThreadRecord(from: mapped, accountId: accountId)
-                .save(dbConn, onConflict: .replace)
-
-            var threadLabelIds = Set<String>()
-            var currentMessageIds = Set<String>()
-            var currentAttachmentIdsByMessage: [String: Set<String>] = [:]
-
-            for dtoMsg in dto.messages ?? [] {
-                let (msg, labelIds) = GmailMapper.mapMessageWithLabels(dtoMsg, accountId: accountId)
-                currentMessageIds.insert(msg.id)
-                try upsertMessageRecord(makeMessageRecord(from: msg, accountId: accountId), db: dbConn)
-
-                for att in msg.attachments {
-                    currentAttachmentIdsByMessage[msg.id, default: []].insert(att.id)
-                    try upsertAttachmentRecord(
-                        makeAttachmentRecord(from: att, messageId: msg.id, accountId: accountId),
-                        db: dbConn
-                    )
-                }
-
-                threadLabelIds.formUnion(labelIds)
-            }
-
-            let existingMessages = try MessageRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == mapped.id)
-                .fetchAll(dbConn)
-
-            for message in existingMessages where !currentMessageIds.contains(message.id) {
-                try SearchIndexMaintenance.deleteMessage(accountId: accountId, messageId: message.id, db: dbConn)
-                try message.delete(dbConn)
-            }
-
-            for messageId in currentMessageIds {
-                let currentAttachmentIds = currentAttachmentIdsByMessage[messageId] ?? []
-                let existingAttachments = try AttachmentRecord
-                    .filter(Column("account_id") == accountId && Column("message_id") == messageId)
-                    .fetchAll(dbConn)
-                for attachment in existingAttachments where !currentAttachmentIds.contains(attachment.id) {
-                    try attachment.delete(dbConn)
-                }
-            }
-
-            // Replace thread_label rows for this thread+account
-            try ThreadLabelRecord
-                .filter(Column("account_id") == accountId && Column("thread_id") == dto.id)
-                .deleteAll(dbConn)
-            for labelId in threadLabelIds.sorted() {
-                try ThreadLabelRecord(accountId: accountId, threadId: dto.id, labelId: labelId)
-                    .save(dbConn, onConflict: .replace)
-            }
-            try SearchIndexMaintenance.upsertMessages(
-                accountId: accountId,
-                messageIds: currentMessageIds,
-                db: dbConn
-            )
-        }
-    }
-
-    private static func upsertMessageRecord(_ record: MessageRecord, db: Database) throws {
-        if try MessageRecord.fetchOne(db, key: ["account_id": record.accountId, "id": record.id]) != nil {
-            try record.update(db)
-        } else {
-            try record.insert(db)
-        }
-    }
-
-    private static func upsertAttachmentRecord(_ record: AttachmentRecord, db: Database) throws {
-        if try AttachmentRecord.fetchOne(
-            db,
-            key: ["account_id": record.accountId, "message_id": record.messageId, "id": record.id]
-        ) != nil {
-            try record.update(db)
-        } else {
-            try record.insert(db)
-        }
     }
 
     @DatabaseActor

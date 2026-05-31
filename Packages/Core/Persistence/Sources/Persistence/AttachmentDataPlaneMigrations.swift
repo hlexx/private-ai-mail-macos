@@ -13,7 +13,7 @@ enum M011_AttachmentDataPlane {
             t.column("account_id", .text).notNull()
             t.column("message_id", .text).notNull()
             t.column("attachment_id", .text).notNull()
-            t.column("extraction_version", .integer).notNull()
+            t.column("extraction_version", .text).notNull()
             t.column("status", .text).notNull()
             t.column("content_hash", .text)
             t.column("mime", .text)
@@ -45,7 +45,7 @@ enum M011_AttachmentDataPlane {
             t.column("account_id", .text).notNull()
             t.column("message_id", .text).notNull()
             t.column("attachment_id", .text).notNull()
-            t.column("extraction_version", .integer).notNull()
+            t.column("extraction_version", .text).notNull()
             t.column("chunk_index", .integer).notNull()
             t.column("content_text", .text).notNull()
             t.column("source_reference", .text)
@@ -75,7 +75,7 @@ enum M011_AttachmentDataPlane {
             t.column("account_id", .text).notNull()
             t.column("message_id", .text).notNull()
             t.column("attachment_id", .text).notNull()
-            t.column("extraction_version", .integer).notNull()
+            t.column("extraction_version", .text).notNull()
             t.column("artifact_kind", .text).notNull()
             t.column("artifact_version", .integer).notNull()
             t.column("model_id", .text)
@@ -201,6 +201,141 @@ enum M012_AttachmentBlobStore {
             .compactMap { $0["name"] as String? }
         guard !existing.contains(column) else { return }
         try db.execute(sql: "ALTER TABLE \(table.sqlIdentifier) ADD COLUMN \(column.sqlIdentifier) \(definition)")
+    }
+}
+
+enum M019_AttachmentExtractionVersionText {
+    static func migrate(_ db: Database) throws {
+        try db.execute(sql: "PRAGMA defer_foreign_keys = ON")
+        try rebuildIfNeeded("attachment_chunk", db: db)
+        try rebuildIfNeeded("attachment_ai_artifact", db: db)
+        try rebuildIfNeeded("attachment_extraction", db: db)
+        try db.execute(sql: "PRAGMA foreign_key_check")
+    }
+
+    private static func rebuildIfNeeded(_ table: String, db: Database) throws {
+        let columns = try tableInfo(table, db: db)
+        guard let extractionVersion = columns.first(where: { $0.name == "extraction_version" }) else {
+            return
+        }
+        guard extractionVersion.type.uppercased() != "TEXT" else {
+            return
+        }
+
+        let indexes = try String.fetchAll(
+            db,
+            sql: """
+                SELECT sql FROM sqlite_master
+                WHERE type = 'index'
+                  AND tbl_name = ?
+                  AND sql IS NOT NULL
+                ORDER BY name
+                """,
+            arguments: [table]
+        )
+        let temporaryTable = "\(table)__m019"
+        try db.execute(sql: "DROP TABLE IF EXISTS \(temporaryTable.sqlIdentifier)")
+        try db.execute(sql: createTableSQL(table: temporaryTable, from: columns, originalTable: table))
+
+        let columnList = columns.map { $0.name.sqlIdentifier }.joined(separator: ", ")
+        try db.execute(
+            sql: """
+                INSERT INTO \(temporaryTable.sqlIdentifier) (\(columnList))
+                SELECT \(columnList) FROM \(table.sqlIdentifier)
+                """
+        )
+        try db.drop(table: table)
+        try db.rename(table: temporaryTable, to: table)
+        for index in indexes {
+            try db.execute(sql: index)
+        }
+    }
+
+    private struct TableColumn {
+        let name: String
+        let type: String
+        let notNull: Bool
+        let defaultValue: String?
+        let primaryKeyRank: Int
+    }
+
+    private static func tableInfo(_ table: String, db: Database) throws -> [TableColumn] {
+        try Row.fetchAll(db, sql: "PRAGMA table_info(\(table.sqlIdentifier))").map { row in
+            TableColumn(
+                name: row["name"],
+                type: row["type"] ?? "",
+                notNull: (row["notnull"] as Int? ?? 0) != 0,
+                defaultValue: row["dflt_value"],
+                primaryKeyRank: row["pk"] ?? 0
+            )
+        }
+    }
+
+    private static func createTableSQL(
+        table: String,
+        from columns: [TableColumn],
+        originalTable: String
+    ) -> String {
+        var definitions = columns.map { columnDefinition($0) }
+
+        let primaryKeyColumns = columns
+            .filter { $0.primaryKeyRank > 0 }
+            .sorted { $0.primaryKeyRank < $1.primaryKeyRank }
+            .map { $0.name.sqlIdentifier }
+        if !primaryKeyColumns.isEmpty {
+            definitions.append("PRIMARY KEY (\(primaryKeyColumns.joined(separator: ", ")))")
+        }
+
+        definitions.append(contentsOf: foreignKeys(for: originalTable))
+
+        return """
+            CREATE TABLE \(table.sqlIdentifier) (
+                \(definitions.joined(separator: ",\n    "))
+            )
+            """
+    }
+
+    private static func columnDefinition(_ column: TableColumn) -> String {
+        var parts = [column.name.sqlIdentifier]
+        let type = column.name == "extraction_version" ? "TEXT" : normalizedType(column.type)
+        if !type.isEmpty {
+            parts.append(type)
+        }
+        if column.notNull {
+            parts.append("NOT NULL")
+        }
+        if let defaultValue = column.defaultValue {
+            parts.append("DEFAULT \(defaultValue)")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func normalizedType(_ type: String) -> String {
+        let trimmed = type.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "BLOB" : trimmed
+    }
+
+    private static func foreignKeys(for table: String) -> [String] {
+        switch table {
+        case "attachment_extraction":
+            return [
+                """
+                FOREIGN KEY (account_id, message_id, attachment_id)
+                REFERENCES attachment(account_id, message_id, id)
+                ON DELETE CASCADE
+                """,
+            ]
+        case "attachment_chunk", "attachment_ai_artifact":
+            return [
+                """
+                FOREIGN KEY (account_id, message_id, attachment_id, extraction_version)
+                REFERENCES attachment_extraction(account_id, message_id, attachment_id, extraction_version)
+                ON DELETE CASCADE
+                """,
+            ]
+        default:
+            return []
+        }
     }
 }
 
