@@ -52,12 +52,12 @@ it does not add new product capabilities.
 
 ### Task 2: Add fixture coverage for provider contracts
 
-- [ ] Add or organize fixtures for Gmail labels/history/messages/attachments
+- [x] Add or organize fixtures for Gmail labels/history/messages/attachments
       and Graph folders/delta/messages/attachments.
-- [ ] Ensure fixtures do not contain real tokens or user-private mail content.
-- [ ] Add tests that both providers map into canonical mailbox/search/send
+- [x] Ensure fixtures do not contain real tokens or user-private mail content.
+- [x] Add tests that both providers map into canonical mailbox/search/send
       contracts consistently where their capabilities overlap.
-- [ ] Run provider and sync package tests.
+- [x] Run provider and sync package tests.
 
 ### Task 3: Add Trust MVP verification script
 

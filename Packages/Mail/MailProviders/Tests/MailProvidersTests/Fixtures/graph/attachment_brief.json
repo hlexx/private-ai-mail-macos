@@ -1,0 +1,10 @@
+{
+  "@odata.type": "#microsoft.graph.fileAttachment",
+  "id": "graph-att-brief-pdf",
+  "name": "trust-brief.pdf",
+  "contentType": "application/pdf",
+  "size": 15,
+  "isInline": false,
+  "contentId": "<brief-pdf@example>",
+  "contentBytes": "SGVsbG8gcHJvdmlkZXIu"
+}

@@ -1,0 +1,62 @@
+{
+  "history": [
+    {
+      "id": "history-101",
+      "messagesAdded": [
+        {
+          "message": {
+            "id": "gmail-overlap-inbox-1",
+            "threadId": "gmail-thread-overlap-1",
+            "labelIds": ["INBOX", "UNREAD", "Label_ProjectAlpha"],
+            "snippet": "Hello provider.",
+            "historyId": "history-101",
+            "internalDate": "1780035299500",
+            "payload": {
+              "mimeType": "multipart/alternative",
+              "headers": [
+                { "name": "From", "value": "Ava Example <ava@example.com>" },
+                { "name": "To", "value": "User Example <user@example.com>" },
+                { "name": "Subject", "value": "Trust review" },
+                { "name": "Message-ID", "value": "<overlap-1@mail.example.com>" }
+              ]
+            }
+          }
+        }
+      ],
+      "labelsAdded": [
+        {
+          "message": {
+            "id": "gmail-overlap-inbox-1",
+            "threadId": "gmail-thread-overlap-1",
+            "labelIds": ["INBOX", "UNREAD", "STARRED", "Label_ProjectAlpha"]
+          },
+          "labelIds": ["STARRED"]
+        }
+      ],
+      "labelsRemoved": [
+        {
+          "message": {
+            "id": "gmail-overlap-inbox-1",
+            "threadId": "gmail-thread-overlap-1",
+            "labelIds": ["INBOX", "STARRED", "Label_ProjectAlpha"]
+          },
+          "labelIds": ["UNREAD"]
+        }
+      ]
+    },
+    {
+      "id": "history-102",
+      "messagesDeleted": [
+        {
+          "message": {
+            "id": "gmail-removed-1",
+            "threadId": "gmail-thread-removed-1",
+            "labelIds": ["TRASH"]
+          }
+        }
+      ]
+    }
+  ],
+  "nextPageToken": "fixture-history-cursor",
+  "historyId": "history-102"
+}

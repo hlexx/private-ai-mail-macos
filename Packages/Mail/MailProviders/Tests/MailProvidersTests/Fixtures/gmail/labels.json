@@ -1,0 +1,36 @@
+{
+  "labels": [
+    {
+      "id": "INBOX",
+      "name": "Inbox",
+      "type": "system",
+      "messagesUnread": 2,
+      "messagesTotal": 5
+    },
+    {
+      "id": "SENT",
+      "name": "Sent",
+      "type": "system",
+      "messagesUnread": 0,
+      "messagesTotal": 3
+    },
+    {
+      "id": "STARRED",
+      "name": "Starred",
+      "type": "system",
+      "messagesUnread": 1,
+      "messagesTotal": 1
+    },
+    {
+      "id": "Label_ProjectAlpha",
+      "name": "Project Alpha",
+      "type": "user",
+      "color": {
+        "backgroundColor": "#e8f0fe",
+        "textColor": "#174ea6"
+      },
+      "messagesUnread": 1,
+      "messagesTotal": 2
+    }
+  ]
+}
