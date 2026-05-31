@@ -76,14 +76,14 @@ it does not add new product capabilities.
 
 ### Task 4: Add migration and rollback checks
 
-- [ ] Ensure `PersistenceTests` cover fresh database migration and upgrade-style
+- [x] Ensure `PersistenceTests` cover fresh database migration and upgrade-style
       migration with seeded Gmail data plus Outlook-compatible rows.
-- [ ] Add tests for account deletion cascade across messages, labels/folders,
+- [x] Add tests for account deletion cascade across messages, labels/folders,
       attachments, search index, drafts, send queue, and AI artifacts where
       those tables exist.
-- [ ] Document rollback behavior for feature-gated Graph, search, send queue,
+- [x] Document rollback behavior for feature-gated Graph, search, send queue,
       attachment preview, and privacy telemetry.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
 
 ### Task 5: Add release note and docs consistency checks
 

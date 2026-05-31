@@ -21,6 +21,7 @@ struct AccountRemovalCascadeTests {
 
         let result = try db.read { database in
             AccountRemovalCounts(
+                coveredAccountScopedTables: try discoveredAccountScopedTables(in: database),
                 removedAccountRows: try countAccountScopedRows(accountId: "a1", in: database),
                 remainingAccountRows: try countAccountScopedRows(accountId: "a2", in: database),
                 removedSearchMatches: try ftsMatchCount("accountoneunique", in: database),
@@ -28,6 +29,7 @@ struct AccountRemovalCascadeTests {
             )
         }
 
+        #expect(Set(result.coveredAccountScopedTables) == Set(accountScopedTables))
         #expect(result.removedAccountRows.allSatisfy { $0.value == 0 })
         #expect(result.remainingAccountRows.allSatisfy { $0.value == 1 })
         #expect(result.removedSearchMatches == 0)
@@ -182,6 +184,34 @@ struct AccountRemovalCascadeTests {
         return counts
     }
 
+    private func discoveredAccountScopedTables(in database: Database) throws -> [String] {
+        let tableNames = try String.fetchAll(
+            database,
+            sql: """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                  AND name NOT LIKE 'sqlite_%'
+                  AND name NOT LIKE 'grdb_%'
+                ORDER BY name
+                """
+        )
+
+        var scopedTables = ["account"]
+        for tableName in tableNames where tableName != "account" {
+            let columns = try Row.fetchAll(
+                database,
+                sql: "PRAGMA table_info(\(tableName.sqlIdentifier))"
+            ).map { row -> String in
+                row["name"]
+            }
+            if columns.contains("account_id") {
+                scopedTables.append(tableName)
+            }
+        }
+        return scopedTables.sorted()
+    }
+
     private func ftsMatchCount(_ term: String, in database: Database) throws -> Int {
         try Int.fetchOne(
             database,
@@ -215,6 +245,7 @@ struct AccountRemovalCascadeTests {
 }
 
 private struct AccountRemovalCounts {
+    let coveredAccountScopedTables: [String]
     let removedAccountRows: [String: Int]
     let remainingAccountRows: [String: Int]
     let removedSearchMatches: Int

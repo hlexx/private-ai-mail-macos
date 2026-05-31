@@ -77,6 +77,21 @@ Temporary SwiftLint baseline:
 | Migrations and deletion | Persistence tests cover fresh database creation, upgrade-style migration with seeded Gmail data, Outlook-compatible account rows, Graph checkpoint rows where present, account deletion cascade for messages, labels or folders, attachments, search index rows, drafts, send queue rows, and AI artifacts. | PersistenceTests output. |
 | App build | Tuist generation and Debug macOS app build pass with code signing disabled. SwiftLint strict mode passes. Whitespace checks pass. | `tuist generate --no-open`, `xcodebuild build`, `swiftlint --strict --reporter xcode`, and `git diff --check` output. |
 
+## Feature Rollback Behavior
+
+Rollback must preserve local data and privacy boundaries. Disabling a gated
+Trust MVP area is allowed only when the user-visible product state stays honest,
+existing local rows remain recoverable, and Gmail-stable workflows are not
+silently changed.
+
+| Feature area | Required rollback behavior |
+| --- | --- |
+| Microsoft Graph / Outlook | Disable Outlook connection, sync, mutation, send, and attachment-fetch entry points through the release-candidate flag or build configuration. Keep additive Outlook schema, existing `outlook` account rows, folder labels, and `graph_delta_checkpoint` rows intact so re-enabling can resume from provider checkpoints. Gmail runtime paths must continue to work. Do not delete Outlook data as part of a feature rollback; account deletion remains the only destructive user action. |
+| Local search | Disable search UI execution and background index rebuild scheduling if the search gate blocks release. Keep `mail_search_document`, `mail_search_fts`, and rebuild metadata tables on disk. Mark the index as needing rebuild before re-enabling. Do not fall back silently to provider/server search, and do not log local query text while search is disabled. |
+| Send queue | Disable the queue executor or provider send adapter while keeping draft and `send_queue_item` rows visible with pending, retry, failed, canceled, or needs-consent state. Re-enabling must continue through existing idempotency keys. Do not auto-send retained rows during rollback, and do not delete queued mail unless the user explicitly cancels it. |
+| Attachment preview | Disable preview and byte-download controls if preview or byte-cache validation blocks release. Keep attachment metadata, cached blob records, extraction rows, chunks, and AI artifacts local. Re-enabling must validate cached files before previewing them. Do not start provider byte fetches in the background as a rollback fallback. |
+| Privacy telemetry | Disable any telemetry export path that cannot pass the privacy grep or event contract review. Keep local status, error categories, and privacy UI available with privacy-safe metadata only. Re-enabling requires the gate to prove no raw mailbox content, prompts, provider payloads, tokens, attachment bytes, local index contents, or query text leave the device. |
+
 ## Manual Gmail Smoke Criteria
 
 Run this checklist against a real non-production Gmail account on the same
