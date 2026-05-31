@@ -93,14 +93,14 @@ workflow automation.
 
 ### Task 6: Keep AI attachment summaries honest
 
-- [ ] Verify existing PDF/text attachment summary paths expose evidence and
+- [x] Verify existing PDF/text attachment summary paths expose evidence and
       unsupported states.
-- [ ] Ensure DOCX, image OCR, and scanned PDFs show unsupported/incomplete
+- [x] Ensure DOCX, image OCR, and scanned PDFs show unsupported/incomplete
       states if not implemented.
-- [ ] Add tests that unsupported attachment types do not produce empty success
+- [x] Add tests that unsupported attachment types do not produce empty success
       summaries.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentRAG && swift test`.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentRAG && swift test`.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 

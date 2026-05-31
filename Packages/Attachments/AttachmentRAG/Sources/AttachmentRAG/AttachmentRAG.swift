@@ -42,6 +42,7 @@ public enum AttachmentRAGError: Error, Sendable, Equatable {
     case missingAttachmentIdentifier
     case attachmentBytesUnavailable
     case extractedTextMissing
+    case summaryEvidenceMissing
 }
 
 public actor AttachmentSummaryOrchestrator {
@@ -70,8 +71,13 @@ public actor AttachmentSummaryOrchestrator {
     public func summarize(_ request: AttachmentSummaryRequest) async throws -> AttachmentSummaryOrchestratorResult {
         let blob = try await loadOrFetchBlob(request)
         if let cached = try fetchCachedSummary(request, fingerprint: blob.sha256) {
-            Self.logger.info("Attachment summary cache hit for \(Self.privacyLogKey(for: request), privacy: .public)")
-            return .summary(cached, cached: true)
+            do {
+                try Self.validateSummary(cached)
+                Self.logger.info("Attachment summary cache hit for \(Self.privacyLogKey(for: request), privacy: .public)")
+                return .summary(cached, cached: true)
+            } catch {
+                Self.logger.info("Attachment summary cache ignored without evidence for \(Self.privacyLogKey(for: request), privacy: .public)")
+            }
         }
 
         let bytes = try byteStore.load(relativePath: blob.relativePath, expectedSHA256: blob.sha256)
@@ -104,6 +110,7 @@ public actor AttachmentSummaryOrchestrator {
                 }
             )
         )
+        try Self.validateSummary(summary, chunks: chunks)
 
         try await persistSummary(
             summary,
@@ -369,6 +376,32 @@ extension AttachmentSummaryOrchestrator {
 
     private static func artifactKind(_ metadata: PromptTaskMetadata) -> String {
         "\(metadata.id.rawValue):\(metadata.promptVersion):\(metadata.schemaVersion)"
+    }
+
+    private static func validateSummary(
+        _ summary: AIAttachmentSummary,
+        chunks: [PromptAttachmentChunk]? = nil
+    ) throws {
+        guard !summary.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              summary.confidence >= 0,
+              summary.confidence <= 1,
+              !summary.evidence.isEmpty else {
+            throw AttachmentRAGError.summaryEvidenceMissing
+        }
+
+        let chunkTextByIndex = chunks.map { Dictionary(uniqueKeysWithValues: $0.map { ($0.index, $0.text) }) }
+        for evidence in summary.evidence {
+            let quote = evidence.quote.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard evidence.chunkIndex >= 0, !quote.isEmpty else {
+                throw AttachmentRAGError.summaryEvidenceMissing
+            }
+            if let chunkTextByIndex {
+                guard let chunkText = chunkTextByIndex[evidence.chunkIndex],
+                      chunkText.contains(evidence.quote) || chunkText.contains(quote) else {
+                    throw AttachmentRAGError.summaryEvidenceMissing
+                }
+            }
+        }
     }
 
     static func privacyLogKey(for request: AttachmentSummaryRequest) -> String {

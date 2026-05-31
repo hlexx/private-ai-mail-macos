@@ -394,6 +394,47 @@ struct ThreadFeatureTests {
         #expect(await ai.callCount == 0)
     }
 
+    @MainActor @Test func attachmentSummaryStoreShowsEvidenceFailure() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        let provider = TestAttachmentByteProvider(result: .success(Data("Amount due: EUR 1840".utf8)))
+        let ai = TestAttachmentAIService(summary: AIAttachmentSummary(
+            summary: "Attachment summary",
+            evidence: [],
+            confidence: 0.8
+        ))
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+        let store = AttachmentSummaryStore(orchestrator: orchestrator)
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 10,
+            mime: "text/plain"
+        )
+
+        store.summarize(attachment)
+        let finalState = try await waitForAttachmentState(store: store, attachment: attachment) { state in
+            if case .failed = state { return true }
+            return false
+        }
+
+        guard case .failed(let message) = finalState else {
+            Issue.record("Expected failed state")
+            return
+        }
+        #expect(message == "The generated summary did not include verifiable evidence.")
+        #expect(await ai.callCount == 1)
+    }
+
     @MainActor @Test func attachmentDownloadStoresLocalBlobAtSafePath() async throws {
         let accountId = "a/1"
         let messageId = "m:1"
@@ -508,6 +549,18 @@ private struct TestAttachmentByteProvider: AttachmentByteProvider {
 
 private actor TestAttachmentAIService: AIService {
     private(set) var callCount = 0
+    private let summary: AIAttachmentSummary
+
+    init(summary: AIAttachmentSummary = AIAttachmentSummary(
+        summary: "Attachment summary",
+        keyFields: [AIKeyField(name: "amount", value: "EUR 1840")],
+        risks: [],
+        nextSteps: ["Pay invoice"],
+        evidence: [AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840")],
+        confidence: 0.9
+    )) {
+        self.summary = summary
+    }
 
     func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
         AIThreadBrief(summary: "unused", confidence: 0.1)
@@ -524,14 +577,7 @@ private actor TestAttachmentAIService: AIService {
 
     func attachmentSummary(_ input: AIAttachmentSummaryInput) async throws -> AIAttachmentSummary {
         callCount += 1
-        return AIAttachmentSummary(
-            summary: "Attachment summary",
-            keyFields: [AIKeyField(name: "amount", value: "EUR 1840")],
-            risks: [],
-            nextSteps: ["Pay invoice"],
-            evidence: [AIAttachmentEvidence(chunkIndex: 0, quote: "Amount due: EUR 1840")],
-            confidence: 0.9
-        )
+        return summary
     }
 }
 
