@@ -10,6 +10,7 @@ let package = Package(
     dependencies: [
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Mail/MailDomain"),
+        .package(path: "../../Core/AppFoundation"),
         .package(path: "../../Core/DesignSystem"),
         .package(path: "../../Core/Persistence"),
     ],
@@ -19,6 +20,7 @@ let package = Package(
             dependencies: [
                 "AIKit",
                 "MailDomain",
+                "AppFoundation",
                 "DesignSystem",
                 "Persistence",
             ],

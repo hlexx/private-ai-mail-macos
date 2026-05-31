@@ -1,6 +1,6 @@
 import AIPrompts
 import Foundation
-import os
+import AppFoundation
 
 /// Records latency samples from MLXBackend inference calls.
 /// Conform to this protocol and inject into MLXBackend to capture
@@ -21,11 +21,6 @@ public actor MLXBackend {
     private let latencyRecorder: (any LatencyRecorder)?
 
     private var isModelLoaded = false
-
-    private static let logger = Logger(
-        subsystem: "com.privateaimail.airuntime",
-        category: "MLXBackend"
-    )
 
     public init(
         modelManager: ModelManager,
@@ -105,8 +100,6 @@ public actor MLXBackend {
 
         let systemPrompt = task.systemPrompt
         let userPrompt = task.renderUserPrompt(input)
-        let taskID = task.metadata.id.rawValue
-        let promptVersion = task.metadata.promptVersion
         let taskMaxOutputTokens = min(maxOutputTokens, task.metadata.maxOutputTokens)
 
         let start = ContinuousClock.now
@@ -127,8 +120,12 @@ public actor MLXBackend {
                 let parsed = try task.parse(rawOutput)
 
                 let elapsed = ContinuousClock.now - start
-                Self.logger.info(
-                    "Structured task \(taskID, privacy: .public) \(promptVersion, privacy: .public) generated in \(elapsed) (attempt \(attempt + 1))"
+                Self.logAITask(
+                    operation: label,
+                    status: "generated",
+                    duration: elapsed,
+                    retryNumber: attempt + 1,
+                    schemaVersion: task.metadata.schemaVersion
                 )
                 latencyRecorder?.record(label: label, duration: elapsed)
 
@@ -141,8 +138,13 @@ public actor MLXBackend {
                     throw MLXBackendError.inferenceFailed(error)
                 }
                 if attempt < maxRetries {
-                    Self.logger.warning(
-                        "Malformed structured task \(taskID, privacy: .public) output on attempt \(attempt + 1), retrying"
+                    Self.logAITask(
+                        operation: label,
+                        status: "retrying",
+                        severity: .warning,
+                        retryNumber: attempt + 1,
+                        schemaVersion: task.metadata.schemaVersion,
+                        errorCategory: "invalid_structured_output"
                     )
                     continue
                 }
@@ -171,7 +173,7 @@ public actor MLXBackend {
         isModelLoaded = true
 
         let elapsed = ContinuousClock.now - start
-        Self.logger.info("Model loaded in \(elapsed)")
+        Self.logAITask(operation: "model_load", status: "loaded", duration: elapsed)
         latencyRecorder?.record(label: "modelLoad", duration: elapsed)
     }
 
@@ -208,6 +210,37 @@ public actor MLXBackend {
             }
         }
         return String(describing: error)
+    }
+
+    private static func logAITask(
+        operation: String,
+        status: String,
+        severity: PrivacyObservabilitySeverity = .info,
+        duration: Duration? = nil,
+        retryNumber: Int? = nil,
+        schemaVersion: String? = nil,
+        errorCategory: String? = nil
+    ) {
+        var fields: [PrivacyObservabilityField: String] = [
+            .operation: operation,
+            .status: status
+        ]
+        if let duration {
+            fields[.durationMilliseconds] = PrivacyObservability.durationMillisecondsString(duration)
+        }
+        if let retryNumber {
+            fields[.retryNumber] = "\(retryNumber)"
+        }
+        if let schemaVersion {
+            fields[.schemaVersion] = schemaVersion
+        }
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .ai, name: "ai.runtime", fields: fields),
+            severity: severity
+        )
     }
 }
 

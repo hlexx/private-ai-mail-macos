@@ -76,11 +76,11 @@ logging raw mail content.
 
 ### Task 4: Replace unsafe or vague logs
 
-- [ ] Audit Swift files for direct `print`, `Logger`, and `os_log` use in sync,
+- [x] Audit Swift files for direct `print`, `Logger`, and `os_log` use in sync,
       provider, compose, search, attachment, AI, and settings paths.
-- [ ] Replace unsafe logs with sanitized helpers. Keep useful status logs with
+- [x] Replace unsafe logs with sanitized helpers. Keep useful status logs with
       counts and error categories.
-- [ ] Run the privacy grep validation and fix leaks.
+- [x] Run the privacy grep validation and fix leaks.
 
 ### Task 5: Surface failure states without leaking content
 

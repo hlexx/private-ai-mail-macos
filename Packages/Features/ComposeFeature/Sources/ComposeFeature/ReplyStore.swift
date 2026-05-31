@@ -1,8 +1,8 @@
 import AIKit
+import AppFoundation
 import Foundation
 import GRDB
 import Observation
-import os
 import Persistence
 
 @Observable
@@ -17,11 +17,6 @@ public final class ReplyStore {
     private let db: AppDatabase?
     private var replyCache: [CacheKey: AIThreadReply] = [:]
     private var inflightTask: Task<Void, Never>?
-
-    private static let logger = Logger(
-        subsystem: "com.hlexx.privateaimail",
-        category: "ReplyStore"
-    )
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -97,17 +92,18 @@ public final class ReplyStore {
                 reply = aiReply
                 isLoading = false
                 error = nil
-                Self.logger.info(
-                    "Draft reply generated account=\(key.accountId, privacy: .public) thread=\(key.threadID, privacy: .public) tone=\(tone.rawValue, privacy: .public)"
-                )
+                Self.logDraftReply(status: "generated", accountId: key.accountId)
             } catch is CancellationError {
                 // Don't update state
             } catch {
                 self.error = error
                 isLoading = false
                 reply = nil
-                Self.logger.error(
-                    "Draft reply failed account=\(key.accountId, privacy: .public) thread=\(key.threadID, privacy: .public) category=\(Self.errorCategory(error), privacy: .public)"
+                Self.logDraftReply(
+                    status: "failed",
+                    accountId: key.accountId,
+                    severity: .error,
+                    errorCategory: Self.errorCategory(error)
                 )
             }
         }
@@ -213,6 +209,28 @@ public final class ReplyStore {
             }
         }
         return String(describing: type(of: error))
+    }
+
+    private nonisolated static func logDraftReply(
+        status: String,
+        accountId: String,
+        severity: PrivacyObservabilitySeverity = .info,
+        errorCategory: String? = nil
+    ) {
+        var fields: [PrivacyObservabilityField: String] = [
+            .operation: "draft_reply",
+            .status: status
+        ]
+        if !accountId.isEmpty {
+            fields[.accountID] = accountId
+        }
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .ai, name: "ai.draft_reply", fields: fields),
+            severity: severity
+        )
     }
 
     nonisolated static func isDisplayableDraft(_ text: String) -> Bool {

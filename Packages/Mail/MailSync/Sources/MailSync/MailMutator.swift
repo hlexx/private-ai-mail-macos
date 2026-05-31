@@ -1,11 +1,9 @@
+import AppFoundation
 import GRDB
 import MailProviders
-import OSLog
 import Persistence
 
 public actor MailMutator {
-    private static let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "MailMutation")
-
     private let db: AppDatabase
     private let apiFactory: GmailAPIFactory
 
@@ -285,9 +283,7 @@ public actor MailMutator {
         accountId: String,
         threadId: String
     ) {
-        Self.logger.info(
-            "Gmail mutation started operation=\(operation.rawValue, privacy: .public) account=\(accountId, privacy: .public) thread=\(threadId, privacy: .public)"
-        )
+        Self.logMutation(operation: operation, accountId: accountId, status: "started")
     }
 
     private nonisolated func logSuccess(
@@ -295,9 +291,7 @@ public actor MailMutator {
         accountId: String,
         threadId: String
     ) {
-        Self.logger.info(
-            "Gmail mutation succeeded operation=\(operation.rawValue, privacy: .public) account=\(accountId, privacy: .public) thread=\(threadId, privacy: .public)"
-        )
+        Self.logMutation(operation: operation, accountId: accountId, status: "succeeded")
     }
 
     private nonisolated func logFailure(
@@ -306,8 +300,34 @@ public actor MailMutator {
         threadId: String,
         category: MailProviderErrorCategory
     ) {
-        Self.logger.error(
-            "Gmail mutation failed operation=\(operation.rawValue, privacy: .public) account=\(accountId, privacy: .public) thread=\(threadId, privacy: .public) category=\(category.rawValue, privacy: .public)"
+        Self.logMutation(
+            operation: operation,
+            accountId: accountId,
+            status: "failed",
+            severity: .error,
+            errorCategory: category.rawValue
+        )
+    }
+
+    private nonisolated static func logMutation(
+        operation: MailMutationOperation,
+        accountId: String,
+        status: String,
+        severity: PrivacyObservabilitySeverity = .info,
+        errorCategory: String? = nil
+    ) {
+        var fields: [PrivacyObservabilityField: String] = [
+            .accountID: accountId,
+            .provider: "gmail",
+            .operation: operation.rawValue,
+            .status: status
+        ]
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .sync, name: "sync.mail_mutation", fields: fields),
+            severity: severity
         )
     }
 }

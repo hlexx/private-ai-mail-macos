@@ -18,10 +18,37 @@ public enum PrivacyObservability {
 
     public static func log(
         _ event: PrivacyObservabilityEvent,
-        level: OSLogType = .info
+        severity: PrivacyObservabilitySeverity = .info
     ) {
         let logger = logger(for: event.category)
-        logger.log(level: level, "\(event.name, privacy: .public) \(event.metadataDescription, privacy: .public)")
+        logger.log(level: severity.osLogType, "\(event.name, privacy: .public) \(event.metadataDescription, privacy: .public)")
+    }
+
+    public static func durationMillisecondsString(_ duration: Duration) -> String {
+        let components = duration.components
+        let secondsMilliseconds = components.seconds * 1_000
+        let attosecondsMilliseconds = components.attoseconds / 1_000_000_000_000_000
+        return "\(secondsMilliseconds + attosecondsMilliseconds)"
+    }
+}
+
+public enum PrivacyObservabilitySeverity: Sendable {
+    case debug
+    case info
+    case warning
+    case error
+
+    fileprivate var osLogType: OSLogType {
+        switch self {
+        case .debug:
+            return .debug
+        case .info:
+            return .info
+        case .warning:
+            return .default
+        case .error:
+            return .error
+        }
     }
 }
 
@@ -126,13 +153,7 @@ public enum PrivacyObservabilityRedactor {
 
     public static func shouldKeepField(named key: String) -> Bool {
         let key = canonicalKey(key)
-
-        if approvedFieldKeys.contains(key) {
-            return true
-        }
-
-        let tokens = tokens(for: key)
-        return tokens.isDisjoint(with: sensitiveKeyTokens)
+        return approvedFieldKeys.contains(key)
     }
 
     public static func canonicalKey(_ key: String) -> String {

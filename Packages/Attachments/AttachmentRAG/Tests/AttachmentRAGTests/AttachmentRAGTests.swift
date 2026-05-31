@@ -1,5 +1,6 @@
 import Testing
 import AIKit
+import AppFoundation
 import CoreGraphics
 import Foundation
 import GRDB
@@ -217,7 +218,7 @@ struct AttachmentRAGTests {
         #expect(await ai.callCount == 0)
     }
 
-    @Test func privacyLogKeyDoesNotExposeRawAttachmentContentOrIdentifiers() {
+    @Test func observabilityEventDoesNotExposeRawAttachmentContentOrIdentifiers() {
         let request = AttachmentSummaryRequest(
             accountId: "acct-private",
             messageId: "message-private",
@@ -226,14 +227,26 @@ struct AttachmentRAGTests {
             mime: "text/plain"
         )
 
-        let key = AttachmentSummaryOrchestrator.privacyLogKey(for: request)
+        let event = AttachmentSummaryOrchestrator.observabilityEvent(
+            status: "generated",
+            request: request,
+            errorCategory: "none",
+            sizeBucket: "lt_16kb"
+        )
 
-        #expect(key.hasPrefix("attachment:"))
-        #expect(!key.contains(request.accountId))
-        #expect(!key.contains(request.messageId))
-        #expect(!key.contains(request.attachmentId))
-        #expect(!key.contains("wire-instructions"))
-        #expect(!key.contains("raw private attachment text"))
+        #expect(event.category == .attachment)
+        #expect(event.metadata == [
+            "account_id": "acct-private",
+            "operation": "attachment_summary",
+            "status": "generated",
+            "attachment_count": "1",
+            "error_category": "none",
+            "size_bucket": "lt_16kb"
+        ])
+        #expect(!event.metadataDescription.contains(request.messageId))
+        #expect(!event.metadataDescription.contains(request.attachmentId))
+        #expect(!event.metadataDescription.contains("wire-instructions"))
+        #expect(!event.metadataDescription.contains("raw private attachment text"))
     }
 }
 

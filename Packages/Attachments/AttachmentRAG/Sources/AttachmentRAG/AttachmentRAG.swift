@@ -1,10 +1,9 @@
 import AIKit
 import AIPrompts
+import AppFoundation
 import AttachmentKit
-import CryptoKit
 import Foundation
 import GRDB
-import os
 import Persistence
 
 // MARK: - Public API
@@ -51,11 +50,6 @@ public actor AttachmentSummaryOrchestrator {
     private let aiService: any AIService
     private let byteProvider: (any AttachmentByteProvider)?
 
-    private static let logger = Logger(
-        subsystem: "com.privateaimail.attachments",
-        category: "AttachmentRAG"
-    )
-
     public init(
         db: AppDatabase,
         byteStore: AttachmentByteStore = AttachmentByteStore(baseURL: AttachmentByteStore.defaultBaseURL()),
@@ -73,10 +67,15 @@ public actor AttachmentSummaryOrchestrator {
         if let cached = try fetchCachedSummary(request, fingerprint: blob.sha256) {
             do {
                 try Self.validateSummary(cached)
-                Self.logger.info("Attachment summary cache hit for \(Self.privacyLogKey(for: request), privacy: .public)")
+                Self.logSummary(status: "cache_hit", request: request, sizeBucket: Self.sizeBucket(blob.byteCount))
                 return .summary(cached, cached: true)
             } catch {
-                Self.logger.info("Attachment summary cache ignored without evidence for \(Self.privacyLogKey(for: request), privacy: .public)")
+                Self.logSummary(
+                    status: "cache_ignored_missing_evidence",
+                    request: request,
+                    errorCategory: "summary_evidence_missing",
+                    sizeBucket: Self.sizeBucket(blob.byteCount)
+                )
             }
         }
 
@@ -90,7 +89,12 @@ public actor AttachmentSummaryOrchestrator {
 
         guard extraction.status == .extracted else {
             let reason = extraction.unsupportedReason ?? "Unsupported attachment"
-            Self.logger.info("Attachment summary unsupported for \(Self.privacyLogKey(for: request), privacy: .public)")
+            Self.logSummary(
+                status: "unsupported",
+                request: request,
+                errorCategory: "unsupported_operation",
+                sizeBucket: Self.sizeBucket(blob.byteCount)
+            )
             return .unsupported(reason)
         }
 
@@ -118,7 +122,7 @@ public actor AttachmentSummaryOrchestrator {
             extractionVersion: extraction.extractionVersion,
             fingerprint: blob.sha256
         )
-        Self.logger.info("Attachment summary generated for \(Self.privacyLogKey(for: request), privacy: .public)")
+        Self.logSummary(status: "generated", request: request, sizeBucket: Self.sizeBucket(blob.byteCount))
         return .summary(summary, cached: false)
     }
 
@@ -159,7 +163,12 @@ public actor AttachmentSummaryOrchestrator {
                 attachmentId: request.attachmentId
             )
         } catch {
-            Self.logger.error("Attachment byte fetch failed for \(Self.privacyLogKey(for: request), privacy: .public)")
+            Self.logSummary(
+                status: "failed",
+                request: request,
+                severity: .error,
+                errorCategory: "attachment_bytes_unavailable"
+            )
             throw error
         }
         let stored = try byteStore.store(
@@ -404,13 +413,56 @@ extension AttachmentSummaryOrchestrator {
         }
     }
 
-    static func privacyLogKey(for request: AttachmentSummaryRequest) -> String {
-        let raw = "\(request.accountId):\(request.messageId):\(request.attachmentId)"
-        let digest = SHA256.hash(data: Data(raw.utf8))
-            .prefix(8)
-            .map { String(format: "%02x", $0) }
-            .joined()
-        return "attachment:\(digest)"
+    private static func logSummary(
+        status: String,
+        request: AttachmentSummaryRequest,
+        severity: PrivacyObservabilitySeverity = .info,
+        errorCategory: String? = nil,
+        sizeBucket: String? = nil
+    ) {
+        PrivacyObservability.log(
+            Self.observabilityEvent(
+                status: status,
+                request: request,
+                errorCategory: errorCategory,
+                sizeBucket: sizeBucket
+            ),
+            severity: severity
+        )
+    }
+
+    static func observabilityEvent(
+        status: String,
+        request: AttachmentSummaryRequest,
+        errorCategory: String? = nil,
+        sizeBucket: String? = nil
+    ) -> PrivacyObservabilityEvent {
+        var fields: [PrivacyObservabilityField: String] = [
+            .accountID: request.accountId,
+            .operation: "attachment_summary",
+            .status: status,
+            .attachmentCount: "1"
+        ]
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        if let sizeBucket {
+            fields[.sizeBucket] = sizeBucket
+        }
+        return PrivacyObservabilityEvent(category: .attachment, name: "attachment.summary", fields: fields)
+    }
+
+    private static func sizeBucket(_ byteCount: Int) -> String {
+        switch byteCount {
+        case ..<16_384:
+            return "lt_16kb"
+        case ..<1_048_576:
+            return "lt_1mb"
+        case ..<10_485_760:
+            return "lt_10mb"
+        default:
+            return "gte_10mb"
+        }
     }
 
     private static func tableColumns(_ table: String, db: Database) throws -> Set<String> {
