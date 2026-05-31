@@ -121,6 +121,127 @@ struct ThreadFeatureTests {
         #expect(info.formattedSize == "")
     }
 
+    @Test func attachmentUIStateResolverReturnsMetadataOnlyWithoutCache() throws {
+        let resolver = AttachmentUIStateResolver(byteStore: AttachmentByteStore(baseURL: temporaryAttachmentRoot()))
+        let attachment = AttachmentInfo(id: "att1", messageId: "m1", accountId: "a1", filename: "invoice.pdf", sizeBytes: 10, mime: "application/pdf")
+
+        #expect(resolver.state(for: attachment) == .metadataOnly)
+    }
+
+    @Test func attachmentUIStateDownloadingIsExplicit() {
+        let state = AttachmentUIState.downloading
+
+        #expect(state.cacheState == .downloading)
+        #expect(state.previewURL == nil)
+        #expect(state.statusText == "downloading")
+    }
+
+    @Test func attachmentUIStateResolverReturnsCachedWhenTypeIsUnknown() throws {
+        let root = temporaryAttachmentRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let byteStore = AttachmentByteStore(baseURL: root)
+        let stored = try byteStore.store(Data("cached bytes".utf8), accountId: "a1", messageId: "m1", attachmentId: "att1")
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "attachment",
+            sizeBytes: stored.byteCount,
+            mime: nil,
+            cache: AttachmentCacheInfo(stored)
+        )
+
+        #expect(AttachmentUIStateResolver(byteStore: byteStore).state(for: attachment) == .cached)
+    }
+
+    @Test func attachmentUIStateResolverReturnsPreviewAvailableForCachedPDF() throws {
+        let root = temporaryAttachmentRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let byteStore = AttachmentByteStore(baseURL: root)
+        let stored = try byteStore.store(Data("%PDF".utf8), accountId: "a1", messageId: "m1", attachmentId: "att1")
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.pdf",
+            sizeBytes: stored.byteCount,
+            mime: "application/pdf",
+            cache: AttachmentCacheInfo(stored)
+        )
+        let state = AttachmentUIStateResolver(byteStore: byteStore).state(for: attachment)
+
+        #expect(state.cacheState == .cached)
+        #expect(state.previewURL?.path.hasPrefix(root.path) == true)
+        #expect(state.statusText == "preview available")
+    }
+
+    @Test func attachmentUIStateResolverReturnsUnsupportedPreviewForKnownUnsupportedType() throws {
+        let root = temporaryAttachmentRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let byteStore = AttachmentByteStore(baseURL: root)
+        let stored = try byteStore.store(Data([0x50, 0x4B]), accountId: "a1", messageId: "m1", attachmentId: "att1")
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "archive.zip",
+            sizeBytes: stored.byteCount,
+            mime: "application/zip",
+            cache: AttachmentCacheInfo(stored)
+        )
+        let state = AttachmentUIStateResolver(byteStore: byteStore).state(for: attachment)
+
+        guard case .unsupportedPreview(let reason) = state.previewAvailability else {
+            Issue.record("Expected unsupported preview state")
+            return
+        }
+        #expect(reason.contains("Preview is not available"))
+        #expect(state.statusText == "preview unsupported")
+    }
+
+    @Test func attachmentUIStateResolverReturnsFailedForUnsafeCachePath() throws {
+        let root = temporaryAttachmentRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.pdf",
+            sizeBytes: 10,
+            mime: "application/pdf",
+            cache: AttachmentCacheInfo(relativePath: "../outside", byteCount: 10, sha256: "abc", storedAt: 1)
+        )
+        let state = AttachmentUIStateResolver(byteStore: AttachmentByteStore(baseURL: root)).state(for: attachment)
+
+        guard case .failed(let message) = state.cacheState else {
+            Issue.record("Expected failed cache state")
+            return
+        }
+        #expect(message == "Attachment cache metadata is invalid.")
+        #expect(state.statusText == "attachment failed")
+    }
+
+    @Test func attachmentUIStateResolverReturnsDeletedWhenBlobFileIsMissing() throws {
+        let root = temporaryAttachmentRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.pdf",
+            sizeBytes: 10,
+            mime: "application/pdf",
+            cache: AttachmentCacheInfo(
+                relativePath: AttachmentByteStore.relativePath(accountId: "a1", messageId: "m1", attachmentId: "att1"),
+                byteCount: 10,
+                sha256: "abc",
+                storedAt: 1
+            )
+        )
+
+        #expect(AttachmentUIStateResolver(byteStore: AttachmentByteStore(baseURL: root)).state(for: attachment) == .deleted)
+    }
+
     @MainActor @Test func attachmentSummaryStoreShowsSummary() async throws {
         let db = try makeAttachmentSummaryDatabase()
         let provider = TestAttachmentByteProvider(result: .success(Data("Amount due: EUR 1840".utf8)))
@@ -322,6 +443,17 @@ struct ThreadFeatureTests {
         #expect(blob?.sha256 == AttachmentByteStore.sha256Hex(bytes))
         #expect(try byteStore.load(relativePath: blob?.relativePath ?? "") == bytes)
     }
+}
+
+private extension AttachmentCacheInfo {
+    init(_ stored: AttachmentStoredBlob) {
+        self.init(relativePath: stored.relativePath, byteCount: stored.byteCount, sha256: stored.sha256, storedAt: 1)
+    }
+}
+
+private func temporaryAttachmentRoot() -> URL {
+    FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
 }
 
 private func makeAttachmentSummaryDatabase(
@@ -888,6 +1020,20 @@ struct ThreadStoreStarTests {
         #expect(store.isStarred == false)
     }
 
+    @Test func observesNoAttachmentState() async throws {
+        let db = try makeDB()
+        try seedThread(db: db, starred: false)
+
+        let store = ThreadStore(db: db)
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty }
+
+        #expect(store.hasAttachment == false)
+        #expect(store.attachments.isEmpty)
+
+        store.stopObserving()
+    }
+
     @Test func observesAttachmentMetadataAndSeparatesInlineCidImages() async throws {
         let db = try makeDB()
         try seedThread(db: db, starred: false)
@@ -899,6 +1045,15 @@ struct ThreadStoreStarTests {
                 filename: "report.pdf",
                 mime: "application/pdf",
                 sizeBytes: 284_000
+            ).insert(dbConn)
+            try AttachmentBlobRecord(
+                accountId: "acc1",
+                messageId: "m1",
+                attachmentId: "att-report",
+                relativePath: "v1-acc1/v1-m1/v1-att-report",
+                byteCount: 284_000,
+                sha256: "abc123",
+                storedAt: 1
             ).insert(dbConn)
             try AttachmentRecord(
                 id: "inline-logo",
@@ -921,6 +1076,8 @@ struct ThreadStoreStarTests {
         #expect(store.attachments[0].filename == "report.pdf")
         #expect(store.attachments[0].mime == "application/pdf")
         #expect(store.attachments[0].formattedSize == "277 KB")
+        #expect(store.attachments[0].cache?.relativePath == "v1-acc1/v1-m1/v1-att-report")
+        #expect(store.attachments[0].cache?.byteCount == 284_000)
         #expect(store.messages[0].inlineAttachments.count == 1)
         #expect(store.messages[0].inlineAttachments[0].contentId == "logo@example")
 

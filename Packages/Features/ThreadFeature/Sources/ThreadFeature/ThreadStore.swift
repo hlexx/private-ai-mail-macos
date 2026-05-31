@@ -78,23 +78,26 @@ public struct AttachmentInfo: Identifiable, Sendable {
     public let filename: String
     public let sizeBytes: Int?
     public let mime: String?
+    public let cache: AttachmentCacheInfo?
 
-    public init(record: AttachmentRecord) {
+    public init(record: AttachmentRecord, cache: AttachmentCacheInfo? = nil) {
         self.id = record.id
         self.messageId = record.messageId
         self.accountId = record.accountId
         self.filename = record.filename ?? "attachment"
         self.sizeBytes = record.sizeBytes
         self.mime = record.mime
+        self.cache = cache
     }
 
-    public init(id: String, messageId: String = "", accountId: String = "", filename: String, sizeBytes: Int?, mime: String?) {
+    public init(id: String, messageId: String = "", accountId: String = "", filename: String, sizeBytes: Int?, mime: String?, cache: AttachmentCacheInfo? = nil) {
         self.id = id
         self.messageId = messageId
         self.accountId = accountId
         self.filename = filename
         self.sizeBytes = sizeBytes
         self.mime = mime
+        self.cache = cache
     }
 
     public var formattedSize: String {
@@ -102,6 +105,31 @@ public struct AttachmentInfo: Identifiable, Sendable {
         if bytes < 1024 { return "\(bytes) B" }
         if bytes < 1024 * 1024 { return "\(bytes / 1024) KB" }
         return String(format: "%.1f MB", Double(bytes) / (1024 * 1024))
+    }
+
+    public var hasDownloadIdentity: Bool {
+        !id.isEmpty && !messageId.isEmpty && !accountId.isEmpty
+    }
+}
+
+public struct AttachmentCacheInfo: Sendable, Equatable {
+    public let relativePath: String
+    public let byteCount: Int
+    public let sha256: String
+    public let storedAt: Int
+
+    public init(relativePath: String, byteCount: Int, sha256: String, storedAt: Int) {
+        self.relativePath = relativePath
+        self.byteCount = byteCount
+        self.sha256 = sha256
+        self.storedAt = storedAt
+    }
+
+    public init(record: AttachmentBlobRecord) {
+        self.relativePath = record.relativePath
+        self.byteCount = record.byteCount
+        self.sha256 = record.sha256
+        self.storedAt = record.storedAt
     }
 }
 
@@ -155,10 +183,19 @@ public final class ThreadStore {
                         .fetchAll(db)
                 }
 
-                return (thread, messages, attachments, isStarred)
+                let blobs: [AttachmentBlobRecord]
+                if messageIds.isEmpty {
+                    blobs = []
+                } else {
+                    blobs = try AttachmentBlobRecord
+                        .filter(messageIds.contains(Column("message_id")) && Column("account_id") == accountId)
+                        .fetchAll(db)
+                }
+
+                return (thread, messages, attachments, blobs, isStarred)
             }
             do {
-                for try await (thread, records, attRecords, starred) in observation.values(in: db.dbQueue) {
+                for try await (thread, records, attRecords, blobRecords, starred) in observation.values(in: db.dbQueue) {
                     guard !Task.isCancelled, let self else { return }
                     let inlineByMessage = Dictionary(
                         grouping: attRecords.filter {
@@ -176,9 +213,19 @@ public final class ThreadStore {
                     }
                     self.subject = thread?.subject ?? "(no subject)"
                     self.messageCount = thread?.messageCount ?? records.count
+                    let blobByKey = Dictionary(
+                        uniqueKeysWithValues: blobRecords.map {
+                            (Self.blobKey(messageId: $0.messageId, attachmentId: $0.attachmentId), AttachmentCacheInfo(record: $0))
+                        }
+                    )
                     self.attachments = attRecords
                         .filter { $0.contentId == nil || $0.dataBase64 == nil }
-                        .map(AttachmentInfo.init)
+                        .map { record in
+                            AttachmentInfo(
+                                record: record,
+                                cache: blobByKey[Self.blobKey(messageId: record.messageId, attachmentId: record.id)]
+                            )
+                        }
                     self.isStarred = starred
                 }
             } catch {
@@ -195,5 +242,9 @@ public final class ThreadStore {
         messageCount = 0
         attachments = []
         isStarred = false
+    }
+
+    private static func blobKey(messageId: String, attachmentId: String) -> String {
+        "\(messageId)\u{1F}\(attachmentId)"
     }
 }

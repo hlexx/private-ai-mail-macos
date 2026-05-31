@@ -74,14 +74,14 @@ workflow automation.
 
 ### Task 4: Add safe preview states
 
-- [ ] Add ThreadFeature attachment UI states: metadata only, downloading,
+- [x] Add ThreadFeature attachment UI states: metadata only, downloading,
       cached, preview available, unsupported preview, failed, and deleted.
-- [ ] Use Quick Look or existing safe preview mechanisms for cached local files
+- [x] Use Quick Look or existing safe preview mechanisms for cached local files
       where available.
-- [ ] Do not enable "Ask about attachment" unless the AI summary handler and
+- [x] Do not enable "Ask about attachment" unless the AI summary handler and
       evidence are real.
-- [ ] Add tests for each UI state and no-attachment state.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ThreadFeature && swift test`.
+- [x] Add tests for each UI state and no-attachment state.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/ThreadFeature && swift test`.
 
 ### Task 5: Connect attachment metadata to search
 

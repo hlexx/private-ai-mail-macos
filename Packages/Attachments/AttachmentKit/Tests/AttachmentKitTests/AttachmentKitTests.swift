@@ -26,6 +26,8 @@ struct AttachmentKitTests {
         ))
         #expect(try store.load(relativePath: blob.relativePath) == data)
         #expect(try store.load(relativePath: blob.relativePath, expectedSHA256: blob.sha256) == data)
+        #expect(try store.fileExists(relativePath: blob.relativePath))
+        #expect(try store.fileURL(relativePath: blob.relativePath).path.hasPrefix(root.path))
 
         let values = try root.resourceValues(forKeys: [.isExcludedFromBackupKey])
         #expect(values.isExcludedFromBackup == true)

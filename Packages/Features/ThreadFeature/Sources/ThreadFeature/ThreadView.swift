@@ -19,6 +19,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     var onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)?
     var onScrollProxy: ((ScrollViewProxy) -> Void)?
     var attachmentSummaryStore: AttachmentSummaryStore?
+    var attachmentUIStateProvider: (AttachmentInfo) -> AttachmentUIState
 
     public init(
         store: ThreadStore,
@@ -30,6 +31,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)? = nil,
         onScrollProxy: ((ScrollViewProxy) -> Void)? = nil,
         attachmentSummaryStore: AttachmentSummaryStore? = nil,
+        attachmentUIStateProvider: ((AttachmentInfo) -> AttachmentUIState)? = nil,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
@@ -43,6 +45,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.onTextNodesExtracted = onTextNodesExtracted
         self.onScrollProxy = onScrollProxy
         self.attachmentSummaryStore = attachmentSummaryStore
+        let resolver = AttachmentUIStateResolver()
+        self.attachmentUIStateProvider = attachmentUIStateProvider ?? { resolver.state(for: $0) }
         self.composerContent = composer()
         self.briefContent = briefRail()
         self.translationHeader = translationHeader()
@@ -218,6 +222,7 @@ private extension ThreadView {
     var attachmentBlock: some View {
         ForEach(store.attachments) { att in
             let summaryState = attachmentSummaryStore?.state(for: att) ?? .idle
+            let uiState = summaryState.isWorking ? AttachmentUIState.downloading : attachmentUIStateProvider(att)
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 12) {
                     // Thumbnail placeholder
@@ -243,19 +248,23 @@ private extension ThreadView {
                         Text(att.filename)
                             .font(.rbGeist(13, weight: .medium))
                             .foregroundStyle(Color.rbFg1)
-                        Text(attachmentStatusText(att, state: summaryState))
+                        Text(attachmentStatusText(att, uiState: uiState))
                             .font(.rbMono(11))
                             .foregroundStyle(Color.rbFg3)
                     }
 
                     Spacer()
 
-                    Button {} label: {
+                    Button {
+                        if let url = uiState.previewURL {
+                            AttachmentQuickLookPresenter.shared.preview(url)
+                        }
+                    } label: {
                         Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
                     }
                     .buttonStyle(.rbGhost)
-                    .disabled(true)
-                    .help(String(localized: "thread.attachment.open.help", defaultValue: "Attachment opening is not available yet"))
+                    .disabled(uiState.previewURL == nil)
+                    .help(attachmentPreviewHelp(uiState))
 
                     Button { attachmentSummaryStore?.summarize(att) } label: {
                         Label(
@@ -266,9 +275,11 @@ private extension ThreadView {
                         )
                     }
                     .buttonStyle(.rbSecondary)
-                    .disabled(attachmentSummaryStore == nil || summaryState.isWorking)
+                    .disabled(!canSummarizeAttachment(att, state: summaryState))
+                    .help(attachmentSummaryHelp(att, state: summaryState))
                 }
 
+                attachmentStateContent(uiState)
                 attachmentSummaryContent(summaryState)
             }
             .padding(.horizontal, 14)
@@ -283,21 +294,56 @@ private extension ThreadView {
         }
     }
 
-    func attachmentStatusText(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
+    func attachmentStatusText(_ attachment: AttachmentInfo, uiState: AttachmentUIState) -> String {
         let size = attachment.formattedSize.isEmpty ? "File" : attachment.formattedSize
-        switch state {
-        case .idle:
-            return "\(size) \u{00B7} local summary ready"
-        case .summarizing:
-            return "\(size) \u{00B7} summarizing locally"
-        case .summary(let data):
-            return data.cached
-                ? "\(size) \u{00B7} cached local summary"
-                : "\(size) \u{00B7} summarized locally"
-        case .unsupported:
-            return "\(size) \u{00B7} unsupported"
-        case .failed:
-            return "\(size) \u{00B7} summary failed"
+        return "\(size) \u{00B7} \(uiState.statusText)"
+    }
+
+    func attachmentPreviewHelp(_ uiState: AttachmentUIState) -> String {
+        switch uiState.previewAvailability {
+        case .previewAvailable:
+            return String(localized: "thread.attachment.preview.help.available", defaultValue: "Preview cached attachment with Quick Look")
+        case .unsupportedPreview(let reason):
+            return reason
+        case .unavailable:
+            switch uiState.cacheState {
+            case .metadataOnly:
+                return String(localized: "thread.attachment.preview.help.metadataOnly", defaultValue: "Download or summarize the attachment before previewing")
+            case .downloading:
+                return String(localized: "thread.attachment.preview.help.downloading", defaultValue: "Attachment is downloading")
+            case .cached:
+                return String(localized: "thread.attachment.preview.help.cached", defaultValue: "Preview is not available for this cached attachment")
+            case .failed(let message):
+                return message
+            case .deleted:
+                return String(localized: "thread.attachment.preview.help.deleted", defaultValue: "Cached attachment file was deleted")
+            }
+        }
+    }
+
+    func attachmentSummaryHelp(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
+        guard attachmentSummaryStore != nil else {
+            return String(localized: "thread.attachment.summary.help.unavailable", defaultValue: "Attachment summary is not available")
+        }
+        guard attachment.hasDownloadIdentity else {
+            return String(localized: "thread.attachment.summary.error.missingId", defaultValue: "Attachment is missing a download identifier.")
+        }
+        if state.isWorking {
+            return String(localized: "thread.attachment.summary.loading", defaultValue: "Reading attachment locally...")
+        }
+        return String(localized: "thread.attachment.summary.help.available", defaultValue: "Summarize with local extracted evidence")
+    }
+
+    func canSummarizeAttachment(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> Bool {
+        attachmentSummaryStore != nil && attachment.hasDownloadIdentity && !state.isWorking
+    }
+
+    @ViewBuilder
+    func attachmentStateContent(_ uiState: AttachmentUIState) -> some View {
+        if let detailText = uiState.detailText {
+            Text(detailText)
+                .font(.rbGeist(12))
+                .foregroundStyle(Color.rbFg3)
         }
     }
 
@@ -350,6 +396,7 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.onTextNodesExtracted = nil
         self.onScrollProxy = nil
         self.attachmentSummaryStore = nil
+        self.attachmentUIStateProvider = { AttachmentUIStateResolver().state(for: $0) }
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()

@@ -74,8 +74,16 @@ public struct AttachmentByteStore: Sendable {
         )
     }
 
+    public func fileURL(relativePath: String) throws -> URL {
+        try resolvedURL(for: relativePath)
+    }
+
+    public func fileExists(relativePath: String) throws -> Bool {
+        try FileManager.default.fileExists(atPath: fileURL(relativePath: relativePath).path)
+    }
+
     public func load(relativePath: String) throws -> Data {
-        try Data(contentsOf: resolvedURL(for: relativePath))
+        try Data(contentsOf: fileURL(relativePath: relativePath))
     }
 
     public func load(relativePath: String, expectedSHA256: String) throws -> Data {
@@ -88,7 +96,7 @@ public struct AttachmentByteStore: Sendable {
     }
 
     public func delete(relativePath: String) throws {
-        let url = try resolvedURL(for: relativePath)
+        let url = try fileURL(relativePath: relativePath)
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
         }
