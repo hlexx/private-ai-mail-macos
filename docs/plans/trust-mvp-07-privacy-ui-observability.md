@@ -93,11 +93,11 @@ logging raw mail content.
 
 ### Task 6: Add cache and account removal notes
 
-- [ ] Document local cache deletion behavior for accounts, attachment bytes,
+- [x] Document local cache deletion behavior for accounts, attachment bytes,
       indexes, drafts, and AI artifacts.
-- [ ] Add or update tests proving account removal cascades local mail,
+- [x] Add or update tests proving account removal cascades local mail,
       attachments, indexes, drafts, and queue rows where those tables exist.
-- [ ] Run all validation commands listed above and fix failures.
+- [x] Run all validation commands listed above and fix failures.
 
 ## Rollback / Recovery
 

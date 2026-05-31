@@ -84,9 +84,10 @@ final class CompositionRoot {
             tokenStore: tokenStore
         )
         self.translationStore = TranslationStore(db: db)
+        let attachmentByteStore = AttachmentByteStore(baseURL: AttachmentByteStore.defaultBaseURL())
         self.attachmentSummaryOrchestrator = AttachmentSummaryOrchestrator(
             db: db,
-            byteStore: AttachmentByteStore(baseURL: AttachmentByteStore.defaultBaseURL()),
+            byteStore: attachmentByteStore,
             aiService: aiService,
             byteProvider: GmailAttachmentByteProvider(apiFactory: apiFactory)
         )
@@ -118,7 +119,10 @@ final class CompositionRoot {
             db: db,
             oauthClient: oauthClient,
             tokenStore: tokenStore,
-            syncSupervisor: syncSupervisor
+            syncSupervisor: syncSupervisor,
+            localAccountCacheDeleter: { accountId in
+                try attachmentByteStore.deleteAccount(accountId: accountId)
+            }
         )
 
         self.accountsTabStore.onAccountAdded = { [weak self] accountId in

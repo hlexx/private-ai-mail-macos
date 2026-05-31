@@ -57,6 +57,7 @@ public final class AccountsTabStore {
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
     private let syncSupervisor: SyncSupervisor
+    private let localAccountCacheDeleter: @Sendable (String) throws -> Void
     private var observationTask: Task<Void, Never>?
 
     /// Called after a new account is fully added and sync has started.
@@ -67,13 +68,15 @@ public final class AccountsTabStore {
         oauthClient: any OAuthClient,
         tokenStore: any TokenStore,
         syncSupervisor: SyncSupervisor,
-        providerOptions: [AccountProviderOption] = AccountsTabStore.defaultProviderOptions()
+        providerOptions: [AccountProviderOption] = AccountsTabStore.defaultProviderOptions(),
+        localAccountCacheDeleter: @escaping @Sendable (String) throws -> Void = { _ in }
     ) {
         self.db = db
         self.oauthClient = oauthClient
         self.tokenStore = tokenStore
         self.syncSupervisor = syncSupervisor
         self.providerOptions = providerOptions
+        self.localAccountCacheDeleter = localAccountCacheDeleter
     }
 
     public static func defaultProviderOptions() -> [AccountProviderOption] {
@@ -191,6 +194,11 @@ public final class AccountsTabStore {
             guard let self else { return }
             await self.syncSupervisor.stop(accountId: accountId)
             do {
+                let deleteLocalCache = self.localAccountCacheDeleter
+                try await Task.detached(priority: .utility) {
+                    try deleteLocalCache(accountId)
+                }.value
+
                 try await DatabaseActor.shared.run {
                     try self.db.dbQueue.write { db in
                         _ = try AccountRecord.deleteOne(db, key: accountId)

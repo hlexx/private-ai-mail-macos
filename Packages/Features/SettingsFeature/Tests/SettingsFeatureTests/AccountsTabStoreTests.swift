@@ -105,7 +105,8 @@ struct AccountsTabStoreTests {
     private func makeStore(
         db: AppDatabase? = nil,
         oauthClient: MockOAuthClient? = nil,
-        tokenStore: MockTokenStore? = nil
+        tokenStore: MockTokenStore? = nil,
+        localAccountCacheDeleter: @escaping @Sendable (String) throws -> Void = { _ in }
     ) async throws -> (AccountsTabStore, AppDatabase, MockOAuthClient, MockTokenStore) {
         let database = try db ?? AppDatabase.openInMemorySync()
         let oauth = oauthClient ?? MockOAuthClient()
@@ -115,7 +116,8 @@ struct AccountsTabStoreTests {
             db: database,
             oauthClient: oauth,
             tokenStore: tokens,
-            syncSupervisor: supervisor
+            syncSupervisor: supervisor,
+            localAccountCacheDeleter: localAccountCacheDeleter
         )
         return (store, database, oauth, tokens)
     }
@@ -247,7 +249,12 @@ struct AccountsTabStoreTests {
 
     @Test @MainActor
     func removeAccountDeletesFromDBAndKeychain() async throws {
-        let (store, db, _, tokens) = try await makeStore()
+        let cacheDeletion = LocalAccountCacheDeletionSpy()
+        let (store, db, _, tokens) = try await makeStore(
+            localAccountCacheDeleter: { accountId in
+                cacheDeletion.delete(accountId)
+            }
+        )
 
         let accountId = "test-account-id"
         try insertAccount(id: accountId, email: "test@gmail.com", into: db)
@@ -269,6 +276,7 @@ struct AccountsTabStoreTests {
         }
         #expect(remaining.isEmpty)
         #expect(tokens.deleteCalledWith.contains(accountId))
+        #expect(cacheDeletion.deletedAccountIds == [accountId])
 
         store.stopObserving()
     }
@@ -346,6 +354,23 @@ struct AccountsTabStoreTests {
             break // Expected
         default:
             Issue.record("Expected fetchingProfile or error phase, got \(store.addPhase)")
+        }
+    }
+}
+
+private final class LocalAccountCacheDeletionSpy: @unchecked Sendable {
+    private let lock = NSLock()
+    private var ids: [String] = []
+
+    func delete(_ accountId: String) {
+        lock.withLock {
+            ids.append(accountId)
+        }
+    }
+
+    var deletedAccountIds: [String] {
+        lock.withLock {
+            ids
         }
     }
 }

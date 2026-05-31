@@ -104,6 +104,34 @@ Settings privacy copy should communicate:
 - How cache deletion and account removal affect local mail, attachment bytes,
   indexes, drafts, queues, and AI artifacts.
 
+## Local Cache Deletion and Account Removal
+
+Removing an account is a local deletion operation. It does not delete mail from
+Gmail or Microsoft Graph, and it does not send mailbox contents to the app
+cloud.
+
+The app must stop sync for the account, delete the locally stored provider
+credential, delete the account's attachment byte-cache directory, and remove the
+account row from the local database. The database account deletion is the root
+of the persistence cascade for:
+
+- Raw local mail rows: sync state, threads, messages, labels, thread labels,
+  trusted sender rows, and attachment metadata.
+- Local attachment state: blob metadata, extraction records, extracted chunks,
+  processing jobs, and attachment AI artifacts.
+- Local indexes: search documents and FTS rows derived from the account's
+  messages.
+- Local drafts and send state: draft rows and queued outgoing message rows,
+  including local body snapshots and retry metadata.
+- Local AI artifacts: thread brief cache rows and attachment summary artifacts
+  tied to the account.
+- Provider sync metadata: provider checkpoints such as Graph delta checkpoint
+  rows.
+
+If attachment byte-cache deletion fails, account removal should surface a
+failure and be retryable rather than silently leaving cached attachment bytes on
+disk.
+
 ## Change Control
 
 Any change that exports mailbox content, attachment bytes, draft bodies, local
