@@ -1,4 +1,5 @@
 import Testing
+import AppFoundation
 import Foundation
 @testable import SettingsFeature
 import AuthKit
@@ -194,6 +195,40 @@ struct AccountsTabStoreTests {
             // Error surfaced correctly
         } else {
             Issue.record("Expected error phase, got \(store.addPhase)")
+        }
+    }
+
+    @Test @MainActor
+    func addAccountNetworkFailureShowsOfflineRecoveryCopy() async throws {
+        let (store, _, oauth, _) = try await makeStore()
+
+        oauth.authorizeResult = .failure(AuthError.network(URLError(.notConnectedToInternet)))
+
+        store.addGmailAccount()
+        try await Task.sleep(for: .milliseconds(200))
+
+        if case .error(let message) = store.addPhase {
+            #expect(message == "Account cannot reach Gmail while offline. Check your connection and try again.")
+        } else {
+            Issue.record("Expected offline account error, got \(store.addPhase)")
+        }
+    }
+
+    @Test @MainActor
+    func reauthorizeFailureShowsMissingCredentialRecoveryCopy() async throws {
+        let (store, db, oauth, _) = try await makeStore()
+
+        let accountId = "gmail-reauthorize-failure"
+        try insertAccount(id: accountId, email: "test@gmail.com", into: db)
+        oauth.authorizeResult = .failure(AuthError.missingRefreshToken)
+
+        store.reauthorizeAccount(accountId)
+        try await Task.sleep(for: .milliseconds(300))
+
+        if case .error(let message) = store.reauthorizationPhases[accountId] {
+            #expect(message == "Reconnect Gmail to use this account.")
+        } else {
+            Issue.record("Expected missing credential re-authorization error")
         }
     }
 

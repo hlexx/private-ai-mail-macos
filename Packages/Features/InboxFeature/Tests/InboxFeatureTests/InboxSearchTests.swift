@@ -1,3 +1,4 @@
+import AppFoundation
 import Foundation
 import MailDomain
 import MailIndex
@@ -146,13 +147,20 @@ struct InboxSearchTests {
             source: .local
         )
         let searcher = StubMailSearching { query in
-            MailSearchResponse(
+            let failure = UserActionableFailure(
+                category: .rateLimit,
+                operation: .search,
+                provider: "Gmail",
+                retryAfterSeconds: 45
+            )
+            return MailSearchResponse(
                 query: query,
                 results: [localResult],
                 providerFallbackFailures: [
                     MailSearchProviderFallbackFailure(
                         provider: .gmail,
-                        userVisibleMessage: "Remote gmail search failed."
+                        category: failure.category,
+                        userVisibleMessage: failure.message
                     ),
                 ]
             )
@@ -163,8 +171,27 @@ struct InboxSearchTests {
         store.submitSearch(mode: .providerFallbackRequest)
 
         try await waitForSearchResults(in: store, expected: ["t1"])
-        #expect(store.searchFallbackMessages == ["Remote gmail search failed."])
-        #expect(store.searchWarningText == "Remote gmail search failed.")
+        #expect(store.searchFallbackMessages == ["Gmail is rate-limiting search. Re:Box will retry in 45s."])
+        #expect(store.searchWarningText == "Gmail is rate-limiting search. Re:Box will retry in 45s.")
+    }
+
+    @MainActor
+    @Test func failedSearchUsesUserActionableCategoryCopy() async throws {
+        let db = try makeDB()
+        let searcher = StubMailSearching { _ in
+            throw UserActionableFailure(category: .offline, operation: .search, provider: "Gmail")
+        }
+        let store = InboxStore(db: db, searchService: searcher)
+
+        store.searchText = "alpha"
+        store.submitSearch()
+
+        try await waitForSearchState(in: store) {
+            if case .failed(query: "alpha", category: .offline, let message) = $0 {
+                return message == "Search cannot reach Gmail while offline. Check your connection and try again."
+            }
+            return false
+        }
     }
 
     @MainActor

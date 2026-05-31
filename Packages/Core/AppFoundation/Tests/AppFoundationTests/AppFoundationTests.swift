@@ -20,6 +20,47 @@ struct AppFoundationTests {
         ])
     }
 
+    @Test func userActionableFailureCategoriesCoverTrustMVPStates() {
+        #expect(UserActionableFailureCategory.allCases.map(\.rawValue) == [
+            "offline",
+            "missingCredential",
+            "insufficientScope",
+            "rateLimit",
+            "providerUnavailable",
+            "unsupportedOperation",
+            "unknown"
+        ])
+    }
+
+    @Test func userActionableFailureMessagesAreCategorySpecificAndSanitized() {
+        let failures = UserActionableFailureCategory.allCases.map {
+            UserActionableFailure(category: $0, operation: .sync, provider: "Gmail", retryAfterSeconds: 30)
+        }
+
+        #expect(failures.map(\.message).allSatisfy { !$0.isEmpty })
+        #expect(failures.first { $0.category == .offline }?.message.contains("offline") == true)
+        #expect(failures.first { $0.category == .missingCredential }?.message.contains("Reconnect") == true)
+        #expect(failures.first { $0.category == .insufficientScope }?.message.contains("Re-authorize") == true)
+        #expect(failures.first { $0.category == .rateLimit }?.message.contains("30s") == true)
+        #expect(failures.first { $0.category == .providerUnavailable }?.message.contains("unavailable") == true)
+        #expect(failures.first { $0.category == .unsupportedOperation }?.message.contains("not supported") == true)
+        #expect(failures.first { $0.category == .unknown }?.message.contains("unknown") == true)
+        #expect(!failures.map(\.message).joined(separator: " ").localizedCaseInsensitiveContains("body"))
+        #expect(!failures.map(\.message).joined(separator: " ").localizedCaseInsensitiveContains("token"))
+        #expect(!failures.map(\.message).joined(separator: " ").localizedCaseInsensitiveContains("payload"))
+    }
+
+    @Test func userActionableFailureCoercesNetworkErrorsWithoutRawDetails() {
+        let failure = UserActionableFailure.coerce(
+            URLError(.notConnectedToInternet),
+            operation: .search,
+            provider: "Gmail"
+        )
+
+        #expect(failure.category == .offline)
+        #expect(failure.message == "Search cannot reach Gmail while offline. Check your connection and try again.")
+    }
+
     @Test func privacyObservabilityKeepsApprovedSafeFields() {
         let event = PrivacyObservability.event(
             "sync.completed",

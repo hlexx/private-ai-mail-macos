@@ -2,6 +2,7 @@ import Testing
 import SwiftUI
 import AppKit
 import AIKit
+import AppFoundation
 import AttachmentKit
 import AttachmentRAG
 @testable import ThreadFeature
@@ -353,7 +354,48 @@ struct ThreadFeatureTests {
             Issue.record("Expected failed state")
             return
         }
-        #expect(message == "Could not summarize this attachment.")
+        #expect(message == "Attachment failed for an unknown reason. Try again.")
+        #expect(await ai.callCount == 0)
+    }
+
+    @MainActor @Test func attachmentSummaryStoreShowsProviderUnavailableFailureCopy() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        let provider = TestAttachmentByteProvider(error: UserActionableFailure(
+            category: .providerUnavailable,
+            operation: .attachment,
+            provider: "Gmail"
+        ))
+        let ai = TestAttachmentAIService()
+        let storeRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: storeRoot) }
+        let orchestrator = AttachmentSummaryOrchestrator(
+            db: db,
+            byteStore: .init(baseURL: storeRoot),
+            aiService: ai,
+            byteProvider: provider
+        )
+        let store = AttachmentSummaryStore(orchestrator: orchestrator)
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 10,
+            mime: "text/plain"
+        )
+
+        store.summarize(attachment)
+        let finalState = try await waitForAttachmentState(store: store, attachment: attachment) { state in
+            if case .failed = state { return true }
+            return false
+        }
+
+        guard case .failed(let message) = finalState else {
+            Issue.record("Expected failed state")
+            return
+        }
+        #expect(message == "Gmail is unavailable right now. Try again later.")
         #expect(await ai.callCount == 0)
     }
 
@@ -390,7 +432,7 @@ struct ThreadFeatureTests {
             Issue.record("Expected failed state")
             return
         }
-        #expect(message == "Attachment is missing a download identifier.")
+        #expect(message == "This attachment is not supported in this build.")
         #expect(await ai.callCount == 0)
     }
 
@@ -431,7 +473,7 @@ struct ThreadFeatureTests {
             Issue.record("Expected failed state")
             return
         }
-        #expect(message == "The generated summary did not include verifiable evidence.")
+        #expect(message == "Attachment failed for an unknown reason. Try again.")
         #expect(await ai.callCount == 1)
     }
 
@@ -540,10 +582,33 @@ private enum TestAttachmentByteError: Error, Sendable {
 }
 
 private struct TestAttachmentByteProvider: AttachmentByteProvider {
-    let result: Result<Data, TestAttachmentByteError>
+    private let data: Data?
+    private let error: (any Error & Sendable)?
+
+    init(result: Result<Data, TestAttachmentByteError>) {
+        switch result {
+        case .success(let data):
+            self.data = data
+            self.error = nil
+        case .failure(let error):
+            self.data = nil
+            self.error = error
+        }
+    }
+
+    init(error: any Error & Sendable) {
+        self.data = nil
+        self.error = error
+    }
 
     func fetchAttachmentData(accountId _: String, messageId _: String, attachmentId _: String) async throws -> Data {
-        try result.get()
+        if let data {
+            return data
+        }
+        if let error {
+            throw error
+        }
+        throw TestAttachmentByteError.unavailable
     }
 }
 

@@ -154,7 +154,7 @@ public struct InboxView: View {
                         defaultValue: "Local search is not available in this build."
                     ))
                 )
-            } else if case .failed(_, let message) = store.searchState {
+            } else if case .failed(_, _, let message) = store.searchState {
                 ContentUnavailableView(
                     String(localized: "threads.search.failed.title", defaultValue: "Search failed"),
                     systemImage: "exclamationmark.triangle",

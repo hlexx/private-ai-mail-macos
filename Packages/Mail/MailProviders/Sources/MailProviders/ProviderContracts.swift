@@ -1,3 +1,4 @@
+import AppFoundation
 import Foundation
 import MailDomain
 
@@ -67,6 +68,38 @@ public enum MailProviderErrorCategory: String, Codable, Sendable, CaseIterable {
     case invalidResponse
     case unsupportedOperation
     case conflict
+}
+
+public extension MailProviderErrorCategory {
+    var userActionableCategory: UserActionableFailureCategory {
+        switch self {
+        case .offline:
+            return .offline
+        case .missingCredential, .authExpired:
+            return .missingCredential
+        case .insufficientScope:
+            return .insufficientScope
+        case .rateLimited:
+            return .rateLimit
+        case .providerUnavailable, .notFound, .invalidResponse, .conflict:
+            return .providerUnavailable
+        case .unsupportedOperation:
+            return .unsupportedOperation
+        }
+    }
+
+    func userActionableFailure(
+        operation: UserActionableFailureOperation,
+        provider: String? = nil,
+        retryAfterSeconds: Int? = nil
+    ) -> UserActionableFailure {
+        UserActionableFailure(
+            category: userActionableCategory,
+            operation: operation,
+            provider: provider,
+            retryAfterSeconds: retryAfterSeconds
+        )
+    }
 }
 
 public extension GmailAPIError {
@@ -198,6 +231,40 @@ public extension GmailAPIError {
             return .offline
         }
         return urlError.code == .timedOut ? .timeout : .offline
+    }
+}
+
+public extension GmailAPIError {
+    func userActionableFailure(operation: UserActionableFailureOperation) -> UserActionableFailure {
+        sharedCategory.userActionableFailure(
+            operation: operation,
+            provider: "Gmail",
+            retryAfterSeconds: retryAfterSeconds
+        )
+    }
+
+    private var retryAfterSeconds: Int? {
+        guard case .rateLimited(let retryAfter) = self, let retryAfter else {
+            return nil
+        }
+        return Int(retryAfter)
+    }
+}
+
+public extension GraphAPIError {
+    func userActionableFailure(operation: UserActionableFailureOperation) -> UserActionableFailure {
+        sharedCategory.userActionableFailure(
+            operation: operation,
+            provider: "Microsoft Graph",
+            retryAfterSeconds: retryAfterSeconds
+        )
+    }
+
+    private var retryAfterSeconds: Int? {
+        guard case .rateLimited(let retryAfter) = self, let retryAfter else {
+            return nil
+        }
+        return Int(retryAfter)
     }
 }
 

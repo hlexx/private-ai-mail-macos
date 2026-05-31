@@ -84,12 +84,12 @@ logging raw mail content.
 
 ### Task 5: Surface failure states without leaking content
 
-- [ ] Ensure sync, send, search, and attachment failures show user-actionable
+- [x] Ensure sync, send, search, and attachment failures show user-actionable
       categories: offline, missing credential, insufficient scope, rate limit,
       provider unavailable, unsupported operation, and unknown.
-- [ ] Add feature tests for representative failure state copy in Settings,
+- [x] Add feature tests for representative failure state copy in Settings,
       Compose, Thread, and Inbox where supported.
-- [ ] Run relevant package tests listed in Validation Commands.
+- [x] Run relevant package tests listed in Validation Commands.
 
 ### Task 6: Add cache and account removal notes
 

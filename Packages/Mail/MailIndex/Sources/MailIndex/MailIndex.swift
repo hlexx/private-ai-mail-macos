@@ -1,3 +1,4 @@
+import AppFoundation
 import Foundation
 import GRDB
 import MailDomain
@@ -405,10 +406,16 @@ public struct MailSearchProviderFallbackResponse: Sendable, Equatable {
 
 public struct MailSearchProviderFallbackFailure: Sendable, Equatable {
     public let provider: MailProviderIdentifier
+    public let category: UserActionableFailureCategory
     public let userVisibleMessage: String
 
-    public init(provider: MailProviderIdentifier, userVisibleMessage: String) {
+    public init(
+        provider: MailProviderIdentifier,
+        category: UserActionableFailureCategory = .unknown,
+        userVisibleMessage: String
+    ) {
         self.provider = provider
+        self.category = category
         self.userVisibleMessage = userVisibleMessage
     }
 }
@@ -567,9 +574,15 @@ public struct MailSearchService: MailSearching {
                     hasUnknownTotalResultCount = true
                 }
             } catch {
+                let failure = Self.userActionableFailure(
+                    for: error,
+                    provider: fallback.provider,
+                    operation: .search
+                )
                 failures.append(MailSearchProviderFallbackFailure(
                     provider: fallback.provider,
-                    userVisibleMessage: "Remote \(fallback.provider.rawValue) search failed."
+                    category: failure.category,
+                    userVisibleMessage: failure.message
                 ))
             }
         }
@@ -583,6 +596,14 @@ public struct MailSearchService: MailSearching {
     private func providerFallbacksForQuery(_ query: MailSearchQuery) -> [any MailProviderSearchFallback] {
         guard !query.filters.providers.isEmpty else { return providerFallbacks }
         return providerFallbacks.filter { query.filters.providers.contains($0.provider) }
+    }
+
+    private static func userActionableFailure(
+        for error: any Error,
+        provider: MailProviderIdentifier,
+        operation: UserActionableFailureOperation
+    ) -> UserActionableFailure {
+        UserActionableFailure.coerce(error, operation: operation, provider: provider.displayName)
     }
 
     private func remoteProviderResult(_ result: MailSearchResult) -> MailSearchResult {

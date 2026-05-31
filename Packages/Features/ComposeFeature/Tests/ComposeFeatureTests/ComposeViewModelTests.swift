@@ -1,3 +1,4 @@
+import AppFoundation
 import Testing
 import Foundation
 import MailDomain
@@ -270,6 +271,27 @@ struct ComposeViewModelTests {
         } else {
             Issue.record("Expected sent after reauthorization, got \(vm.sendState)")
         }
+    }
+
+    @Test func approvalErrorMessageUsesSanitizedSendFailureCategoryCopy() {
+        let message = ApprovalRow.errorMessage(.send(underlying: UserActionableFailure(
+            category: .providerUnavailable,
+            operation: .send,
+            provider: "Gmail"
+        )))
+
+        #expect(message == "Gmail is unavailable right now. Try again later.")
+    }
+
+    @Test func approvalErrorMessageUsesRateLimitRetryCopy() {
+        let message = ApprovalRow.errorMessage(.send(underlying: UserActionableFailure(
+            category: .rateLimit,
+            operation: .send,
+            provider: "Gmail",
+            retryAfterSeconds: 60
+        )))
+
+        #expect(message == "Gmail is rate-limiting send. Re:Box will retry in 60s.")
     }
 }
 

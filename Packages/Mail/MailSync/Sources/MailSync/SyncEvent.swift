@@ -1,4 +1,7 @@
+import AppFoundation
+import AuthKit
 import Foundation
+import MailProviders
 
 public enum SyncEvent: Sendable {
     case progress(Double)
@@ -16,26 +19,42 @@ public enum SyncError: Error, Sendable {
 
 extension SyncError: LocalizedError {
     public var errorDescription: String? {
+        userActionableFailure.message
+    }
+}
+
+public extension SyncError {
+    var userActionableFailure: UserActionableFailure {
         switch self {
         case .bootstrapFailed(let inner):
-            // Surface the underlying error verbatim. Without this, the UI
-            // falls back to Swift's default Error bridging and renders
-            // "The operation couldn't be completed. (MailSync.SyncError
-            // error 0.)" — useless for diagnosing what actually broke.
-            return "Bootstrap sync failed: \(describe(inner))"
+            return Self.userActionableFailure(for: inner)
         case .incrementalFailed(let inner):
-            return "Incremental sync failed: \(describe(inner))"
+            return Self.userActionableFailure(for: inner)
         case .rateLimited(let retryAfter):
-            return "Gmail API rate limit hit. Retrying in \(Int(retryAfter))s."
+            return UserActionableFailure(
+                category: .rateLimit,
+                operation: .sync,
+                provider: "Gmail",
+                retryAfterSeconds: Int(retryAfter)
+            )
         case .historyExpired:
-            return "Gmail history token expired; falling back to a full sync."
+            return UserActionableFailure(category: .providerUnavailable, operation: .sync, provider: "Gmail")
         }
     }
 
-    private func describe(_ error: any Error) -> String {
-        if let localized = (error as? LocalizedError)?.errorDescription {
-            return localized
+    private static func userActionableFailure(for error: any Error) -> UserActionableFailure {
+        if let failure = error as? UserActionableFailure {
+            return failure
         }
-        return String(describing: error)
+        if let gmailError = error as? GmailAPIError {
+            return gmailError.userActionableFailure(operation: .sync)
+        }
+        if let graphError = error as? GraphAPIError {
+            return graphError.userActionableFailure(operation: .sync)
+        }
+        if let authError = error as? AuthError {
+            return authError.userActionableFailure(operation: .sync, provider: "Gmail")
+        }
+        return UserActionableFailure.coerce(error, operation: .sync, provider: "Gmail")
     }
 }

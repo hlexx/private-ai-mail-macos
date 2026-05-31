@@ -22,6 +22,17 @@ public struct MailProviderIdentifier: RawRepresentable, Codable, Hashable, Senda
     public var isTrustMVPSupported: Bool {
         self == .gmail || self == .outlook
     }
+
+    public var displayName: String {
+        switch self {
+        case .gmail:
+            return "Gmail"
+        case .outlook:
+            return "Outlook"
+        default:
+            return rawValue
+        }
+    }
 }
 
 public enum CanonicalMailboxUserDefinedKind: String, Codable, Sendable, Hashable {

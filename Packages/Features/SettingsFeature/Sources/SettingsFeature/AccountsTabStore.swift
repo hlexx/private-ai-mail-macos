@@ -1,3 +1,4 @@
+import AppFoundation
 import AuthKit
 import Foundation
 import GRDB
@@ -180,7 +181,7 @@ public final class AccountsTabStore {
             } catch let error as AuthError where error.isCancelled {
                 self.addPhase = .idle
             } catch {
-                self.addPhase = .error(error.localizedDescription)
+                self.addPhase = .error(Self.userMessage(for: error, operation: .account, provider: "Gmail"))
             }
         }
     }
@@ -199,7 +200,7 @@ public final class AccountsTabStore {
                 self.syncStates.removeValue(forKey: accountId)
                 self.reauthorizationPhases.removeValue(forKey: accountId)
             } catch {
-                self.addPhase = .error(error.localizedDescription)
+                self.addPhase = .error(Self.userMessage(for: error, operation: .account))
             }
         }
     }
@@ -235,7 +236,9 @@ public final class AccountsTabStore {
                     )
                 }
             } catch {
-                self.reauthorizationPhases[accountId] = .error(error.localizedDescription)
+                self.reauthorizationPhases[accountId] = .error(
+                    Self.userMessage(for: error, operation: .account, provider: "Gmail")
+                )
             }
         }
     }
@@ -288,7 +291,7 @@ public final class AccountsTabStore {
                     }
                 case .error(let syncError):
                     if case .bootstrapping = self.addPhase {
-                        self.addPhase = .error(syncError.localizedDescription)
+                        self.addPhase = .error(syncError.userActionableFailure.message)
                     }
                 case .threadUpserted:
                     break
@@ -303,6 +306,23 @@ public final class AccountsTabStore {
                 syncStates[record.id] = state
             }
         }
+    }
+
+    private nonisolated static func userMessage(
+        for error: any Error,
+        operation: UserActionableFailureOperation,
+        provider: String? = nil
+    ) -> String {
+        if let authError = error as? AuthError {
+            return authError.userActionableFailure(operation: operation, provider: provider).message
+        }
+        if let gmailError = error as? GmailAPIError {
+            return gmailError.userActionableFailure(operation: operation).message
+        }
+        if let graphError = error as? GraphAPIError {
+            return graphError.userActionableFailure(operation: operation).message
+        }
+        return UserActionableFailure.coerce(error, operation: operation, provider: provider).message
     }
 }
 

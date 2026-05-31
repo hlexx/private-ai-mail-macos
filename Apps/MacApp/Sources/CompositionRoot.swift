@@ -1,5 +1,6 @@
 import AIKit
 import AIRuntime
+import AppFoundation
 import AttachmentKit
 import AttachmentRAG
 import AuthKit
@@ -157,7 +158,7 @@ final class CompositionRoot {
                     try await syncSupervisor.startIncremental(accountId: account.id)
                     subscribeSyncEvents(accountId: account.id)
                 } catch {
-                    showErrorToast("Sync start failed: \(describe(error))")
+                    showErrorToast(Self.userMessage(for: error, operation: .sync, provider: "Gmail"))
                 }
             }
 
@@ -174,6 +175,8 @@ final class CompositionRoot {
                 guard let self, !Task.isCancelled else { break }
                 if case .threadUpserted(let threadId) = event {
                     self.debouncedEnqueue(accountId: accountId, threadId: threadId)
+                } else if case .error(let syncError) = event {
+                    self.showErrorToast(syncError.userActionableFailure.message)
                 }
             }
             // Clean up so re-subscribing works if the account is re-added
@@ -197,7 +200,7 @@ final class CompositionRoot {
             do {
                 try await syncSupervisor.refresh(accountId: accountId)
             } catch {
-                showErrorToast("Refresh failed: \(describe(error))")
+                showErrorToast(Self.userMessage(for: error, operation: .sync, provider: "Gmail"))
             }
         }
     }
@@ -223,7 +226,7 @@ final class CompositionRoot {
                 do {
                     try await syncSupervisor.refresh(accountId: account.id)
                 } catch {
-                    showErrorToast("Refresh failed: \(describe(error))")
+                    showErrorToast(Self.userMessage(for: error, operation: .sync, provider: "Gmail"))
                 }
             }
         }
@@ -259,11 +262,21 @@ final class CompositionRoot {
         toastMessage = ToastState(message: message, undoAction: nil, kind: .error)
     }
 
-    private func describe(_ error: any Error) -> String {
-        if let localized = (error as? LocalizedError)?.errorDescription {
-            return localized
+    private nonisolated static func userMessage(
+        for error: any Error,
+        operation: UserActionableFailureOperation,
+        provider: String? = nil
+    ) -> String {
+        if let syncError = error as? SyncError {
+            return syncError.userActionableFailure.message
         }
-        return String(describing: error)
+        if let authError = error as? AuthError {
+            return authError.userActionableFailure(operation: operation, provider: provider).message
+        }
+        if let gmailError = error as? GmailAPIError {
+            return gmailError.userActionableFailure(operation: operation).message
+        }
+        return UserActionableFailure.coerce(error, operation: operation, provider: provider).message
     }
 
     nonisolated private static var isRunningTests: Bool {
@@ -275,8 +288,16 @@ private struct GmailAttachmentByteProvider: AttachmentByteProvider {
     let apiFactory: GmailAPIFactory
 
     func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
-        let api = try apiFactory(accountId)
-        return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
+        do {
+            let api = try apiFactory(accountId)
+            return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
+        } catch let error as GmailAPIError {
+            throw error.userActionableFailure(operation: .attachment)
+        } catch let error as AuthError {
+            throw error.userActionableFailure(operation: .attachment, provider: "Gmail")
+        } catch {
+            throw UserActionableFailure.coerce(error, operation: .attachment, provider: "Gmail")
+        }
     }
 }
 

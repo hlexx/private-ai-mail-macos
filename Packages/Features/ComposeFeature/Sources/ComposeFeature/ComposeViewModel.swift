@@ -1,5 +1,7 @@
+import AppFoundation
 import Foundation
 import MailDomain
+import MailProviders
 import Observation
 
 // MARK: - Send State
@@ -54,6 +56,33 @@ private struct ComposeQueueUnavailableError: Error, Sendable {}
 
 private struct ComposeSanitizedQueueFailure: Error, Sendable {
     let failure: SanitizedSendFailure
+}
+
+extension ComposeError {
+    var userActionableFailure: UserActionableFailure {
+        switch self {
+        case .noRecipients:
+            return UserActionableFailure(category: .unknown, operation: .send)
+        case .noAccount:
+            return UserActionableFailure(category: .missingCredential, operation: .send)
+        case .needsReconsent:
+            return UserActionableFailure(category: .insufficientScope, operation: .send)
+        case .send(let underlying):
+            if let queuedFailure = underlying as? ComposeSanitizedQueueFailure {
+                return queuedFailure.failure.userActionableFailure()
+            }
+            if let providerSendError = underlying as? ProviderSendError {
+                return providerSendError.failure.userActionableFailure()
+            }
+            if let gmailError = underlying as? GmailAPIError {
+                return gmailError.userActionableFailure(operation: .send)
+            }
+            if let graphError = underlying as? GraphAPIError {
+                return graphError.userActionableFailure(operation: .send)
+            }
+            return UserActionableFailure.coerce(underlying, operation: .send)
+        }
+    }
 }
 
 private struct DirectComposeSendQueueProcessor: ComposeSendQueueProcessing {

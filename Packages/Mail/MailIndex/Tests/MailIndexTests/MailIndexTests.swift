@@ -342,7 +342,8 @@ struct MailIndexTests {
         #expect(response.providerFallbackFailures == [
             MailSearchProviderFallbackFailure(
                 provider: .gmail,
-                userVisibleMessage: "Remote gmail search failed."
+                category: .unknown,
+                userVisibleMessage: "Search failed for an unknown reason. Try again."
             ),
         ])
         #expect(response.localResultsComplete == false)

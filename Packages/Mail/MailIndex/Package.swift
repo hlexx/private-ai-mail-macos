@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "MailIndex", targets: ["MailIndex"]),
     ],
     dependencies: [
+        .package(path: "../../Core/AppFoundation"),
         .package(path: "../../Core/Persistence"),
         .package(path: "../MailDomain"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -16,6 +17,7 @@ let package = Package(
         .target(
             name: "MailIndex",
             dependencies: [
+                "AppFoundation",
                 "Persistence",
                 "MailDomain",
                 .product(name: "GRDB", package: "GRDB.swift"),
@@ -26,6 +28,7 @@ let package = Package(
             name: "MailIndexTests",
             dependencies: [
                 "MailIndex",
+                "AppFoundation",
                 "Persistence",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ]

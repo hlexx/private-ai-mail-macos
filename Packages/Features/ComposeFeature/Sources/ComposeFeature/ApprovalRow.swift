@@ -216,7 +216,7 @@ public struct ApprovalRow: View {
         case .needsReconsent:
             return String(localized: "approval.error.needsReconsent", defaultValue: "This account hasn\u{2019}t granted send permission yet \u{2014} Re-authorize")
         case .send:
-            return String(localized: "approval.error.generic", defaultValue: "Failed to send message. Please try again.")
+            return error.userActionableFailure.message
         }
     }
 }

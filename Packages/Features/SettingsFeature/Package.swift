@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../Auth/AuthKit"),
+        .package(path: "../../Core/AppFoundation"),
         .package(path: "../../Core/DesignSystem"),
         .package(path: "../../Core/Persistence"),
         .package(path: "../../Mail/MailSync"),
@@ -19,6 +20,7 @@ let package = Package(
             name: "SettingsFeature",
             dependencies: [
                 "AuthKit",
+                "AppFoundation",
                 "DesignSystem",
                 "Persistence",
                 "MailSync",
@@ -26,6 +28,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "SettingsFeatureTests", dependencies: ["SettingsFeature"]),
+        .testTarget(name: "SettingsFeatureTests", dependencies: ["SettingsFeature", "AppFoundation"]),
     ]
 )

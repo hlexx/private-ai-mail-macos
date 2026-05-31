@@ -238,6 +238,19 @@ struct MailSyncEngineTests {
         #expect(state == .paused)
     }
 
+    @Test func syncErrorsUseUserActionableFailureCopy() {
+        let offline = SyncError.bootstrapFailed(GmailAPIError.networkError(URLError(.notConnectedToInternet)))
+        let scope = SyncError.incrementalFailed(GmailAPIError.insufficientScope)
+        let rateLimited = SyncError.rateLimited(retryAfter: 42)
+
+        #expect(offline.userActionableFailure.category == .offline)
+        #expect(offline.localizedDescription == "Sync cannot reach Gmail while offline. Check your connection and try again.")
+        #expect(scope.userActionableFailure.category == .insufficientScope)
+        #expect(scope.localizedDescription == "Re-authorize Gmail so Re:Box has permission to sync mail.")
+        #expect(rateLimited.userActionableFailure.category == .rateLimit)
+        #expect(rateLimited.localizedDescription == "Gmail is rate-limiting sync. Re:Box will retry in 42s.")
+    }
+
     @Test func reBootstrapIsIdempotent() async throws {
         let db = try await makeDB()
         try await seedAccount(db)

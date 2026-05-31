@@ -1,3 +1,4 @@
+import AppFoundation
 import Foundation
 
 public struct DraftID: RawRepresentable, Codable, Hashable, Sendable, ExpressibleByStringLiteral, CustomStringConvertible {
@@ -215,6 +216,41 @@ public struct SanitizedSendFailure: Codable, Equatable, Sendable {
         self.userVisibleMessage = userVisibleMessage
         self.retryAfterSeconds = retryAfterSeconds
         self.occurredAt = occurredAt
+    }
+}
+
+public extension SendFailureCategory {
+    var userActionableCategory: UserActionableFailureCategory {
+        switch self {
+        case .offline, .timeout:
+            return .offline
+        case .missingCredential, .authExpired:
+            return .missingCredential
+        case .insufficientScope:
+            return .insufficientScope
+        case .rateLimited:
+            return .rateLimit
+        case .providerUnavailable, .notFound, .invalidResponse, .conflict, .ambiguousCompletion:
+            return .providerUnavailable
+        case .unsupportedOperation, .validation:
+            return .unsupportedOperation
+        case .unknown:
+            return .unknown
+        }
+    }
+}
+
+public extension SanitizedSendFailure {
+    func userActionableFailure(
+        operation: UserActionableFailureOperation = .send,
+        provider: String? = nil
+    ) -> UserActionableFailure {
+        UserActionableFailure(
+            category: category.userActionableCategory,
+            operation: operation,
+            provider: provider,
+            retryAfterSeconds: retryAfterSeconds
+        )
     }
 }
 

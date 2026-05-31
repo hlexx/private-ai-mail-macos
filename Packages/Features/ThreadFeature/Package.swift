@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "ThreadFeature", targets: ["ThreadFeature"]),
     ],
     dependencies: [
+        .package(path: "../../Core/AppFoundation"),
         .package(path: "../../Mail/MailSync"),
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Attachments/AttachmentKit"),
@@ -19,6 +20,7 @@ let package = Package(
         .target(
             name: "ThreadFeature",
             dependencies: [
+                "AppFoundation",
                 "MailSync",
                 "AIKit",
                 "AttachmentKit",
@@ -28,6 +30,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "AIKit", "AttachmentKit", "AttachmentRAG", "Persistence"]),
+        .testTarget(name: "ThreadFeatureTests", dependencies: ["ThreadFeature", "AppFoundation", "AIKit", "AttachmentKit", "AttachmentRAG", "Persistence"]),
     ]
 )

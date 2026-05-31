@@ -1,3 +1,4 @@
+import AppFoundation
 import Foundation
 import GRDB
 import MailIndex
@@ -28,7 +29,7 @@ public enum InboxSearchState: Sendable, Equatable {
     case loading(query: String)
     case results(query: String, count: Int, includesRemoteResults: Bool)
     case empty(query: String)
-    case failed(query: String, message: String)
+    case failed(query: String, category: UserActionableFailureCategory, message: String)
 }
 
 public struct ThreadRow: Identifiable, Sendable, Hashable {
@@ -215,12 +216,14 @@ public final class InboxStore {
                     )
                 }
             } catch {
+                let failure = Self.userActionableSearchFailure(for: error)
                 guard !Task.isCancelled, let self else { return }
                 self.searchResults = []
                 self.searchFallbackMessages = []
                 self.searchState = .failed(
                     query: queryText,
-                    message: String(localized: "search.error.generic", defaultValue: "Search failed.")
+                    category: failure.category,
+                    message: failure.message
                 )
             }
         }
@@ -302,6 +305,18 @@ public final class InboxStore {
             accountIDs: accountIDs,
             hasAttachment: hasAttachment
         )
+    }
+
+    private nonisolated static func userActionableSearchFailure(for error: any Error) -> UserActionableFailure {
+        if let validationError = error as? MailSearchValidationError {
+            switch validationError {
+            case .incompatibleAttachmentFilter:
+                return UserActionableFailure(category: .unsupportedOperation, operation: .search)
+            case .emptyFilterValue, .invalidDateRange:
+                return UserActionableFailure(category: .unknown, operation: .search)
+            }
+        }
+        return UserActionableFailure.coerce(error, operation: .search)
     }
 
     private nonisolated static func isSearchResultVisible(

@@ -26,6 +26,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "ComposeFeatureTests", dependencies: ["ComposeFeature"]),
+        .testTarget(name: "ComposeFeatureTests", dependencies: ["ComposeFeature", "AppFoundation"]),
     ]
 )
