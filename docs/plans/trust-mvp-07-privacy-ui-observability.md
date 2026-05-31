@@ -66,13 +66,13 @@ logging raw mail content.
 
 ### Task 3: Add sanitized observability helpers
 
-- [ ] Add a small observability helper in `AppFoundation` or an existing core
+- [x] Add a small observability helper in `AppFoundation` or an existing core
       package for sanitized event fields and redaction.
-- [ ] Add categories for Sync, ProviderAuth, SendQueue, Search, Attachment,
+- [x] Add categories for Sync, ProviderAuth, SendQueue, Search, Attachment,
       Privacy, and AI without logging raw content.
-- [ ] Add tests proving redaction removes email body-like, token-like, MIME
+- [x] Add tests proving redaction removes email body-like, token-like, MIME
       body, prompt, and attachment fields from event metadata.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/AppFoundation && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/AppFoundation && swift test`.
 
 ### Task 4: Replace unsafe or vague logs
 
