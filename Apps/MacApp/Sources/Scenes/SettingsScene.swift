@@ -24,16 +24,13 @@ struct SettingsScene: View {
                     )
                 }
 
-            placeholder(
-                title: String(localized: "settings.tab.privacy", defaultValue: "Privacy"),
-                systemImage: "lock.shield"
-            )
-            .tabItem {
-                Label(
-                    String(localized: "settings.tab.privacy", defaultValue: "Privacy"),
-                    systemImage: "lock.shield"
-                )
-            }
+            PrivacyTab(store: composition.accountsTabStore)
+                .tabItem {
+                    Label(
+                        String(localized: "settings.tab.privacy", defaultValue: "Privacy"),
+                        systemImage: "lock.shield"
+                    )
+                }
 
             AITab(queue: composition.briefBackgroundQueue)
             .tabItem {

@@ -15,6 +15,13 @@ public enum AddAccountPhase: Sendable, Equatable {
     case error(String)
 }
 
+public enum ProviderReauthorizationPhase: Sendable, Equatable {
+    case idle
+    case authorizing
+    case done
+    case error(String)
+}
+
 public struct AccountProviderOption: Identifiable, Sendable, Equatable {
     public enum Availability: Sendable, Equatable {
         case enabled
@@ -41,6 +48,7 @@ public struct AccountProviderOption: Identifiable, Sendable, Equatable {
 public final class AccountsTabStore {
     public private(set) var accounts: [AccountRecord] = []
     public private(set) var addPhase: AddAccountPhase = .idle
+    public private(set) var reauthorizationPhases: [String: ProviderReauthorizationPhase] = [:]
     public private(set) var syncStates: [String: SyncState] = [:]
     public private(set) var providerOptions: [AccountProviderOption]
 
@@ -189,8 +197,45 @@ public final class AccountsTabStore {
                 }
                 try? self.tokenStore.delete(for: accountId)
                 self.syncStates.removeValue(forKey: accountId)
+                self.reauthorizationPhases.removeValue(forKey: accountId)
             } catch {
                 self.addPhase = .error(error.localizedDescription)
+            }
+        }
+    }
+
+    public func reauthorizeAccount(_ accountId: String) {
+        guard reauthorizationPhases[accountId] != .authorizing else { return }
+        reauthorizationPhases[accountId] = .authorizing
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let account = try self.db.read { db in
+                    try AccountRecord.fetchOne(db, key: accountId)
+                }
+                guard let account else {
+                    throw SettingsAccountAuthorizationError.accountNotFound
+                }
+
+                switch AuthProvider(rawValue: account.provider) {
+                case .gmail:
+                    let credential = try await self.oauthClient.reauthorize(
+                        additionalScopes: GmailOAuthConfig.default.scopes
+                    )
+                    try self.tokenStore.save(credential, for: accountId)
+                    self.reauthorizationPhases[accountId] = .done
+                case .outlook:
+                    self.reauthorizationPhases[accountId] = .error(
+                        "Outlook re-consent is not available in this build."
+                    )
+                default:
+                    self.reauthorizationPhases[accountId] = .error(
+                        "This mail provider is not supported yet."
+                    )
+                }
+            } catch {
+                self.reauthorizationPhases[accountId] = .error(error.localizedDescription)
             }
         }
     }
@@ -273,5 +318,16 @@ extension AuthError {
 extension DatabaseActor {
     fileprivate func run<T: Sendable>(_ work: @DatabaseActor @Sendable () throws -> T) async rethrows -> T {
         try await work()
+    }
+}
+
+private enum SettingsAccountAuthorizationError: LocalizedError {
+    case accountNotFound
+
+    var errorDescription: String? {
+        switch self {
+        case .accountNotFound:
+            return "The connected account could not be found."
+        }
     }
 }

@@ -53,16 +53,16 @@ logging raw mail content.
 
 ### Task 2: Build Settings privacy surface
 
-- [ ] Add or update Settings Privacy tab to show connected providers, local data
+- [x] Add or update Settings Privacy tab to show connected providers, local data
       classes, provider API use, AI mode, cloud fallback state, and cache
       controls.
-- [ ] Show Gmail and Outlook permissions in human terms and link them to
+- [x] Show Gmail and Outlook permissions in human terms and link them to
       re-consent where supported.
-- [ ] Add controls for AI disabled/local/cloud fallback only if those modes are
+- [x] Add controls for AI disabled/local/cloud fallback only if those modes are
       implemented. Otherwise show local-only current state.
-- [ ] Add SettingsFeature tests for copy keys, state rendering, toggles, and no
+- [x] Add SettingsFeature tests for copy keys, state rendering, toggles, and no
       unsupported controls.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/SettingsFeature && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Features/SettingsFeature && swift test`.
 
 ### Task 3: Add sanitized observability helpers
 

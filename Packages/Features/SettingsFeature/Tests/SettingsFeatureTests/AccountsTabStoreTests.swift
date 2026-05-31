@@ -239,6 +239,44 @@ struct AccountsTabStoreTests {
     }
 
     @Test @MainActor
+    func reauthorizeAccountRefreshesGmailConsentAndSavesCredential() async throws {
+        let (store, db, oauth, tokens) = try await makeStore()
+
+        let accountId = "gmail-reauthorize"
+        try insertAccount(id: accountId, email: "test@gmail.com", into: db)
+        oauth.authorizeResult = .success(TokenCredential(
+            accessToken: "reauthorized-access",
+            refreshToken: "reauthorized-refresh",
+            expiresAt: Date().addingTimeInterval(3600)
+        ))
+
+        store.reauthorizeAccount(accountId)
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(tokens.storage[accountId]?.accessToken == "reauthorized-access")
+        #expect(tokens.storage[accountId]?.refreshToken == "reauthorized-refresh")
+        #expect(store.reauthorizationPhases[accountId] == .done)
+    }
+
+    @Test @MainActor
+    func reauthorizeAccountKeepsOutlookUnsupportedUntilOAuthFlowExists() async throws {
+        let (store, db, _, tokens) = try await makeStore()
+
+        let accountId = "outlook-reauthorize"
+        try insertAccount(id: accountId, email: "test@outlook.com", provider: "outlook", into: db)
+
+        store.reauthorizeAccount(accountId)
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(tokens.storage[accountId] == nil)
+        if case .error(let message) = store.reauthorizationPhases[accountId] {
+            #expect(message == "Outlook re-consent is not available in this build.")
+        } else {
+            Issue.record("Expected Outlook re-consent to remain unsupported")
+        }
+    }
+
+    @Test @MainActor
     func observingPicksUpExistingAccounts() async throws {
         let (store, db, _, _) = try await makeStore()
 
