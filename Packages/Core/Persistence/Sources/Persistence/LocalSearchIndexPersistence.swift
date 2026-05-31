@@ -51,6 +51,32 @@ public struct MailSearchDocumentRecord: Codable, Sendable, FetchableRecord, Tabl
     }
 }
 
+public extension MailSearchDocumentRecord {
+    init(row: Row) {
+        id = row["id"]
+        accountId = row["account_id"]
+        messageId = row["message_id"]
+        threadId = row["thread_id"]
+        provider = row["provider"]
+        subject = row["subject"]
+        fromAddr = row["from_addr"]
+        toAddr = row["to_addr"]
+        ccAddr = row["cc_addr"]
+        snippet = row["snippet"]
+        bodyText = row["body_text"]
+        normalizedBodyText = row["normalized_body_text"]
+        attachmentFilenames = row["attachment_filenames"]
+        attachmentMimes = row["attachment_mimes"]
+        attachmentSizeBuckets = row["attachment_size_buckets"]
+        canonicalMailboxes = row["canonical_mailboxes"]
+        sentAt = row["sent_at"]
+        isUnread = row["is_unread"]
+        isSent = row["is_sent"]
+        hasAttachment = row["has_attachment"]
+        updatedAt = row["updated_at"]
+    }
+}
+
 public struct MailSearchRebuildStateRecord: Codable, Sendable, FetchableRecord, TableRecord {
     public static let databaseTableName = "mail_search_rebuild_state"
 

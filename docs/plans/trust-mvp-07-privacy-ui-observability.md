@@ -41,13 +41,13 @@ logging raw mail content.
 
 ### Task 1: Define privacy status copy and data classes
 
-- [ ] Add `docs/trust-mvp-privacy-and-observability.md` with data classes:
+- [x] Add `docs/trust-mvp-privacy-and-observability.md` with data classes:
       local raw mail, local attachments, local drafts, local indexes, local AI
       artifacts, provider API requests, optional cloud/control-plane metadata,
       and approved external payloads.
-- [ ] State "no mailbox mirroring by default" and list exact exceptions:
+- [x] State "no mailbox mirroring by default" and list exact exceptions:
       provider API calls for sync/send and future approved integrations.
-- [ ] State what logs may contain: account id or hash, provider, operation,
+- [x] State what logs may contain: account id or hash, provider, operation,
       status, duration, error category, counts, and feature flags. State what
       logs must not contain.
 

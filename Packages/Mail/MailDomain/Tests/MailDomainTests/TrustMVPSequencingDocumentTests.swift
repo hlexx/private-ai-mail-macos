@@ -86,12 +86,52 @@ struct TrustMVPSequencingDocumentTests {
         #expect(document.contains("AI auto-send, shared mailbox send-as, enterprise delegated send"))
     }
 
+    @Test func privacyObservabilityDocumentDefinesDataClassesAndLogBoundary() throws {
+        let document = try Self.loadPrivacyObservabilityDocument()
+
+        for dataClass in [
+            "Local raw mail",
+            "Local attachments",
+            "Local drafts",
+            "Local indexes",
+            "Local AI artifacts",
+            "Provider API requests",
+            "Optional cloud/control-plane metadata",
+            "Approved external payloads"
+        ] {
+            #expect(document.contains(dataClass))
+        }
+
+        #expect(document.contains("No mailbox mirroring by default."))
+        #expect(document.contains("Provider API calls for sync and send"))
+        #expect(document.contains("Future approved integrations"))
+        #expect(document.contains("Logs may contain:"))
+        #expect(document.contains("Account id or hash."))
+        #expect(document.contains("Provider."))
+        #expect(document.contains("Operation."))
+        #expect(document.contains("Status."))
+        #expect(document.contains("Duration."))
+        #expect(document.contains("Error category."))
+        #expect(document.contains("Counts."))
+        #expect(document.contains("Feature flags."))
+        #expect(document.contains("Logs must not contain:"))
+        #expect(document.contains("Raw mail body"))
+        #expect(document.contains("Attachment bytes"))
+        #expect(document.contains("AI prompts"))
+        #expect(document.contains("OAuth access tokens"))
+        #expect(document.contains("Raw provider request or response payloads."))
+    }
+
     private static func loadSequencingDocument() throws -> String {
         try loadDocument("docs/trust-mvp-sequencing.md")
     }
 
     private static func loadADR0005() throws -> String {
         try loadDocument("docs/adr/0005-trust-mvp-gmail-outlook-provider-contracts.md")
+    }
+
+    private static func loadPrivacyObservabilityDocument() throws -> String {
+        try loadDocument("docs/trust-mvp-privacy-and-observability.md")
     }
 
     private static func loadDocument(_ relativePath: String) throws -> String {
