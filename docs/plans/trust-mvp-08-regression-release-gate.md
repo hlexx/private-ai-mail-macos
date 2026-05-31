@@ -61,18 +61,18 @@ it does not add new product capabilities.
 
 ### Task 3: Add Trust MVP verification script
 
-- [ ] Create `scripts/verify-trust-mvp.sh` as a strict bash script with clear
+- [x] Create `scripts/verify-trust-mvp.sh` as a strict bash script with clear
       section output and non-zero failure on any required gate.
-- [ ] Include `git diff --check`, SwiftLint, package tests for MailDomain,
+- [x] Include `git diff --check`, SwiftLint, package tests for MailDomain,
       MailProviders, MailSync, MailIndex, Persistence, AuthKit, ComposeFeature,
       InboxFeature, ThreadFeature, SettingsFeature, AttachmentKit, and
       AttachmentRAG where those packages exist.
-- [ ] Include privacy grep checks for tokens, raw bodies, raw prompts, raw
+- [x] Include privacy grep checks for tokens, raw bodies, raw prompts, raw
       attachment bytes, and unsafe logger/print patterns.
-- [ ] Make expensive `xcodebuild build` optional behind an environment variable
+- [x] Make expensive `xcodebuild build` optional behind an environment variable
       or separate final section if needed for local speed, but document the full
       release command.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && ./scripts/verify-trust-mvp.sh`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && ./scripts/verify-trust-mvp.sh`.
 
 ### Task 4: Add migration and rollback checks
 

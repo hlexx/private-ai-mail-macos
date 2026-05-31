@@ -1,6 +1,6 @@
 import AIPrompts
-import Foundation
 import AppFoundation
+import Foundation
 
 /// Records latency samples from MLXBackend inference calls.
 /// Conform to this protocol and inject into MLXBackend to capture

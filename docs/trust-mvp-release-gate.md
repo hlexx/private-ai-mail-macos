@@ -37,6 +37,35 @@ documented full release command. Fixture data must be synthetic or minimized and
 must not contain real tokens, raw private mail, provider secrets, or copied
 customer content.
 
+Default local gate:
+
+```bash
+./scripts/verify-trust-mvp.sh
+```
+
+Full release gate, including Tuist generation and the Debug macOS app build:
+
+```bash
+FULL_TRUST_MVP_GATE=1 ./scripts/verify-trust-mvp.sh
+```
+
+Temporary SwiftLint baseline:
+
+- Why necessary now: when the gate script was introduced, strict SwiftLint had
+  pre-existing size, nesting, and type-body violations across UI, sync,
+  persistence, search, and attachment modules.
+- Why the structural fix is not in this task: reducing those violations safely
+  requires cross-module refactors outside the release-gate script boundary.
+- Owner: Trust MVP release owner.
+- Expiry: remove the baseline by 2026-06-30 or before promoting the Trust MVP
+  beyond internal/beta release, whichever comes first.
+- Removal plan: refactor baseline-listed files, regenerate the baseline until
+  it is empty, remove `baseline: .swiftlint-baseline.json` from
+  `.swiftlint.yml`, and rerun `swiftlint --strict --reporter xcode`.
+- Rollback plan: if the baseline hides a new lint regression, delete the
+  matching stale baseline entry and rerun the gate; do not loosen rule
+  thresholds.
+
 | Area | Required automated criteria | Evidence |
 | --- | --- | --- |
 | Gmail provider flow | Gmail fixtures cover labels, history checkpoints, messages, recipients, bodies, attachments, send responses, mutation responses, auth failures, rate limits, and not-found cases. Mapper and client tests prove Gmail data maps into shared mailbox, search, send, attachment, and error contracts without leaking Gmail DTOs across provider boundaries. | MailProviders and MailSync test results, fixture review, privacy grep. |
