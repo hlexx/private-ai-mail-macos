@@ -39,14 +39,14 @@ it does not add new product capabilities.
 
 ### Task 1: Define Trust MVP acceptance criteria
 
-- [ ] Create `docs/trust-mvp-release-gate.md`.
-- [ ] Define automated acceptance criteria for Gmail, Graph, search, send queue,
+- [x] Create `docs/trust-mvp-release-gate.md`.
+- [x] Define automated acceptance criteria for Gmail, Graph, search, send queue,
       attachment baseline, privacy/observability, migrations, and build.
-- [ ] Define manual smoke criteria for real Gmail and real Outlook accounts:
+- [x] Define manual smoke criteria for real Gmail and real Outlook accounts:
       connect, initial sync, refresh, search, send/reply, archive, read/unread,
       star/flag, trash, attachment download/preview, offline open, re-consent,
       and rate-limit/error visibility.
-- [ ] Define explicit non-goals for this release gate: iCloud/IMAP,
+- [x] Define explicit non-goals for this release gate: iCloud/IMAP,
       shared/delegated mailboxes, team inbox, CRM writes, Slack/Notion writes,
       send later, auto-send, and mobile companion.
 
