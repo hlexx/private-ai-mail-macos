@@ -29,6 +29,44 @@ struct IntegrationDomainTests {
         }
     }
 
+    @Test func localMVPExecutorSupportsOnlyTrustMVPActionKinds() async throws {
+        let executor = LocalMVPActionExecutor()
+        let target = ActionTarget.thread(accountId: "acct-1", threadId: "thread-1")
+
+        for kind in [ActionKind.draftReply, .archiveThread, .starThread, .markRead, .trashThread] {
+            let command = try ActionCommand(
+                opId: "op-\(kind.rawValue)",
+                accountId: "acct-1",
+                target: target,
+                kind: kind,
+                approvalRequirement: kind == .trashThread ? .explicitConfirm : nil,
+                approvalState: kind == .trashThread ? .approved : nil,
+                status: .ready
+            )
+
+            let result = await executor.execute(command: command)
+
+            #expect(kind.isTrustMVPLocalAction)
+            #expect(result.status == .succeeded)
+            #expect(result.failureKind == nil)
+            #expect(result.externalResultId == "local:\(command.opId)")
+        }
+
+        let unsupported = try ActionCommand(
+            opId: "op-send",
+            accountId: "acct-1",
+            target: .message(accountId: "acct-1", threadId: "thread-1", messageId: "message-1"),
+            kind: .sendReply,
+            approvalState: .approved,
+            status: .ready
+        )
+        let unsupportedResult = await executor.execute(command: unsupported)
+
+        #expect(!ActionKind.sendReply.isTrustMVPLocalAction)
+        #expect(unsupportedResult.status == .failed)
+        #expect(unsupportedResult.failureKind == .validationFailed)
+    }
+
     @Test func defaultApprovalPolicyMatchesActionRisk() {
         for kind in [ActionKind.draftReply, .archiveThread, .starThread, .markRead, .snoozeThread] {
             #expect(ActionPolicy.defaultApprovalRequirement(for: kind) == .notRequired)
