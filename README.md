@@ -1,7 +1,8 @@
 # Private AI Mail — macOS
 
 Native macOS client for **Private AI Mail**: a privacy-first AI email client
-where all AI runs on-device and revenue comes from workflow integrations.
+focused on reliable local mail workflows, explicit user approval, and
+on-device AI assistance.
 
 Product strategy, threat model, and roadmap live in the spec repo: see
 [`EMAIL_ALF`](../EMAIL_ALF) (sibling directory). Architectural decisions for
@@ -42,11 +43,26 @@ space for the app + AI model.
 
 ## Status
 
-**Step 9 complete.** First installable alpha (v0.1.0-alpha) released with
-Sparkle auto-update support. Gmail read-only sync, on-device AI thread
-briefs via MLX + Gemma, reply composer with real Gmail send. The app
-generates per-thread briefs locally on Apple Silicon with zero network
-traffic at inference time.
+**Trust MVP release gate in progress.** The current supported provider path is
+Gmail. Gmail is the stable Trust MVP provider path for account connection,
+local sync/refresh, local search over synced mail, mailbox actions, attachment
+metadata with narrow local preview/summary support, supervised compose/reply,
+and Gmail send.
+
+Outlook/Microsoft 365 support is beta-disabled in the app by default until
+real-account smoke tests pass. The repo contains Microsoft Graph contracts,
+OAuth configuration, mapping fixtures, sync/send adapter coverage, and
+Outlook-compatible persistence rows, but the Settings UI keeps Add Outlook
+disabled for this release candidate.
+
+Local AI is an optional local assistant layer, not a provider dependency. The
+current alpha includes on-device MLX + Gemma thread briefs on Apple Silicon;
+mail reliability, privacy, and provider correctness are release blockers before
+AI expansion.
+
+Not supported in this Trust MVP: iCloud Mail, IMAP, JMAP, shared/delegated
+mailboxes, team inboxes, CRM writes, Slack/Notion writes, send later,
+auto-send, and mobile companion apps.
 
 ## Requirements
 
@@ -74,7 +90,9 @@ cd Packages/Mail/MailDomain && swift test
 Open `PrivateAIMail.xcworkspace`, select the `MacApp` scheme, run.
 
 The app opens the Re:Box mail workspace with Gmail account connection, folder
-filters, thread reading, local AI briefs, reply drafting, and Gmail send.
+filters, thread reading, local search, local AI briefs, reply drafting, mailbox
+actions, and Gmail send. Outlook appears as a beta provider but remains disabled
+until the Trust MVP release gate records passing real-account smoke evidence.
 
 ## Repo layout
 

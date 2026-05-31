@@ -87,14 +87,14 @@ it does not add new product capabilities.
 
 ### Task 5: Add release note and docs consistency checks
 
-- [ ] Update `README.md`, `NOTES.md`, or release notes to state current Trust
+- [x] Update `README.md`, `NOTES.md`, or release notes to state current Trust
       MVP support honestly: Gmail stable, Outlook beta or stable depending on
       implementation, no iCloud/IMAP unless implemented, optional local AI.
-- [ ] Add a docs consistency checklist so claims about M365, FTS, DOCX/OCR,
+- [x] Add a docs consistency checklist so claims about M365, FTS, DOCX/OCR,
       Spotlight, send queue, or privacy match code and tests.
-- [ ] Do not edit sibling `../EMAIL_ALF` in this app plan unless explicitly
+- [x] Do not edit sibling `../EMAIL_ALF` in this app plan unless explicitly
       required by the user in a separate docs repo pass.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos && git diff --check`.
 
 ### Task 6: Run the full gate and capture evidence
 

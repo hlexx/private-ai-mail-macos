@@ -277,6 +277,27 @@ Prompt tuning notes: `docs/eval-reports/step4-prompt-notes.md`.
 
 ## Release smoke testing
 
+### Trust MVP release claim checklist
+
+Use this checklist before editing README, release notes, GitHub release copy,
+Sparkle notes, screenshots, or marketing handoff copy. A claim can ship only if
+the listed code and test evidence exists in this app repo, or the claim is
+explicitly marked unsupported, beta-disabled, or planned.
+
+| Claim area | Current honest claim | Required evidence before stronger wording |
+|---|---|---|
+| Gmail | Stable Trust MVP provider path for account connection, sync/refresh, local search over synced mail, mailbox actions, supervised compose/reply, Gmail send, and the tested attachment baseline. | `docs/trust-mvp-gmail-baseline.md`, provider/sync/compose/thread tests, and `./scripts/verify-trust-mvp.sh`. |
+| M365 / Outlook | Beta-disabled by default until real-account smoke tests pass. Graph contracts, OAuth config, fixtures, sync/send adapters, and Outlook-compatible rows exist, but Settings keeps Add Outlook disabled. | Enabled Settings provider option, real-account smoke evidence in `docs/trust-mvp-release-gate.md`, Graph sync/send tests, and manual Outlook checklist results. |
+| FTS / local search | Local search can be claimed only for synced local data covered by MailIndex and persistence tests. Do not imply provider/server search fallback unless the fallback contract is implemented and documented. | `Packages/Mail/MailIndex` tests, FTS migration tests, and privacy grep proving query text is not logged. |
+| DOCX / OCR | Unsupported. DOCX extraction, image OCR, scanned-PDF OCR, and broad arbitrary attachment preview must stay out of release claims. | Real extractors, user-visible unsupported states, privacy-safe logs, and AttachmentKit/AttachmentRAG tests. |
+| Spotlight | Unsupported unless a macOS Spotlight indexing integration exists behind an explicit privacy contract. Do not use "Spotlight" as a synonym for local search. | Spotlight importer/indexing code, opt-in or documented local boundary, privacy review, and tests. |
+| Send queue | Durable local draft/send queue and supervised send can be claimed only within tested provider capability boundaries. No send later, scheduled send, auto-send, or autonomous outbound mail. | MailDomain send states, Persistence send queue tests, ComposeFeature tests, provider send executor tests, and release gate output. |
+| Privacy | Local-first: raw bodies, attachments, drafts, search indexes, AI artifacts, prompts, provider cursors, and raw provider responses stay on the Mac unless the user sends mail or approves a documented external payload. | `docs/trust-mvp-privacy-and-observability.md`, privacy UI tests, and release-gate privacy grep. |
+| Local AI | Optional local assistant layer after mail reliability. Current alpha uses on-device MLX + Gemma for local briefs; do not imply cloud AI fallback or provider-independent automation. | AIRuntime/AIKit tests, eval reports, model integrity checks, and privacy boundary docs. |
+
+Do not edit sibling `../EMAIL_ALF` as part of this app release checklist. Keep
+that repo for a separate product-doc pass after app-side evidence is recorded.
+
 ### Sparkle auto-update end-to-end verification
 
 This procedure verifies the full Sparkle update lifecycle. Run after

@@ -122,6 +122,55 @@ struct TrustMVPSequencingDocumentTests {
         #expect(document.contains("Raw provider request or response payloads."))
     }
 
+    @Test func readmeStatesCurrentTrustMVPSupportHonestly() throws {
+        let document = try Self.loadREADME()
+
+        #expect(document.contains("Gmail is the stable Trust MVP provider path"))
+        #expect(document.contains("Outlook/Microsoft 365 support is beta-disabled"))
+        #expect(document.contains("Settings UI keeps Add Outlook"))
+        #expect(document.contains("disabled for this release candidate"))
+        #expect(document.contains("Local AI is an optional local assistant layer"))
+
+        for nonGoal in [
+            "iCloud Mail",
+            "IMAP",
+            "JMAP",
+            "shared/delegated",
+            "CRM writes",
+            "Slack/Notion writes",
+            "send later",
+            "auto-send",
+            "mobile companion apps"
+        ] {
+            #expect(document.contains(nonGoal))
+        }
+
+        #expect(!document.contains("revenue comes from workflow integrations"))
+    }
+
+    @Test func notesContainTrustMVPReleaseClaimChecklist() throws {
+        let document = try Self.loadNOTES()
+
+        #expect(document.contains("### Trust MVP release claim checklist"))
+        #expect(document.contains("Use this checklist before editing README"))
+
+        for claimArea in [
+            "| Gmail |",
+            "| M365 / Outlook |",
+            "| FTS / local search |",
+            "| DOCX / OCR |",
+            "| Spotlight |",
+            "| Send queue |",
+            "| Privacy |",
+            "| Local AI |"
+        ] {
+            #expect(document.contains(claimArea))
+        }
+
+        #expect(document.contains("Beta-disabled by default until real-account smoke tests pass"))
+        #expect(document.contains("Do not edit sibling `../EMAIL_ALF`"))
+    }
+
     private static func loadSequencingDocument() throws -> String {
         try loadDocument("docs/trust-mvp-sequencing.md")
     }
@@ -132,6 +181,14 @@ struct TrustMVPSequencingDocumentTests {
 
     private static func loadPrivacyObservabilityDocument() throws -> String {
         try loadDocument("docs/trust-mvp-privacy-and-observability.md")
+    }
+
+    private static func loadREADME() throws -> String {
+        try loadDocument("README.md")
+    }
+
+    private static func loadNOTES() throws -> String {
+        try loadDocument("NOTES.md")
     }
 
     private static func loadDocument(_ relativePath: String) throws -> String {
