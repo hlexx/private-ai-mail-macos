@@ -44,11 +44,11 @@ workflow automation.
 
 ### Task 1: Audit attachment promises and current behavior
 
-- [ ] Create `docs/trust-mvp-attachment-baseline.md` with a table for Gmail and
+- [x] Create `docs/trust-mvp-attachment-baseline.md` with a table for Gmail and
       Outlook: metadata, inline CID, byte download, preview, cache, deletion,
       search marker, PDF text extraction, DOCX, OCR, and AI summary.
-- [ ] Mark DOCX and OCR as unsupported unless implemented and tested.
-- [ ] Ensure README/NOTES do not claim attachment features that are not wired in
+- [x] Mark DOCX and OCR as unsupported unless implemented and tested.
+- [x] Ensure README/NOTES do not claim attachment features that are not wired in
       code.
 
 ### Task 2: Harden attachment metadata and byte fetch

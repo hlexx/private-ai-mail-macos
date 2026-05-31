@@ -46,4 +46,16 @@ struct AttachmentKitTests {
         #expect(result.status == .unsupported)
         #expect(result.unsupportedReason?.contains("Unsupported") == true)
     }
+
+    @Test func textExtractorRejectsImageOCR() {
+        let result = AttachmentTextExtractor.extract(
+            data: Data([0x89, 0x50, 0x4E, 0x47]),
+            mime: "image/png",
+            filename: "scan.png"
+        )
+
+        #expect(result.status == .unsupported)
+        #expect(result.text == nil)
+        #expect(result.unsupportedReason?.contains("Unsupported") == true)
+    }
 }
