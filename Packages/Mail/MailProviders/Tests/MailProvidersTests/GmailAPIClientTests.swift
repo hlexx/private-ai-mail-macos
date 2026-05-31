@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import MailProviders
 import AuthKit
+import MailDomain
 
 @Suite("GmailAPIClient", .serialized)
 struct GmailAPIClientTests {
@@ -255,6 +256,71 @@ struct GmailAPIClientTests {
         #expect(requests.count == 1)
     }
 
+    @Test func getAttachmentDataRejectsMissingIdentifierBeforeNetwork() async throws {
+        MockURLProtocol.reset()
+        let client = makeClient()
+
+        do {
+            _ = try await client.getAttachmentData(messageId: "msg001", attachmentId: " ")
+            Issue.record("Expected GmailAPIError.missingAttachmentIdentifier")
+        } catch GmailAPIError.missingAttachmentIdentifier {
+            // expected
+        } catch {
+            Issue.record("Expected missingAttachmentIdentifier, got \(error)")
+        }
+
+        #expect(MockURLProtocol.requestLog.isEmpty)
+    }
+
+    @Test func getAttachmentDataNotFoundIsUserActionable() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/msg001/attachments/missing",
+            statusCode: 404,
+            json: """
+            {"error": {"code": 404, "message": "Not found"}}
+            """
+        )
+
+        let client = makeClient()
+
+        do {
+            _ = try await client.getAttachmentData(messageId: "msg001", attachmentId: "missing")
+            Issue.record("Expected GmailAPIError.serverError")
+        } catch GmailAPIError.serverError(let statusCode) {
+            #expect(statusCode == 404)
+            #expect(GmailAPIError.serverError(statusCode: statusCode).sharedCategory == .notFound)
+            #expect(GmailAPIError.serverError(statusCode: statusCode).errorDescription?.contains("Re-sync") == true)
+        } catch {
+            Issue.record("Expected serverError, got \(error)")
+        }
+    }
+
+    @Test func getAttachmentDataRateLimitIsActionableWithoutSleeping() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/msg001/attachments/att001",
+            statusCode: 429,
+            json: """
+            {"error": {"code": 429, "message": "Rate limited"}}
+            """,
+            headers: ["Content-Type": "application/json", "Retry-After": "0"]
+        )
+
+        let client = makeClient()
+
+        do {
+            _ = try await client.getAttachmentData(messageId: "msg001", attachmentId: "att001")
+            Issue.record("Expected GmailAPIError.rateLimited")
+        } catch GmailAPIError.rateLimited(let retryAfter) {
+            #expect(retryAfter == 0)
+            #expect(GmailAPIError.rateLimited(retryAfter: retryAfter).sharedCategory == .rateLimited)
+            #expect(GmailAPIError.rateLimited(retryAfter: retryAfter).errorDescription?.contains("rate limit") == true)
+        } catch {
+            Issue.record("Expected rateLimited, got \(error)")
+        }
+    }
+
     // MARK: - sendMessage 429 → backoff → retry → 200
 
     @Test func sendMessageRateLimitedRetries() async throws {
@@ -399,6 +465,9 @@ struct GmailMapperTests {
                         partId: "1",
                         mimeType: "application/pdf",
                         filename: "report.pdf",
+                        headers: [
+                            GmailDTO.MessagePartHeader(name: "Content-Disposition", value: "attachment; filename=\"report.pdf\""),
+                        ],
                         body: GmailDTO.MessagePartBody(attachmentId: "att001", size: 1024)
                     ),
                 ]
@@ -409,8 +478,17 @@ struct GmailMapperTests {
 
         #expect(message.attachments.count == 1)
         #expect(message.attachments[0].id == "att001")
+        #expect(message.attachments[0].accountId == accountId)
         #expect(message.attachments[0].filename == "report.pdf")
         #expect(message.attachments[0].mimeType == "application/pdf")
+        #expect(message.attachments[0].sizeBytes == 1024)
+        #expect(message.attachments[0].disposition == .attachment)
+        #expect(message.attachments[0].byteFetchHandle == AttachmentByteFetchHandle(
+            provider: .gmail,
+            accountId: accountId,
+            messageId: "msg002",
+            attachmentId: "att001"
+        ))
     }
 
     @Test func mapMessageWithInlineImage() async throws {
@@ -449,10 +527,13 @@ struct GmailMapperTests {
         let message = GmailMapper.mapMessage(dto, accountId: accountId)
 
         #expect(message.attachments.count == 1)
+        #expect(message.attachments[0].accountId == accountId)
         #expect(message.attachments[0].contentId == "logo@example")
         #expect(message.attachments[0].inlineData != nil)
         #expect(message.attachments[0].mimeType == "image/png")
         #expect(message.attachments[0].id == "inline_logo@example")
+        #expect(message.attachments[0].disposition == .inline)
+        #expect(message.attachments[0].byteFetchHandle == nil)
     }
 
     @Test func mapMessageWithAttachmentIncludesContentId() async throws {

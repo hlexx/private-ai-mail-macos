@@ -1,6 +1,7 @@
 import Foundation
 
 public enum GraphAPIError: Error, Sendable, Equatable {
+    case missingAttachmentIdentifier
     case unauthorized
     case rateLimited(retryAfter: TimeInterval?)
     case serverError(statusCode: Int, code: String?)
@@ -13,6 +14,8 @@ public enum GraphAPIError: Error, Sendable, Equatable {
 extension GraphAPIError: LocalizedError {
     public var errorDescription: String? {
         switch self {
+        case .missingAttachmentIdentifier:
+            return "Microsoft Graph attachment is missing a download identifier. Re-sync the Outlook message before trying again."
         case .unauthorized:
             return "Microsoft Graph authentication failed (401). Reconnect the Outlook account."
         case .rateLimited(let retryAfter):
@@ -21,6 +24,9 @@ extension GraphAPIError: LocalizedError {
             }
             return "Microsoft Graph rate limit hit (429)."
         case .serverError(let statusCode, let code):
+            if statusCode == 404 {
+                return "Microsoft Graph attachment or message was not found. Re-sync the Outlook mailbox and try again."
+            }
             if let code {
                 return "Microsoft Graph error \(code) (HTTP \(statusCode))."
             }
@@ -40,6 +46,8 @@ extension GraphAPIError: LocalizedError {
 public extension GraphAPIError {
     var sharedCategory: MailProviderErrorCategory {
         switch self {
+        case .missingAttachmentIdentifier:
+            return .invalidResponse
         case .unauthorized:
             return .authExpired
         case .rateLimited:

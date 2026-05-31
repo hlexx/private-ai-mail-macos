@@ -73,7 +73,10 @@ public final class GraphAPIClient: GraphAPI, @unchecked Sendable {
     }
 
     public func getAttachment(messageId: String, attachmentId: String) async throws -> GraphDTO.AttachmentContent {
-        try await perform(.getAttachment(messageId: messageId, attachmentId: attachmentId))
+        guard Self.hasValue(messageId), Self.hasValue(attachmentId) else {
+            throw GraphAPIError.missingAttachmentIdentifier
+        }
+        return try await perform(.getAttachment(messageId: messageId, attachmentId: attachmentId))
     }
 
     public func sendMail(_ request: GraphDTO.SendMailRequest) async throws -> GraphDTO.SendResult {
@@ -197,5 +200,9 @@ public final class GraphAPIClient: GraphAPI, @unchecked Sendable {
             return nil
         }
         return response.error.code
+    }
+
+    private static func hasValue(_ value: String) -> Bool {
+        !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }

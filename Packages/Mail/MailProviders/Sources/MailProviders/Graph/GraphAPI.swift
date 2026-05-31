@@ -16,6 +16,15 @@ public protocol GraphAPI: Sendable {
 }
 
 public extension GraphAPI {
+    func getAttachmentData(messageId: String, attachmentId: String) async throws -> Data {
+        let content = try await getAttachment(messageId: messageId, attachmentId: attachmentId)
+        guard let encoded = content.contentBytes,
+              let data = Data(base64Encoded: encoded) else {
+            throw GraphAPIError.decodingError("Attachment response did not include decodable contentBytes.")
+        }
+        return data
+    }
+
     func archiveMessage(messageId: String) async throws -> GraphDTO.Message {
         guard let archiveFolder = GraphMailboxMapper.graphWellKnownFolder(for: .archive) else {
             throw GraphAPIError.invalidResponse

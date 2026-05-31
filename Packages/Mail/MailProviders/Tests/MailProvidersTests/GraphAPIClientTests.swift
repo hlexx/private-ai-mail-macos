@@ -90,6 +90,74 @@ struct GraphAPIClientTests {
         #expect(queryItems?.contains(URLQueryItem(name: "$top", value: "50")) == true)
     }
 
+    @Test func getAttachmentDataDecodesContentBytes() async throws {
+        GraphMockURLProtocol.reset()
+        GraphMockURLProtocol.stub(
+            path: "/me/messages/graph-message/attachments/graph-attachment",
+            json: """
+            {
+              "@odata.type": "#microsoft.graph.fileAttachment",
+              "id": "graph-attachment",
+              "name": "brief.txt",
+              "contentType": "text/plain",
+              "size": 11,
+              "isInline": false,
+              "contentBytes": "SGVsbG8tR3JhcGg="
+            }
+            """
+        )
+
+        let client = GraphAPIClient(accessToken: "token", session: GraphMockURLProtocol.makeSession())
+        let data = try await client.getAttachmentData(messageId: "graph-message", attachmentId: "graph-attachment")
+
+        #expect(String(data: data, encoding: .utf8) == "Hello-Graph")
+        let requests = GraphMockURLProtocol.requestLog.filter {
+            $0.url?.path.contains("/me/messages/graph-message/attachments/graph-attachment") == true
+        }
+        #expect(requests.count == 1)
+    }
+
+    @Test func getAttachmentRejectsMissingIdentifierBeforeNetwork() async throws {
+        GraphMockURLProtocol.reset()
+        let client = GraphAPIClient(accessToken: "token", session: GraphMockURLProtocol.makeSession())
+
+        do {
+            _ = try await client.getAttachment(messageId: "graph-message", attachmentId: " ")
+            Issue.record("Expected GraphAPIError.missingAttachmentIdentifier")
+        } catch GraphAPIError.missingAttachmentIdentifier {
+            // expected
+        } catch {
+            Issue.record("Expected missingAttachmentIdentifier, got \(error)")
+        }
+
+        #expect(GraphMockURLProtocol.requestLog.isEmpty)
+    }
+
+    @Test func getAttachmentNotFoundIsUserActionable() async throws {
+        GraphMockURLProtocol.reset()
+        GraphMockURLProtocol.stub(
+            path: "/me/messages/graph-message/attachments/missing",
+            statusCode: 404,
+            json: """
+            {"error": {"code": "ErrorItemNotFound", "message": "Attachment not found."}}
+            """
+        )
+
+        let client = GraphAPIClient(accessToken: "token", session: GraphMockURLProtocol.makeSession())
+
+        do {
+            _ = try await client.getAttachment(messageId: "graph-message", attachmentId: "missing")
+            Issue.record("Expected GraphAPIError.serverError")
+        } catch GraphAPIError.serverError(let statusCode, let code) {
+            #expect(statusCode == 404)
+            #expect(code == "ErrorItemNotFound")
+            #expect(GraphAPIError.serverError(statusCode: statusCode, code: code).sharedCategory == .notFound)
+            #expect(GraphAPIError.serverError(statusCode: statusCode, code: code).errorDescription?.contains("Re-sync") == true)
+        } catch {
+            Issue.record("Expected serverError, got \(error)")
+        }
+    }
+
     @Test func graphErrorBodyMapsInsufficientScope() async throws {
         GraphMockURLProtocol.reset()
         GraphMockURLProtocol.stub(

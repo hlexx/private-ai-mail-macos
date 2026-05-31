@@ -88,10 +88,18 @@ struct GraphMapperTests {
         #expect(mapped.message.attachments.count == 1)
         #expect(mapped.message.attachments[0].id == "outlook:outlook-account:attachment:attachment-1")
         #expect(mapped.message.attachments[0].messageId == "outlook:outlook-account:message:message-with-attachments")
+        #expect(mapped.message.attachments[0].accountId == accountId)
         #expect(mapped.message.attachments[0].filename == "brief.pdf")
         #expect(mapped.message.attachments[0].mimeType == "application/pdf")
         #expect(mapped.message.attachments[0].sizeBytes == 2048)
         #expect(mapped.message.attachments[0].contentId == "file-1")
+        #expect(mapped.message.attachments[0].disposition == .attachment)
+        #expect(mapped.message.attachments[0].byteFetchHandle == AttachmentByteFetchHandle(
+            provider: .outlook,
+            accountId: accountId,
+            messageId: "message-with-attachments",
+            attachmentId: "attachment-1"
+        ))
     }
 
     @Test func mapsSentFolderFlaggedStateAndCategories() throws {

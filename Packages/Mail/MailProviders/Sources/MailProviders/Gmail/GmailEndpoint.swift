@@ -23,11 +23,11 @@ enum GmailEndpoint {
         case .listMessages:
             return "/messages"
         case .getMessage(let id, _):
-            return "/messages/\(id)"
+            return "/messages/\(Self.pathSegment(id))"
         case .getThread(let id, _):
-            return "/threads/\(id)"
+            return "/threads/\(Self.pathSegment(id))"
         case .getAttachment(let messageId, let attachmentId):
-            return "/messages/\(messageId)/attachments/\(attachmentId)"
+            return "/messages/\(Self.pathSegment(messageId))/attachments/\(Self.pathSegment(attachmentId))"
         case .listHistory:
             return "/history"
         case .sendMessage:
@@ -35,8 +35,14 @@ enum GmailEndpoint {
         case .listLabels:
             return "/labels"
         case .modifyThread(let id, _, _):
-            return "/threads/\(id)/modify"
+            return "/threads/\(Self.pathSegment(id))/modify"
         }
+    }
+
+    private static func pathSegment(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/?#[]@!$&'()*+,;=:")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     /// Gmail API quota cost per method (units per request).

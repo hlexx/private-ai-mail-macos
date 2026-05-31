@@ -53,14 +53,14 @@ workflow automation.
 
 ### Task 2: Harden attachment metadata and byte fetch
 
-- [ ] Ensure provider attachment metadata includes id, message id, account id,
+- [x] Ensure provider attachment metadata includes id, message id, account id,
       filename, MIME, size, content id, inline/disposition if available, and
       provider-specific byte fetch handle.
-- [ ] Add provider tests for Gmail attachment fetch and Graph attachment fetch
+- [x] Add provider tests for Gmail attachment fetch and Graph attachment fetch
       if Graph exists from tranche 03.
-- [ ] Ensure missing attachment id, auth failure, not found, rate limit, and
+- [x] Ensure missing attachment id, auth failure, not found, rate limit, and
       provider errors produce user-actionable failures.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Mail/MailProviders && swift test`.
 
 ### Task 3: Harden local attachment byte cache
 

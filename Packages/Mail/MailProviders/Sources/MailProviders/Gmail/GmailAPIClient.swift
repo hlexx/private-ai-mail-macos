@@ -60,6 +60,9 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
     }
 
     public func getAttachmentData(messageId: String, attachmentId: String) async throws -> Data {
+        guard Self.hasValue(messageId), Self.hasValue(attachmentId) else {
+            throw GmailAPIError.missingAttachmentIdentifier
+        }
         let endpoint = GmailEndpoint.getAttachment(messageId: messageId, attachmentId: attachmentId)
         let body: GmailDTO.MessagePartBody = try await perform(endpoint)
         guard let encoded = body.data,
@@ -290,6 +293,10 @@ public final class GmailAPIClient: GmailAPI, @unchecked Sendable {
             base64 += String(repeating: "=", count: 4 - remainder)
         }
         return Data(base64Encoded: base64)
+    }
+
+    private static func hasValue(_ value: String) -> Bool {
+        !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 

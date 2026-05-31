@@ -72,6 +72,8 @@ public enum MailProviderErrorCategory: String, Codable, Sendable, CaseIterable {
 public extension GmailAPIError {
     var sharedCategory: MailProviderErrorCategory {
         switch self {
+        case .missingAttachmentIdentifier:
+            return .invalidResponse
         case .unauthorized:
             return .authExpired
         case .rateLimited:
@@ -110,6 +112,8 @@ public extension GmailAPIError {
 public extension GmailAPIError {
     var sendFailureCategory: SendFailureCategory {
         switch self {
+        case .missingAttachmentIdentifier:
+            return .validation
         case .unauthorized:
             return .authExpired
         case .rateLimited:
@@ -138,6 +142,8 @@ public extension GmailAPIError {
 
     private var sendProviderErrorCode: String? {
         switch self {
+        case .missingAttachmentIdentifier:
+            return "missing_attachment_id"
         case .unauthorized:
             return "401"
         case .rateLimited:
@@ -198,6 +204,8 @@ public extension GmailAPIError {
 public extension GraphAPIError {
     var sendFailureCategory: SendFailureCategory {
         switch self {
+        case .missingAttachmentIdentifier:
+            return .validation
         case .unauthorized:
             return .authExpired
         case .rateLimited:
@@ -227,6 +235,8 @@ public extension GraphAPIError {
 
     private var sendProviderErrorCode: String? {
         switch self {
+        case .missingAttachmentIdentifier:
+            return "missing_attachment_id"
         case .unauthorized:
             return "401"
         case .rateLimited:

@@ -170,7 +170,12 @@ public enum GraphMapper {
             snippet: dto.bodyPreview,
             bodyText: bodyText,
             bodyHTML: bodyHTML,
-            attachments: attachments(from: dto.attachments, messageId: id, accountId: accountId),
+            attachments: attachments(
+                from: dto.attachments,
+                localMessageId: id,
+                providerMessageId: providerMessageId,
+                accountId: accountId
+            ),
             isUnread: dto.isRead.map { !$0 } ?? false,
             isSentByMe: mailbox == .sent
         )
@@ -276,18 +281,27 @@ public enum GraphMapper {
 
     private static func attachments(
         from attachments: [GraphDTO.AttachmentMetadata]?,
-        messageId: String,
+        localMessageId: String,
+        providerMessageId: String,
         accountId: String
     ) -> [Attachment] {
         attachments?.compactMap { attachment in
             guard let providerAttachmentId = attachment.id else { return nil }
             return Attachment(
                 id: scopedExternalId(accountId: accountId, kind: "attachment", providerId: providerAttachmentId),
-                messageId: messageId,
+                messageId: localMessageId,
+                accountId: accountId,
                 filename: attachment.name,
                 mimeType: attachment.contentType,
                 sizeBytes: attachment.size,
-                contentId: normalizedContentId(attachment.contentId)
+                contentId: normalizedContentId(attachment.contentId),
+                disposition: attachment.isInline.map { $0 ? .inline : .attachment },
+                byteFetchHandle: AttachmentByteFetchHandle(
+                    provider: .outlook,
+                    accountId: accountId,
+                    messageId: providerMessageId,
+                    attachmentId: providerAttachmentId
+                )
             )
         } ?? []
     }
