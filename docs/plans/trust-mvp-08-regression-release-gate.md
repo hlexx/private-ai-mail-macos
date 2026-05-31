@@ -98,10 +98,10 @@ it does not add new product capabilities.
 
 ### Task 6: Run the full gate and capture evidence
 
-- [ ] Run all validation commands listed above.
-- [ ] Capture command outcomes in `docs/trust-mvp-release-gate.md` with date,
+- [x] Run all validation commands listed above.
+- [x] Capture command outcomes in `docs/trust-mvp-release-gate.md` with date,
       commit SHA, and any manual steps that remain.
-- [ ] If any gate is blocked, document the exact blocker, owner, and required
+- [x] If any gate is blocked, document the exact blocker, owner, and required
       fix instead of weakening the gate.
 
 ## Rollback / Recovery

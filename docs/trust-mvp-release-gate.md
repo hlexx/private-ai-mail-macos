@@ -157,6 +157,54 @@ Passing this release gate does not certify or imply support for:
 - Cloud AI fallback or cloud telemetry containing mailbox content, drafts,
   attachment bytes, local indexes, prompts, model outputs, or provider payloads.
 
+## Gate Run Evidence - 2026-05-31
+
+Date: 2026-05-31 15:23:35 +05
+
+Base commit SHA at Task 6 validation start: `f60865505288`
+
+Context:
+
+- Machine/local context: macOS local developer machine, Xcode 26.2.0, Tuist,
+  SwiftLint, SwiftPM package tests, and Debug macOS app build.
+- Task 6 worktree note: the gate run included a deterministic wait fix in
+  `Packages/Features/InboxFeature/Tests/InboxFeatureTests/ChipFilterTests.swift`.
+  The first `./scripts/verify-trust-mvp.sh` attempt exposed a flaky fixed sleep
+  in `folderCountsIncludeBriefDrivenCounts`; the test now waits for observed
+  `needsReply` and `hasDeadline` folder counts before asserting.
+- Feature flag state: no runtime feature flag change was made in this evidence
+  pass. Graph/Outlook, search, send queue, attachment preview, attachment
+  summarization, and privacy telemetry remain governed by their existing
+  release-candidate behavior and documented rollback rules.
+
+Automated command outcomes:
+
+| Command | Outcome | Evidence |
+| --- | --- | --- |
+| `git status --short --branch` | Passed | Reported branch `trust-mvp-07-privacy-ui-observability` and no uncommitted changes at the start of Task 6 validation. |
+| `git diff --check` | Passed | No whitespace errors. |
+| `./scripts/verify-trust-mvp.sh` | Passed | Default gate passed repository hygiene, SwiftLint, package tests, and privacy grep. Package suites passed: MailDomain 15 tests, MailProviders 61, MailSync 35, MailIndex 20, Persistence 60, AuthKit 30, ComposeFeature 58, InboxFeature 45, ThreadFeature 67, SettingsFeature 28, AttachmentKit 11, AttachmentRAG 11. Default mode intentionally skipped Tuist/xcodebuild and printed the full release command. |
+| `swiftlint --strict --reporter xcode` | Passed | Linted 221 Swift files with 0 violations and 0 serious violations. |
+| `tuist generate --no-open` | Passed | Generated `PrivateAIMail.xcworkspace` successfully. Xcode emitted a supported-platform warning during package resolution, but Tuist exited 0. |
+| `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO` | Passed | Debug macOS app build completed with `** BUILD SUCCEEDED **`. Xcode selected the arm64 `My Mac` destination and noted signing/hardened-runtime behavior because code signing was disabled for the gate. |
+
+Manual steps remaining:
+
+- Real Gmail smoke checklist from this document must still be run against a
+  non-production Gmail account before release signoff. Owner: Trust MVP release
+  owner.
+- Real Outlook or Microsoft 365 smoke checklist from this document must still
+  be run against a non-production mailbox, with the documented release-candidate
+  Graph/Outlook flag state. Owner: Trust MVP release owner.
+- Manual evidence must record only commit SHA, app version, account/message/
+  thread/attachment hashes, timestamps, visible state, counts, and shared error
+  categories.
+
+Blockers:
+
+- No automated release-gate blockers remained after the InboxFeature observation
+  wait fix and full rerun.
+
 ## Evidence and Failure Handling
 
 The release gate evidence must include:

@@ -24,6 +24,22 @@ struct ChipFilterTests {
         }
     }
 
+    @MainActor
+    private func waitForCounts(
+        in store: InboxStore,
+        expected: [FolderID: Int]
+    ) async throws {
+        for _ in 0..<80 {
+            if expected.allSatisfy({ store.folderCounts[$0.key] == $0.value }) {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        throw ObservationWaitTimeout()
+    }
+
+    private struct ObservationWaitTimeout: Error {}
+
     /// Seeds 3 threads in account acc1, all in INBOX.
     /// - threadA: has a brief with request = "approve invoice"
     /// - threadB: has a brief with deadline = "Friday"
@@ -156,7 +172,13 @@ struct ChipFilterTests {
         store.setSelection(.folder(.inbox))
         store.startObserving()
 
-        try await Task.sleep(for: .milliseconds(500))
+        try await waitForCounts(
+            in: store,
+            expected: [
+                .needsReply: 1,
+                .hasDeadline: 1,
+            ]
+        )
 
         #expect(store.folderCounts[.needsReply] == 1) // tA
         #expect(store.folderCounts[.hasDeadline] == 1) // tB
