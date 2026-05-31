@@ -83,6 +83,45 @@ struct AttachmentArtifactMigrationTests {
         }
     }
 
+    @Test func deletingOneAccountCascadesOnlyItsAttachmentBlobRows() throws {
+        let db = try AppDatabase.openInMemorySync()
+
+        try db.dbQueue.write { database in
+            try AccountRecord(id: "a1", email: "a1@example.com", createdAt: 1).insert(database)
+            try AccountRecord(id: "a2", email: "a2@example.com", createdAt: 1).insert(database)
+            try ThreadRecord(id: "t1", accountId: "a1", lastMessageAt: 1).insert(database)
+            try ThreadRecord(id: "t2", accountId: "a2", lastMessageAt: 1).insert(database)
+            try MessageRecord(id: "m1", threadId: "t1", accountId: "a1", sentAt: 1).insert(database)
+            try MessageRecord(id: "m2", threadId: "t2", accountId: "a2", sentAt: 1).insert(database)
+            try AttachmentRecord(id: "att1", messageId: "m1", accountId: "a1").insert(database)
+            try AttachmentRecord(id: "att2", messageId: "m2", accountId: "a2").insert(database)
+            try AttachmentBlobRecord(
+                accountId: "a1",
+                messageId: "m1",
+                attachmentId: "att1",
+                relativePath: "path/a1",
+                byteCount: 10,
+                sha256: "sha-a1",
+                storedAt: 1
+            ).insert(database)
+            try AttachmentBlobRecord(
+                accountId: "a2",
+                messageId: "m2",
+                attachmentId: "att2",
+                relativePath: "path/a2",
+                byteCount: 20,
+                sha256: "sha-a2",
+                storedAt: 1
+            ).insert(database)
+
+            try AccountRecord.deleteOne(database, key: "a1")
+
+            let remaining = try AttachmentBlobRecord.fetchAll(database)
+            #expect(remaining.map(\.accountId) == ["a2"])
+            #expect(remaining.first?.relativePath == "path/a2")
+        }
+    }
+
     @Test func migratesDatabaseThatAlreadyAppliedAttachmentDataPlane() throws {
         let dbQueue = try DatabaseQueue(configuration: .init())
 

@@ -64,13 +64,13 @@ workflow automation.
 
 ### Task 3: Harden local attachment byte cache
 
-- [ ] Ensure `AttachmentByteStore` stores bytes by account/message/attachment
+- [x] Ensure `AttachmentByteStore` stores bytes by account/message/attachment
       without collisions and can load/delete them deterministically.
-- [ ] Exclude cache paths from backup where applicable.
-- [ ] Add tests for store/load/delete, path traversal resistance, duplicate
+- [x] Exclude cache paths from backup where applicable.
+- [x] Add tests for store/load/delete, path traversal resistance, duplicate
       store, SHA-256 mismatch, and account deletion cleanup.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentKit && swift test`.
-- [ ] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Attachments/AttachmentKit && swift test`.
+- [x] Run `cd /Users/alexeykhaynovsky/Documents/Projects/Re_Box/private-ai-mail-macos/Packages/Core/Persistence && swift test`.
 
 ### Task 4: Add safe preview states
 

@@ -74,7 +74,7 @@ public actor AttachmentSummaryOrchestrator {
             return .summary(cached, cached: true)
         }
 
-        let bytes = try byteStore.load(relativePath: blob.relativePath)
+        let bytes = try byteStore.load(relativePath: blob.relativePath, expectedSHA256: blob.sha256)
         let extraction = AttachmentTextExtractor.extract(
             data: bytes,
             mime: request.mime,

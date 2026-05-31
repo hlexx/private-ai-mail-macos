@@ -313,7 +313,11 @@ struct ThreadFeatureTests {
         let blob = try await db.dbQueue.read { database in
             try AttachmentBlobRecord.fetchOne(database)
         }
-        #expect(blob?.relativePath == "a_1/m_1/att_1")
+        #expect(blob?.relativePath == AttachmentByteStore.relativePath(
+            accountId: accountId,
+            messageId: messageId,
+            attachmentId: attachmentId
+        ))
         #expect(blob?.byteCount == bytes.count)
         #expect(blob?.sha256 == AttachmentByteStore.sha256Hex(bytes))
         #expect(try byteStore.load(relativePath: blob?.relativePath ?? "") == bytes)

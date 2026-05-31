@@ -13,6 +13,20 @@ public struct AttachmentStoredBlob: Sendable, Equatable {
     }
 }
 
+public enum AttachmentByteStoreError: Error, Sendable, Equatable, LocalizedError {
+    case unsafeRelativePath(String)
+    case sha256Mismatch(expected: String, actual: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unsafeRelativePath:
+            return "Attachment cache path is invalid."
+        case .sha256Mismatch:
+            return "Attachment cache checksum does not match stored metadata."
+        }
+    }
+}
+
 public struct AttachmentByteStore: Sendable {
     public let baseURL: URL
 
@@ -26,22 +40,31 @@ public struct AttachmentByteStore: Sendable {
             .appendingPathComponent("Attachments", isDirectory: true)
     }
 
+    public static func relativePath(accountId: String, messageId: String, attachmentId: String) -> String {
+        [
+            encodedPathComponent(accountId),
+            encodedPathComponent(messageId),
+            encodedPathComponent(attachmentId),
+        ].joined(separator: "/")
+    }
+
     public func store(
         _ data: Data,
         accountId: String,
         messageId: String,
         attachmentId: String
     ) throws -> AttachmentStoredBlob {
-        let relativePath = [
-            Self.safePathComponent(accountId),
-            Self.safePathComponent(messageId),
-            Self.safePathComponent(attachmentId),
-        ].joined(separator: "/")
-        let destination = baseURL.appendingPathComponent(relativePath, isDirectory: false)
+        let relativePath = Self.relativePath(
+            accountId: accountId,
+            messageId: messageId,
+            attachmentId: attachmentId
+        )
+        let destination = try resolvedURL(for: relativePath)
         let directory = destination.deletingLastPathComponent()
 
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try excludeFromBackupIfNeeded(baseURL)
+        try excludeFromBackupIfNeeded(directory)
         try data.write(to: destination, options: [.atomic])
 
         return AttachmentStoredBlob(
@@ -52,11 +75,28 @@ public struct AttachmentByteStore: Sendable {
     }
 
     public func load(relativePath: String) throws -> Data {
-        try Data(contentsOf: baseURL.appendingPathComponent(relativePath, isDirectory: false))
+        try Data(contentsOf: resolvedURL(for: relativePath))
+    }
+
+    public func load(relativePath: String, expectedSHA256: String) throws -> Data {
+        let data = try load(relativePath: relativePath)
+        let actual = Self.sha256Hex(data)
+        guard actual.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+            throw AttachmentByteStoreError.sha256Mismatch(expected: expectedSHA256, actual: actual)
+        }
+        return data
     }
 
     public func delete(relativePath: String) throws {
-        let url = baseURL.appendingPathComponent(relativePath, isDirectory: false)
+        let url = try resolvedURL(for: relativePath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    public func deleteAccount(accountId: String) throws {
+        let accountPath = Self.encodedPathComponent(accountId)
+        let url = try resolvedURL(for: accountPath)
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
         }
@@ -66,11 +106,27 @@ public struct AttachmentByteStore: Sendable {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func safePathComponent(_ raw: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
-        let scalars = raw.unicodeScalars.map { allowed.contains($0) ? Character($0) : Character("_") }
-        let result = String(scalars)
-        return result.isEmpty ? "_" : result
+    private static func encodedPathComponent(_ raw: String) -> String {
+        "v1-" + raw.utf8.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func resolvedURL(for relativePath: String) throws -> URL {
+        let components = relativePath.split(separator: "/", omittingEmptySubsequences: false)
+        guard !relativePath.isEmpty,
+              !relativePath.hasPrefix("/"),
+              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+            throw AttachmentByteStoreError.unsafeRelativePath(relativePath)
+        }
+
+        let candidate = components.reduce(baseURL) { partial, component in
+            partial.appendingPathComponent(String(component), isDirectory: false)
+        }
+        let basePath = baseURL.standardizedFileURL.path
+        let candidatePath = candidate.standardizedFileURL.path
+        guard candidatePath == basePath || candidatePath.hasPrefix(basePath + "/") else {
+            throw AttachmentByteStoreError.unsafeRelativePath(relativePath)
+        }
+        return candidate
     }
 
     private func excludeFromBackupIfNeeded(_ url: URL) throws {
