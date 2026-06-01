@@ -63,14 +63,14 @@ Build the next Trust MVP increment after `7cdeb8a`: turn the integrated action-c
 - [x] Run `cd Packages/Features/ThreadFeature && arch -arm64 swift test`.
 
 ### Task 4: Run Outlook Trust MVP readiness spike
-- [ ] Inspect current Microsoft/Outlook provider, auth, sync, and settings code paths.
-- [ ] Document whether Outlook currently supports read/sync only, draft creation, message mutation, or no usable provider boundary.
-- [ ] Identify missing Microsoft Graph scopes, contracts, or sync invariants required before Outlook mutations can be enabled.
-- [ ] Do not add new Graph scopes, mutation behavior, or schema changes in this task unless an ADR is created first.
-- [ ] Create or update a short plan note under `docs/plans/` describing the next Outlook implementation step and whether ADR is required.
-- [ ] Add tests only for compatibility surfaces touched during inspection; otherwise keep this task documentation-only.
-- [ ] Run `git diff --check`.
-- [ ] Run the narrow package tests for any package touched by the spike.
+- [x] Inspect current Microsoft/Outlook provider, auth, sync, and settings code paths.
+- [x] Document whether Outlook currently supports read/sync only, draft creation, message mutation, or no usable provider boundary.
+- [x] Identify missing Microsoft Graph scopes, contracts, or sync invariants required before Outlook mutations can be enabled.
+- [x] Do not add new Graph scopes, mutation behavior, or schema changes in this task unless an ADR is created first.
+- [x] Create or update a short plan note under `docs/plans/` describing the next Outlook implementation step and whether ADR is required.
+- [x] Add tests only for compatibility surfaces touched during inspection; otherwise keep this task documentation-only.
+- [x] Run `git diff --check`.
+- [x] Run the narrow package tests for any package touched by the spike.
 
 ### Task 5: Run full Trust MVP release gate
 - [ ] Run every command in `## Validation Commands` from the repository root.
