@@ -82,6 +82,31 @@ struct AttachmentKitTests {
         #expect(try store.load(relativePath: attachmentVariant.relativePath) == attachmentVariantData)
     }
 
+    @Test func byteStoreDeletesAllStoredBlobsForAccount() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let store = AttachmentByteStore(baseURL: root)
+        let removed = try store.store(
+            Data("remove me".utf8),
+            accountId: "account/1",
+            messageId: "message:1",
+            attachmentId: "attachment?1"
+        )
+        let retained = try store.store(
+            Data("keep me".utf8),
+            accountId: "account:2",
+            messageId: "message:1",
+            attachmentId: "attachment?1"
+        )
+
+        try store.deleteAccount(accountId: "account/1")
+
+        #expect(try store.fileExists(relativePath: removed.relativePath) == false)
+        #expect(try store.load(relativePath: retained.relativePath) == Data("keep me".utf8))
+    }
+
     @Test func byteStoreLoadsAndDeletesExistingRelativePaths() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

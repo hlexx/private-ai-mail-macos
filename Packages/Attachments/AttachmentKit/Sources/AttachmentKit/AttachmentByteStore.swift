@@ -68,6 +68,17 @@ public struct AttachmentByteStore: Sendable {
         }
     }
 
+    public func deleteAccount(accountId: String) throws {
+        let relativePath = [
+            "v2",
+            Self.identifierPathComponent(accountId),
+        ].joined(separator: "/")
+        let url = try fileURL(for: relativePath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
     public func fileExists(relativePath: String) throws -> Bool {
         let url = try fileURL(for: relativePath)
         return FileManager.default.fileExists(atPath: url.path)
