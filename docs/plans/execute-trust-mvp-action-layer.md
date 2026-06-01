@@ -73,12 +73,19 @@ Build the next Trust MVP increment after `7cdeb8a`: turn the integrated action-c
 - [x] Run the narrow package tests for any package touched by the spike.
 
 ### Task 5: Run full Trust MVP release gate
-- [ ] Run every command in `## Validation Commands` from the repository root.
-- [ ] Inspect changed logging for raw email bodies, raw attachment text or bytes, prompt bodies, model output, bearer tokens, refresh tokens, and connector secrets.
-- [ ] Confirm `git status --short --branch` shows only intended changes.
-- [ ] Confirm any migration added is additive, tested from fresh DB and upgraded DB paths, and has rollback notes.
-- [ ] Summarize completed behavior by subsystem: action executor, Gmail provider wiring, approval/outbox UI, Outlook spike, docs.
-- [ ] Explicitly list deferred work: Slack/Notion/CRM calls, cloud broker delivery, action-router model task, external connector auth, automatic rules, Snooze, Outlook mutations if not proven, DOCX/OCR extraction, attachment Preview, notarized release packaging.
+- [x] Run every command in `## Validation Commands` from the repository root.
+- [x] Inspect changed logging for raw email bodies, raw attachment text or bytes, prompt bodies, model output, bearer tokens, refresh tokens, and connector secrets.
+- [x] Confirm `git status --short --branch` shows only intended changes.
+- [x] Confirm any migration added is additive, tested from fresh DB and upgraded DB paths, and has rollback notes.
+- [x] Summarize completed behavior by subsystem: action executor, Gmail provider wiring, approval/outbox UI, Outlook spike, docs.
+- [x] Explicitly list deferred work: Slack/Notion/CRM calls, cloud broker delivery, action-router model task, external connector auth, automatic rules, Snooze, Outlook mutations if not proven, DOCX/OCR extraction, attachment Preview, notarized release packaging.
+
+Task 5 release gate evidence:
+- Validation passed: `git status --short --branch`, `git diff --check`, `swiftlint --strict --reporter xcode`, `./scripts/verify-trust-mvp.sh`, all six explicit `arch -arm64 swift test` package commands listed above, `tuist generate --no-open`, and the MacApp Debug `xcodebuild build` command with signing disabled.
+- Privacy logging inspection: changed action audit and result metadata stores action kind, target kind, status, executor/provider labels, result, retryability, provider error category, and external-result presence only. It does not persist or log raw email bodies, raw attachment text or bytes, prompt bodies, model output, bearer tokens, refresh tokens, or connector secrets.
+- Migration confirmation: this action-layer plan did not add or modify migration files. Existing additive action outbox migration coverage still passed fresh and upgrade paths through Persistence tests, including `freshMigrationCreatesActionOutboxTablesAndIndexes`, `freshDatabaseMigrationCreatesTrustMVPReleaseGateSchema`, and `upgradeStyleMigrationPreservesSeededGmailDataAndAcceptsOutlookRows`. Rollback remains the documented disable-UI/executor path with additive tables left dormant.
+- Completed behavior by subsystem: IntegrationDomain now exposes the local MVP executor boundary and supported action kinds; Persistence executes idempotent outbox lifecycle, attempts, and audit persistence; Gmail provider wiring supports draft, archive, star, mark-read, and trash through the executor adapter; Inbox and Thread UI require explicit approval where needed, show outbox state, and gate retries; the Outlook spike documents that mutations remain disabled until an ADR-backed provider/account/sync contract is implemented; docs now capture the release gate and Outlook readiness outcome.
+- Deferred work: Slack/Notion/CRM calls, cloud broker delivery, action-router model task, external connector auth, automatic rules, Snooze, Outlook mutations, DOCX/OCR extraction, attachment Preview, and notarized release packaging.
 
 ## Rollback / Recovery
 - Revert the final merge commit for this plan if action execution blocks release.
