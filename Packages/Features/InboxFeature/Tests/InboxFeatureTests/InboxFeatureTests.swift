@@ -1,3 +1,4 @@
+import ActionsFeature
 import Testing
 import SwiftUI
 import AppKit
@@ -66,6 +67,128 @@ struct InboxFeatureTests {
         #expect(FolderID.spam.gmailLabel == "SPAM")
         #expect(FolderID.archive.gmailLabel == nil)
         #expect(FolderID.needsReply.gmailLabel == nil)
+    }
+
+    // MARK: - Trust MVP Actions
+
+    @MainActor
+    @Test func lowRiskActionQueuesAndCompletesWithoutApproval() async {
+        let queue = TestTrustActionQueue(outcomes: [
+            .init(opId: "req-archive", status: .completed, message: "Action completed"),
+        ])
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "req-archive",
+            action: .archiveThread,
+            target: .init(accountId: "a1", threadId: "t1", subject: "Subject")
+        ))
+
+        #expect(store.pendingApproval == nil)
+        #expect(store.outboxItems.first?.status == .completed)
+        #expect(queue.started.map(\.action) == [.archiveThread])
+    }
+
+    @MainActor
+    @Test func retryAffordanceOnlyRunsForRetryableFailure() async {
+        let queue = TestTrustActionQueue(
+            outcomes: [
+                .init(opId: "req-mark-read", status: .failedRetryable, message: "Network is unavailable. Retry when the connection returns."),
+            ],
+            retryOutcomes: [
+                "req-mark-read": .init(opId: "req-mark-read", status: .completed, message: "Action completed"),
+            ]
+        )
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "req-mark-read",
+            action: .markRead,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+        #expect(store.outboxItems.first?.canRetry == true)
+
+        await store.retry(opId: "req-mark-read")
+
+        #expect(store.outboxItems.first?.status == .completed)
+        #expect(queue.retried == ["req-mark-read"])
+    }
+
+    @MainActor
+    @Test func completedAndNonRetryableActionsDoNotRetry() async {
+        let queue = TestTrustActionQueue(outcomes: [])
+        let store = TrustActionUIStore(queue: queue)
+        store.replaceOutboxItems([
+            .init(
+                id: "done",
+                action: .archiveThread,
+                target: .init(accountId: "a1", threadId: "t1"),
+                status: .completed,
+                message: "Action completed"
+            ),
+            .init(
+                id: "failed",
+                action: .trashThread,
+                target: .init(accountId: "a1", threadId: "t2"),
+                status: .failedNonRetryable,
+                message: "The provider rejected this action."
+            ),
+        ])
+
+        await store.retry(opId: "done")
+        await store.retry(opId: "failed")
+
+        #expect(queue.retried.isEmpty)
+    }
+
+    @MainActor
+    @Test func aiGeneratedActionOutputIsNotQueuedAutomatically() async {
+        let queue = TestTrustActionQueue(outcomes: [])
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "ai-output",
+            action: .archiveThread,
+            target: .init(accountId: "a1", threadId: "t1"),
+            createdByAIOutput: true
+        ))
+
+        #expect(store.pendingApproval == nil)
+        #expect(store.outboxItems.isEmpty)
+        #expect(queue.started.isEmpty)
+    }
+}
+
+@MainActor
+private final class TestTrustActionQueue: TrustActionQueueing {
+    private var outcomes: [TrustActionQueueOutcome]
+    private let retryOutcomes: [String: TrustActionQueueOutcome]
+    private(set) var started: [TrustActionRequest] = []
+    private(set) var retried: [String] = []
+
+    init(
+        outcomes: [TrustActionQueueOutcome],
+        retryOutcomes: [String: TrustActionQueueOutcome] = [:]
+    ) {
+        self.outcomes = outcomes
+        self.retryOutcomes = retryOutcomes
+    }
+
+    func start(_ request: TrustActionRequest) async -> TrustActionQueueOutcome {
+        started.append(request)
+        if !outcomes.isEmpty {
+            return outcomes.removeFirst()
+        }
+        return TrustActionQueueOutcome(
+            opId: request.requestId,
+            status: .completed,
+            message: "Action completed"
+        )
+    }
+
+    func retry(opId: String) async -> TrustActionQueueOutcome? {
+        retried.append(opId)
+        return retryOutcomes[opId]
     }
 }
 

@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../Core/AppFoundation"),
+        .package(path: "../ActionsFeature"),
         .package(path: "../../Mail/MailIndex"),
         .package(path: "../../Mail/MailSync"),
         .package(path: "../../Mail/MailDomain"),
@@ -21,6 +22,7 @@ let package = Package(
             name: "InboxFeature",
             dependencies: [
                 "AppFoundation",
+                "ActionsFeature",
                 "MailIndex",
                 "MailSync",
                 "MailDomain",
@@ -30,6 +32,6 @@ let package = Package(
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "AppFoundation", "MailIndex", "MailDomain", "Persistence"]),
+        .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "ActionsFeature", "AppFoundation", "MailIndex", "MailDomain", "Persistence"]),
     ]
 )

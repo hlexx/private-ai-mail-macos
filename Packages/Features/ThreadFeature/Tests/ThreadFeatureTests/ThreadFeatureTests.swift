@@ -1,3 +1,4 @@
+import ActionsFeature
 import Testing
 import SwiftUI
 import AppKit
@@ -234,6 +235,93 @@ struct ThreadFeatureTests {
         }
         #expect(reason.contains("Unsupported"))
         #expect(await ai.callCount == 0)
+    }
+
+    // MARK: - Trust MVP Actions
+
+    @MainActor
+    @Test func draftReplyRequiresExplicitApprovalBeforeQueueing() async {
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "draft-1",
+            status: .completed,
+            message: "Draft action approved"
+        ))
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "draft-1",
+            action: .draftReply,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+
+        #expect(store.pendingApproval?.request.action == .draftReply)
+        #expect(store.outboxItems.isEmpty)
+
+        await store.confirmPendingAction()
+
+        #expect(store.pendingApproval == nil)
+        #expect(store.outboxItems.first?.status == .completed)
+        #expect(queue.started.map(\.action) == [.draftReply])
+    }
+
+    @MainActor
+    @Test func destructiveTrashRequiresApprovalAndCanFailRetryable() async {
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "trash-1",
+            status: .failedRetryable,
+            message: "Network is unavailable. Retry when the connection returns."
+        ))
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "trash-1",
+            action: .trashThread,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+        #expect(store.pendingApproval?.request.action == .trashThread)
+
+        await store.confirmPendingAction()
+
+        #expect(store.outboxItems.first?.status == .failedRetryable)
+        #expect(store.outboxItems.first?.canRetry == true)
+    }
+
+    @MainActor
+    @Test func nonRetryableFailureDoesNotExposeRetry() async {
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "star-1",
+            status: .failedNonRetryable,
+            message: "The account is missing permission for this action."
+        ))
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "star-1",
+            action: .starThread,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+
+        #expect(store.outboxItems.first?.status == .failedNonRetryable)
+        #expect(store.outboxItems.first?.canRetry == false)
+    }
+}
+
+@MainActor
+private final class ThreadTrustActionQueue: TrustActionQueueing {
+    let outcome: TrustActionQueueOutcome
+    private(set) var started: [TrustActionRequest] = []
+
+    init(outcome: TrustActionQueueOutcome) {
+        self.outcome = outcome
+    }
+
+    func start(_ request: TrustActionRequest) async -> TrustActionQueueOutcome {
+        started.append(request)
+        return outcome
+    }
+
+    func retry(opId _: String) async -> TrustActionQueueOutcome? {
+        nil
     }
 }
 

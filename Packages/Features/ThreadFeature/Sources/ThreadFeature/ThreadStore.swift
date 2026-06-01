@@ -141,6 +141,8 @@ public final class ThreadStore {
     public private(set) var messageCount: Int = 0
     public private(set) var attachments: [AttachmentInfo] = []
     public private(set) var isStarred: Bool = false
+    public private(set) var observedThreadId: String?
+    public private(set) var observedAccountId: String?
     public var accountEmail: String = ""
 
     public var hasAttachment: Bool { !attachments.isEmpty }
@@ -158,6 +160,8 @@ public final class ThreadStore {
 
     public func observe(threadId: String, accountId: String) {
         observationTask?.cancel()
+        observedThreadId = threadId
+        observedAccountId = accountId
         observationTask = Task { [weak self, db] in
             let observation = ValueObservation.tracking { db in
                 let thread = try ThreadRecord
@@ -242,6 +246,8 @@ public final class ThreadStore {
         messageCount = 0
         attachments = []
         isStarred = false
+        observedThreadId = nil
+        observedAccountId = nil
     }
 
     private static func blobKey(messageId: String, attachmentId: String) -> String {

@@ -52,15 +52,15 @@ Build the next Trust MVP increment after `7cdeb8a`: turn the integrated action-c
 - [x] Run `cd Packages/Mail/MailSync && arch -arm64 swift test`.
 
 ### Task 3: Add minimal approval and outbox UI
-- [ ] Add user-triggered actions in Inbox/Thread UI for the MVP action kinds without introducing AI auto-actions.
-- [ ] Require explicit confirmation for destructive actions and draft/send-related actions; allow low-risk label mutations to use a fast confirm flow.
-- [ ] Add an outbox/action state surface for pending, running, completed, failed, and retryable failed actions.
-- [ ] Add retry affordance only for retryable failures and prevent retry for completed or non-retryable actions.
-- [ ] Use privacy-safe, user-actionable copy for provider/auth/network failures.
-- [ ] Do not wire Slack, Notion, CRM, Team Connect, cloud broker, or action-router model tasks.
-- [ ] Add UI/view-model tests for approval required, action queued, completed, failed retryable, failed non-retryable, and no auto-action on AI output.
-- [ ] Run `cd Packages/Features/InboxFeature && arch -arm64 swift test`.
-- [ ] Run `cd Packages/Features/ThreadFeature && arch -arm64 swift test`.
+- [x] Add user-triggered actions in Inbox/Thread UI for the MVP action kinds without introducing AI auto-actions.
+- [x] Require explicit confirmation for destructive actions and draft/send-related actions; allow low-risk label mutations to use a fast confirm flow.
+- [x] Add an outbox/action state surface for pending, running, completed, failed, and retryable failed actions.
+- [x] Add retry affordance only for retryable failures and prevent retry for completed or non-retryable actions.
+- [x] Use privacy-safe, user-actionable copy for provider/auth/network failures.
+- [x] Do not wire Slack, Notion, CRM, Team Connect, cloud broker, or action-router model tasks.
+- [x] Add UI/view-model tests for approval required, action queued, completed, failed retryable, failed non-retryable, and no auto-action on AI output.
+- [x] Run `cd Packages/Features/InboxFeature && arch -arm64 swift test`.
+- [x] Run `cd Packages/Features/ThreadFeature && arch -arm64 swift test`.
 
 ### Task 4: Run Outlook Trust MVP readiness spike
 - [ ] Inspect current Microsoft/Outlook provider, auth, sync, and settings code paths.

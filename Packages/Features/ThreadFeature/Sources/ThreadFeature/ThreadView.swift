@@ -1,3 +1,4 @@
+import ActionsFeature
 import DesignSystem
 import SwiftUI
 
@@ -13,6 +14,9 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     let translationHeader: TranslationHeader
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
+    var onMarkRead: (() -> Void)?
+    var onTrash: (() -> Void)?
+    let actionStore: TrustActionUIStore?
     var showTranslated: Bool
     var translatedTexts: [String: String]
     var translatedNodes: [String: [String: String]]
@@ -23,8 +27,11 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 
     public init(
         store: ThreadStore,
+        actionStore: TrustActionUIStore? = nil,
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
+        onMarkRead: (() -> Void)? = nil,
+        onTrash: (() -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
         translatedNodes: [String: [String: String]] = [:],
@@ -37,8 +44,11 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
     ) {
         self.store = store
+        self.actionStore = actionStore
         self.onArchive = onArchive
         self.onStar = onStar
+        self.onMarkRead = onMarkRead
+        self.onTrash = onTrash
         self.showTranslated = showTranslated
         self.translatedTexts = translatedTexts
         self.translatedNodes = translatedNodes
@@ -62,6 +72,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 //   head spans the whole pane; body splits 1fr / 340px.
                 VStack(spacing: 0) {
                     headSection
+                    actionOutboxStrip
                     translationHeader
                     HStack(spacing: 0) {
                         ScrollViewReader { proxy in
@@ -97,6 +108,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 .background(Color.rbBgCanvas)
             }
         }
+        .trustActionApprovalAlert(actionStore)
     }
 
     // MARK: - Empty State
@@ -129,13 +141,19 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 
             HStack(spacing: RBSpace.s2) {
                 Spacer()
-                Button { onArchive?() } label: {
+                Button { requestActionOrFallback(.draftReply, fallback: nil) } label: {
+                    Label(String(localized: "thread.action.draftReply", defaultValue: "Draft"), systemImage: "arrowshape.turn.up.left")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(actionTarget == nil)
+
+                Button { requestActionOrFallback(.archiveThread, fallback: onArchive) } label: {
                     Label(String(localized: "thread.action.archive", defaultValue: "Archive"), systemImage: "archivebox")
                 }
                 .buttonStyle(.rbGhost)
-                .disabled(onArchive == nil)
+                .disabled(actionStore == nil && onArchive == nil)
 
-                Button { onStar?() } label: {
+                Button { requestActionOrFallback(.starThread, fallback: onStar) } label: {
                     Label(
                         store.isStarred
                             ? String(localized: "thread.action.unstar", defaultValue: "Unstar")
@@ -144,7 +162,19 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     )
                 }
                 .buttonStyle(.rbGhost)
-                .disabled(onStar == nil)
+                .disabled(actionStore == nil && onStar == nil)
+
+                Button { requestActionOrFallback(.markRead, fallback: onMarkRead) } label: {
+                    Label(String(localized: "thread.action.markRead", defaultValue: "Mark read"), systemImage: "envelope.open")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(actionStore == nil && onMarkRead == nil)
+
+                Button(role: .destructive) { requestActionOrFallback(.trashThread, fallback: onTrash) } label: {
+                    Label(String(localized: "thread.action.trash", defaultValue: "Trash"), systemImage: "trash")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(actionStore == nil && onTrash == nil)
 
                 Button {} label: {
                     Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
@@ -217,10 +247,20 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 }
 
 extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView, TranslationHeader == EmptyView {
-    public init(store: ThreadStore, onArchive: (() -> Void)? = nil, onStar: (() -> Void)? = nil) {
+    public init(
+        store: ThreadStore,
+        actionStore: TrustActionUIStore? = nil,
+        onArchive: (() -> Void)? = nil,
+        onStar: (() -> Void)? = nil,
+        onMarkRead: (() -> Void)? = nil,
+        onTrash: (() -> Void)? = nil
+    ) {
         self.store = store
+        self.actionStore = actionStore
         self.onArchive = onArchive
         self.onStar = onStar
+        self.onMarkRead = onMarkRead
+        self.onTrash = onTrash
         self.showTranslated = false
         self.translatedTexts = [:]
         self.translatedNodes = [:]

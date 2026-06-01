@@ -64,6 +64,7 @@ struct MainScene: View {
                 threadlist: {
                     InboxView(
                         store: inboxStore,
+                        actionStore: composition.trustActionStore,
                         onArchive: { threadId, accountId in
                             Task {
                                 do {
@@ -87,8 +88,11 @@ struct MainScene: View {
                 reading: {
                     ThreadView(
                         store: threadStore,
+                        actionStore: composition.trustActionStore,
                         onArchive: { archiveSelectedThread() },
                         onStar: { starSelectedThread() },
+                        onMarkRead: { markReadSelectedThread() },
+                        onTrash: { trashSelectedThread() },
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.allTranslatedNodes(

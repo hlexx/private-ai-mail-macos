@@ -1,3 +1,4 @@
+import ActionsFeature
 import AIKit
 import AIRuntime
 import AppFoundation
@@ -7,6 +8,7 @@ import AuthKit
 import BriefFeature
 import ComposeFeature
 import InboxFeature
+import IntegrationDomain
 import MailDomain
 import MailProviders
 import MailSync
@@ -29,6 +31,8 @@ final class CompositionRoot {
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
     let mailMutator: MailMutator
+    let trustActionStore: TrustActionUIStore
+    let actionQueueService: ActionQueueService
     let labelReconciler: LabelReconciler
     let translationStore: TranslationStore
     let attachmentSummaryOrchestrator: AttachmentSummaryOrchestrator
@@ -78,6 +82,12 @@ final class CompositionRoot {
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
         self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
+        let gmailActionExecutor = GmailActionExecutor(db: db, apiFactory: apiFactory)
+        self.actionQueueService = ActionQueueService(
+            db: db,
+            executionStore: ActionOutboxExecutionStore(db: db, executor: gmailActionExecutor)
+        )
+        self.trustActionStore = TrustActionUIStore(queue: actionQueueService)
         self.labelReconciler = LabelReconciler(db: db, apiFactory: apiFactory)
         self.labelReconcileCoordinator = LabelReconcileCoordinator(
             reconciler: labelReconciler,
