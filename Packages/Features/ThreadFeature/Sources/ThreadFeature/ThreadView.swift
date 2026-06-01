@@ -1,3 +1,4 @@
+import ActionsFeature
 import DesignSystem
 import SwiftUI
 
@@ -13,36 +14,49 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     let translationHeader: TranslationHeader
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
+    var onMarkRead: (() -> Void)?
+    var onTrash: (() -> Void)?
+    let actionStore: TrustActionUIStore?
     var showTranslated: Bool
     var translatedTexts: [String: String]
     var translatedNodes: [String: [String: String]]
     var onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)?
     var onScrollProxy: ((ScrollViewProxy) -> Void)?
     var attachmentSummaryStore: AttachmentSummaryStore?
+    var attachmentUIStateProvider: (AttachmentInfo) -> AttachmentUIState
 
     public init(
         store: ThreadStore,
+        actionStore: TrustActionUIStore? = nil,
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
+        onMarkRead: (() -> Void)? = nil,
+        onTrash: (() -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
         translatedNodes: [String: [String: String]] = [:],
         onTextNodesExtracted: ((String, [TranslationTextNode]) -> Void)? = nil,
         onScrollProxy: ((ScrollViewProxy) -> Void)? = nil,
         attachmentSummaryStore: AttachmentSummaryStore? = nil,
+        attachmentUIStateProvider: ((AttachmentInfo) -> AttachmentUIState)? = nil,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
     ) {
         self.store = store
+        self.actionStore = actionStore
         self.onArchive = onArchive
         self.onStar = onStar
+        self.onMarkRead = onMarkRead
+        self.onTrash = onTrash
         self.showTranslated = showTranslated
         self.translatedTexts = translatedTexts
         self.translatedNodes = translatedNodes
         self.onTextNodesExtracted = onTextNodesExtracted
         self.onScrollProxy = onScrollProxy
         self.attachmentSummaryStore = attachmentSummaryStore
+        let resolver = AttachmentUIStateResolver()
+        self.attachmentUIStateProvider = attachmentUIStateProvider ?? { resolver.state(for: $0) }
         self.composerContent = composer()
         self.briefContent = briefRail()
         self.translationHeader = translationHeader()
@@ -58,6 +72,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 //   head spans the whole pane; body splits 1fr / 340px.
                 VStack(spacing: 0) {
                     headSection
+                    actionOutboxStrip
                     translationHeader
                     HStack(spacing: 0) {
                         ScrollViewReader { proxy in
@@ -93,6 +108,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 .background(Color.rbBgCanvas)
             }
         }
+        .trustActionApprovalAlert(actionStore)
     }
 
     // MARK: - Empty State
@@ -125,13 +141,25 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
 
             HStack(spacing: RBSpace.s2) {
                 Spacer()
-                Button { onArchive?() } label: {
+                Button { requestActionOrFallback(.draftReply, fallback: nil) } label: {
+                    Label(String(localized: "thread.action.draftReply", defaultValue: "Draft"), systemImage: "arrowshape.turn.up.left")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(actionTarget == nil)
+
+                Button { requestActionOrFallback(.archiveThread, fallback: onArchive) } label: {
                     Label(String(localized: "thread.action.archive", defaultValue: "Archive"), systemImage: "archivebox")
                 }
                 .buttonStyle(.rbGhost)
-                .disabled(onArchive == nil)
+                .disabled(actionStore == nil && onArchive == nil)
 
-                Button { onStar?() } label: {
+                Button {
+                    if store.isStarred {
+                        onStar?()
+                    } else {
+                        requestActionOrFallback(.starThread, fallback: onStar)
+                    }
+                } label: {
                     Label(
                         store.isStarred
                             ? String(localized: "thread.action.unstar", defaultValue: "Unstar")
@@ -140,21 +168,37 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     )
                 }
                 .buttonStyle(.rbGhost)
-                .disabled(onStar == nil)
+                .disabled(actionStore == nil && onStar == nil)
 
-                Button { /* Snooze stub */ } label: {
+                Button { requestActionOrFallback(.markRead, fallback: onMarkRead) } label: {
+                    Label(String(localized: "thread.action.markRead", defaultValue: "Mark read"), systemImage: "envelope.open")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(actionStore == nil && onMarkRead == nil)
+
+                Button(role: .destructive) { requestActionOrFallback(.trashThread, fallback: onTrash) } label: {
+                    Label(String(localized: "thread.action.trash", defaultValue: "Trash"), systemImage: "trash")
+                }
+                .buttonStyle(.rbGhost)
+                .disabled(actionStore == nil && onTrash == nil)
+
+                Button {} label: {
                     Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
                 }
                 .buttonStyle(.rbGhost)
+                .disabled(true)
+                .help(String(localized: "thread.action.snooze.help", defaultValue: "Not available yet"))
 
-                Button { /* Send-to stub */ } label: {
+                Button {} label: {
                     Label {
-                        Text(String(localized: "thread.action.sendTo", defaultValue: "Send to \u{2197}"))
+                        Text(String(localized: "thread.action.sendTo", defaultValue: "Send to"))
                     } icon: {
                         Image(systemName: "paperplane")
                     }
                 }
                 .buttonStyle(.rbGhost)
+                .disabled(true)
+                .help(String(localized: "thread.action.sendTo.help", defaultValue: "Not available yet"))
             }
         }
         .padding(.horizontal, 28)
@@ -208,148 +252,28 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     }
 }
 
-private extension ThreadView {
-    // MARK: - Attachment Block
-
-    var attachmentBlock: some View {
-        ForEach(store.attachments) { att in
-            let summaryState = attachmentSummaryStore?.state(for: att) ?? .idle
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center, spacing: 12) {
-                    // Thumbnail placeholder
-                    ZStack(alignment: .bottomLeading) {
-                        RoundedRectangle(cornerRadius: RBRadius.xs)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(red: 0.96, green: 0.95, blue: 0.9),
-                                             Color(red: 0.84, green: 0.82, blue: 0.75)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .frame(width: 38, height: 48)
-                        Text(att.mime?.contains("pdf") == true ? "PDF" : "FILE")
-                            .font(.rbMono(8, weight: .semibold))
-                            .foregroundStyle(Color.rbGraphite900)
-                            .padding(.leading, 4)
-                            .padding(.bottom, 4)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(att.filename)
-                            .font(.rbGeist(13, weight: .medium))
-                            .foregroundStyle(Color.rbFg1)
-                        Text(attachmentStatusText(att, state: summaryState))
-                            .font(.rbMono(11))
-                            .foregroundStyle(Color.rbFg3)
-                    }
-
-                    Spacer()
-
-                    Button { /* Preview stub */ } label: {
-                        Label(String(localized: "thread.attachment.preview", defaultValue: "Preview"), systemImage: "eye")
-                    }
-                    .buttonStyle(.rbGhost)
-
-                    Button { attachmentSummaryStore?.summarize(att) } label: {
-                        Label(
-                            summaryState.isWorking
-                                ? String(localized: "thread.attachment.summarizing", defaultValue: "Summarizing")
-                                : String(localized: "thread.attachment.summarize", defaultValue: "Summarize"),
-                            systemImage: "sparkle"
-                        )
-                    }
-                    .buttonStyle(.rbSecondary)
-                    .disabled(attachmentSummaryStore == nil || summaryState.isWorking)
-                }
-
-                attachmentSummaryContent(summaryState)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.rbBgElev1)
-            .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: RBRadius.md)
-                    .strokeBorder(Color.rbStroke1, lineWidth: 1)
-            )
-            .padding(.top, 14)
-        }
-    }
-
-    func attachmentStatusText(_ attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
-        AttachmentSummaryStatusFormatter.text(for: attachment, state: state)
-    }
-
-    @ViewBuilder
-    func attachmentSummaryContent(_ state: AttachmentSummaryViewState) -> some View {
-        switch state {
-        case .idle:
-            EmptyView()
-        case .summarizing:
-            Text(String(localized: "thread.attachment.summary.loading", defaultValue: "Reading attachment locally..."))
-                .font(.rbGeist(12))
-                .foregroundStyle(Color.rbFg3)
-        case .summary(let data):
-            VStack(alignment: .leading, spacing: 8) {
-                Text(data.summary)
-                    .font(.rbGeist(13, weight: .medium))
-                    .foregroundStyle(Color.rbFg1)
-                if !data.keyFields.isEmpty {
-                    Text(data.keyFields.map { "\($0.name): \($0.value)" }.joined(separator: " \u{00B7} "))
-                        .font(.rbMono(11))
-                        .foregroundStyle(Color.rbFg2)
-                }
-                if let evidence = data.evidence.first {
-                    Text("\(String(localized: "thread.attachment.summary.evidence", defaultValue: "Evidence:")) \(evidence.quote)")
-                        .font(.rbMono(11))
-                        .foregroundStyle(Color.rbFg3)
-                        .lineLimit(2)
-                }
-            }
-        case .unsupported(let reason):
-            Text(reason)
-                .font(.rbGeist(12))
-                .foregroundStyle(Color.rbFg3)
-        case .failed(let message):
-            Text(message)
-                .font(.rbGeist(12))
-                .foregroundStyle(Color.rbFg3)
-        }
-    }
-}
-
-enum AttachmentSummaryStatusFormatter {
-    static func text(for attachment: AttachmentInfo, state: AttachmentSummaryViewState) -> String {
-        let size = attachment.formattedSize.isEmpty ? "File" : attachment.formattedSize
-        switch state {
-        case .idle:
-            return "\(size) \u{00B7} ready to summarize"
-        case .summarizing:
-            return "\(size) \u{00B7} summarizing locally"
-        case .summary(let data):
-            return data.cached
-                ? "\(size) \u{00B7} cached local summary"
-                : "\(size) \u{00B7} summarized locally"
-        case .unsupported:
-            return "\(size) \u{00B7} unsupported"
-        case .failed:
-            return "\(size) \u{00B7} summary failed"
-        }
-    }
-}
-
 extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyView, TranslationHeader == EmptyView {
-    public init(store: ThreadStore, onArchive: (() -> Void)? = nil, onStar: (() -> Void)? = nil) {
+    public init(
+        store: ThreadStore,
+        actionStore: TrustActionUIStore? = nil,
+        onArchive: (() -> Void)? = nil,
+        onStar: (() -> Void)? = nil,
+        onMarkRead: (() -> Void)? = nil,
+        onTrash: (() -> Void)? = nil
+    ) {
         self.store = store
+        self.actionStore = actionStore
         self.onArchive = onArchive
         self.onStar = onStar
+        self.onMarkRead = onMarkRead
+        self.onTrash = onTrash
         self.showTranslated = false
         self.translatedTexts = [:]
         self.translatedNodes = [:]
         self.onTextNodesExtracted = nil
         self.onScrollProxy = nil
         self.attachmentSummaryStore = nil
+        self.attachmentUIStateProvider = { AttachmentUIStateResolver().state(for: $0) }
         self.composerContent = EmptyView()
         self.briefContent = EmptyView()
         self.translationHeader = EmptyView()

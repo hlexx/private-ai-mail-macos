@@ -84,8 +84,11 @@ extension AttachmentSummaryOrchestrator {
         do {
             return try JSONDecoder().decode(AIAttachmentSummary.self, from: Data(payload.utf8))
         } catch {
-            Self.logger.warning(
-                "Attachment summary cache decode failed attachment=\(request.attachmentId, privacy: .public) task=\(metadata.id.rawValue, privacy: .public) prompt=\(metadata.promptVersion, privacy: .public) schema=\(metadata.schemaVersion, privacy: .public)"
+            Self.logAttachmentEvent(
+                "attachment.summary_cache_decode",
+                status: "failed",
+                errorCategory: "invalid_cached_payload",
+                severity: .warning
             )
             try await deleteCachedSummary(request, fingerprint: fingerprint)
             return nil

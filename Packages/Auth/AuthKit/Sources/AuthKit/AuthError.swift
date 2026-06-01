@@ -1,3 +1,4 @@
+import AppFoundation
 import Foundation
 
 public enum AuthError: Error, Sendable {
@@ -9,6 +10,30 @@ public enum AuthError: Error, Sendable {
     case invalidResponse
     case missingRefreshToken
     case missingCredential(accountID: String)
+    case missingProviderCredential(provider: AuthProvider, accountID: String)
+    case invalidConfiguration(field: String)
+}
+
+public extension AuthError {
+    func userActionableFailure(
+        operation: UserActionableFailureOperation = .account,
+        provider: String? = nil
+    ) -> UserActionableFailure {
+        let category: UserActionableFailureCategory
+        switch self {
+        case .cancelled:
+            category = .unknown
+        case .denied, .missingRefreshToken, .missingCredential, .missingProviderCredential:
+            category = .missingCredential
+        case .network:
+            category = .offline
+        case .decode, .invalidResponse, .keychain:
+            category = .providerUnavailable
+        case .invalidConfiguration:
+            category = .unsupportedOperation
+        }
+        return UserActionableFailure(category: category, operation: operation, provider: provider)
+    }
 }
 
 extension AuthError: LocalizedError {
@@ -29,7 +54,11 @@ extension AuthError: LocalizedError {
         case .missingRefreshToken:
             return "Authorization response did not include a refresh token."
         case .missingCredential(let accountID):
-            return "No saved Gmail credential for account \(accountID). Reconnect the account."
+            return "No saved credential for account \(accountID). Reconnect the account."
+        case .missingProviderCredential(let provider, let accountID):
+            return "No saved \(provider.rawValue) credential for account \(accountID). Reconnect the account."
+        case .invalidConfiguration(let field):
+            return "Authorization configuration is missing \(field)."
         }
     }
 

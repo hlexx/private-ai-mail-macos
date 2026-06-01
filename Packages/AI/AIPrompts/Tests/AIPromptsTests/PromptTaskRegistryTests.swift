@@ -48,6 +48,25 @@ struct PromptTaskRegistryTests {
         #expect(!AttachmentSummaryTask.systemPrompt.contains("Example output"))
     }
 
+    @Test func attachmentSummaryPromptTreatsMaxInputAsTotalRenderedBudget() {
+        let chunkText = String(repeating: "x", count: AttachmentSummaryTask.metadata.maxInputCharacters)
+        let prompt = AttachmentSummaryTask.renderUserPrompt(
+            AttachmentSummaryTaskInput(
+                filename: "long.pdf",
+                mime: "application/pdf",
+                chunks: [
+                    PromptAttachmentChunk(index: 0, sourceOffset: 0, text: chunkText),
+                    PromptAttachmentChunk(index: 1, sourceOffset: chunkText.count, text: chunkText),
+                ]
+            )
+        )
+
+        #expect(prompt.count <= AttachmentSummaryTask.metadata.maxInputCharacters)
+        #expect(prompt.contains("[trimmed "))
+        #expect(prompt.contains("## Output JSON"))
+        #expect(prompt.contains("[chunk 0 | offset 0]"))
+    }
+
     @Test func attachmentSummaryParserAcceptsSeededDuplicateOpeningBrace() throws {
         let parsed = try AttachmentSummaryTask.parse(
             """

@@ -1,8 +1,8 @@
 import AIKit
+import AppFoundation
 import Foundation
 import GRDB
 import NaturalLanguage
-import OSLog
 import Persistence
 
 /// Processes brief generation for threads in the background, one at a time.
@@ -23,7 +23,6 @@ public final class BriefBackgroundQueue {
     private var backfillTask: Task<Void, Never>?
     private var retryCount: Int = 0
     private static let maxRetries = 10
-    private static let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "BriefBackgroundQueue")
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -241,15 +240,11 @@ public final class BriefBackgroundQueue {
                 }
             default:
                 let kind = Self.failureKind(err)
-                Self.logger.error(
-                    "Background brief generation failed kind=\(kind, privacy: .public) account=\(key.accountId, privacy: .private) thread=\(key.threadId, privacy: .private)"
-                )
+                Self.logBrief(status: "failed", accountId: key.accountId, severity: .error, errorCategory: kind)
             }
         } catch {
             let kind = Self.failureKind(error)
-            Self.logger.error(
-                "Background brief generation failed kind=\(kind, privacy: .public) account=\(key.accountId, privacy: .private) thread=\(key.threadId, privacy: .private)"
-            )
+            Self.logBrief(status: "failed", accountId: key.accountId, severity: .error, errorCategory: kind)
             // Other errors — skip this thread, continue with next
         }
     }
@@ -274,6 +269,26 @@ public final class BriefBackgroundQueue {
             }
         }
         return String(describing: type(of: error))
+    }
+
+    private nonisolated static func logBrief(
+        status: String,
+        accountId: String,
+        severity: PrivacyObservabilitySeverity = .info,
+        errorCategory: String? = nil
+    ) {
+        var fields: [PrivacyObservabilityField: String] = [
+            .accountID: accountId,
+            .operation: "thread_brief_backfill",
+            .status: status
+        ]
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .ai, name: "ai.thread_brief_backfill", fields: fields),
+            severity: severity
+        )
     }
 }
 

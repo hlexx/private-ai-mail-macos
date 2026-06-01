@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import MailProviders
 import AuthKit
+import MailDomain
 
 @Suite("GmailAPIClient", .serialized)
 struct GmailAPIClientTests {
@@ -126,6 +127,64 @@ struct GmailAPIClientTests {
         #expect(result.labelIds == ["SENT"])
     }
 
+    @Test func sendMessageIncludesThreadIdInRequestBodyForReplies() async throws {
+        MockURLProtocol.reset()
+        var capturedBody: Data?
+        MockURLProtocol.handlers.append { request in
+            guard let url = request.url, url.path.contains("/messages/send") else { return nil }
+            capturedBody = Self.requestBodyData(from: request)
+            let data = """
+            {"id": "reply001", "threadId": "thread001", "labelIds": ["SENT"]}
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (data, response)
+        }
+
+        let client = makeClient()
+        _ = try await client.sendMessage(raw: "dGVzdA", threadId: "thread001")
+
+        let body = try #require(capturedBody)
+        let object = try JSONSerialization.jsonObject(with: body) as? [String: String]
+        #expect(object?["raw"] == "dGVzdA")
+        #expect(object?["threadId"] == "thread001")
+    }
+
+    @Test func createDraftIncludesNestedMessageBodyForReplies() async throws {
+        MockURLProtocol.reset()
+        var capturedBody: Data?
+        MockURLProtocol.handlers.append { request in
+            guard let url = request.url, url.path.contains("/drafts") else { return nil }
+            capturedBody = Self.requestBodyData(from: request)
+            let data = """
+            {"id": "draft001", "message": {"id": "message001", "threadId": "thread001", "labelIds": ["DRAFT"]}}
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (data, response)
+        }
+
+        let client = makeClient()
+        let draft = try await client.createDraft(raw: "dGVzdA", threadId: "thread001")
+
+        #expect(draft.id == "draft001")
+        #expect(draft.message.id == "message001")
+        #expect(draft.message.threadId == "thread001")
+
+        let body = try #require(capturedBody)
+        let object = try JSONSerialization.jsonObject(with: body) as? [String: [String: String]]
+        #expect(object?["message"]?["raw"] == "dGVzdA")
+        #expect(object?["message"]?["threadId"] == "thread001")
+    }
+
     // MARK: - sendMessage 403 insufficient scope
 
     @Test func sendMessageInsufficientScopeThrows() async throws {
@@ -228,6 +287,71 @@ struct GmailAPIClientTests {
         #expect(requests.count == 1)
     }
 
+    @Test func getAttachmentDataRejectsMissingIdentifierBeforeNetwork() async throws {
+        MockURLProtocol.reset()
+        let client = makeClient()
+
+        do {
+            _ = try await client.getAttachmentData(messageId: "msg001", attachmentId: " ")
+            Issue.record("Expected GmailAPIError.missingAttachmentIdentifier")
+        } catch GmailAPIError.missingAttachmentIdentifier {
+            // expected
+        } catch {
+            Issue.record("Expected missingAttachmentIdentifier, got \(error)")
+        }
+
+        #expect(MockURLProtocol.requestLog.isEmpty)
+    }
+
+    @Test func getAttachmentDataNotFoundIsUserActionable() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/msg001/attachments/missing",
+            statusCode: 404,
+            json: """
+            {"error": {"code": 404, "message": "Not found"}}
+            """
+        )
+
+        let client = makeClient()
+
+        do {
+            _ = try await client.getAttachmentData(messageId: "msg001", attachmentId: "missing")
+            Issue.record("Expected GmailAPIError.serverError")
+        } catch GmailAPIError.serverError(let statusCode) {
+            #expect(statusCode == 404)
+            #expect(GmailAPIError.serverError(statusCode: statusCode).sharedCategory == .notFound)
+            #expect(GmailAPIError.serverError(statusCode: statusCode).errorDescription?.contains("Re-sync") == true)
+        } catch {
+            Issue.record("Expected serverError, got \(error)")
+        }
+    }
+
+    @Test func getAttachmentDataRateLimitIsActionableWithoutSleeping() async throws {
+        MockURLProtocol.reset()
+        MockURLProtocol.stub(
+            path: "/messages/msg001/attachments/att001",
+            statusCode: 429,
+            json: """
+            {"error": {"code": 429, "message": "Rate limited"}}
+            """,
+            headers: ["Content-Type": "application/json", "Retry-After": "0"]
+        )
+
+        let client = makeClient()
+
+        do {
+            _ = try await client.getAttachmentData(messageId: "msg001", attachmentId: "att001")
+            Issue.record("Expected GmailAPIError.rateLimited")
+        } catch GmailAPIError.rateLimited(let retryAfter) {
+            #expect(retryAfter == 0)
+            #expect(GmailAPIError.rateLimited(retryAfter: retryAfter).sharedCategory == .rateLimited)
+            #expect(GmailAPIError.rateLimited(retryAfter: retryAfter).errorDescription?.contains("rate limit") == true)
+        } catch {
+            Issue.record("Expected rateLimited, got \(error)")
+        }
+    }
+
     // MARK: - sendMessage 429 → backoff → retry → 200
 
     @Test func sendMessageRateLimitedRetries() async throws {
@@ -247,6 +371,35 @@ struct GmailAPIClientTests {
         let result = try await client.sendMessage(raw: "dGVzdA", threadId: nil)
 
         #expect(result.id == "sent002")
+    }
+
+    private static func requestBodyData(from request: URLRequest) -> Data? {
+        if let body = request.httpBody {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            return nil
+        }
+
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+
+        while stream.hasBytesAvailable {
+            let count = stream.read(buffer, maxLength: bufferSize)
+            if count < 0 {
+                return nil
+            }
+            if count == 0 {
+                break
+            }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }
 
@@ -343,6 +496,9 @@ struct GmailMapperTests {
                         partId: "1",
                         mimeType: "application/pdf",
                         filename: "report.pdf",
+                        headers: [
+                            GmailDTO.MessagePartHeader(name: "Content-Disposition", value: "attachment; filename=\"report.pdf\""),
+                        ],
                         body: GmailDTO.MessagePartBody(attachmentId: "att001", size: 1024)
                     ),
                 ]
@@ -353,8 +509,17 @@ struct GmailMapperTests {
 
         #expect(message.attachments.count == 1)
         #expect(message.attachments[0].id == "att001")
+        #expect(message.attachments[0].accountId == accountId)
         #expect(message.attachments[0].filename == "report.pdf")
         #expect(message.attachments[0].mimeType == "application/pdf")
+        #expect(message.attachments[0].sizeBytes == 1024)
+        #expect(message.attachments[0].disposition == .attachment)
+        #expect(message.attachments[0].byteFetchHandle == AttachmentByteFetchHandle(
+            provider: .gmail,
+            accountId: accountId,
+            messageId: "msg002",
+            attachmentId: "att001"
+        ))
     }
 
     @Test func mapMessageWithInlineImage() async throws {
@@ -393,10 +558,13 @@ struct GmailMapperTests {
         let message = GmailMapper.mapMessage(dto, accountId: accountId)
 
         #expect(message.attachments.count == 1)
+        #expect(message.attachments[0].accountId == accountId)
         #expect(message.attachments[0].contentId == "logo@example")
         #expect(message.attachments[0].inlineData != nil)
         #expect(message.attachments[0].mimeType == "image/png")
         #expect(message.attachments[0].id == "inline_logo@example")
+        #expect(message.attachments[0].disposition == .inline)
+        #expect(message.attachments[0].byteFetchHandle == nil)
     }
 
     @Test func mapMessageWithAttachmentIncludesContentId() async throws {

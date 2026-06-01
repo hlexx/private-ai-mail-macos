@@ -163,6 +163,16 @@ public enum GmailDTO {
         }
     }
 
+    public struct Draft: Codable, Sendable {
+        public let id: String
+        public let message: Message
+
+        public init(id: String, message: Message) {
+            self.id = id
+            self.message = message
+        }
+    }
+
     public struct HistoryResponse: Codable, Sendable {
         public let history: [HistoryRecord]?
         public let nextPageToken: String?

@@ -66,9 +66,11 @@ struct RBSidebarTests {
 
     @Test func folderItemDefaultCount() {
         let folders = FolderItem.defaultFolders
-        #expect(folders.count == 8)
+        #expect(folders.count == 10)
         #expect(folders[0].id == .inbox)
-        #expect(folders[7].id == .archive)
+        #expect(folders[7].id == .trash)
+        #expect(folders[8].id == .spam)
+        #expect(folders[9].id == .archive)
     }
 
     @Test func accountRowDeterministicColor() {

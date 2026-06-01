@@ -3,6 +3,8 @@ disabled_rules:
   - line_length
   - trailing_comma
 
+baseline: .swiftlint-baseline.json
+
 opt_in_rules:
   - sorted_imports
   - file_header

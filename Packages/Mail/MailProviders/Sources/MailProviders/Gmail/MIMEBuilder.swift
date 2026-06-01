@@ -17,7 +17,7 @@ public enum MIMEBuilder {
         var lines: [String] = []
 
         lines.append("Date: \(rfc5322Date())")
-        lines.append("Message-ID: <\(messageID(seed: message.messageIDSeed))>")
+        lines.append("Message-ID: \(messageIDHeader(message))")
         lines.append("From: \(formatAddress(message.from))")
 
         if !message.to.isEmpty {
@@ -163,6 +163,24 @@ public enum MIMEBuilder {
     static func messageID(seed: String?) -> String {
         let id = seed ?? UUID().uuidString.lowercased()
         return "\(id)@hlexx.privateaimail"
+    }
+
+    static func messageIDHeader(_ message: OutgoingMessage) -> String {
+        if let header = message.messageIDHeader {
+            return normalizedMessageIDHeader(header)
+        }
+        return "<\(messageID(seed: message.messageIDSeed))>"
+    }
+
+    private static func normalizedMessageIDHeader(_ value: String) -> String {
+        let sanitized = sanitizeHeaderValue(value).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitized.isEmpty else {
+            return "<\(messageID(seed: nil))>"
+        }
+        if sanitized.hasPrefix("<"), sanitized.hasSuffix(">") {
+            return sanitized
+        }
+        return "<\(sanitized)>"
     }
 
     // MARK: - RFC 5322 Date

@@ -1,4 +1,5 @@
 import AIKit
+import AppFoundation
 import AttachmentRAG
 import Foundation
 import Observation
@@ -85,11 +86,17 @@ public final class AttachmentSummaryStore {
         if let ragError = error as? AttachmentRAGError {
             switch ragError {
             case .attachmentBytesUnavailable:
-                return String(localized: "thread.attachment.summary.error.bytes", defaultValue: "Attachment data is not available yet.")
+                return UserActionableFailure(
+                    category: .providerUnavailable,
+                    operation: .attachment
+                ).message
             case .extractedTextMissing:
                 return String(localized: "thread.attachment.summary.error.empty", defaultValue: "No readable text was found.")
             }
         }
-        return String(localized: "thread.attachment.summary.error.generic", defaultValue: "Could not summarize this attachment.")
+        if error is AttachmentSummaryEvidenceValidationError {
+            return String(localized: "thread.attachment.summary.error.evidence", defaultValue: "Summary evidence could not be verified.")
+        }
+        return UserActionableFailure.coerce(error, operation: .attachment).message
     }
 }

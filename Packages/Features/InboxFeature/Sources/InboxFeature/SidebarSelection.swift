@@ -1,4 +1,5 @@
 import Foundation
+import MailDomain
 
 public enum SidebarSelection: Hashable, Sendable {
     case folder(FolderID)
@@ -16,15 +17,24 @@ public enum FolderID: String, Hashable, Sendable, CaseIterable {
     case logged
     case starred
     case sent
+    case trash
+    case spam
     case archive = "arch"
 
-    public var gmailLabel: String? {
+    public var canonicalMailbox: CanonicalMailbox? {
         switch self {
-        case .inbox: return "INBOX"
-        case .sent: return "SENT"
-        case .starred: return "STARRED"
-        case .archive: return nil
-        default: return nil
+        case .inbox: return .inbox
+        case .sent: return .sent
+        case .starred: return .starred
+        case .trash: return .trash
+        case .spam: return .spam
+        case .archive: return .archive
+        case .needsReply, .hasDeadline, .attachments, .logged:
+            return nil
         }
+    }
+
+    public var gmailLabel: String? {
+        canonicalMailbox.flatMap(GmailMailboxMapper.gmailLabelID(for:))
     }
 }

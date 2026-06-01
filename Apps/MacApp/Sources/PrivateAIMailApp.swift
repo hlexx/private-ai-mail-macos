@@ -1,5 +1,6 @@
 import ComposeFeature
 import DesignSystem
+import MailDomain
 import Persistence
 import SwiftUI
 
@@ -151,7 +152,14 @@ struct PrivateAIMailApp: App {
         let vm = composition.composeViewModel
         vm.reset()
         let accounts = (try? composition.db.read { db in try AccountRecord.fetchAll(db) }) ?? []
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let activeID = composition.activeAccountID ?? accounts.first?.id {
             vm.selectedAccountID = activeID
             vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email

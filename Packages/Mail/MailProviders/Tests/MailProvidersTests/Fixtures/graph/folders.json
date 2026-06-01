@@ -1,0 +1,37 @@
+{
+  "value": [
+    {
+      "id": "inbox-id",
+      "displayName": "Inbox",
+      "parentFolderId": "root",
+      "childFolderCount": 0,
+      "unreadItemCount": 2,
+      "totalItemCount": 5
+    },
+    {
+      "id": "sentitems-id",
+      "displayName": "Sent Items",
+      "parentFolderId": "root",
+      "childFolderCount": 0,
+      "unreadItemCount": 0,
+      "totalItemCount": 3
+    },
+    {
+      "id": "archive-id",
+      "displayName": "Archive",
+      "parentFolderId": "root",
+      "childFolderCount": 0,
+      "unreadItemCount": 0,
+      "totalItemCount": 8
+    },
+    {
+      "id": "projects-id",
+      "displayName": "Project Alpha",
+      "parentFolderId": "root",
+      "childFolderCount": 0,
+      "unreadItemCount": 1,
+      "totalItemCount": 2
+    }
+  ],
+  "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/mailFolders/delta?$deltatoken=fixture-folder-cursor"
+}

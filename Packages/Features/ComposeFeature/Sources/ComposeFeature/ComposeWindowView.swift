@@ -53,7 +53,10 @@ public struct ComposeWindowView: View {
         }
         .onChange(of: viewModel.sendState.key) { _, newKey in
             if newKey == "sent" {
-                dismiss()
+                Task {
+                    try? await Task.sleep(for: .milliseconds(700))
+                    dismiss()
+                }
             }
         }
         .animation(RBEase.out(duration: RBDuration.d3), value: viewModel.sendState.key)
@@ -172,12 +175,16 @@ public struct ComposeWindowView: View {
             HStack(spacing: RBSpace.s2) {
                 Button(String(localized: "compose.cta.saveDraft", defaultValue: "Save draft")) {}
                     .buttonStyle(.rbGhost)
+                    .disabled(true)
+                    .help(String(localized: "compose.cta.saveDraft.help", defaultValue: "Draft saving is not available yet"))
 
                 Button {
                 } label: {
                     Label(String(localized: "compose.cta.rewrite", defaultValue: "Rewrite"), systemImage: "sparkle")
                 }
                 .buttonStyle(.rbSecondary)
+                .disabled(true)
+                .help(String(localized: "compose.cta.rewrite.help", defaultValue: "Rewrite is not available yet"))
 
                 Button {
                     viewModel.requestSend()
@@ -195,10 +202,7 @@ public struct ComposeWindowView: View {
     }
 
     private var isSendEnabled: Bool {
-        if case .idle = viewModel.sendState {
-            return !viewModel.toField.trimmingCharacters(in: .whitespaces).isEmpty
-        }
-        return false
+        viewModel.canRequestSend
     }
 }
 

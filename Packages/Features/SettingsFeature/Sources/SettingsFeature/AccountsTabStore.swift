@@ -1,3 +1,4 @@
+import AppFoundation
 import AuthKit
 import Foundation
 import GRDB
@@ -15,17 +16,48 @@ public enum AddAccountPhase: Sendable, Equatable {
     case error(String)
 }
 
+public enum ProviderReauthorizationPhase: Sendable, Equatable {
+    case idle
+    case authorizing
+    case done
+    case error(String)
+}
+
+public struct AccountProviderOption: Identifiable, Sendable, Equatable {
+    public enum Availability: Sendable, Equatable {
+        case enabled
+        case disabled(reason: String)
+    }
+
+    public let provider: AuthProvider
+    public let title: String
+    public let subtitle: String
+    public let actionTitle: String
+    public let systemImage: String
+    public let availability: Availability
+
+    public var id: String { provider.rawValue }
+
+    public var isEnabled: Bool {
+        if case .enabled = availability { return true }
+        return false
+    }
+}
+
 @Observable
 @MainActor
 public final class AccountsTabStore {
     public private(set) var accounts: [AccountRecord] = []
     public private(set) var addPhase: AddAccountPhase = .idle
+    public private(set) var reauthorizationPhases: [String: ProviderReauthorizationPhase] = [:]
     public private(set) var syncStates: [String: SyncState] = [:]
+    public private(set) var providerOptions: [AccountProviderOption]
 
     private let db: AppDatabase
     private let oauthClient: any OAuthClient
     private let tokenStore: any TokenStore
     private let syncSupervisor: SyncSupervisor
+    private let localAccountCacheDeleter: @Sendable (String) throws -> Void
     private var observationTask: Task<Void, Never>?
 
     /// Called after a new account is fully added and sync has started.
@@ -35,12 +67,48 @@ public final class AccountsTabStore {
         db: AppDatabase,
         oauthClient: any OAuthClient,
         tokenStore: any TokenStore,
-        syncSupervisor: SyncSupervisor
+        syncSupervisor: SyncSupervisor,
+        providerOptions: [AccountProviderOption] = AccountsTabStore.defaultProviderOptions(),
+        localAccountCacheDeleter: @escaping @Sendable (String) throws -> Void = { _ in }
     ) {
         self.db = db
         self.oauthClient = oauthClient
         self.tokenStore = tokenStore
         self.syncSupervisor = syncSupervisor
+        self.providerOptions = providerOptions
+        self.localAccountCacheDeleter = localAccountCacheDeleter
+    }
+
+    public static func defaultProviderOptions() -> [AccountProviderOption] {
+        [
+            AccountProviderOption(
+                provider: .gmail,
+                title: "Gmail",
+                subtitle: "Connect a Gmail account.",
+                actionTitle: "Add Gmail account",
+                systemImage: "envelope",
+                availability: .enabled
+            ),
+            AccountProviderOption(
+                provider: .outlook,
+                title: "Outlook",
+                subtitle: "Beta support is disabled until real account smoke tests pass.",
+                actionTitle: "Add Outlook account",
+                systemImage: "envelope.badge",
+                availability: .disabled(reason: "Internal beta")
+            ),
+        ]
+    }
+
+    public func addAccount(provider: AuthProvider) {
+        switch provider {
+        case .gmail:
+            addGmailAccount()
+        case .outlook:
+            addPhase = .error("Outlook support is in beta and disabled until real account smoke tests pass.")
+        default:
+            addPhase = .error("This mail provider is not supported yet.")
+        }
     }
 
     public func startObserving() {
@@ -116,7 +184,7 @@ public final class AccountsTabStore {
             } catch let error as AuthError where error.isCancelled {
                 self.addPhase = .idle
             } catch {
-                self.addPhase = .error(error.localizedDescription)
+                self.addPhase = .error(Self.userMessage(for: error, operation: .account, provider: "Gmail"))
             }
         }
     }
@@ -126,15 +194,60 @@ public final class AccountsTabStore {
             guard let self else { return }
             await self.syncSupervisor.stop(accountId: accountId)
             do {
+                try self.tokenStore.delete(for: accountId)
+
+                let deleteLocalCache = self.localAccountCacheDeleter
+                try await Task.detached(priority: .utility) {
+                    try deleteLocalCache(accountId)
+                }.value
+
                 try await DatabaseActor.shared.run {
                     try self.db.dbQueue.write { db in
                         _ = try AccountRecord.deleteOne(db, key: accountId)
                     }
                 }
-                try? self.tokenStore.delete(for: accountId)
                 self.syncStates.removeValue(forKey: accountId)
+                self.reauthorizationPhases.removeValue(forKey: accountId)
             } catch {
-                self.addPhase = .error(error.localizedDescription)
+                self.addPhase = .error(Self.userMessage(for: error, operation: .account))
+            }
+        }
+    }
+
+    public func reauthorizeAccount(_ accountId: String) {
+        guard reauthorizationPhases[accountId] != .authorizing else { return }
+        reauthorizationPhases[accountId] = .authorizing
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let account = try self.db.read { db in
+                    try AccountRecord.fetchOne(db, key: accountId)
+                }
+                guard let account else {
+                    throw SettingsAccountAuthorizationError.accountNotFound
+                }
+
+                switch AuthProvider(rawValue: account.provider) {
+                case .gmail:
+                    let credential = try await self.oauthClient.reauthorize(
+                        additionalScopes: GmailOAuthConfig.default.scopes
+                    )
+                    try self.tokenStore.save(credential, for: accountId)
+                    self.reauthorizationPhases[accountId] = .done
+                case .outlook:
+                    self.reauthorizationPhases[accountId] = .error(
+                        "Outlook re-consent is not available in this build."
+                    )
+                default:
+                    self.reauthorizationPhases[accountId] = .error(
+                        "This mail provider is not supported yet."
+                    )
+                }
+            } catch {
+                self.reauthorizationPhases[accountId] = .error(
+                    Self.userMessage(for: error, operation: .account, provider: "Gmail")
+                )
             }
         }
     }
@@ -187,7 +300,7 @@ public final class AccountsTabStore {
                     }
                 case .error(let syncError):
                     if case .bootstrapping = self.addPhase {
-                        self.addPhase = .error(syncError.localizedDescription)
+                        self.addPhase = .error(syncError.userActionableFailure.message)
                     }
                 case .threadUpserted:
                     break
@@ -203,6 +316,23 @@ public final class AccountsTabStore {
             }
         }
     }
+
+    private nonisolated static func userMessage(
+        for error: any Error,
+        operation: UserActionableFailureOperation,
+        provider: String? = nil
+    ) -> String {
+        if let authError = error as? AuthError {
+            return authError.userActionableFailure(operation: operation, provider: provider).message
+        }
+        if let gmailError = error as? GmailAPIError {
+            return gmailError.userActionableFailure(operation: operation).message
+        }
+        if let graphError = error as? GraphAPIError {
+            return graphError.userActionableFailure(operation: operation).message
+        }
+        return UserActionableFailure.coerce(error, operation: operation, provider: provider).message
+    }
 }
 
 // MARK: - Helpers
@@ -217,5 +347,16 @@ extension AuthError {
 extension DatabaseActor {
     fileprivate func run<T: Sendable>(_ work: @DatabaseActor @Sendable () throws -> T) async rethrows -> T {
         try await work()
+    }
+}
+
+private enum SettingsAccountAuthorizationError: LocalizedError {
+    case accountNotFound
+
+    var errorDescription: String? {
+        switch self {
+        case .accountNotFound:
+            return "The connected account could not be found."
+        }
     }
 }

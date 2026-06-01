@@ -5,6 +5,8 @@ public struct SyncStateRecord: Codable, Sendable, FetchableRecord, PersistableRe
     public static let databaseTableName = "sync_state"
 
     public var accountId: String
+    // TODO(trust-mvp-01): Rename to a provider-neutral checkpoint field once
+    // Graph delta checkpoints are added to shared sync contracts.
     public var historyId: String?
     public var lastBootstrapAt: Int?
     public var status: String

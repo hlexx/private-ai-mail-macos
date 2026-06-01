@@ -1,6 +1,7 @@
 import Foundation
 
 public enum GmailAPIError: Error, Sendable {
+    case missingAttachmentIdentifier
     case unauthorized
     case rateLimited(retryAfter: TimeInterval?)
     case serverError(statusCode: Int)
@@ -14,6 +15,8 @@ public enum GmailAPIError: Error, Sendable {
 extension GmailAPIError: LocalizedError {
     public var errorDescription: String? {
         switch self {
+        case .missingAttachmentIdentifier:
+            return "Gmail attachment is missing a download identifier. Re-sync the message before trying again."
         case .unauthorized:
             return "Gmail authentication failed (401). The access token was rejected — try removing the account and reconnecting."
         case .rateLimited(let retryAfter):
@@ -22,7 +25,14 @@ extension GmailAPIError: LocalizedError {
             }
             return "Gmail API rate limit hit (429)."
         case .serverError(let code):
-            return "Gmail API server error (HTTP \(code))."
+            switch code {
+            case 404:
+                return "Gmail attachment or message was not found. Re-sync the mailbox and try again."
+            case 500 ... 599:
+                return "Gmail is temporarily unavailable (HTTP \(code)). Try again shortly."
+            default:
+                return "Gmail API request failed (HTTP \(code))."
+            }
         case .networkError(let inner):
             return "Network error reaching Gmail: \((inner as? LocalizedError)?.errorDescription ?? String(describing: inner))"
         case .decodingError(let inner):

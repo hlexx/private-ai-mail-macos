@@ -11,6 +11,8 @@ let package = Package(
         .package(path: "../MailProviders"),
         .package(path: "../MailDomain"),
         .package(path: "../MailIndex"),
+        .package(path: "../../Integrations/IntegrationDomain"),
+        .package(path: "../../Core/AppFoundation"),
         .package(path: "../../Core/Persistence"),
         .package(path: "../../Auth/AuthKit"),
     ],
@@ -21,11 +23,13 @@ let package = Package(
                 "MailProviders",
                 "MailDomain",
                 "MailIndex",
+                "IntegrationDomain",
+                "AppFoundation",
                 "Persistence",
                 "AuthKit",
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "MailSyncTests", dependencies: ["MailSync"]),
+        .testTarget(name: "MailSyncTests", dependencies: ["MailSync", "AuthKit"]),
     ]
 )

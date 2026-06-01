@@ -14,8 +14,9 @@ private struct ToolbarTestHost: View {
             onToggleTheme: {},
             onOpenSettings: {},
             onCompose: {},
-            onOpenActionSheet: {},
-            searchFocused: $searchFocused
+            searchFocused: $searchFocused,
+            searchText: .constant(""),
+            onSubmitSearch: {}
         )
         .frame(width: 1200, height: 56)
     }

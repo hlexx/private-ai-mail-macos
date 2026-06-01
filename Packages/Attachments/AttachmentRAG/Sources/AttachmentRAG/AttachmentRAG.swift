@@ -1,9 +1,9 @@
 import AIKit
 import AIPrompts
+import AppFoundation
 import AttachmentKit
 import Foundation
 import GRDB
-import os
 import Persistence
 
 // MARK: - Public API
@@ -48,7 +48,7 @@ enum EvidenceValidationFailureKind: String, Sendable, Equatable {
     case quoteNotFound = "quote_not_found"
 }
 
-struct AttachmentSummaryEvidenceValidationError: Error, Sendable, Equatable {
+public struct AttachmentSummaryEvidenceValidationError: Error, Sendable, Equatable {
     let kind: EvidenceValidationFailureKind
 }
 
@@ -57,11 +57,6 @@ public actor AttachmentSummaryOrchestrator {
     private let byteStore: AttachmentByteStore
     private let aiService: any AIService
     private let byteProvider: (any AttachmentByteProvider)?
-
-    static let logger = Logger(
-        subsystem: "com.privateaimail.attachments",
-        category: "AttachmentRAG"
-    )
 
     public init(
         db: AppDatabase,
@@ -80,10 +75,10 @@ public actor AttachmentSummaryOrchestrator {
         if let cached = try await fetchCachedSummary(request, fingerprint: blob.sha256) {
             do {
                 try validateCachedSummary(cached, request: request)
-                Self.logger.info("Attachment summary cache hit for \(request.attachmentId, privacy: .public)")
+                Self.logAttachmentEvent("attachment.summary_cache", status: "hit")
                 return .summary(cached, cached: true)
             } catch let error as AttachmentSummaryEvidenceValidationError {
-                Self.logEvidenceValidationFailure(error, request: request)
+                Self.logEvidenceValidationFailure(error)
                 try await deleteCachedSummary(request, fingerprint: blob.sha256)
             }
         }
@@ -103,7 +98,11 @@ public actor AttachmentSummaryOrchestrator {
 
         guard extraction.status == .extracted else {
             let reason = extraction.unsupportedReason ?? "Unsupported attachment"
-            Self.logger.info("Attachment summary unsupported for \(request.attachmentId, privacy: .public)")
+            Self.logAttachmentEvent(
+                "attachment.summary_extraction",
+                status: "unsupported",
+                errorCategory: "unsupported_attachment"
+            )
             return .unsupported(reason)
         }
 
@@ -127,7 +126,7 @@ public actor AttachmentSummaryOrchestrator {
         do {
             try Self.validateSummaryEvidence(summary, chunks: chunks)
         } catch let error as AttachmentSummaryEvidenceValidationError {
-            Self.logEvidenceValidationFailure(error, request: request)
+            Self.logEvidenceValidationFailure(error)
             throw error
         }
 
@@ -137,17 +136,34 @@ public actor AttachmentSummaryOrchestrator {
             extractionVersion: extraction.extractionVersion,
             fingerprint: verifiedBlob.sha256
         )
-        Self.logger.info("Attachment summary generated for \(request.attachmentId, privacy: .public)")
+        Self.logAttachmentEvent("attachment.summary_generation", status: "generated")
         return .summary(summary, cached: false)
     }
 
-    private static func logEvidenceValidationFailure(
-        _ error: AttachmentSummaryEvidenceValidationError,
-        request: AttachmentSummaryRequest
+    private static func logEvidenceValidationFailure(_ error: AttachmentSummaryEvidenceValidationError) {
+        logAttachmentEvent(
+            "attachment.summary_evidence_validation",
+            status: "failed",
+            errorCategory: error.kind.rawValue,
+            severity: .warning
+        )
+    }
+
+    static func logAttachmentEvent(
+        _ name: String,
+        status: String,
+        errorCategory: String? = nil,
+        severity: PrivacyObservabilitySeverity = .info
     ) {
-        let metadata = AttachmentSummaryTask.metadata
-        logger.warning(
-            "Attachment summary evidence validation failed attachment=\(request.attachmentId, privacy: .public) task=\(metadata.id.rawValue, privacy: .public) prompt=\(metadata.promptVersion, privacy: .public) kind=\(error.kind.rawValue, privacy: .public)"
+        var fields: [PrivacyObservabilityField: String] = [
+            .status: status,
+        ]
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .attachment, name: name, fields: fields),
+            severity: severity
         )
     }
 
@@ -168,16 +184,22 @@ public actor AttachmentSummaryOrchestrator {
             guard data.count == blob.byteCount,
                   AttachmentByteStore.sha256Hex(data) == blob.sha256
             else {
-                Self.logger.warning(
-                    "Attachment blob integrity check failed attachment=\(request.attachmentId, privacy: .public) reason=hash_or_size_mismatch"
+                Self.logAttachmentEvent(
+                    "attachment.blob_integrity",
+                    status: "failed",
+                    errorCategory: "hash_or_size_mismatch",
+                    severity: .warning
                 )
                 try await removeStaleBlob(blob, request: request)
                 return try await fetchAndPersistBlob(request)
             }
             return (blob, data)
         } catch {
-            Self.logger.warning(
-                "Attachment blob load failed attachment=\(request.attachmentId, privacy: .public) reason=missing_or_invalid_path"
+            Self.logAttachmentEvent(
+                "attachment.blob_load",
+                status: "failed",
+                errorCategory: "missing_or_invalid_path",
+                severity: .warning
             )
             try await removeStaleBlob(blob, request: request)
             return try await fetchAndPersistBlob(request)

@@ -8,14 +8,135 @@ struct AuthKitTests {
         #expect(AuthKit.moduleName == "AuthKit")
     }
 
-    @Test func defaultScopesIncludeReadSendAndUserinfo() {
+    @Test func defaultScopesIncludeReadModifySendAndUserinfo() {
         let expected: Set<String> = [
             "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.modify",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/userinfo.email"
         ]
         let actual = Set(GmailOAuthConfig.default.scopes)
         #expect(actual == expected)
+    }
+}
+
+@Suite("MicrosoftOAuthConfig")
+struct MicrosoftOAuthConfigTests {
+    @Test func defaultScopesUseGraphLeastPrivilegeSet() throws {
+        let config = try MicrosoftOAuthConfig(
+            clientID: "client-id",
+            redirectURI: "com.hlexx.privateaimail:/oauth2redirect"
+        )
+
+        #expect(config.tenant == "common")
+        #expect(Set(config.scopes) == [
+            "openid",
+            "profile",
+            "email",
+            "offline_access",
+            "Mail.ReadWrite",
+            "Mail.Send",
+        ])
+    }
+
+    @Test func endpointsUseConfiguredTenant() throws {
+        let config = try MicrosoftOAuthConfig(
+            clientID: "client-id",
+            tenant: "organizations",
+            redirectURI: "com.hlexx.privateaimail:/oauth2redirect"
+        )
+
+        #expect(config.authorizationEndpoint.absoluteString == "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize")
+        #expect(config.tokenEndpoint.absoluteString == "https://login.microsoftonline.com/organizations/oauth2/v2.0/token")
+    }
+
+    @Test func rejectsMissingCredentialsAndScopes() {
+        #expect(throws: AuthError.self) {
+            _ = try MicrosoftOAuthConfig(clientID: " ", redirectURI: "scheme:/callback")
+        }
+        #expect(throws: AuthError.self) {
+            _ = try MicrosoftOAuthConfig(clientID: "client-id", redirectURI: "")
+        }
+        #expect(throws: AuthError.self) {
+            _ = try MicrosoftOAuthConfig(
+                clientID: "client-id",
+                redirectURI: "scheme:/callback",
+                scopes: []
+            )
+        }
+    }
+
+    @Test func reconsentSignalReportsMissingScopesCaseInsensitively() throws {
+        let config = try MicrosoftOAuthConfig(
+            clientID: "client-id",
+            redirectURI: "scheme:/callback"
+        )
+
+        let signal = try config.reconsentSignal(
+            accountID: "outlook-1",
+            grantedScopes: ["OPENID", "profile", "email", "offline_access", "mail.readwrite"]
+        )
+
+        #expect(signal.provider == .outlook)
+        #expect(signal.accountID == "outlook-1")
+        #expect(signal.missingScopes == ["Mail.Send"])
+        #expect(signal.requiresReconsent)
+    }
+
+    @Test func noReconsentSignalWhenAllScopesGranted() throws {
+        let config = try MicrosoftOAuthConfig(
+            clientID: "client-id",
+            redirectURI: "scheme:/callback"
+        )
+
+        let signal = try config.reconsentSignal(
+            accountID: "outlook-1",
+            grantedScopes: config.scopes
+        )
+
+        #expect(!signal.requiresReconsent)
+        #expect(signal.missingScopes.isEmpty)
+    }
+}
+
+@Suite("AuthAccountIdentity")
+struct AuthAccountIdentityTests {
+    @Test func outlookIdentityPersistsProviderAndDisplayIdentityWithoutCredential() throws {
+        let identity = try AuthAccountIdentity(
+            accountID: "outlook-1",
+            provider: .microsoftGraph,
+            email: "alex@example.com",
+            displayName: "Alex Example",
+            providerUserID: "aad-user-id"
+        )
+
+        #expect(identity.provider == .outlook)
+        #expect(identity.email == "alex@example.com")
+        #expect(identity.displayName == "Alex Example")
+        #expect(try identity.credentialScope.storageAccountID == "outlook:outlook-1")
+
+        let data = try JSONEncoder().encode(identity)
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("\"provider\""))
+        #expect(!json.contains("access"))
+        #expect(!json.contains("credential"))
+    }
+
+    @Test func rejectsMissingAccountIdentityFields() {
+        #expect(throws: AuthError.self) {
+            _ = try AuthAccountIdentity(
+                accountID: "",
+                provider: .outlook,
+                email: "alex@example.com"
+            )
+        }
+        #expect(throws: AuthError.self) {
+            _ = try AuthAccountIdentity(
+                accountID: "outlook-1",
+                provider: .outlook,
+                email: " "
+            )
+        }
     }
 }
 
@@ -119,6 +240,60 @@ struct InMemoryTokenStoreTests {
         TokenCredential(
             accessToken: access,
             refreshToken: "rt",
+            expiresAt: Date().addingTimeInterval(3600)
+        )
+    }
+}
+
+@Suite("ProviderScopedTokenStore")
+struct ProviderScopedTokenStoreTests {
+    @Test func isolatesCredentialsByProviderAndAccount() throws {
+        let base = InMemoryTokenStore()
+        let store = ProviderScopedTokenStore(base: base)
+        let gmail = try TokenCredentialScope(provider: .gmail, accountID: "same-account")
+        let outlook = try TokenCredentialScope(provider: .outlook, accountID: "same-account")
+
+        try store.save(makeCredential(access: "gmail-token"), for: gmail)
+        try store.save(makeCredential(access: "outlook-token"), for: outlook)
+
+        #expect(try store.load(for: gmail)?.accessToken == "gmail-token")
+        #expect(try store.load(for: outlook)?.accessToken == "outlook-token")
+        #expect(try base.load(for: "same-account") == nil)
+    }
+
+    @Test func missingCredentialErrorIncludesProviderAndAccount() throws {
+        let store = ProviderScopedTokenStore(base: InMemoryTokenStore())
+        let scope = try TokenCredentialScope(provider: .outlook, accountID: "outlook-1")
+
+        let error = #expect(throws: AuthError.self) {
+            _ = try store.requireCredential(for: scope)
+        }
+        guard let error,
+              case AuthError.missingProviderCredential(let provider, let accountID) = error else {
+            Issue.record("Expected missingProviderCredential error")
+            return
+        }
+        #expect(provider == .outlook)
+        #expect(accountID == "outlook-1")
+    }
+
+    @Test func deleteRemovesOnlyScopedCredential() throws {
+        let store = ProviderScopedTokenStore(base: InMemoryTokenStore())
+        let gmail = try TokenCredentialScope(provider: .gmail, accountID: "account-1")
+        let outlook = try TokenCredentialScope(provider: .outlook, accountID: "account-1")
+
+        try store.save(makeCredential(access: "gmail-token"), for: gmail)
+        try store.save(makeCredential(access: "outlook-token"), for: outlook)
+        try store.delete(for: outlook)
+
+        #expect(try store.load(for: gmail)?.accessToken == "gmail-token")
+        #expect(try store.load(for: outlook) == nil)
+    }
+
+    private func makeCredential(access: String) -> TokenCredential {
+        TokenCredential(
+            accessToken: access,
+            refreshToken: "refresh",
             expiresAt: Date().addingTimeInterval(3600)
         )
     }

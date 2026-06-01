@@ -66,6 +66,13 @@ struct ComposeServiceTests {
         #expect(msg?.flags == MessageRecord.sentByMe | MessageRecord.read)
         #expect(msg?.bodyText == "Hello, world!")
 
+        let hasSentLabel = try db.read { dbConn in
+            try ThreadLabelRecord
+                .filter(Column("account_id") == "acc_1" && Column("thread_id") == "thread_888" && Column("label_id") == "SENT")
+                .fetchCount(dbConn)
+        }
+        #expect(hasSentLabel == 1)
+
         let thread = try db.read { dbConn in
             try ThreadRecord.filter(Column("id") == "thread_888" && Column("account_id") == "acc_1").fetchOne(dbConn)
         }
@@ -74,7 +81,7 @@ struct ComposeServiceTests {
         #expect(thread?.messageCount == 1)
     }
 
-    @Test func replyDoesNotInsertNewThread() async throws {
+    @Test func replySendPassesThreadIdAndBuildsReplyHeaders() async throws {
         let db = try await makeDB()
         try await seedAccount(db: db)
 
@@ -90,18 +97,26 @@ struct ComposeServiceTests {
         )
 
         let service = LiveComposeService(api: mockAPI, db: db)
-        let reply = ReplyContext(threadID: "existing_thread", inReplyToMessageID: "<orig@example.com>", referencesChain: ["<orig@example.com>"])
+        let reply = ReplyContext(threadID: "existing_thread", inReplyToMessageID: "<orig@example.com>", referencesChain: ["<root@example.com>"])
         let draft = makeDraft(replyContext: reply)
 
         let echo = try await service.send(draft)
 
         #expect(echo.threadID == "existing_thread")
         #expect(mockAPI.lastThreadId == "existing_thread")
+        let raw = try #require(decodedRawMessage(from: mockAPI))
+        #expect(raw.contains("In-Reply-To: <orig@example.com>\r\n"))
+        #expect(raw.contains("References: <root@example.com> <orig@example.com>\r\n"))
 
         let threadCount = try db.read { dbConn in
             try ThreadRecord.filter(Column("id") == "existing_thread").fetchCount(dbConn)
         }
         #expect(threadCount == 1)
+
+        let thread = try db.read { dbConn in
+            try ThreadRecord.fetchOne(dbConn, key: ["account_id": "acc_1", "id": "existing_thread"])
+        }
+        #expect(thread?.messageCount == 3)
     }
 
     @Test func insufficientScopeThrowsNeedsReconsent() async throws {
@@ -124,6 +139,10 @@ struct ComposeServiceTests {
                 Issue.record("Expected needsReconsent, got \(error)")
             }
         }
+        let messageCount = try db.read { dbConn in
+            try MessageRecord.filter(Column("account_id") == "acc_1").fetchCount(dbConn)
+        }
+        #expect(messageCount == 0)
     }
 
     @Test func emptyRecipientsThrowsNoRecipients() async throws {
@@ -146,7 +165,7 @@ struct ComposeServiceTests {
         #expect(mockAPI.sendCallCount == 0)
     }
 
-    @Test func genericAPIErrorWrapsAsSendError() async throws {
+    @Test func genericAPIErrorWrapsAsSendErrorAndDoesNotInsertLocalSentState() async throws {
         let db = try await makeDB()
         try await seedAccount(db: db)
 
@@ -166,7 +185,76 @@ struct ComposeServiceTests {
                 Issue.record("Expected send(underlying:), got \(error)")
             }
         }
+
+        let localState = try db.read { dbConn in
+            let messages = try MessageRecord.filter(Column("account_id") == "acc_1").fetchCount(dbConn)
+            let threads = try ThreadRecord.filter(Column("account_id") == "acc_1").fetchCount(dbConn)
+            let labels = try ThreadLabelRecord.filter(Column("account_id") == "acc_1").fetchCount(dbConn)
+            return (messages: messages, threads: threads, labels: labels)
+        }
+        #expect(localState.messages == 0)
+        #expect(localState.threads == 0)
+        #expect(localState.labels == 0)
     }
+
+    @Test func duplicateReturnedSentMessageDoesNotDuplicateLocalRowsOrThreadCount() async throws {
+        let db = try await makeDB()
+        try await seedAccount(db: db)
+
+        try await DatabaseActor.shared.run {
+            try db.write { dbConn in
+                try ThreadRecord(
+                    id: "existing_thread",
+                    accountId: "acc_1",
+                    lastMessageAt: 500,
+                    messageCount: 2
+                ).insert(dbConn)
+            }
+        }
+
+        let mockAPI = MockGmailAPI()
+        mockAPI.sendMessageResult = .success(
+            GmailDTO.SentMessage(id: "reply_1", threadId: "existing_thread", labelIds: ["SENT"])
+        )
+
+        let service = LiveComposeService(api: mockAPI, db: db)
+        let reply = ReplyContext(
+            threadID: "existing_thread",
+            inReplyToMessageID: "<orig@example.com>",
+            referencesChain: ["<root@example.com>", "<orig@example.com>"]
+        )
+        let draft = makeDraft(replyContext: reply)
+
+        _ = try await service.send(draft)
+        _ = try await service.send(draft)
+
+        let state = try db.read { dbConn in
+            let messages = try MessageRecord
+                .filter(Column("account_id") == "acc_1" && Column("id") == "reply_1")
+                .fetchCount(dbConn)
+            let thread = try ThreadRecord.fetchOne(dbConn, key: ["account_id": "acc_1", "id": "existing_thread"])
+            let labels = try ThreadLabelRecord
+                .filter(Column("account_id") == "acc_1" && Column("thread_id") == "existing_thread" && Column("label_id") == "SENT")
+                .fetchCount(dbConn)
+            return (messages: messages, thread: thread, labels: labels)
+        }
+        #expect(state.messages == 1)
+        #expect(state.thread?.messageCount == 3)
+        #expect(state.labels == 1)
+    }
+}
+
+private func decodedRawMessage(from api: MockGmailAPI) -> String? {
+    guard var base64 = api.lastRaw else { return nil }
+    base64 = base64
+        .replacingOccurrences(of: "-", with: "+")
+        .replacingOccurrences(of: "_", with: "/")
+    let remainder = base64.count % 4
+    if remainder > 0 {
+        base64 += String(repeating: "=", count: 4 - remainder)
+    }
+    guard let data = Data(base64Encoded: base64) else { return nil }
+    return String(data: data, encoding: .utf8)
 }
 
 extension DatabaseActor {

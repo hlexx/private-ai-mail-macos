@@ -1,4 +1,5 @@
 import Testing
+import AppFoundation
 import Foundation
 @testable import SettingsFeature
 import AuthKit
@@ -79,10 +80,15 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
 
 // MARK: - Helpers
 
-private func insertAccount(id: String, email: String, into db: AppDatabase) throws {
+private func insertAccount(
+    id: String,
+    email: String,
+    provider: String = "gmail",
+    into db: AppDatabase
+) throws {
     let account = AccountRecord(
         id: id,
-        provider: "gmail",
+        provider: provider,
         email: email,
         createdAt: Int(Date().timeIntervalSince1970)
     )
@@ -99,7 +105,8 @@ struct AccountsTabStoreTests {
     private func makeStore(
         db: AppDatabase? = nil,
         oauthClient: MockOAuthClient? = nil,
-        tokenStore: MockTokenStore? = nil
+        tokenStore: MockTokenStore? = nil,
+        localAccountCacheDeleter: @escaping @Sendable (String) throws -> Void = { _ in }
     ) async throws -> (AccountsTabStore, AppDatabase, MockOAuthClient, MockTokenStore) {
         let database = try db ?? AppDatabase.openInMemorySync()
         let oauth = oauthClient ?? MockOAuthClient()
@@ -109,9 +116,34 @@ struct AccountsTabStoreTests {
             db: database,
             oauthClient: oauth,
             tokenStore: tokens,
-            syncSupervisor: supervisor
+            syncSupervisor: supervisor,
+            localAccountCacheDeleter: localAccountCacheDeleter
         )
         return (store, database, oauth, tokens)
+    }
+
+    @Test @MainActor
+    func defaultProviderOptionsKeepGmailEnabledAndOutlookDisabledBeta() async throws {
+        let (store, _, _, _) = try await makeStore()
+
+        #expect(store.providerOptions.map(\.provider) == [.gmail, .outlook])
+
+        let gmail = try #require(store.providerOptions.first { $0.provider == .gmail })
+        #expect(gmail.title == "Gmail")
+        #expect(gmail.actionTitle == "Add Gmail account")
+        #expect(gmail.isEnabled)
+
+        let outlook = try #require(store.providerOptions.first { $0.provider == .outlook })
+        #expect(outlook.title == "Outlook")
+        #expect(outlook.actionTitle == "Add Outlook account")
+        #expect(!outlook.isEnabled)
+        #expect(outlook.subtitle.contains("Beta"))
+
+        if case .disabled(let reason) = outlook.availability {
+            #expect(reason == "Internal beta")
+        } else {
+            Issue.record("Expected Outlook beta provider to be disabled by default")
+        }
     }
 
     @Test @MainActor
@@ -124,6 +156,32 @@ struct AccountsTabStoreTests {
         try await Task.sleep(for: .milliseconds(200))
 
         #expect(store.addPhase == .idle)
+    }
+
+    @Test @MainActor
+    func addAccountProviderRoutesGmailWithoutRegressingCancellation() async throws {
+        let (store, _, oauth, _) = try await makeStore()
+
+        oauth.authorizeResult = .failure(AuthError.cancelled)
+
+        store.addAccount(provider: .gmail)
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(store.addPhase == .idle)
+    }
+
+    @Test @MainActor
+    func addAccountProviderKeepsOutlookDisabledUntilSmokeTestsPass() async throws {
+        let (store, _, _, _) = try await makeStore()
+
+        store.addAccount(provider: .outlook)
+
+        if case .error(let message) = store.addPhase {
+            #expect(message.contains("Outlook support is in beta"))
+            #expect(message.contains("disabled until real account smoke tests pass"))
+        } else {
+            Issue.record("Expected disabled Outlook beta error, got \(store.addPhase)")
+        }
     }
 
     @Test @MainActor
@@ -143,6 +201,40 @@ struct AccountsTabStoreTests {
     }
 
     @Test @MainActor
+    func addAccountNetworkFailureShowsOfflineRecoveryCopy() async throws {
+        let (store, _, oauth, _) = try await makeStore()
+
+        oauth.authorizeResult = .failure(AuthError.network(URLError(.notConnectedToInternet)))
+
+        store.addGmailAccount()
+        try await Task.sleep(for: .milliseconds(200))
+
+        if case .error(let message) = store.addPhase {
+            #expect(message == "Account cannot reach Gmail while offline. Check your connection and try again.")
+        } else {
+            Issue.record("Expected offline account error, got \(store.addPhase)")
+        }
+    }
+
+    @Test @MainActor
+    func reauthorizeFailureShowsMissingCredentialRecoveryCopy() async throws {
+        let (store, db, oauth, _) = try await makeStore()
+
+        let accountId = "gmail-reauthorize-failure"
+        try insertAccount(id: accountId, email: "test@gmail.com", into: db)
+        oauth.authorizeResult = .failure(AuthError.missingRefreshToken)
+
+        store.reauthorizeAccount(accountId)
+        try await Task.sleep(for: .milliseconds(300))
+
+        if case .error(let message) = store.reauthorizationPhases[accountId] {
+            #expect(message == "Reconnect Gmail to use this account.")
+        } else {
+            Issue.record("Expected missing credential re-authorization error")
+        }
+    }
+
+    @Test @MainActor
     func dismissErrorResetsToIdle() async throws {
         let (store, _, oauth, _) = try await makeStore()
 
@@ -157,7 +249,12 @@ struct AccountsTabStoreTests {
 
     @Test @MainActor
     func removeAccountDeletesFromDBAndKeychain() async throws {
-        let (store, db, _, tokens) = try await makeStore()
+        let cacheDeletion = LocalAccountCacheDeletionSpy()
+        let (store, db, _, tokens) = try await makeStore(
+            localAccountCacheDeleter: { accountId in
+                cacheDeletion.delete(accountId)
+            }
+        )
 
         let accountId = "test-account-id"
         try insertAccount(id: accountId, email: "test@gmail.com", into: db)
@@ -179,8 +276,47 @@ struct AccountsTabStoreTests {
         }
         #expect(remaining.isEmpty)
         #expect(tokens.deleteCalledWith.contains(accountId))
+        #expect(cacheDeletion.deletedAccountIds == [accountId])
 
         store.stopObserving()
+    }
+
+    @Test @MainActor
+    func reauthorizeAccountRefreshesGmailConsentAndSavesCredential() async throws {
+        let (store, db, oauth, tokens) = try await makeStore()
+
+        let accountId = "gmail-reauthorize"
+        try insertAccount(id: accountId, email: "test@gmail.com", into: db)
+        oauth.authorizeResult = .success(TokenCredential(
+            accessToken: "reauthorized-access",
+            refreshToken: "reauthorized-refresh",
+            expiresAt: Date().addingTimeInterval(3600)
+        ))
+
+        store.reauthorizeAccount(accountId)
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(tokens.storage[accountId]?.accessToken == "reauthorized-access")
+        #expect(tokens.storage[accountId]?.refreshToken == "reauthorized-refresh")
+        #expect(store.reauthorizationPhases[accountId] == .done)
+    }
+
+    @Test @MainActor
+    func reauthorizeAccountKeepsOutlookUnsupportedUntilOAuthFlowExists() async throws {
+        let (store, db, _, tokens) = try await makeStore()
+
+        let accountId = "outlook-reauthorize"
+        try insertAccount(id: accountId, email: "test@outlook.com", provider: "outlook", into: db)
+
+        store.reauthorizeAccount(accountId)
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(tokens.storage[accountId] == nil)
+        if case .error(let message) = store.reauthorizationPhases[accountId] {
+            #expect(message == "Outlook re-consent is not available in this build.")
+        } else {
+            Issue.record("Expected Outlook re-consent to remain unsupported")
+        }
     }
 
     @Test @MainActor
@@ -218,6 +354,23 @@ struct AccountsTabStoreTests {
             break // Expected
         default:
             Issue.record("Expected fetchingProfile or error phase, got \(store.addPhase)")
+        }
+    }
+}
+
+private final class LocalAccountCacheDeletionSpy: @unchecked Sendable {
+    private let lock = NSLock()
+    private var ids: [String] = []
+
+    func delete(_ accountId: String) {
+        lock.withLock {
+            ids.append(accountId)
+        }
+    }
+
+    var deletedAccountIds: [String] {
+        lock.withLock {
+            ids
         }
     }
 }

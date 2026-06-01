@@ -1,8 +1,8 @@
+import AppFoundation
 import AuthKit
 import Foundation
 import MailProviders
 import MailSync
-import OSLog
 
 @MainActor
 final class LabelReconcileCoordinator {
@@ -11,7 +11,6 @@ final class LabelReconcileCoordinator {
     private let defaults: UserDefaults
     private let hasCredential: @Sendable (String) throws -> Bool
     private let reconcile: @Sendable (String) async throws -> Void
-    private let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "LabelReconcile")
     private var isRunning = false
 
     convenience init(
@@ -51,18 +50,16 @@ final class LabelReconcileCoordinator {
 
         let eligibility = resolveEligibility(accountIds)
         if !eligibility.skipped.isEmpty {
-            logger.info(
-                """
-                Skipping Gmail label reconcile for \(eligibility.skipped.count, privacy: .public) accounts \
-                without saved credentials
-                """
+            Self.logReconcile(
+                status: "skipped_missing_credentials",
+                count: eligibility.skipped.count
             )
         }
 
         guard !eligibility.eligible.isEmpty else {
             if eligibility.failures.isEmpty {
                 defaults.set(false, forKey: Self.flagKey)
-                logger.info("Gmail label reconcile skipped because no account has saved credentials")
+                Self.logReconcile(status: "skipped_no_credentials")
                 return
             }
             showToast(ToastState(message: failureMessage(for: eligibility.failures), undoAction: nil, kind: .error))
@@ -70,7 +67,7 @@ final class LabelReconcileCoordinator {
         }
 
         isRunning = true
-        logger.info("Starting Gmail label reconcile for \(eligibility.eligible.count, privacy: .public) accounts")
+        Self.logReconcile(status: "started", count: eligibility.eligible.count)
 
         let toast = ToastState(
             message: String(
@@ -89,14 +86,14 @@ final class LabelReconcileCoordinator {
             for accountId in eligibility.eligible {
                 do {
                     try await reconcile(accountId)
-                    logger.info("Gmail label reconcile succeeded for account \(accountId, privacy: .private)")
+                    Self.logReconcile(status: "succeeded", accountId: accountId)
                 } catch {
                     failures.append((accountId, error))
-                    logger.error(
-                        """
-                        Gmail label reconcile failed for account \(accountId, privacy: .private): \
-                        \(self.describe(error), privacy: .public)
-                        """
+                    Self.logReconcile(
+                        status: "failed",
+                        accountId: accountId,
+                        severity: .error,
+                        errorCategory: Self.errorCategory(error)
                     )
                 }
             }
@@ -104,7 +101,7 @@ final class LabelReconcileCoordinator {
             if failures.isEmpty {
                 defaults.set(false, forKey: Self.flagKey)
                 clearToastIfCurrent(toast.id)
-                logger.info("Gmail label reconcile completed")
+                Self.logReconcile(status: "completed", count: eligibility.eligible.count)
             } else {
                 showToast(ToastState(message: failureMessage(for: failures), undoAction: nil, kind: .error))
             }
@@ -172,10 +169,53 @@ final class LabelReconcileCoordinator {
         return false
     }
 
-    private func describe(_ error: any Error) -> String {
-        if let localized = (error as? LocalizedError)?.errorDescription {
-            return localized
+    private nonisolated static func logReconcile(
+        status: String,
+        accountId: String? = nil,
+        count: Int? = nil,
+        severity: PrivacyObservabilitySeverity = .info,
+        errorCategory: String? = nil
+    ) {
+        var fields: [PrivacyObservabilityField: String] = [
+            .provider: "gmail",
+            .operation: "label_reconcile",
+            .status: status
+        ]
+        if let accountId, !accountId.isEmpty {
+            fields[.accountID] = accountId
         }
-        return String(describing: error)
+        if let count {
+            fields[.count] = "\(count)"
+        }
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .sync, name: "sync.label_reconcile", fields: fields),
+            severity: severity
+        )
+    }
+
+    private nonisolated static func errorCategory(_ error: any Error) -> String {
+        if let error = error as? GmailAPIError {
+            return error.sharedCategory.rawValue
+        }
+        if let error = error as? AuthError {
+            switch error {
+            case .cancelled:
+                return "cancelled"
+            case .denied:
+                return "authExpired"
+            case .network:
+                return "offline"
+            case .decode, .invalidResponse:
+                return "invalidResponse"
+            case .keychain, .missingRefreshToken, .missingCredential, .missingProviderCredential:
+                return "missingCredential"
+            case .invalidConfiguration:
+                return "unsupportedOperation"
+            }
+        }
+        return String(describing: type(of: error))
     }
 }

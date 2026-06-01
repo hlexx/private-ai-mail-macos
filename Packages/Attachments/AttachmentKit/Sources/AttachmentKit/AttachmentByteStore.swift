@@ -73,6 +73,10 @@ public struct AttachmentByteStore: Sendable {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
+    public func fileURL(relativePath: String) throws -> URL {
+        try fileURL(for: relativePath)
+    }
+
     public static func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }

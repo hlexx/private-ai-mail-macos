@@ -27,6 +27,17 @@ struct ActionsFeatureTests {
         #expect(itemIDs == allCases)
     }
 
+    @Test func onlyImplementedActionsAreExecutable() {
+        #expect(ActionExecutionSupport.isEnabled(.reply))
+        #expect(ActionExecutionSupport.isEnabled(.archive))
+        #expect(!ActionExecutionSupport.isEnabled(.snooze))
+        #expect(!ActionExecutionSupport.isEnabled(.log))
+        #expect(!ActionExecutionSupport.isEnabled(.task))
+        #expect(!ActionExecutionSupport.isEnabled(.unsub))
+        #expect(!ActionExecutionSupport.isEnabled(.rule))
+        #expect(!ActionExecutionSupport.isEnabled(.share))
+    }
+
     // MARK: - ActionSheetView snapshot (dark)
 
     @MainActor

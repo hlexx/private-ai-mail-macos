@@ -45,23 +45,7 @@ struct MainScene: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            RBToolbar(
-                accounts: accounts,
-                activeAccountID: composition.activeAccountID,
-                onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
-                onToggleTheme: { toggleTheme() },
-                onOpenSettings: { openSettings() },
-                onCompose: {
-                    prepareNewCompose()
-                    composition.showCompose = true
-                },
-                onOpenActionSheet: { composition.showActionSheet = true },
-                onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
-                onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
-                sidebarWidth: CGFloat(sidebarWidth),
-                sidebarCollapsed: sidebarCollapsed,
-                searchFocused: $searchFocused
-            )
+            toolbar
 
             MainSplitController(
                 sidebarCollapsed: $sidebarCollapsed,
@@ -80,13 +64,14 @@ struct MainScene: View {
                 threadlist: {
                     InboxView(
                         store: inboxStore,
+                        actionStore: composition.trustActionStore,
                         onArchive: { threadId, accountId in
                             Task {
                                 do {
                                     try await composition.mailMutator.archive(threadId, accountId: accountId)
                                     showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
                                 } catch {
-                                    showToast("Archive failed", undo: nil)
+                                    showMutationError(error, fallback: "Archive failed")
                                 }
                             }
                         },
@@ -103,8 +88,11 @@ struct MainScene: View {
                 reading: {
                     ThreadView(
                         store: threadStore,
+                        actionStore: composition.trustActionStore,
                         onArchive: { archiveSelectedThread() },
                         onStar: { starSelectedThread() },
+                        onMarkRead: { markReadSelectedThread() },
+                        onTrash: { trashSelectedThread() },
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.allTranslatedNodes(
@@ -139,6 +127,7 @@ struct MainScene: View {
                                     accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
                                     replyLanguage: detectReplyLanguage(),
                                     replyStore: composition.replyStore,
+                                    sendState: composition.composeViewModel.sendState,
                                     onEditInFull: { draftText in
                                         prefillComposeForReply()
                                         composition.composeViewModel.bodyText = draftText
@@ -148,7 +137,11 @@ struct MainScene: View {
                                         prefillComposeForReply()
                                         composition.composeViewModel.bodyText = bodyText
                                         composition.composeViewModel.requestSend()
-                                    }
+                                    },
+                                    onCancelSend: { composition.composeViewModel.cancelSend() },
+                                    onRetrySend: { composition.composeViewModel.retrySend() },
+                                    onConfirmSendNow: { composition.composeViewModel.confirmSendNow() },
+                                    onReauthorize: { composition.composeViewModel.reauthorizeAndRetry() }
                                 )
                             }
                         },
@@ -180,8 +173,9 @@ struct MainScene: View {
             if composition.showActionSheet {
                 ActionSheetView(
                     threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
-                    onAction: { _ in
+                    onAction: { action in
                         composition.showActionSheet = false
+                        handleActionSheet(action)
                     }
                 )
             }
@@ -254,13 +248,64 @@ struct MainScene: View {
 
 }
 
+// MARK: - Action Sheet
+
+extension MainScene {
+    func handleActionSheet(_ action: ActionID?) {
+        guard let action else { return }
+        switch action {
+        case .reply:
+            requestTrustActionForSelectedThread(.draftReply)
+        case .archive:
+            requestTrustActionForSelectedThread(.archiveThread)
+        case .snooze, .log, .task, .unsub, .rule, .share:
+            showToast("Action not available yet", undo: nil)
+        }
+    }
+
+    private var toolbarSearchText: Binding<String> {
+        Binding(
+            get: { inboxStore.searchText },
+            set: { inboxStore.searchText = $0 }
+        )
+    }
+
+    private var toolbar: some View {
+        RBToolbar(
+            accounts: accounts,
+            activeAccountID: composition.activeAccountID,
+            onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
+            onToggleTheme: { toggleTheme() },
+            onOpenSettings: { openSettings() },
+            onCompose: {
+                prepareNewCompose()
+                composition.showCompose = true
+            },
+            onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
+            onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
+            sidebarWidth: CGFloat(sidebarWidth),
+            sidebarCollapsed: sidebarCollapsed,
+            searchFocused: $searchFocused,
+            searchText: toolbarSearchText,
+            onSubmitSearch: { inboxStore.submitSearch() }
+        )
+    }
+}
+
 // MARK: - Compose Helpers
 
 extension MainScene {
     func prepareNewCompose() {
         let vm = composition.composeViewModel
         vm.reset()
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let activeID = composition.activeAccountID ?? accounts.first?.id {
             vm.selectedAccountID = activeID
             vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
@@ -294,7 +339,14 @@ extension MainScene {
             lastMessageID: inReplyToID,
             referencesChain: referencesChain
         )
-        vm.accounts = accounts.map { AccountInfo(id: $0.id, email: $0.email, displayName: $0.displayName) }
+        vm.accounts = accounts.map {
+            AccountInfo(
+                id: $0.id,
+                email: $0.email,
+                displayName: $0.displayName,
+                provider: MailProviderIdentifier(rawValue: $0.provider)
+            )
+        }
         if let accountID = replyAccountId {
             vm.selectedAccountID = accountID
             vm.selectedAccountEmail = replyAccountEmail
@@ -345,7 +397,7 @@ extension MainScene {
     // swiftlint:disable:next cyclomatic_complexity
     private func handleAction(_ key: ActionKey) {
         switch key {
-        case .reply:            draftReply()
+        case .reply:            requestTrustActionForSelectedThread(.draftReply)
         case .replyAll:         replyAll()
         case .forward:          forwardThread()
         case .archive:          archiveSelectedThread()
@@ -395,7 +447,7 @@ extension MainScene {
                 try await composition.mailMutator.markRead(threadId, accountId: accountId, read: false)
                 showToast("Marked unread", undo: nil)
             } catch {
-                showToast("Mark unread failed", undo: nil)
+                showMutationError(error, fallback: "Mark unread failed")
             }
         }
     }

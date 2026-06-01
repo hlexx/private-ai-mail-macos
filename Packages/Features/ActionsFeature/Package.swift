@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../Integrations/IntegrationBroker"),
+        .package(path: "../../Integrations/IntegrationDomain"),
         .package(path: "../../AI/AIKit"),
         .package(path: "../../Core/DesignSystem"),
     ],
@@ -17,6 +18,7 @@ let package = Package(
             name: "ActionsFeature",
             dependencies: [
                 "IntegrationBroker",
+                "IntegrationDomain",
                 "AIKit",
                 "DesignSystem",
             ],

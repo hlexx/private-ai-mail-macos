@@ -9,6 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../AppFoundation"),
+        .package(path: "../../Integrations/IntegrationDomain"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
     ],
     targets: [
@@ -16,6 +17,7 @@ let package = Package(
             name: "Persistence",
             dependencies: [
                 "AppFoundation",
+                "IntegrationDomain",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
             resources: [.process("Resources")]

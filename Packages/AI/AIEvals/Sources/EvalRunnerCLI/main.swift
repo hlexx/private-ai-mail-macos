@@ -61,7 +61,7 @@ if await modelManager.installedURL() != nil {
 let runner = EvalRunner()
 let report = try await runner.run(corpus: corpus, service: service)
 
-print(report.markdownReport())
+fputs(report.markdownReport() + "\n", stdout)
 
 if report.schemaValidityRate < 1.0 {
     fputs("\nWARNING: Schema validity below 100%\n", stderr)

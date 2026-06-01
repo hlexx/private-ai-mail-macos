@@ -1,9 +1,9 @@
 import AIKit
+import AppFoundation
 import Foundation
 import GRDB
 import NaturalLanguage
 import Observation
-import OSLog
 import Persistence
 
 @Observable
@@ -19,7 +19,6 @@ public final class BriefStore {
     private var briefCache: [BriefCacheKey: CacheEntry] = [:]
     private var inflightTask: Task<Void, Never>?
     private var activeAccountId: String?
-    private static let logger = Logger(subsystem: "com.hlexx.privateaimail", category: "BriefStore")
 
     /// Production init with AI service and database.
     public init(aiService: any AIService, db: AppDatabase) {
@@ -254,9 +253,7 @@ public final class BriefStore {
     private func handleBriefFailure(_ error: any Error, threadID: String, accountId: String?) {
         guard activeThreadID == threadID else { return }
         let kind = Self.failureKind(error)
-        Self.logger.error(
-            "Brief generation failed kind=\(kind, privacy: .public) account=\(accountId ?? "<unknown>", privacy: .private) thread=\(threadID, privacy: .private)"
-        )
+        Self.logBrief(status: "failed", accountId: accountId, severity: .error, errorCategory: kind)
         self.error = error
         isLoading = false
         brief = nil
@@ -287,6 +284,28 @@ public final class BriefStore {
             }
         }
         return String(describing: type(of: error))
+    }
+
+    private nonisolated static func logBrief(
+        status: String,
+        accountId: String?,
+        severity: PrivacyObservabilitySeverity = .info,
+        errorCategory: String? = nil
+    ) {
+        var fields: [PrivacyObservabilityField: String] = [
+            .operation: "thread_brief",
+            .status: status
+        ]
+        if let accountId, !accountId.isEmpty {
+            fields[.accountID] = accountId
+        }
+        if let errorCategory {
+            fields[.errorCategory] = errorCategory
+        }
+        PrivacyObservability.log(
+            PrivacyObservabilityEvent(category: .ai, name: "ai.thread_brief", fields: fields),
+            severity: severity
+        )
     }
 }
 

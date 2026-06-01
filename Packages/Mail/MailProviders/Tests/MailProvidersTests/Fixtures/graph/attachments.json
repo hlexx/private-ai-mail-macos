@@ -1,0 +1,24 @@
+{
+  "value": [
+    {
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      "id": "graph-att-brief-pdf",
+      "name": "trust-brief.pdf",
+      "contentType": "application/pdf",
+      "size": 2048,
+      "isInline": false,
+      "contentId": "<brief-pdf@example>",
+      "lastModifiedDateTime": "2026-05-29T06:16:00Z"
+    },
+    {
+      "@odata.type": "#microsoft.graph.fileAttachment",
+      "id": "graph-att-logo",
+      "name": "logo.png",
+      "contentType": "image/png",
+      "size": 8,
+      "isInline": true,
+      "contentId": "<logo@example>",
+      "lastModifiedDateTime": "2026-05-29T06:16:01Z"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ let package = Package(
         .package(path: "../../AI/AIKit"),
         .package(path: "../../AI/AIPrompts"),
         .package(path: "../../AI/AIEmbeddings"),
+        .package(path: "../../Core/AppFoundation"),
         .package(path: "../../Core/Persistence"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
     ],
@@ -23,11 +24,12 @@ let package = Package(
                 "AIKit",
                 "AIPrompts",
                 "AIEmbeddings",
+                "AppFoundation",
                 "Persistence",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
             resources: [.process("Resources")]
         ),
-        .testTarget(name: "AttachmentRAGTests", dependencies: ["AttachmentRAG"]),
+        .testTarget(name: "AttachmentRAGTests", dependencies: ["AttachmentRAG", "AppFoundation"]),
     ]
 )

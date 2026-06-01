@@ -1,3 +1,4 @@
+import ActionsFeature
 import Testing
 import SwiftUI
 import AppKit
@@ -120,6 +121,44 @@ struct ThreadFeatureTests {
         #expect(info.formattedSize == "")
     }
 
+    @Test func attachmentStatusCopyCoversSummaryStates() {
+        let attachment = AttachmentInfo(
+            id: "att1",
+            messageId: "m1",
+            accountId: "a1",
+            filename: "invoice.txt",
+            sizeBytes: 284_000,
+            mime: "text/plain"
+        )
+        let generatedSummary = AttachmentSummaryViewData(
+            summary: AIAttachmentSummary(summary: "Attachment summary", confidence: 0.9),
+            cached: false
+        )
+        let cachedSummary = AttachmentSummaryViewData(
+            summary: AIAttachmentSummary(summary: "Attachment summary", confidence: 0.9),
+            cached: true
+        )
+
+        #expect(AttachmentSummaryCopy.statusText(for: attachment, state: .idle) == "277 KB \u{00B7} ready to summarize")
+        #expect(AttachmentSummaryCopy.statusText(for: attachment, state: .summarizing) == "277 KB \u{00B7} summarizing locally")
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .summary(generatedSummary))
+                == "277 KB \u{00B7} summarized locally"
+        )
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .summary(cachedSummary))
+                == "277 KB \u{00B7} cached local summary"
+        )
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .unsupported("Unsupported"))
+                == "277 KB \u{00B7} unsupported"
+        )
+        #expect(
+            AttachmentSummaryCopy.statusText(for: attachment, state: .failed("Failed"))
+                == "277 KB \u{00B7} summary failed"
+        )
+    }
+
     @MainActor @Test func attachmentSummaryStoreShowsSummary() async throws {
         let db = try makeAttachmentSummaryDatabase()
         let provider = TestAttachmentByteProvider(data: Data("Amount due: EUR 1840".utf8))
@@ -196,6 +235,93 @@ struct ThreadFeatureTests {
         }
         #expect(reason.contains("Unsupported"))
         #expect(await ai.callCount == 0)
+    }
+
+    // MARK: - Trust MVP Actions
+
+    @MainActor
+    @Test func draftReplyRequiresExplicitApprovalBeforeQueueing() async {
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "draft-1",
+            status: .completed,
+            message: "Draft action approved"
+        ))
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "draft-1",
+            action: .draftReply,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+
+        #expect(store.pendingApproval?.request.action == .draftReply)
+        #expect(store.outboxItems.isEmpty)
+
+        await store.confirmPendingAction()
+
+        #expect(store.pendingApproval == nil)
+        #expect(store.outboxItems.first?.status == .completed)
+        #expect(queue.started.map(\.action) == [.draftReply])
+    }
+
+    @MainActor
+    @Test func destructiveTrashRequiresApprovalAndCanFailRetryable() async {
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "trash-1",
+            status: .failedRetryable,
+            message: "Network is unavailable. Retry when the connection returns."
+        ))
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "trash-1",
+            action: .trashThread,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+        #expect(store.pendingApproval?.request.action == .trashThread)
+
+        await store.confirmPendingAction()
+
+        #expect(store.outboxItems.first?.status == .failedRetryable)
+        #expect(store.outboxItems.first?.canRetry == true)
+    }
+
+    @MainActor
+    @Test func nonRetryableFailureDoesNotExposeRetry() async {
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "star-1",
+            status: .failedNonRetryable,
+            message: "The account is missing permission for this action."
+        ))
+        let store = TrustActionUIStore(queue: queue)
+
+        await store.requestAction(TrustActionRequest(
+            requestId: "star-1",
+            action: .starThread,
+            target: .init(accountId: "a1", threadId: "t1")
+        ))
+
+        #expect(store.outboxItems.first?.status == .failedNonRetryable)
+        #expect(store.outboxItems.first?.canRetry == false)
+    }
+}
+
+@MainActor
+private final class ThreadTrustActionQueue: TrustActionQueueing {
+    let outcome: TrustActionQueueOutcome
+    private(set) var started: [TrustActionRequest] = []
+
+    init(outcome: TrustActionQueueOutcome) {
+        self.outcome = outcome
+    }
+
+    func start(_ request: TrustActionRequest) async -> TrustActionQueueOutcome {
+        started.append(request)
+        return outcome
+    }
+
+    func retry(opId _: String) async -> TrustActionQueueOutcome? {
+        nil
     }
 }
 
@@ -760,6 +886,7 @@ struct ThreadStoreStarTests {
 // MARK: - CID Image Resolution Tests
 
 @Suite("CID Image Resolution")
+@MainActor
 struct CIDImageResolutionTests {
 
     @Test func resolvedHTMLReplacesCidWithDataURL() {
@@ -828,6 +955,7 @@ struct CIDImageResolutionTests {
 // MARK: - Translation JS Script Tests
 
 @Suite("HTMLWebView Translation Scripts")
+@MainActor
 struct HTMLWebViewTranslationScriptTests {
 
     @Test func extractionJSContainsTreeWalker() {

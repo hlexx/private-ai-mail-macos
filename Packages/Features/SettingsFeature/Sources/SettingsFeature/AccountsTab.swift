@@ -34,10 +34,7 @@ public struct AccountsTab: View {
 
             Divider()
 
-            HStack {
-                addButton
-                Spacer()
-            }
+            providerSelection
 
             statusView
         }
@@ -80,16 +77,55 @@ public struct AccountsTab: View {
     }
 
     @ViewBuilder
-    private var addButton: some View {
-        Button {
-            store.addGmailAccount()
-        } label: {
-            Label(
-                String(localized: "accounts.add.gmail", defaultValue: "Add Gmail account"),
-                systemImage: "plus"
-            )
+    private var providerSelection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(String(localized: "accounts.providers.title", defaultValue: "Add account"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            ForEach(store.providerOptions) { option in
+                providerOptionRow(option)
+            }
         }
-        .disabled(isAddInProgress)
+    }
+
+    private func providerOptionRow(_ option: AccountProviderOption) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: option.systemImage)
+                .frame(width: 20)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(option.title)
+                        .font(.body)
+
+                    if option.provider == .outlook {
+                        Text(String(localized: "accounts.provider.outlook.beta", defaultValue: "Beta"))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Text(option.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if case .disabled(let reason) = option.availability {
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button(option.actionTitle) {
+                store.addAccount(provider: option.provider)
+            }
+            .disabled(isAddInProgress || !option.isEnabled)
+        }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder

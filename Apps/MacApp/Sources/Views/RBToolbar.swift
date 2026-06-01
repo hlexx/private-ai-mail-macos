@@ -10,14 +10,13 @@ struct RBToolbar: View {
     let onToggleTheme: () -> Void
     let onOpenSettings: () -> Void
     let onCompose: () -> Void
-    let onOpenActionSheet: () -> Void
     var onToggleSidebar: (() -> Void)?
     var onToggleBrief: (() -> Void)?
     var sidebarWidth: CGFloat = RBLayout.sidebarWidth
     var sidebarCollapsed: Bool = false
     var searchFocused: FocusState<Bool>.Binding
-
-    @State private var searchText: String = ""
+    @Binding var searchText: String
+    let onSubmitSearch: () -> Void
 
     @AppStorage("rb-theme") private var themeRaw: String = RBTheme.system.rawValue
     private var theme: RBTheme {
@@ -74,7 +73,7 @@ struct RBToolbar: View {
 
     private var trailingSection: some View {
         HStack(spacing: RBSpace.s2) {
-            SearchField(text: $searchText, isFocused: searchFocused, onCommit: { onOpenActionSheet() })
+            SearchField(text: $searchText, isFocused: searchFocused, onCommit: onSubmitSearch)
                 .frame(maxWidth: 480)
 
             Spacer(minLength: RBSpace.s2)
@@ -147,8 +146,9 @@ struct RBToolbarPreview: View {
             onToggleTheme: {},
             onOpenSettings: {},
             onCompose: {},
-            onOpenActionSheet: {},
-            searchFocused: $focused
+            searchFocused: $focused,
+            searchText: .constant(""),
+            onSubmitSearch: {}
         )
         .preferredColorScheme(.dark)
     }

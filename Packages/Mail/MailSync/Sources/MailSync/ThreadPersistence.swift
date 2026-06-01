@@ -35,6 +35,7 @@ enum ThreadPersistence {
             db: dbConn
         )
         try replaceThreadLabels(threadLabelIds, threadId: dto.id, accountId: accountId, db: dbConn)
+        try SearchIndexMaintenance.upsertMessages(accountId: accountId, messageIds: incomingMessageIds, db: dbConn)
     }
 
     private static func reconcileAttachments(

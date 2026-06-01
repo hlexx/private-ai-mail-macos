@@ -31,15 +31,41 @@ public struct ApprovalRow: View {
 
     public var body: some View {
         switch sendState {
-        case .idle, .sent:
+        case .idle:
             EmptyView()
 
         case .awaitingApproval(let deadline):
             approvalBar(deadline: deadline)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
 
+        case .pending:
+            queueBar(
+                icon: "tray.and.arrow.up.fill",
+                title: String(localized: "approval.pending", defaultValue: "Queued locally"),
+                actionTitle: nil,
+                action: nil
+            )
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+
         case .sending:
             sendingBar
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+
+        case .retrying:
+            queueBar(
+                icon: "clock.arrow.circlepath",
+                title: String(localized: "approval.retrying", defaultValue: "Retry scheduled"),
+                actionTitle: String(localized: "approval.retryNow", defaultValue: "Retry now"),
+                action: onRetrySend
+            )
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+
+        case .needsReconsent:
+            needsReconsentBar
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+
+        case .sent:
+            sentBar
                 .transition(.move(edge: .bottom).combined(with: .opacity))
 
         case .failed(let error):
@@ -96,6 +122,61 @@ public struct ApprovalRow: View {
         .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
     }
 
+    private func queueBar(icon: String, title: String, actionTitle: String?, action: (() -> Void)?) -> some View {
+        HStack(spacing: RBSpace.s3) {
+            Image(systemName: icon)
+                .foregroundStyle(Color.rbAccent)
+            Text(title)
+                .rbTextStyle(.bodySM)
+                .foregroundStyle(Color.rbFg2)
+            Spacer()
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.rbPrimary)
+            }
+            Button(String(localized: "approval.cancel", defaultValue: "Cancel"), action: onCancel)
+                .buttonStyle(.rbGhost)
+        }
+        .padding(.horizontal, RBSpace.s5)
+        .padding(.vertical, RBSpace.s3)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
+    }
+
+    private var needsReconsentBar: some View {
+        HStack(spacing: RBSpace.s3) {
+            Image(systemName: "person.badge.key.fill")
+                .foregroundStyle(Color.rbSignalDeadline)
+            Text(Self.errorMessage(.needsReconsent))
+                .rbTextStyle(.bodySM)
+                .foregroundStyle(Color.rbFg1)
+            Spacer()
+            Button(String(localized: "approval.reauthorize", defaultValue: "Re-authorize"), action: onReauthorize)
+                .buttonStyle(.rbPrimary)
+            Button(String(localized: "approval.cancel", defaultValue: "Cancel"), action: onCancel)
+                .buttonStyle(.rbGhost)
+        }
+        .padding(.horizontal, RBSpace.s5)
+        .padding(.vertical, RBSpace.s3)
+        .background(Color.rbSignalDeadlineBg)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
+    }
+
+    private var sentBar: some View {
+        HStack(spacing: RBSpace.s3) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.rbSignalSuccess)
+            Text(String(localized: "approval.sent", defaultValue: "Sent"))
+                .rbTextStyle(.bodySM)
+                .foregroundStyle(Color.rbFg1)
+            Spacer()
+        }
+        .padding(.horizontal, RBSpace.s5)
+        .padding(.vertical, RBSpace.s3)
+        .background(Color.rbBgElev1)
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
+    }
+
     // MARK: - Failed
 
     private func failedBar(error: ComposeError) -> some View {
@@ -135,7 +216,7 @@ public struct ApprovalRow: View {
         case .needsReconsent:
             return String(localized: "approval.error.needsReconsent", defaultValue: "This account hasn\u{2019}t granted send permission yet \u{2014} Re-authorize")
         case .send:
-            return String(localized: "approval.error.generic", defaultValue: "Failed to send message. Please try again.")
+            return error.userActionableFailure.message
         }
     }
 }

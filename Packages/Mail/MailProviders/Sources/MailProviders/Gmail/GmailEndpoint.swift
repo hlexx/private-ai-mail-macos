@@ -9,6 +9,7 @@ enum GmailEndpoint {
     case getAttachment(messageId: String, attachmentId: String)
     case listHistory(startHistoryId: String, pageToken: String?)
     case sendMessage(raw: String, threadId: String?)
+    case createDraft(raw: String, threadId: String?)
     case listLabels
     case modifyThread(id: String, addLabelIds: [String], removeLabelIds: [String])
 
@@ -23,20 +24,28 @@ enum GmailEndpoint {
         case .listMessages:
             return "/messages"
         case .getMessage(let id, _):
-            return "/messages/\(id)"
+            return "/messages/\(Self.pathSegment(id))"
         case .getThread(let id, _):
-            return "/threads/\(id)"
+            return "/threads/\(Self.pathSegment(id))"
         case .getAttachment(let messageId, let attachmentId):
-            return "/messages/\(messageId)/attachments/\(attachmentId)"
+            return "/messages/\(Self.pathSegment(messageId))/attachments/\(Self.pathSegment(attachmentId))"
         case .listHistory:
             return "/history"
         case .sendMessage:
             return "/messages/send"
+        case .createDraft:
+            return "/drafts"
         case .listLabels:
             return "/labels"
         case .modifyThread(let id, _, _):
-            return "/threads/\(id)/modify"
+            return "/threads/\(Self.pathSegment(id))/modify"
         }
+    }
+
+    private static func pathSegment(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/?#[]@!$&'()*+,;=:")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     /// Gmail API quota cost per method (units per request).
@@ -48,6 +57,7 @@ enum GmailEndpoint {
         case .getAttachment: return 5
         case .listHistory: return 2
         case .sendMessage: return 100
+        case .createDraft: return 10
         case .listLabels: return 1
         case .modifyThread: return 5
         }
@@ -55,7 +65,7 @@ enum GmailEndpoint {
 
     var httpMethod: String {
         switch self {
-        case .sendMessage: return "POST"
+        case .sendMessage, .createDraft: return "POST"
         case .modifyThread: return "POST"
         case .listLabels: return "GET"
         default: return "GET"
@@ -68,6 +78,10 @@ enum GmailEndpoint {
             var dict: [String: String] = ["raw": raw]
             if let threadId { dict["threadId"] = threadId }
             return try? JSONSerialization.data(withJSONObject: dict)
+        case .createDraft(let raw, let threadId):
+            var message: [String: String] = ["raw": raw]
+            if let threadId { message["threadId"] = threadId }
+            return try? JSONSerialization.data(withJSONObject: ["message": message])
         case .modifyThread(_, let addLabelIds, let removeLabelIds):
             var dict: [String: [String]] = [:]
             if !addLabelIds.isEmpty { dict["addLabelIds"] = addLabelIds }
@@ -97,7 +111,7 @@ enum GmailEndpoint {
             var items = [URLQueryItem(name: "startHistoryId", value: startHistoryId)]
             if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
             return items
-        case .sendMessage:
+        case .sendMessage, .createDraft:
             return []
         case .listLabels:
             return []

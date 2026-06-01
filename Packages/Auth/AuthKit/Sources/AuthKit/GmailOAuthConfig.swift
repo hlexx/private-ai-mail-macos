@@ -31,6 +31,10 @@ public struct GmailOAuthConfig: Sendable {
             // `gmail.readonly` already grants metadata + full message
             // reads, which is what the on-device pipeline needs.
             "https://www.googleapis.com/auth/gmail.readonly",
+            // Trust MVP mailbox actions and provider draft creation require
+            // Gmail write access. `gmail.modify` covers label mutations,
+            // trash, drafts, compose, and send without permanent deletion.
+            "https://www.googleapis.com/auth/gmail.modify",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/userinfo.email"
         ]

@@ -17,7 +17,7 @@ public enum GmailMapper {
         let isUnread = dto.labelIds?.contains("UNREAD") ?? false
         let isSentByMe = dto.labelIds?.contains("SENT") ?? false
         let (bodyText, bodyHTML) = extractBodies(from: dto.payload)
-        let attachments = extractAttachments(from: dto.payload, messageId: dto.id)
+        let attachments = extractAttachments(from: dto.payload, messageId: dto.id, accountId: accountId)
 
         return MailDomain.Message(
             id: dto.id,
@@ -94,29 +94,43 @@ public enum GmailMapper {
         }
     }
 
-    private static func extractAttachments(from part: GmailDTO.MessagePart?, messageId: String) -> [Attachment] {
+    private static func extractAttachments(from part: GmailDTO.MessagePart?, messageId: String, accountId: String) -> [Attachment] {
         guard let part else { return [] }
         var result: [Attachment] = []
-        collectAttachments(part: part, messageId: messageId, result: &result)
+        collectAttachments(part: part, messageId: messageId, accountId: accountId, result: &result)
         return result
     }
 
-    private static func collectAttachments(part: GmailDTO.MessagePart, messageId: String, result: inout [Attachment]) {
+    private static func collectAttachments(
+        part: GmailDTO.MessagePart,
+        messageId: String,
+        accountId: String,
+        result: inout [Attachment]
+    ) {
         let partContentId = part.headers?.first {
             $0.name.caseInsensitiveCompare("Content-ID") == .orderedSame
         }?.value
         let normalizedCid = partContentId?
             .trimmingCharacters(in: .whitespaces)
             .trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
+        let disposition = contentDisposition(in: part.headers)
 
         if let attachmentId = part.body?.attachmentId, let filename = part.filename, !filename.isEmpty {
             result.append(Attachment(
                 id: attachmentId,
                 messageId: messageId,
+                accountId: accountId,
                 filename: filename,
                 mimeType: part.mimeType,
                 sizeBytes: part.body?.size,
-                contentId: normalizedCid
+                contentId: normalizedCid,
+                disposition: disposition,
+                byteFetchHandle: AttachmentByteFetchHandle(
+                    provider: .gmail,
+                    accountId: accountId,
+                    messageId: messageId,
+                    attachmentId: attachmentId
+                )
             ))
         } else if let cid = normalizedCid, !cid.isEmpty,
                   let mime = part.mimeType, mime.hasPrefix("image/"),
@@ -126,15 +140,38 @@ public enum GmailMapper {
             result.append(Attachment(
                 id: id,
                 messageId: messageId,
+                accountId: accountId,
                 filename: nil,
                 mimeType: mime,
                 sizeBytes: part.body?.size,
                 contentId: cid,
+                disposition: .inline,
                 inlineData: base64
             ))
         }
         for child in part.parts ?? [] {
-            collectAttachments(part: child, messageId: messageId, result: &result)
+            collectAttachments(part: child, messageId: messageId, accountId: accountId, result: &result)
+        }
+    }
+
+    private static func contentDisposition(in headers: [GmailDTO.MessagePartHeader]?) -> AttachmentDisposition? {
+        guard let raw = headers?.first(where: {
+            $0.name.caseInsensitiveCompare("Content-Disposition") == .orderedSame
+        })?.value else {
+            return nil
+        }
+        let normalized = raw
+            .split(separator: ";", maxSplits: 1)
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        switch normalized {
+        case "attachment":
+            return .attachment
+        case "inline":
+            return .inline
+        default:
+            return nil
         }
     }
 

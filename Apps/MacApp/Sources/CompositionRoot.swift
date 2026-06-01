@@ -1,11 +1,15 @@
+import ActionsFeature
 import AIKit
 import AIRuntime
+import AppFoundation
 import AttachmentKit
 import AttachmentRAG
 import AuthKit
 import BriefFeature
 import ComposeFeature
 import InboxFeature
+import IntegrationDomain
+import MailDomain
 import MailProviders
 import MailSync
 import Persistence
@@ -27,6 +31,8 @@ final class CompositionRoot {
     let accountsTabStore: AccountsTabStore
     let syncSupervisor: SyncSupervisor
     let mailMutator: MailMutator
+    let trustActionStore: TrustActionUIStore
+    let actionQueueService: ActionQueueService
     let labelReconciler: LabelReconciler
     let translationStore: TranslationStore
     let attachmentSummaryOrchestrator: AttachmentSummaryOrchestrator
@@ -62,29 +68,30 @@ final class CompositionRoot {
         let oauthClient: any OAuthClient = GmailOAuthClient()
         self.oauthClient = oauthClient
 
-        self.apiFactory = { [tokenStore, oauthClient] accountId in
-            guard let credential = try tokenStore.load(for: accountId) else {
-                throw AuthError.missingCredential(accountID: accountId)
-            }
-            return GmailAPIClient(
-                accountId: accountId,
-                credential: credential,
-                oauthClient: oauthClient,
-                tokenStore: tokenStore
-            )
-        }
+        self.apiFactory = Self.makeGmailAPIFactory(tokenStore: tokenStore, oauthClient: oauthClient)
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
         self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
+        let gmailActionExecutor = GmailActionExecutor(db: db, apiFactory: apiFactory)
+        self.actionQueueService = ActionQueueService(
+            db: db,
+            executionStore: ActionOutboxExecutionStore(db: db, executor: gmailActionExecutor)
+        )
+        self.trustActionStore = TrustActionUIStore(queue: actionQueueService)
+        Task { [actionQueueService, trustActionStore] in
+            let items = await actionQueueService.recentOutboxItems()
+            trustActionStore.replaceOutboxItems(items)
+        }
         self.labelReconciler = LabelReconciler(db: db, apiFactory: apiFactory)
         self.labelReconcileCoordinator = LabelReconcileCoordinator(
             reconciler: labelReconciler,
             tokenStore: tokenStore
         )
         self.translationStore = TranslationStore(db: db)
+        let attachmentByteStore = AttachmentByteStore(baseURL: AttachmentByteStore.defaultBaseURL())
         self.attachmentSummaryOrchestrator = AttachmentSummaryOrchestrator(
             db: db,
-            byteStore: AttachmentByteStore(baseURL: AttachmentByteStore.defaultBaseURL()),
+            byteStore: attachmentByteStore,
             aiService: aiService,
             byteProvider: GmailAttachmentByteProvider(apiFactory: apiFactory)
         )
@@ -95,8 +102,14 @@ final class CompositionRoot {
         let capturedOAuth = oauthClient
         let capturedTokenStore = tokenStore
         self.composeViewModel = ComposeViewModel(
-            composeServiceFactory: { accountId in
-                LiveComposeService(api: try capturedFactory(accountId), db: capturedDB)
+            sendQueueFactory: { _ in
+                SendQueueService(
+                    db: capturedDB,
+                    providers: [
+                        LazyGmailSendProvider(apiFactory: capturedFactory)
+                    ],
+                    credentialAuthorizer: TokenStoreSendQueueCredentialAuthorizer(tokenStore: capturedTokenStore)
+                )
             },
             reauthorizeHandler: { @MainActor accountId in
                 let newCredential = try await capturedOAuth.reauthorize(
@@ -110,23 +123,15 @@ final class CompositionRoot {
             db: db,
             oauthClient: oauthClient,
             tokenStore: tokenStore,
-            syncSupervisor: syncSupervisor
+            syncSupervisor: syncSupervisor,
+            localAccountCacheDeleter: { accountId in
+                try attachmentByteStore.deleteAccount(accountId: accountId)
+            }
         )
 
         self.accountsTabStore.onAccountAdded = { [weak self] accountId in
             self?.subscribeSyncEvents(accountId: accountId)
         }
-    }
-
-    nonisolated static func defaultDBPath() -> String {
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
-        return appSupport
-            .appendingPathComponent("PrivateAIMail")
-            .appendingPathComponent("db.sqlite")
-            .path
     }
 
     var toastDismissTask: Task<Void, Never>?
@@ -150,7 +155,7 @@ final class CompositionRoot {
                     try await syncSupervisor.startIncremental(accountId: account.id)
                     subscribeSyncEvents(accountId: account.id)
                 } catch {
-                    showErrorToast("Sync start failed: \(describe(error))")
+                    showErrorToast(Self.userMessage(for: error, operation: .sync, provider: "Gmail"))
                 }
             }
 
@@ -167,6 +172,8 @@ final class CompositionRoot {
                 guard let self, !Task.isCancelled else { break }
                 if case .threadUpserted(let threadId) = event {
                     self.debouncedEnqueue(accountId: accountId, threadId: threadId)
+                } else if case .error(let syncError) = event {
+                    self.showErrorToast(syncError.userActionableFailure.message)
                 }
             }
             // Clean up so re-subscribing works if the account is re-added
@@ -190,13 +197,23 @@ final class CompositionRoot {
             do {
                 try await syncSupervisor.refresh(accountId: accountId)
             } catch {
-                showErrorToast("Refresh failed: \(describe(error))")
+                showErrorToast(Self.userMessage(for: error, operation: .sync, provider: "Gmail"))
             }
         }
     }
 
     func makeComposeService(accountId: String) throws -> any ComposeService {
         LiveComposeService(api: try apiFactory(accountId), db: db)
+    }
+
+    func makeSendQueueService() -> SendQueueService {
+        SendQueueService(
+            db: db,
+            providers: [
+                LazyGmailSendProvider(apiFactory: apiFactory)
+            ],
+            credentialAuthorizer: TokenStoreSendQueueCredentialAuthorizer(tokenStore: tokenStore)
+        )
     }
 
     func refreshAllAccounts() {
@@ -206,7 +223,7 @@ final class CompositionRoot {
                 do {
                     try await syncSupervisor.refresh(accountId: account.id)
                 } catch {
-                    showErrorToast("Refresh failed: \(describe(error))")
+                    showErrorToast(Self.userMessage(for: error, operation: .sync, provider: "Gmail"))
                 }
             }
         }
@@ -242,11 +259,53 @@ final class CompositionRoot {
         toastMessage = ToastState(message: message, undoAction: nil, kind: .error)
     }
 
-    private func describe(_ error: any Error) -> String {
-        if let localized = (error as? LocalizedError)?.errorDescription {
-            return localized
+}
+
+extension CompositionRoot {
+
+    nonisolated static func defaultDBPath() -> String {
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first!
+        return appSupport
+            .appendingPathComponent("PrivateAIMail")
+            .appendingPathComponent("db.sqlite")
+            .path
+    }
+
+    nonisolated private static func makeGmailAPIFactory(
+        tokenStore: any TokenStore,
+        oauthClient: any OAuthClient
+    ) -> GmailAPIFactory {
+        { accountId in
+            guard let credential = try tokenStore.load(for: accountId) else {
+                throw AuthError.missingCredential(accountID: accountId)
+            }
+            return GmailAPIClient(
+                accountId: accountId,
+                credential: credential,
+                oauthClient: oauthClient,
+                tokenStore: tokenStore
+            )
         }
-        return String(describing: error)
+    }
+
+    private nonisolated static func userMessage(
+        for error: any Error,
+        operation: UserActionableFailureOperation,
+        provider: String? = nil
+    ) -> String {
+        if let syncError = error as? SyncError {
+            return syncError.userActionableFailure.message
+        }
+        if let authError = error as? AuthError {
+            return authError.userActionableFailure(operation: operation, provider: provider).message
+        }
+        if let gmailError = error as? GmailAPIError {
+            return gmailError.userActionableFailure(operation: operation).message
+        }
+        return UserActionableFailure.coerce(error, operation: operation, provider: provider).message
     }
 
     nonisolated private static var isRunningTests: Bool {
@@ -258,7 +317,46 @@ private struct GmailAttachmentByteProvider: AttachmentByteProvider {
     let apiFactory: GmailAPIFactory
 
     func fetchAttachmentData(accountId: String, messageId: String, attachmentId: String) async throws -> Data {
-        let api = try apiFactory(accountId)
-        return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
+        do {
+            let api = try apiFactory(accountId)
+            return try await api.getAttachmentData(messageId: messageId, attachmentId: attachmentId)
+        } catch let error as GmailAPIError {
+            throw error.userActionableFailure(operation: .attachment)
+        } catch let error as AuthError {
+            throw error.userActionableFailure(operation: .attachment, provider: "Gmail")
+        } catch {
+            throw UserActionableFailure.coerce(error, operation: .attachment, provider: "Gmail")
+        }
+    }
+}
+
+private struct LazyGmailSendProvider: MailSendProvider {
+    let provider = MailProviderIdentifier.gmail
+    let apiFactory: GmailAPIFactory
+
+    func send(_ request: ProviderSendRequest) async throws -> ProviderSendResult {
+        let api = try apiFactory(request.accountID)
+        return try await GmailSendExecutor(api: api).send(request)
+    }
+}
+
+private struct TokenStoreSendQueueCredentialAuthorizer: SendQueueCredentialAuthorizing {
+    let tokenStore: any TokenStore
+
+    func authorization(for item: QueuedOutgoingMessage) async -> SendQueueCredentialAuthorization {
+        do {
+            guard try tokenStore.load(for: item.accountID) != nil else {
+                return SendQueueCredentialAuthorization(
+                    status: .missingCredential,
+                    providerErrorCode: "missing_credential"
+                )
+            }
+            return .authorized
+        } catch {
+            return SendQueueCredentialAuthorization(
+                status: .missingCredential,
+                providerErrorCode: "credential_lookup_failed"
+            )
+        }
     }
 }

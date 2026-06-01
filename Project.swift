@@ -39,6 +39,7 @@ private let localPackages: [Package] = [
 
 // Features linked into the MacApp target. Core/Mail/AI/etc are pulled in transitively.
 private let appFeatureDeps: [TargetDependency] = [
+    .package(product: "AppFoundation"),
     .package(product: "InboxFeature"),
     .package(product: "ThreadFeature"),
     .package(product: "ComposeFeature"),

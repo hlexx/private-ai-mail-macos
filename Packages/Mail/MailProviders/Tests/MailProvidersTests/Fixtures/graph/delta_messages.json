@@ -1,0 +1,62 @@
+{
+  "value": [
+    {
+      "@odata.type": "#microsoft.graph.message",
+      "id": "graph-overlap-inbox-1",
+      "changeKey": "fixture-change-1",
+      "internetMessageId": "<overlap-1@mail.example.com>",
+      "conversationId": "graph-conversation-overlap-1",
+      "parentFolderId": "inbox-id",
+      "subject": "Trust review",
+      "bodyPreview": "Hello provider.",
+      "body": {
+        "contentType": "text",
+        "content": "Hello provider."
+      },
+      "from": {
+        "emailAddress": {
+          "name": "Ava Example",
+          "address": "ava@example.com"
+        }
+      },
+      "toRecipients": [
+        {
+          "emailAddress": {
+            "name": "User Example",
+            "address": "user@example.com"
+          }
+        }
+      ],
+      "receivedDateTime": "2026-05-29T06:15:00Z",
+      "sentDateTime": "2026-05-29T06:14:59.500Z",
+      "isRead": false,
+      "isDraft": false,
+      "hasAttachments": true,
+      "attachments": [
+        {
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          "id": "graph-att-brief-pdf",
+          "name": "trust-brief.pdf",
+          "contentType": "application/pdf",
+          "size": 2048,
+          "isInline": false,
+          "contentId": "<brief-pdf@example>"
+        }
+      ],
+      "categories": ["Project Alpha"],
+      "flag": {
+        "flagStatus": "flagged"
+      }
+    },
+    {
+      "@odata.type": "#microsoft.graph.message",
+      "id": "graph-removed-1",
+      "parentFolderId": "inbox-id",
+      "@removed": {
+        "reason": "deleted"
+      }
+    }
+  ],
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$skiptoken=fixture-delta-next",
+  "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$deltatoken=fixture-delta-cursor"
+}
