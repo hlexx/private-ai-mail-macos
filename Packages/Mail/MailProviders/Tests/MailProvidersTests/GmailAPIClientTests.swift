@@ -154,6 +154,37 @@ struct GmailAPIClientTests {
         #expect(object?["threadId"] == "thread001")
     }
 
+    @Test func createDraftIncludesNestedMessageBodyForReplies() async throws {
+        MockURLProtocol.reset()
+        var capturedBody: Data?
+        MockURLProtocol.handlers.append { request in
+            guard let url = request.url, url.path.contains("/drafts") else { return nil }
+            capturedBody = Self.requestBodyData(from: request)
+            let data = """
+            {"id": "draft001", "message": {"id": "message001", "threadId": "thread001", "labelIds": ["DRAFT"]}}
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (data, response)
+        }
+
+        let client = makeClient()
+        let draft = try await client.createDraft(raw: "dGVzdA", threadId: "thread001")
+
+        #expect(draft.id == "draft001")
+        #expect(draft.message.id == "message001")
+        #expect(draft.message.threadId == "thread001")
+
+        let body = try #require(capturedBody)
+        let object = try JSONSerialization.jsonObject(with: body) as? [String: [String: String]]
+        #expect(object?["message"]?["raw"] == "dGVzdA")
+        #expect(object?["message"]?["threadId"] == "thread001")
+    }
+
     // MARK: - sendMessage 403 insufficient scope
 
     @Test func sendMessageInsufficientScopeThrows() async throws {

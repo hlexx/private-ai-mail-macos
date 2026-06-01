@@ -42,14 +42,14 @@ Build the next Trust MVP increment after `7cdeb8a`: turn the integrated action-c
 - [x] Run `cd Packages/Core/Persistence && arch -arm64 swift test`.
 
 ### Task 2: Wire Gmail actions through the provider layer
-- [ ] Locate the current Gmail mutation APIs or add the minimal provider-facing methods required for archive, star, mark read, trash, and draft creation.
-- [ ] Implement Gmail executor adapter behind the executor boundary from Task 1.
-- [ ] Map Gmail API success to completed outbox status with privacy-safe result metadata.
-- [ ] Map Gmail API failures to retryable/non-retryable `ActionFailureKind` without logging raw message bodies, attachment text, prompts, tokens, or provider secrets.
-- [ ] Preserve existing Gmail sync invariants and do not change Gmail history checkpointing behavior.
-- [ ] Add tests for successful Gmail mutation, duplicate execution suppression, expired auth, retryable provider failure, and non-retryable provider failure.
-- [ ] Run `cd Packages/Mail/MailProviders && arch -arm64 swift test`.
-- [ ] Run `cd Packages/Mail/MailSync && arch -arm64 swift test`.
+- [x] Locate the current Gmail mutation APIs or add the minimal provider-facing methods required for archive, star, mark read, trash, and draft creation.
+- [x] Implement Gmail executor adapter behind the executor boundary from Task 1.
+- [x] Map Gmail API success to completed outbox status with privacy-safe result metadata.
+- [x] Map Gmail API failures to retryable/non-retryable `ActionFailureKind` without logging raw message bodies, attachment text, prompts, tokens, or provider secrets.
+- [x] Preserve existing Gmail sync invariants and do not change Gmail history checkpointing behavior.
+- [x] Add tests for successful Gmail mutation, duplicate execution suppression, expired auth, retryable provider failure, and non-retryable provider failure.
+- [x] Run `cd Packages/Mail/MailProviders && arch -arm64 swift test`.
+- [x] Run `cd Packages/Mail/MailSync && arch -arm64 swift test`.
 
 ### Task 3: Add minimal approval and outbox UI
 - [ ] Add user-triggered actions in Inbox/Thread UI for the MVP action kinds without introducing AI auto-actions.

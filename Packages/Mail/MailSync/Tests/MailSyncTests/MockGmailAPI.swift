@@ -7,6 +7,12 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     var listHistoryResults: [Result<GmailDTO.HistoryResponse, Error>] = []
     var getMessageResults: [String: Result<GmailDTO.Message, Error>] = [:]
     var listLabelsResult: Result<[GmailDTO.Label], Error> = .success([])
+    var createDraftResult: Result<GmailDTO.Draft, Error> = .success(
+        GmailDTO.Draft(
+            id: "draft-default",
+            message: GmailDTO.Message(id: "message-default", threadId: "thread-default", labelIds: ["DRAFT"])
+        )
+    )
 
     private var listMessagesCallIndex = 0
     private var listHistoryCallIndex = 0
@@ -15,6 +21,7 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
     var getThreadCalled = 0
     var getThreadCalledIds: [String] = []
     var listHistoryCallArguments: [(startHistoryId: String, pageToken: String?)] = []
+    var createDraftCalls: [(raw: String, threadId: String?)] = []
 
     func listMessages(query: String?, pageToken: String?, maxResults: Int) async throws -> GmailDTO.MessageList {
         listMessagesCalled += 1
@@ -54,6 +61,11 @@ final class MockGmailAPI: GmailAPI, @unchecked Sendable {
 
     func sendMessage(raw base64URL: String, threadId: String?) async throws -> GmailDTO.SentMessage {
         throw GmailAPIError.invalidResponse
+    }
+
+    func createDraft(raw base64URL: String, threadId: String?) async throws -> GmailDTO.Draft {
+        createDraftCalls.append((raw: base64URL, threadId: threadId))
+        return try createDraftResult.get()
     }
 
     func listLabels() async throws -> [GmailDTO.Label] {
