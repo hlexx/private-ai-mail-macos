@@ -2,6 +2,7 @@ import ActionsFeature
 import Foundation
 import GRDB
 import IntegrationDomain
+import MailDomain
 import MailSync
 import Persistence
 
@@ -23,10 +24,6 @@ final class ActionQueueService: TrustActionQueueing {
 
     func start(_ request: TrustActionRequest) async -> TrustActionQueueOutcome {
         do {
-            if request.action == .draftReply {
-                return try await completeLocalDraftRequest(request)
-            }
-
             try await enqueue(request)
             let result = try await executionStore.execute(opId: request.requestId)
             return Self.outcome(opId: request.requestId, result: result)
@@ -42,6 +39,7 @@ final class ActionQueueService: TrustActionQueueing {
 
     func retry(opId: String) async -> TrustActionQueueOutcome? {
         do {
+            _ = try await executionStore.recoverStaleExecuting(opId: opId)
             guard try await prepareRetry(opId: opId) else { return nil }
             let result = try await executionStore.execute(opId: opId)
             return Self.outcome(opId: opId, result: result)
@@ -57,7 +55,7 @@ final class ActionQueueService: TrustActionQueueing {
 
     private func enqueue(_ request: TrustActionRequest) async throws {
         let timestamp = timestampValue(now())
-        let command = try command(for: request, timestamp: timestamp)
+        let command = try await command(for: request, timestamp: timestamp)
         let payloadJSON = try encodeJSONString(command.payload)
         try await db.write { database in
             if try ActionOutboxRecord.fetchOne(database, key: request.requestId) != nil {
@@ -84,56 +82,6 @@ final class ActionQueueService: TrustActionQueueing {
         }
     }
 
-    private func completeLocalDraftRequest(_ request: TrustActionRequest) async throws -> TrustActionQueueOutcome {
-        let timestamp = timestampValue(now())
-        let command = try command(for: request, timestamp: timestamp, status: .succeeded)
-        let result = ActionResult(
-            status: .succeeded,
-            externalResultId: "local:draft:\(request.requestId)",
-            completedAt: now(),
-            metadata: .object([
-                "actionKind": .string(request.action.rawValue),
-                "executor": .string("local-ui"),
-                "result": .string("approved"),
-                "targetKind": .string(command.target.kind.rawValue),
-            ])
-        )
-        let payloadJSON = try encodeJSONString(command.payload)
-        let resultJSON = try encodeJSONString(result)
-        try await db.write { database in
-            if try ActionOutboxRecord.fetchOne(database, key: request.requestId) != nil {
-                return
-            }
-            try ActionOutboxRecord(
-                opId: command.opId,
-                accountId: command.accountId,
-                targetKind: command.target.kind.rawValue,
-                threadId: request.target.threadId,
-                actionKind: command.kind.rawValue,
-                sensitivity: command.sensitivity.rawValue,
-                actionSchemaVersion: command.schemaVersion,
-                idempotencyKey: command.idempotencyKey.rawValue,
-                approvalRequirement: command.approvalRequirement.rawValue,
-                approvalState: command.approvalState.rawValue,
-                status: command.status.rawValue,
-                payloadJSON: payloadJSON,
-                resultJSON: resultJSON,
-                externalResultId: result.externalResultId,
-                attemptCount: command.attemptCount,
-                createdAt: timestamp,
-                updatedAt: timestamp,
-                approvedAt: timestamp,
-                completedAt: timestamp
-            ).insert(database)
-        }
-
-        return TrustActionQueueOutcome(
-            opId: request.requestId,
-            status: .completed,
-            message: "Draft action approved"
-        )
-    }
-
     private func prepareRetry(opId: String) async throws -> Bool {
         let timestamp = timestampValue(now())
         return try await db.write { database in
@@ -150,21 +98,70 @@ final class ActionQueueService: TrustActionQueueing {
         }
     }
 
+}
+
+extension ActionQueueService {
+
+    func recentOutboxItems(limit: Int = 5) async -> [TrustActionOutboxItem] {
+        (try? db.read { database in
+            let records = try ActionOutboxRecord.fetchAll(
+                database,
+                sql: """
+                    SELECT * FROM action_outbox
+                    ORDER BY updated_at DESC
+                    LIMIT ?
+                    """,
+                arguments: [limit]
+            )
+            return try records.compactMap { record in
+                try Self.outboxItem(from: record, database: database)
+            }
+        }) ?? []
+    }
+
+    nonisolated private static func outboxItem(
+        from record: ActionOutboxRecord,
+        database: Database
+    ) throws -> TrustActionOutboxItem? {
+        guard let action = TrustMVPAction(rawValue: record.actionKind),
+              let threadId = record.threadId else {
+            return nil
+        }
+        let subject = try String.fetchOne(
+            database,
+            sql: "SELECT subject FROM thread WHERE account_id = ? AND id = ?",
+            arguments: [record.accountId, threadId]
+        ) ?? ""
+        let failureKind = record.lastErrorKind.flatMap(ActionFailureKind.init(rawValue:))
+        return TrustActionOutboxItem(
+            id: record.opId,
+            action: action,
+            target: TrustActionTarget(
+                accountId: record.accountId,
+                threadId: threadId,
+                subject: subject
+            ),
+            status: displayStatus(record.status, failureKind: failureKind),
+            failureKind: failureKind,
+            message: message(record.status, failureKind: failureKind)
+        )
+    }
+}
+
+extension ActionQueueService {
+
     private func command(
         for request: TrustActionRequest,
         timestamp: Int,
         status: ActionStatus = .ready
-    ) throws -> ActionCommand {
+    ) async throws -> ActionCommand {
         try ActionCommand(
             opId: request.requestId,
             accountId: request.target.accountId,
             target: .thread(accountId: request.target.accountId, threadId: request.target.threadId),
             kind: request.action.kind,
             sensitivity: request.action == .trashThread ? .sensitive : .standard,
-            payload: ActionPayload(body: .object([
-                "source": .string("user"),
-                "surface": .string("trustMVP"),
-            ])),
+            payload: try await payload(for: request),
             userActionId: request.requestId,
             approvalRequirement: request.action.requiresExplicitConfirmation ? .explicitConfirm : .notRequired,
             approvalState: request.action.requiresExplicitConfirmation ? .approved : .notRequired,
@@ -172,6 +169,74 @@ final class ActionQueueService: TrustActionQueueing {
             createdAt: Date(timeIntervalSince1970: TimeInterval(timestamp)),
             updatedAt: Date(timeIntervalSince1970: TimeInterval(timestamp))
         )
+    }
+
+    private func payload(for request: TrustActionRequest) async throws -> ActionPayload {
+        guard try await isSupportedGmailAccount(request.target.accountId) else {
+            throw ActionQueueServiceError.unsupportedProvider
+        }
+        guard request.action == .draftReply else {
+            return ActionPayload(body: .object([
+                "source": .string("user"),
+                "surface": .string("trustMVP"),
+            ]))
+        }
+
+        let draftPayload = try await draftPayload(for: request)
+        return try ActionPayload(encoding: draftPayload)
+    }
+
+    private func isSupportedGmailAccount(_ accountId: String) async throws -> Bool {
+        try db.read { database in
+            try AccountRecord.fetchOne(database, key: accountId)?.provider == "gmail"
+        }
+    }
+
+    private func draftPayload(for request: TrustActionRequest) async throws -> GmailDraftActionPayload {
+        try db.read { database in
+            guard let account = try AccountRecord.fetchOne(database, key: request.target.accountId) else {
+                throw ActionQueueServiceError.invalidDraftPayload
+            }
+            let messages = try MessageRecord
+                .filter(
+                    Column("account_id") == request.target.accountId
+                        && Column("thread_id") == request.target.threadId
+                )
+                .order(Column("sent_at"))
+                .fetchAll(database)
+            guard let replyTarget = messages.last(where: { $0.flags & MessageRecord.sentByMe == 0 }) ?? messages.last,
+                  let recipient = Self.replyRecipient(from: replyTarget) else {
+                throw ActionQueueServiceError.invalidDraftPayload
+            }
+
+            return GmailDraftActionPayload(
+                accountID: account.id,
+                from: Address(name: account.displayName, email: account.email),
+                to: [recipient],
+                subject: Self.replySubject(request.target.subject),
+                bodyText: "",
+                threadID: request.target.threadId,
+                rfcInReplyTo: replyTarget.messageIdHeader ?? replyTarget.id,
+                rfcReferences: messages.compactMap(\.messageIdHeader)
+            )
+        }
+    }
+
+    nonisolated private static func replyRecipient(from message: MessageRecord) -> Address? {
+        if let from = message.fromAddr, let address = Address(rfc822: from) {
+            return address
+        }
+        if let to = message.toAddr, let address = Address(rfc822: to) {
+            return address
+        }
+        return nil
+    }
+
+    nonisolated private static func replySubject(_ subject: String) -> String {
+        let trimmed = subject.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        let prefix = trimmed.range(of: "re:", options: [.anchored, .caseInsensitive])
+        return prefix == nil ? "Re: \(trimmed)" : trimmed
     }
 
     private func encodeJSONString(_ value: some Encodable) throws -> String {
@@ -185,8 +250,11 @@ final class ActionQueueService: TrustActionQueueing {
     private func timestampValue(_ date: Date) -> Int {
         Int(date.timeIntervalSince1970)
     }
+}
 
-    private static func outcome(opId: String, result: ActionResult) -> TrustActionQueueOutcome {
+extension ActionQueueService {
+
+    nonisolated private static func outcome(opId: String, result: ActionResult) -> TrustActionQueueOutcome {
         switch result.status {
         case .succeeded:
             return TrustActionQueueOutcome(
@@ -215,8 +283,43 @@ final class ActionQueueService: TrustActionQueueing {
             )
         }
     }
+
+    nonisolated private static func displayStatus(
+        _ rawStatus: String,
+        failureKind: ActionFailureKind?
+    ) -> TrustActionDisplayStatus {
+        switch ActionStatus(rawValue: rawStatus) {
+        case .pending:
+            return .pending
+        case .ready, .executing:
+            return .running
+        case .succeeded:
+            return .completed
+        case .failed:
+            return TrustActionFailureCopy.isRetryable(failureKind) ? .failedRetryable : .failedNonRetryable
+        case .blocked, .cancelled, nil:
+            return .failedNonRetryable
+        }
+    }
+
+    nonisolated private static func message(_ rawStatus: String, failureKind: ActionFailureKind?) -> String {
+        switch ActionStatus(rawValue: rawStatus) {
+        case .pending:
+            return "Queued action"
+        case .ready, .executing:
+            return "Running action"
+        case .succeeded:
+            return "Action completed"
+        case .failed:
+            return TrustActionFailureCopy.message(for: failureKind)
+        case .blocked, .cancelled, nil:
+            return TrustActionFailureCopy.message(for: .cancelled)
+        }
+    }
 }
 
 private enum ActionQueueServiceError: Error {
     case invalidJSONEncoding
+    case invalidDraftPayload
+    case unsupportedProvider
 }

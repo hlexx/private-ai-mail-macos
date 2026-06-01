@@ -29,7 +29,7 @@ struct IntegrationDomainTests {
         }
     }
 
-    @Test func localMVPExecutorSupportsOnlyTrustMVPActionKinds() async throws {
+    @Test func localMVPExecutorFailsClosedForProductionSafety() async throws {
         let executor = LocalMVPActionExecutor()
         let target = ActionTarget.thread(accountId: "acct-1", threadId: "thread-1")
 
@@ -47,9 +47,9 @@ struct IntegrationDomainTests {
             let result = await executor.execute(command: command)
 
             #expect(kind.isTrustMVPLocalAction)
-            #expect(result.status == .succeeded)
-            #expect(result.failureKind == nil)
-            #expect(result.externalResultId == "local:\(command.opId)")
+            #expect(result.status == .failed)
+            #expect(result.failureKind == .providerRejected)
+            #expect(result.externalResultId == nil)
         }
 
         let unsupported = try ActionCommand(
@@ -64,7 +64,7 @@ struct IntegrationDomainTests {
 
         #expect(!ActionKind.sendReply.isTrustMVPLocalAction)
         #expect(unsupportedResult.status == .failed)
-        #expect(unsupportedResult.failureKind == .validationFailed)
+        #expect(unsupportedResult.failureKind == .providerRejected)
     }
 
     @Test func defaultApprovalPolicyMatchesActionRisk() {

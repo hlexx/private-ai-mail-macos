@@ -49,6 +49,13 @@ local sync/refresh, local search over synced mail, mailbox actions, attachment
 metadata with narrow local preview/summary support, supervised compose/reply,
 and Gmail send.
 
+Gmail Trust MVP actions support draft reply, archive, star, mark read, and
+trash through the supervised action outbox. Draft reply and trash require
+explicit user confirmation; archive, star, and mark-read use the fast action
+path. The UI shows recent pending, running, completed, and failed action state,
+and retry is exposed only for retryable failures. AI output never auto-runs an
+action.
+
 Outlook/Microsoft 365 support is beta-disabled in the app by default until
 real-account smoke tests pass. The repo contains Microsoft Graph contracts,
 OAuth configuration, mapping fixtures, sync/send adapter coverage, and
@@ -71,6 +78,8 @@ auto-send, and mobile companion apps.
 - Apple Silicon
 - Xcode 16+ / Swift 6
 - [Tuist](https://docs.tuist.dev) 4.x (`brew install tuist`)
+- SwiftLint (`brew install swiftlint`)
+- ripgrep (`brew install ripgrep`)
 - Metal Toolchain for local builds: `sudo xcodebuild -downloadComponent MetalToolchain`
 - ~3.6 GB disk space for on-device AI model (downloaded automatically on first launch)
 
@@ -93,6 +102,39 @@ The app opens the Re:Box mail workspace with Gmail account connection, folder
 filters, thread reading, local search, local AI briefs, reply drafting, mailbox
 actions, and Gmail send. Outlook appears as a beta provider but remains disabled
 until the Trust MVP release gate records passing real-account smoke evidence.
+
+## Validation
+
+```bash
+# Default Trust MVP release gate: diff hygiene, SwiftLint, package tests,
+# privacy grep, and release-gate command guidance.
+./scripts/verify-trust-mvp.sh
+
+# Full local release gate: default gate plus Tuist generation and Debug app build.
+FULL_TRUST_MVP_GATE=1 ./scripts/verify-trust-mvp.sh
+
+# Print the gate without executing commands.
+VERIFY_TRUST_MVP_DRY_RUN=1 ./scripts/verify-trust-mvp.sh
+```
+
+Run the gate with the Homebrew arm64 toolchain first on Apple Silicon if the
+system PATH also contains an Intel SwiftLint binary:
+
+```bash
+PATH=/opt/homebrew/bin:$PATH ./scripts/verify-trust-mvp.sh
+```
+
+AI evals use the installed local model by default. Stub-only offline runs are
+available with `RB_ALLOW_STUB_EVALS=1`, but stub output must not be used as a
+baseline report.
+
+## Local Data
+
+The on-device model is stored under
+`~/Library/Application Support/PrivateAIMail/models/`. Attachment bytes are
+cached under `~/Library/Application Support/PrivateAIMail/Attachments/`, are
+excluded from backup, are checksum-verified on load when metadata is available,
+and are removed per account during account deletion.
 
 ## Repo layout
 

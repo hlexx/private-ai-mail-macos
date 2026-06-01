@@ -255,9 +255,9 @@ extension MainScene {
         guard let action else { return }
         switch action {
         case .reply:
-            draftReply()
+            requestTrustActionForSelectedThread(.draftReply)
         case .archive:
-            archiveSelectedThread()
+            requestTrustActionForSelectedThread(.archiveThread)
         case .snooze, .log, .task, .unsub, .rule, .share:
             showToast("Action not available yet", undo: nil)
         }
@@ -397,7 +397,7 @@ extension MainScene {
     // swiftlint:disable:next cyclomatic_complexity
     private func handleAction(_ key: ActionKey) {
         switch key {
-        case .reply:            draftReply()
+        case .reply:            requestTrustActionForSelectedThread(.draftReply)
         case .replyAll:         replyAll()
         case .forward:          forwardThread()
         case .archive:          archiveSelectedThread()

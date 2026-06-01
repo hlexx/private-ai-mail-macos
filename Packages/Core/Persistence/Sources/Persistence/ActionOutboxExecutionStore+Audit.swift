@@ -93,15 +93,3 @@ extension ActionOutboxExecutionStore {
         }
     }
 }
-
-extension ActionFailureKind {
-    var isRetryable: Bool {
-        switch self {
-        case .rateLimited, .networkUnavailable, .executionFailed, .unknown:
-            true
-        case .policyDenied, .approvalMissing, .validationFailed, .authenticationRequired,
-             .permissionDenied, .providerRejected, .cancelled:
-            false
-        }
-    }
-}

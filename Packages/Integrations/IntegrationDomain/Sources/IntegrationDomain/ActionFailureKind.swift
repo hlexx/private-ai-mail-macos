@@ -12,4 +12,14 @@ public enum ActionFailureKind: String, CaseIterable, Codable, Hashable, Sendable
     case executionFailed
     case cancelled
     case unknown
+
+    public var isRetryable: Bool {
+        switch self {
+        case .rateLimited, .networkUnavailable, .executionFailed, .unknown:
+            true
+        case .policyDenied, .approvalMissing, .validationFailed, .authenticationRequired,
+             .permissionDenied, .providerRejected, .cancelled:
+            false
+        }
+    }
 }

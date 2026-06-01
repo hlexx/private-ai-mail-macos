@@ -222,9 +222,11 @@ public final class TrustActionUIStore {
               outboxItems[index].canRetry else {
             return
         }
+        let previousItem = outboxItems[index]
         outboxItems[index].status = .running
         outboxItems[index].message = "Retrying action"
         guard let outcome = await queue.retry(opId: opId) else {
+            outboxItems[index] = previousItem
             return
         }
         apply(outcome, fallbackRequest: outboxItems[index])
@@ -306,12 +308,6 @@ public enum TrustActionFailureCopy {
     }
 
     public static func isRetryable(_ failureKind: ActionFailureKind?) -> Bool {
-        switch failureKind {
-        case .rateLimited, .networkUnavailable, .executionFailed, .unknown:
-            return true
-        case .authenticationRequired, .permissionDenied, .providerRejected, .policyDenied,
-             .approvalMissing, .validationFailed, .cancelled, nil:
-            return false
-        }
+        failureKind?.isRetryable ?? false
     }
 }

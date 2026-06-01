@@ -8,24 +8,12 @@ public struct LocalMVPActionExecutor: ActionExecuting {
     public init() {}
 
     public func execute(command: ActionCommand) async -> ActionResult {
-        guard command.kind.isTrustMVPLocalAction else {
-            return ActionResult(
-                status: .failed,
-                failureKind: .validationFailed,
-                metadata: Self.metadata(
-                    command: command,
-                    result: "unsupportedAction"
-                )
-            )
-        }
-
-        return ActionResult(
-            status: .succeeded,
-            externalResultId: "local:\(command.opId)",
-            completedAt: Date(),
+        ActionResult(
+            status: .failed,
+            failureKind: .providerRejected,
             metadata: Self.metadata(
                 command: command,
-                result: "accepted"
+                result: "unsupportedExecutor"
             )
         )
     }

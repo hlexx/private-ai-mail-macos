@@ -68,17 +68,7 @@ final class CompositionRoot {
         let oauthClient: any OAuthClient = GmailOAuthClient()
         self.oauthClient = oauthClient
 
-        self.apiFactory = { [tokenStore, oauthClient] accountId in
-            guard let credential = try tokenStore.load(for: accountId) else {
-                throw AuthError.missingCredential(accountID: accountId)
-            }
-            return GmailAPIClient(
-                accountId: accountId,
-                credential: credential,
-                oauthClient: oauthClient,
-                tokenStore: tokenStore
-            )
-        }
+        self.apiFactory = Self.makeGmailAPIFactory(tokenStore: tokenStore, oauthClient: oauthClient)
 
         self.syncSupervisor = SyncSupervisor(db: db, apiFactory: apiFactory)
         self.mailMutator = MailMutator(db: db, apiFactory: apiFactory)
@@ -88,6 +78,10 @@ final class CompositionRoot {
             executionStore: ActionOutboxExecutionStore(db: db, executor: gmailActionExecutor)
         )
         self.trustActionStore = TrustActionUIStore(queue: actionQueueService)
+        Task { [actionQueueService, trustActionStore] in
+            let items = await actionQueueService.recentOutboxItems()
+            trustActionStore.replaceOutboxItems(items)
+        }
         self.labelReconciler = LabelReconciler(db: db, apiFactory: apiFactory)
         self.labelReconcileCoordinator = LabelReconcileCoordinator(
             reconciler: labelReconciler,
@@ -138,17 +132,6 @@ final class CompositionRoot {
         self.accountsTabStore.onAccountAdded = { [weak self] accountId in
             self?.subscribeSyncEvents(accountId: accountId)
         }
-    }
-
-    nonisolated static func defaultDBPath() -> String {
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
-        return appSupport
-            .appendingPathComponent("PrivateAIMail")
-            .appendingPathComponent("db.sqlite")
-            .path
     }
 
     var toastDismissTask: Task<Void, Never>?
@@ -274,6 +257,38 @@ final class CompositionRoot {
 
     private func showErrorToast(_ message: String) {
         toastMessage = ToastState(message: message, undoAction: nil, kind: .error)
+    }
+
+}
+
+extension CompositionRoot {
+
+    nonisolated static func defaultDBPath() -> String {
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first!
+        return appSupport
+            .appendingPathComponent("PrivateAIMail")
+            .appendingPathComponent("db.sqlite")
+            .path
+    }
+
+    nonisolated private static func makeGmailAPIFactory(
+        tokenStore: any TokenStore,
+        oauthClient: any OAuthClient
+    ) -> GmailAPIFactory {
+        { accountId in
+            guard let credential = try tokenStore.load(for: accountId) else {
+                throw AuthError.missingCredential(accountID: accountId)
+            }
+            return GmailAPIClient(
+                accountId: accountId,
+                credential: credential,
+                oauthClient: oauthClient,
+                tokenStore: tokenStore
+            )
+        }
     }
 
     private nonisolated static func userMessage(

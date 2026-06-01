@@ -24,17 +24,20 @@ public struct ActionOutboxExecutionStore: Sendable {
     let executor: any ActionExecuting
     let now: @Sendable () -> Date
     let makeEventId: @Sendable () -> String
+    let executingLeaseSeconds: Int
 
     public init(
         db: AppDatabase,
         executor: any ActionExecuting,
         now: @escaping @Sendable () -> Date = Date.init,
-        makeEventId: @escaping @Sendable () -> String = { UUID().uuidString }
+        makeEventId: @escaping @Sendable () -> String = { UUID().uuidString },
+        executingLeaseSeconds: Int = 300
     ) {
         self.db = db
         self.executor = executor
         self.now = now
         self.makeEventId = makeEventId
+        self.executingLeaseSeconds = executingLeaseSeconds
     }
 
     public func execute(opId: String) async throws -> ActionResult {
@@ -59,6 +62,12 @@ public struct ActionOutboxExecutionStore: Sendable {
 
         return result
     }
+
+    public func recoverStaleExecuting(opId: String) async throws -> Bool {
+        try await db.write { database in
+            try recoverStaleExecutingIfNeeded(opId: opId, database: database)
+        }
+    }
 }
 
 struct PreparedActionExecution: Sendable {
@@ -80,13 +89,18 @@ extension ActionOutboxExecutionStore {
             )
         }
 
-        guard currentStatus == .ready else {
+        if currentStatus == .executing,
+           try recoverStaleExecutingIfNeeded(opId: opId, database: database) {
+            record = try fetchOutboxRecord(opId: opId, database: database)
+        }
+
+        guard try actionStatus(record.status) == .ready else {
             throw ActionOutboxExecutionError.actionNotReady(opId: opId, status: record.status)
         }
-        guard currentStatus.canTransition(to: .executing) else {
+        guard try actionStatus(record.status).canTransition(to: .executing) else {
             throw ActionOutboxExecutionError.invalidTransition(
                 opId: opId,
-                from: currentStatus,
+                from: try actionStatus(record.status),
                 to: .executing
             )
         }
@@ -191,6 +205,51 @@ extension ActionOutboxExecutionStore {
             status: ActionStatus.executing.rawValue,
             startedAt: currentTimestamp()
         )
+    }
+
+    func recoverStaleExecutingIfNeeded(opId: String, database: Database) throws -> Bool {
+        var record = try fetchOutboxRecord(opId: opId, database: database)
+        guard try actionStatus(record.status) == .executing else {
+            return false
+        }
+        guard record.updatedAt <= currentTimestamp() - executingLeaseSeconds else {
+            return false
+        }
+
+        let timestamp = currentTimestamp()
+        record.status = ActionStatus.failed.rawValue
+        record.lastErrorKind = ActionFailureKind.executionFailed.rawValue
+        record.updatedAt = timestamp
+        try record.update(database)
+
+        var attempt = try fetchAttempt(
+            opId: opId,
+            attemptNumber: record.attemptCount,
+            database: database
+        )
+        attempt.status = ActionStatus.failed.rawValue
+        attempt.completedAt = timestamp
+        attempt.retryable = 1
+        attempt.errorCode = ActionFailureKind.executionFailed.rawValue
+        attempt.errorMessage = safeAttemptErrorMessage(for: .executionFailed)
+        try attempt.save(database)
+
+        try insertAuditEvent(
+            opId: opId,
+            kind: .executionFailed,
+            actor: .system,
+            occurredAt: timestamp,
+            metadata: .object([
+                "actionKind": .string(record.actionKind),
+                "failureKind": .string(ActionFailureKind.executionFailed.rawValue),
+                "recovery": .string("staleExecuting"),
+                "retryable": .bool(true),
+                "status": .string(ActionStatus.failed.rawValue),
+                "targetKind": .string(record.targetKind),
+            ]),
+            database: database
+        )
+        return true
     }
 
     func currentTimestamp() -> Int {

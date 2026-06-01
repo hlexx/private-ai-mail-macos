@@ -174,6 +174,55 @@ struct ActionOutboxExecutionStoreTests {
             #expect(attempts[0].errorMessage == "The action request was invalid.")
         }
     }
+
+    @Test func staleExecutingActionRecoversToRetryableFailure() async throws {
+        let db = try AppDatabase.openInMemorySync()
+        try seedActionAccount(db)
+        try insertActionOutboxRecord(
+            db,
+            opId: "op-stale",
+            idempotencyKey: "idem-stale",
+            status: "executing",
+            attemptCount: 1,
+            updatedAt: 10
+        )
+        try insertActionAttemptRecord(db, opId: "op-stale", status: "executing")
+        let executor = ProbeActionExecutor(result: ActionResult(status: .succeeded))
+        let store = ActionOutboxExecutionStore(
+            db: db,
+            executor: executor,
+            now: { Date(timeIntervalSince1970: 400) },
+            executingLeaseSeconds: 60
+        )
+
+        let recovered = try await store.recoverStaleExecuting(opId: "op-stale")
+
+        try db.read { database in
+            let fetchedRecord = try ActionOutboxRecord.fetchOne(database, key: "op-stale")
+            let record = try #require(fetchedRecord)
+            #expect(record.status == "failed")
+            #expect(record.lastErrorKind == ActionFailureKind.executionFailed.rawValue)
+            let attempts = try attemptsForOp("op-stale", database)
+            #expect(attempts.map(\.status) == ["failed"])
+            #expect(attempts[0].retryable == 1)
+            #expect(attempts[0].errorCode == ActionFailureKind.executionFailed.rawValue)
+            let events = try auditEventsForOp("op-stale", database)
+            #expect(events.contains { $0.metadataJSON.contains("staleExecuting") })
+        }
+        #expect(recovered)
+        #expect(await executor.executionCount == 0)
+    }
+}
+
+private func insertActionAttemptRecord(_ db: AppDatabase, opId: String, status: String) throws {
+    try db.dbQueue.write { database in
+        try ActionAttemptRecord(
+            opId: opId,
+            attemptNumber: 1,
+            status: status,
+            startedAt: 10
+        ).insert(database)
+    }
 }
 
 private actor ProbeActionExecutor: ActionExecuting {
@@ -217,6 +266,8 @@ private func insertActionOutboxRecord(
     payloadJSON: String = #"{"schemaVersion":1,"body":{"reason":"userAction"}}"#,
     resultJSON: String? = nil,
     externalResultId: String? = nil,
+    attemptCount: Int = 0,
+    updatedAt: Int = 10,
     completedAt: Int? = nil
 ) throws {
     try db.dbQueue.write { database in
@@ -234,8 +285,9 @@ private func insertActionOutboxRecord(
             payloadJSON: payloadJSON,
             resultJSON: resultJSON,
             externalResultId: externalResultId,
+            attemptCount: attemptCount,
             createdAt: 10,
-            updatedAt: 10,
+            updatedAt: updatedAt,
             completedAt: completedAt
         ).insert(database)
     }

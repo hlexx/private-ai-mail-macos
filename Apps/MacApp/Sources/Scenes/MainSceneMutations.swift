@@ -1,3 +1,4 @@
+import ActionsFeature
 import AIKit
 import ComposeFeature
 import DesignSystem
@@ -55,6 +56,21 @@ extension MainScene {
             tone: tone,
             replyLanguage: detectReplyLanguage()
         )
+    }
+
+    func requestTrustActionForSelectedThread(_ action: TrustMVPAction) {
+        guard let threadId = inboxStore.selectedThreadID,
+              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
+        Task {
+            await composition.trustActionStore.requestAction(TrustActionRequest(
+                action: action,
+                target: TrustActionTarget(
+                    accountId: thread.accountId,
+                    threadId: thread.id,
+                    subject: thread.subject
+                )
+            ))
+        }
     }
 
     func replyAll() {
@@ -206,6 +222,9 @@ extension MainScene {
         guard let threadId = inboxStore.selectedThreadID,
               let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
         let accountId = thread.accountId
+        if requestTrustActionIfSupported(.archiveThread, thread: thread) {
+            return
+        }
         Task {
             do {
                 try await composition.mailMutator.archive(threadId, accountId: accountId)
@@ -226,6 +245,9 @@ extension MainScene {
                 .filter(Column("account_id") == accountId && Column("thread_id") == threadId && Column("label_id") == "STARRED")
                 .fetchOne(db)
         }) != nil
+        if !isStarred, requestTrustActionIfSupported(.starThread, thread: thread) {
+            return
+        }
         Task {
             do {
                 if isStarred {
@@ -245,6 +267,9 @@ extension MainScene {
         guard let threadId = inboxStore.selectedThreadID,
               let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
         let accountId = thread.accountId
+        if requestTrustActionIfSupported(.markRead, thread: thread) {
+            return
+        }
         Task {
             do {
                 try await composition.mailMutator.markRead(threadId, accountId: accountId, read: true)
@@ -256,6 +281,10 @@ extension MainScene {
     }
 
     func trashThread(_ threadId: String, accountId: String) {
+        if let thread = inboxStore.threads.first(where: { $0.id == threadId }),
+           requestTrustActionIfSupported(.trashThread, thread: thread) {
+            return
+        }
         Task {
             do {
                 try await composition.mailMutator.trash(threadId, accountId: accountId)
@@ -267,6 +296,21 @@ extension MainScene {
                 showMutationError(error, fallback: "Trash failed")
             }
         }
+    }
+
+    private func requestTrustActionIfSupported(_ action: TrustMVPAction, thread: ThreadRow) -> Bool {
+        guard thread.accountId.isEmpty == false else { return false }
+        Task {
+            await composition.trustActionStore.requestAction(TrustActionRequest(
+                action: action,
+                target: TrustActionTarget(
+                    accountId: thread.accountId,
+                    threadId: thread.id,
+                    subject: thread.subject
+                )
+            ))
+        }
+        return true
     }
 
     func showToast(_ message: String, undo: ToastState.UndoAction?, kind: ToastState.Kind = .success) {
@@ -322,90 +366,4 @@ extension MainScene {
         }
     }
 
-    // MARK: - Thread Navigation (J/K)
-
-    enum ThreadNavDirection { case newer, older }
-
-    func navigateThread(direction: ThreadNavDirection) {
-        let ordered = inboxStore.threads
-        guard !ordered.isEmpty else { return }
-
-        guard let active = inboxStore.selectedThreadID,
-              let idx = ordered.firstIndex(where: { $0.id == active }) else {
-            // No selection — select the first thread
-            inboxStore.selectedThreadID = ordered.first?.id
-            return
-        }
-
-        let nextIdx: Int
-        switch direction {
-        case .older: nextIdx = (idx + 1) % ordered.count
-        case .newer: nextIdx = (idx - 1 + ordered.count) % ordered.count
-        }
-
-        // Wrap-around feedback
-        let didWrap = (direction == .older && idx == ordered.count - 1 && nextIdx == 0) ||
-                      (direction == .newer && idx == 0 && nextIdx == ordered.count - 1)
-        if didWrap {
-            threadListWrapPulse = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                threadListWrapPulse = false
-            }
-        }
-
-        inboxStore.selectedThreadID = ordered[nextIdx].id
-    }
-
-    // MARK: - Space: Page Down / Next Unread
-
-    func pageDownOrNextUnread() {
-        // Scroll through messages one-by-one, then advance to next unread thread.
-        let messages = threadStore.messages
-        if let proxy = threadScrollProxy, !messages.isEmpty, !threadScrolledToBottom {
-            let nextIndex = lastScrolledMessageIndex + 1
-            if nextIndex < messages.count {
-                // Scroll to the next message in the thread
-                lastScrolledMessageIndex = nextIndex
-                withAnimation(.easeOut(duration: 0.25)) {
-                    proxy.scrollTo(messages[nextIndex].id, anchor: .top)
-                }
-                return
-            } else {
-                // Scrolled past last message — scroll to composer anchor
-                withAnimation(.easeOut(duration: 0.25)) {
-                    proxy.scrollTo(ThreadViewAnchor.composer, anchor: .top)
-                }
-                threadScrolledToBottom = true
-                return
-            }
-        }
-
-        // At bottom or no scroll proxy — find next unread thread
-        let ordered = inboxStore.threads
-        guard let active = inboxStore.selectedThreadID,
-              let idx = ordered.firstIndex(where: { $0.id == active }) else { return }
-
-        let afterCurrent = ordered[(idx + 1)...]
-        let beforeCurrent = ordered[..<idx]
-        let nextUnread = afterCurrent.first(where: { $0.hasUnread })
-            ?? beforeCurrent.first(where: { $0.hasUnread })
-
-        if let next = nextUnread {
-            inboxStore.selectedThreadID = next.id
-        } else {
-            showToast("No more unread mail", undo: nil)
-        }
-    }
-
-    func toggleTheme() {
-        let raw = UserDefaults.standard.string(forKey: "rb-theme") ?? RBTheme.system.rawValue
-        let current = RBTheme(rawValue: raw) ?? .system
-        let next: RBTheme
-        switch current {
-        case .system: next = .dark
-        case .dark: next = .light
-        case .light: next = .system
-        }
-        UserDefaults.standard.set(next.rawValue, forKey: "rb-theme")
-    }
 }

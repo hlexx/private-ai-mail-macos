@@ -10,12 +10,14 @@ struct TrustMVPSequencingDocumentTests {
             #expect(document.contains("### Tranche \(number):"))
         }
 
-        #expect(document.contains("Microsoft Graph network calls: planned"))
-        #expect(document.contains("Full local search: planned"))
-        #expect(document.contains("Send queue: planned"))
-        #expect(document.contains("Broad attachment preview: planned"))
-        #expect(document.contains("Status: in progress for this plan until validation passes."))
-        #expect(document.contains("Status: planned."))
+        #expect(document.contains("Microsoft Graph network calls: implemented in provider/sync packages but"))
+        #expect(document.contains("product-disabled"))
+        #expect(document.contains("Full local search: implemented for synced local mail through the local index."))
+        #expect(document.contains("Send and action queues: implemented for Gmail Trust MVP flows."))
+        #expect(document.contains("Broad DOCX/OCR,"))
+        #expect(document.contains("archive extraction, and arbitrary attachment preview remain deferred."))
+        #expect(document.contains("mutations, Snooze, automatic rules, Slack/Notion/CRM writes"))
+        #expect(document.contains("notarized packaging remain release-owner manual"))
     }
 
     @Test func documentKeepsEMAILALFFollowUpOutOfAppPlan() throws {

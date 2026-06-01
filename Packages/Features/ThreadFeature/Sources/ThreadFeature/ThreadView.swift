@@ -153,7 +153,13 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                 .buttonStyle(.rbGhost)
                 .disabled(actionStore == nil && onArchive == nil)
 
-                Button { requestActionOrFallback(.starThread, fallback: onStar) } label: {
+                Button {
+                    if store.isStarred {
+                        onStar?()
+                    } else {
+                        requestActionOrFallback(.starThread, fallback: onStar)
+                    }
+                } label: {
                     Label(
                         store.isStarred
                             ? String(localized: "thread.action.unstar", defaultValue: "Unstar")

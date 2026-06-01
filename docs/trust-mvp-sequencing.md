@@ -6,18 +6,18 @@ provider boundaries before expanding optional private AI behavior.
 
 ## Current implementation status
 
-- Microsoft Graph network calls: planned. This tranche defines provider
-  identifiers, mailbox vocabulary, capabilities, errors, checkpoint semantics,
-  and Outlook-compatible account rows; it does not call Microsoft Graph.
-- Full local search: planned. The Trust MVP must prefer local indexes for
-  private body and attachment search, with server search used only through an
-  explicit provider contract.
-- Send queue: planned. Current send contracts can describe provider send
-  capability, but durable queued send, retries, cancellation, and recovery are
-  not complete.
-- Broad attachment preview: planned. Attachment byte storage, extraction, and
-  summary foundations exist, but broad provider-neutral preview coverage across
-  common file types remains a later release gate.
+- Microsoft Graph network calls: implemented in provider/sync packages but
+  product-disabled. Settings still keeps Add Outlook disabled until real-account
+  smoke evidence and an ADR-backed mutation plan are complete.
+- Full local search: implemented for synced local mail through the local index.
+  Provider server search remains explicit and must not silently replace local
+  search.
+- Send and action queues: implemented for Gmail Trust MVP flows. Gmail send uses
+  durable queued send; supervised actions use `action_outbox` for draft reply,
+  archive, star, mark read, and trash.
+- Attachments: local byte storage, checksum validation, metadata search, narrow
+  preview states, and AI summary foundations are implemented. Broad DOCX/OCR,
+  archive extraction, and arbitrary attachment preview remain deferred.
 
 ## Tranches and release gates
 
@@ -37,7 +37,8 @@ Release gates:
 - SwiftPM tests for `MailDomain`, `MailProviders`, `MailSync`, and
   `Persistence` pass.
 
-Status: in progress for this plan until validation passes.
+Status: complete for the Trust MVP provider-contract tranche; later provider
+work must preserve ADR 0005 boundaries.
 
 ### Tranche 2: Outlook auth and account connection
 
@@ -53,7 +54,8 @@ Release gates:
 - Revocation, expired auth, and insufficient scope map to shared provider error
   categories.
 
-Status: planned.
+Status: product-disabled. Auth/config scaffolding exists, but account connection
+remains gated off in Settings for the release candidate.
 
 ### Tranche 3: Graph read adapter and delta sync
 
@@ -68,7 +70,8 @@ Release gates:
 - Folder and category mapping follows the canonical mailbox contract.
 - Gmail History API sync behavior is unchanged.
 
-Status: planned.
+Status: implemented below the product flag. Outlook/Graph read and delta-sync
+code exists, but app-level enablement still requires smoke evidence.
 
 ### Tranche 4: Provider-neutral sync orchestration and recovery
 
@@ -84,7 +87,8 @@ Release gates:
 - Progress and recovery logs use privacy-safe account, provider, stage, and
   category fields.
 
-Status: planned.
+Status: partially implemented. Gmail remains the stable runtime path; Graph sync
+coverage exists but is not product-enabled.
 
 ### Tranche 5: Full local search
 
@@ -99,7 +103,7 @@ Release gates:
 - Provider server search is optional and explicit, with minimized query payloads
   and no silent fallback from local to server search.
 
-Status: planned.
+Status: implemented for local synced mail.
 
 ### Tranche 6: Send and mutation queue
 
@@ -114,7 +118,9 @@ Release gates:
   and cancellation semantics.
 - Auto-send remains out of scope unless a later ADR changes the trust boundary.
 
-Status: planned.
+Status: implemented for Gmail send and the Trust MVP action layer. Outlook
+mutations, Snooze, automatic rules, Slack/Notion/CRM writes, cloud broker
+delivery, and model-router action tasks remain deferred.
 
 ### Tranche 7: Attachments data plane and broad preview
 
@@ -130,8 +136,9 @@ Release gates:
   types handled visibly and safely.
 - AI artifact generation uses local extracted text and versioned prompts.
 
-Status: planned. Existing attachment storage and summarization foundations are
-in progress, but broad preview is not complete.
+Status: partially implemented. Local storage, checksum validation, metadata
+search, limited preview state, and AI-summary foundations are present; broad
+preview, DOCX/OCR, and archive extraction are not complete.
 
 ### Tranche 8: Trust MVP release hardening
 
@@ -153,7 +160,9 @@ Release gates:
 - Rollback can disable Graph paths while preserving Gmail and leaving dormant
   Outlook-compatible schema intact.
 
-Status: planned.
+Status: automated gate implemented in `scripts/verify-trust-mvp.sh`; live Gmail
+and Outlook smoke evidence plus notarized packaging remain release-owner manual
+work.
 
 ## EMAIL_ALF follow-up
 

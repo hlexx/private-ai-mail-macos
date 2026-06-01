@@ -142,6 +142,29 @@ struct InboxFeatureTests {
     }
 
     @MainActor
+    @Test func retryReturningNilRestoresRetryableFailureState() async {
+        let queue = TestTrustActionQueue(outcomes: [], retryOutcomes: [:])
+        let store = TrustActionUIStore(queue: queue)
+        store.replaceOutboxItems([
+            .init(
+                id: "retryable",
+                action: .archiveThread,
+                target: .init(accountId: "a1", threadId: "t1"),
+                status: .failedRetryable,
+                failureKind: .networkUnavailable,
+                message: "Network is unavailable. Retry when the connection returns."
+            ),
+        ])
+
+        await store.retry(opId: "retryable")
+
+        #expect(store.outboxItems.first?.status == .failedRetryable)
+        #expect(store.outboxItems.first?.failureKind == .networkUnavailable)
+        #expect(store.outboxItems.first?.message == "Network is unavailable. Retry when the connection returns.")
+        #expect(queue.retried == ["retryable"])
+    }
+
+    @MainActor
     @Test func aiGeneratedActionOutputIsNotQueuedAutomatically() async {
         let queue = TestTrustActionQueue(outcomes: [])
         let store = TrustActionUIStore(queue: queue)
