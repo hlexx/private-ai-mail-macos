@@ -42,29 +42,6 @@ public final class BriefBackgroundQueue {
         }
     }
 
-    public func cancelAll() {
-        workerTask?.cancel()
-        workerTask = nil
-        retryTask?.cancel()
-        retryTask = nil
-        backfillTask?.cancel()
-        backfillTask = nil
-        pending.removeAll()
-        pendingSet.removeAll()
-        isRunning = false
-        retryCount = 0
-    }
-
-    public func setAIAvailable(_ available: Bool) {
-        aiAvailable = available
-        if available {
-            retryCount = 0
-            retryTask?.cancel()
-            retryTask = nil
-            startWorkerIfNeeded()
-        }
-    }
-
     /// Enqueue all inbox threads that don't have a brief yet, capped at `limit` globally.
     public func backfillMissing(limit: Int = 200) {
         backfillTask?.cancel()
@@ -289,6 +266,40 @@ public final class BriefBackgroundQueue {
             PrivacyObservabilityEvent(category: .ai, name: "ai.thread_brief_backfill", fields: fields),
             severity: severity
         )
+    }
+}
+
+// MARK: - Lifecycle
+
+extension BriefBackgroundQueue {
+    public func cancelAll() {
+        workerTask?.cancel()
+        workerTask = nil
+        retryTask?.cancel()
+        retryTask = nil
+        backfillTask?.cancel()
+        backfillTask = nil
+        pending.removeAll()
+        pendingSet.removeAll()
+        isRunning = false
+        retryCount = 0
+    }
+
+    public func setAIAvailable(_ available: Bool) {
+        aiAvailable = available
+        if available {
+            retryCount = 0
+            retryTask?.cancel()
+            retryTask = nil
+            startWorkerIfNeeded()
+        } else {
+            workerTask?.cancel()
+            workerTask = nil
+            retryTask?.cancel()
+            retryTask = nil
+            isRunning = false
+            retryCount = 0
+        }
     }
 }
 

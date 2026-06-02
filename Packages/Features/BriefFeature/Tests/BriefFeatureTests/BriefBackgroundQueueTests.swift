@@ -162,6 +162,27 @@ struct BriefBackgroundQueueTests {
     }
 
     @MainActor
+    @Test func setAIUnavailablePreventsProcessingUntilAvailableAgain() async throws {
+        let fake = QueueFakeAIService()
+        fake.stubbedBrief = queueSampleBrief
+        let db = try makeQueueTestDB(threadCount: 1)
+        let queue = BriefBackgroundQueue(aiService: fake, db: db)
+
+        queue.setAIAvailable(false)
+        queue.enqueue(accountId: "acc1", threadId: "thread-1")
+
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(fake.callCount == 0)
+        #expect(queue.isRunning == false)
+
+        queue.setAIAvailable(true)
+        try await Task.sleep(for: .seconds(1))
+
+        #expect(fake.callCount == 1)
+    }
+
+    @MainActor
     @Test func backfillMissingEnqueuesThreadsWithoutBriefs() async throws {
         let fake = QueueFakeAIService()
         fake.stubbedBrief = queueSampleBrief

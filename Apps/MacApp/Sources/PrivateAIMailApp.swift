@@ -13,28 +13,32 @@ struct PrivateAIMailApp: App {
     private let keyboardDispatcher = KeyboardDispatcher()
     private let sparkleUpdater = SparkleUpdater()
     @State private var startup = AppStartupState.bootstrap()
-    @State private var setupComplete = false
 
     var body: some Scene {
         WindowGroup(id: "main") {
             Group {
-                if let composition = startup.composition, setupComplete {
-                    MainScene(composition: composition, keyboardDispatcher: keyboardDispatcher)
-                        .frame(minWidth: 980, minHeight: 720)
-                        .task { composition.resumeExistingAccounts() }
-                        .onAppear { configureMainWindow() }
-                        .onChange(of: composition.showCompose) { _, show in
-                            if show {
-                                openWindow(id: "compose")
-                                composition.showCompose = false
+                if let composition = startup.composition {
+                    if composition.aiModelController.shouldShowFirstLaunchOnboarding {
+                        AIOnboardingScene(modelController: composition.aiModelController)
+                            .frame(minWidth: 560, minHeight: 440)
+                    } else {
+                        MainScene(composition: composition, keyboardDispatcher: keyboardDispatcher)
+                            .frame(minWidth: 980, minHeight: 720)
+                            .task { composition.resumeExistingAccounts() }
+                            .onAppear { configureMainWindow() }
+                            .onChange(of: composition.showCompose) { _, show in
+                                if show {
+                                    openWindow(id: "compose")
+                                    composition.showCompose = false
+                                }
                             }
-                        }
-                } else if let composition = startup.composition {
-                    ModelSetupScene(
-                        modelManager: composition.modelManager,
-                        onComplete: { setupComplete = true }
-                    )
-                    .frame(minWidth: 480, minHeight: 360)
+                            .onChange(of: composition.aiModelController.isAIReady) { _, ready in
+                                composition.applyAIAvailability()
+                                if ready {
+                                    composition.briefBackgroundQueue.backfillMissing(limit: 200)
+                                }
+                            }
+                    }
                 } else if let failure = startup.failure {
                     StartupRecoveryScene(failure: failure, onRetry: retryStartup)
                         .frame(minWidth: 560, minHeight: 360)
@@ -42,10 +46,8 @@ struct PrivateAIMailApp: App {
             }
             .task(id: startup.id) {
                 guard let composition = startup.composition else { return }
-                let installed = await composition.modelManager.installedURL()
-                if installed != nil {
-                    setupComplete = true
-                }
+                await composition.aiModelController.refreshInstalledStatus()
+                composition.applyAIAvailability()
             }
             .rbTheme()
         }
@@ -167,7 +169,6 @@ struct PrivateAIMailApp: App {
     }
 
     private func retryStartup() {
-        setupComplete = false
         startup = AppStartupState.bootstrap()
     }
 

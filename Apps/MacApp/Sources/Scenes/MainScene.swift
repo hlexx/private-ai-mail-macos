@@ -36,12 +36,13 @@ struct MainScene: View {
     @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
     @AppStorage("pam.layout.sidebarCollapsed") private var sidebarCollapsed: Bool = false
     @AppStorage("pam.layout.briefCollapsed") private var briefCollapsed: Bool = false
-    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openSettings) var openSettings
 
     var inboxStore: InboxStore { composition.inboxStore }
     var threadStore: ThreadStore { composition.threadStore }
     var briefStore: BriefStore { composition.briefStore }
     var translationStore: TranslationStore { composition.translationStore }
+    var aiReady: Bool { composition.aiModelController.isAIReady }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -119,9 +120,9 @@ struct MainScene: View {
                         onScrollProxy: { proxy in
                             threadScrollProxy = proxy
                         },
-                        attachmentSummaryStore: composition.attachmentSummaryStore,
+                        attachmentSummaryStore: aiReady ? composition.attachmentSummaryStore : nil,
                         composer: {
-                            if let threadID = inboxStore.selectedThreadID {
+                            if aiReady, let threadID = inboxStore.selectedThreadID {
                                 InlineComposer(
                                     threadID: threadID,
                                     accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
@@ -158,8 +159,15 @@ struct MainScene: View {
                     )
                 },
                 brief: {
-                    BriefRail(store: briefStore, onDraftReply: { draftReply() })
-                        .frame(maxHeight: .infinity, alignment: .top)
+                    if aiReady {
+                        BriefRail(store: briefStore, onDraftReply: { draftReply() })
+                            .frame(maxHeight: .infinity, alignment: .top)
+                    } else {
+                        AIUnavailableRail(
+                            modelController: composition.aiModelController,
+                            openSettings: { openSettings() }
+                        )
+                    }
                 }
             )
         }
@@ -206,9 +214,26 @@ struct MainScene: View {
                 let accountEmail = accounts.first(where: { $0.id == thread.accountId })?.email ?? ""
                 threadStore.accountEmail = accountEmail
                 threadStore.observe(threadId: threadId, accountId: thread.accountId)
-                briefStore.loadBrief(forThreadID: threadId, accountId: thread.accountId)
+                if aiReady {
+                    briefStore.loadBrief(forThreadID: threadId, accountId: thread.accountId)
+                } else {
+                    briefStore.loadBrief(forThreadID: nil)
+                }
             } else {
                 threadStore.stopObserving()
+                briefStore.loadBrief(forThreadID: nil)
+            }
+        }
+        .onChange(of: aiReady) { _, ready in
+            guard let threadId = inboxStore.selectedThreadID,
+                  let thread = inboxStore.threads.first(where: { $0.id == threadId })
+            else {
+                briefStore.loadBrief(forThreadID: nil)
+                return
+            }
+            if ready {
+                briefStore.loadBrief(forThreadID: threadId, accountId: thread.accountId)
+            } else {
                 briefStore.loadBrief(forThreadID: nil)
             }
         }

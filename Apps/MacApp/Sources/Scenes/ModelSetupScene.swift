@@ -1,17 +1,10 @@
-import AIRuntime
 import DesignSystem
 import SwiftUI
 
 struct ModelSetupScene: View {
 
-    let modelManager: ModelManager
-    let onComplete: () -> Void
-
-    @State private var fraction: Double = 0
-    @State private var bytesDownloaded: Int64 = 0
-    @State private var totalBytes: Int64 = 0
-    @State private var error: String?
-    @State private var isDownloading = false
+    let modelController: AIModelController
+    var completeOnboardingBeforeInstall = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +21,7 @@ struct ModelSetupScene: View {
                     .rbTextStyle(.eyebrow)
                     .foregroundStyle(Color.rbFg3)
 
-                if let error {
+                if let error = modelController.installErrorMessage {
                     errorView(error)
                 } else {
                     progressView
@@ -38,9 +31,8 @@ struct ModelSetupScene: View {
 
             Spacer()
 
-            // Cancel button
-            Button(action: cancelAndQuit) {
-                Text("Cancel and quit")
+            Button(action: modelController.continueWithoutAI) {
+                Text("Continue without AI")
                     .rbTextStyle(.bodySM)
                     .foregroundStyle(Color.rbFg3)
                     .padding(.horizontal, RBSpace.s4)
@@ -52,19 +44,28 @@ struct ModelSetupScene: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.rbBgDeep)
         .task {
-            await startInstall()
+            if modelController.installErrorMessage == nil {
+                modelController.startInstall(
+                    completeOnboardingImmediately: completeOnboardingBeforeInstall
+                )
+            }
         }
     }
 
     private var progressView: some View {
         VStack(spacing: RBSpace.s3) {
-            ProgressView(value: fraction)
+            ProgressView(value: modelController.downloadFraction)
                 .tint(Color.rbCitron500)
                 .progressViewStyle(.linear)
 
-            Text(byteCountLabel)
+            Text(modelController.byteCountLabel)
                 .rbTextStyle(.mono)
                 .foregroundStyle(Color.rbFg3)
+
+            Text("The model stays on this Mac and powers briefs, reply drafts, and attachment summaries without sending mailbox content to a cloud AI service.")
+                .rbTextStyle(.bodySM)
+                .foregroundStyle(Color.rbFg3)
+                .multilineTextAlignment(.center)
         }
     }
 
@@ -76,7 +77,11 @@ struct ModelSetupScene: View {
                 .multilineTextAlignment(.center)
 
             Button(
-                action: { Task { await startInstall() } },
+                action: {
+                    modelController.startInstall(
+                        completeOnboardingImmediately: completeOnboardingBeforeInstall
+                    )
+                },
                 label: {
                     Text("Retry")
                         .rbTextStyle(.bodySM)
@@ -87,44 +92,5 @@ struct ModelSetupScene: View {
             )
             .buttonStyle(.plain)
         }
-    }
-
-    private var byteCountLabel: String {
-        guard totalBytes > 0 else { return "Preparing download…" }
-        let downloaded = ByteCountFormatter.string(fromByteCount: bytesDownloaded, countStyle: .file)
-        let total = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
-        return "\(downloaded) / \(total)"
-    }
-
-    private func startInstall() async {
-        guard !isDownloading else { return }
-        isDownloading = true
-        error = nil
-
-        do {
-            _ = try await modelManager.install { frac, downloaded, total in
-                Task { @MainActor in
-                    self.fraction = frac
-                    self.bytesDownloaded = downloaded
-                    self.totalBytes = total
-                }
-            }
-            isDownloading = false
-            onComplete()
-        } catch is CancellationError {
-            isDownloading = false
-        } catch let downloadError {
-            if let urlError = downloadError as? URLError,
-               [.notConnectedToInternet, .networkConnectionLost, .dataNotAllowed].contains(urlError.code) {
-                self.error = "No internet — required for one-time setup"
-            } else {
-                self.error = "Download failed: \(downloadError.localizedDescription)"
-            }
-            isDownloading = false
-        }
-    }
-
-    private func cancelAndQuit() {
-        NSApplication.shared.terminate(nil)
     }
 }

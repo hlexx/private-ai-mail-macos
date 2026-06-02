@@ -98,8 +98,8 @@ let project = Project(
                 base: [
                     "CODE_SIGN_STYLE": "Automatic",
                     "DEVELOPMENT_TEAM": "",
-                    "MARKETING_VERSION": "0.1.28-alpha",
-                    "CURRENT_PROJECT_VERSION": "128",
+                    "MARKETING_VERSION": "0.1.29-alpha",
+                    "CURRENT_PROJECT_VERSION": "129",
                 ]
             )
         ),

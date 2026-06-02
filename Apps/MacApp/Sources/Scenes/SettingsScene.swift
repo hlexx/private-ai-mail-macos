@@ -32,7 +32,10 @@ struct SettingsScene: View {
                     )
                 }
 
-            AITab(queue: composition.briefBackgroundQueue)
+            AITab(
+                queue: composition.briefBackgroundQueue,
+                modelController: composition.aiModelController
+            )
             .tabItem {
                 Label(
                     String(localized: "settings.tab.ai", defaultValue: "AI"),

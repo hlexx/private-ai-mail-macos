@@ -44,6 +44,10 @@ extension MainScene {
 extension MainScene {
 
     func draftReply() {
+        guard composition.aiModelController.isAIReady else {
+            openSettings()
+            return
+        }
         guard let threadID = inboxStore.selectedThreadID else { return }
         let accountId = inboxStore.threads.first(where: { $0.id == threadID })?.accountId
         withAnimation {

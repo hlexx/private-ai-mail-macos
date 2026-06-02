@@ -22,6 +22,7 @@ import TranslationFeature
 final class CompositionRoot {
     let db: AppDatabase
     let modelManager: ModelManager
+    let aiModelController: AIModelController
     let aiService: any AIService
     let inboxStore: InboxStore
     let threadStore: ThreadStore
@@ -55,6 +56,7 @@ final class CompositionRoot {
         let path = Self.defaultDBPath()
         self.db = try AppDatabase.openSync(at: path)
         self.modelManager = ModelManager()
+        self.aiModelController = AIModelController(modelManager: modelManager)
         self.aiService = ThreadBriefService.live(modelManager: modelManager)
         self.inboxStore = InboxStore(db: db)
         self.threadStore = ThreadStore(db: db)
@@ -140,6 +142,7 @@ final class CompositionRoot {
 
     func resumeExistingAccounts() {
         guard !Self.isRunningTests else { return }
+        applyAIAvailability()
 
         #if DEBUG
         // Populate the DB with seven synthetic threads from the Re:Box
@@ -159,8 +162,18 @@ final class CompositionRoot {
                 }
             }
 
-            // Backfill briefs for threads that don't have one yet
-            briefBackgroundQueue.backfillMissing(limit: 200)
+            if aiModelController.isAIReady {
+                // Backfill briefs for threads that don't have one yet.
+                briefBackgroundQueue.backfillMissing(limit: 200)
+            }
+        }
+    }
+
+    func applyAIAvailability() {
+        let ready = aiModelController.isAIReady
+        briefBackgroundQueue.setAIAvailable(ready)
+        if !ready {
+            briefStore.loadBrief(forThreadID: nil)
         }
     }
 
@@ -187,6 +200,10 @@ final class CompositionRoot {
         debounceTimers[key] = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled, let self else { return }
+            guard self.aiModelController.isAIReady else {
+                self.debounceTimers.removeValue(forKey: key)
+                return
+            }
             self.briefBackgroundQueue.enqueue(accountId: accountId, threadId: threadId)
             self.debounceTimers.removeValue(forKey: key)
         }
