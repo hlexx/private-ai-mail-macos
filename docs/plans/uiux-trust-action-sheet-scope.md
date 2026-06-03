@@ -34,9 +34,9 @@ Reduce action sheet overpromising by making only currently executable Trust MVP 
 - [x] Make unavailable items visually secondary and non-confusable with enabled tiles.
 
 ### Task 3: Add tests for trust scope
-- [ ] Add or update ActionsFeature tests to prove disabled/future actions cannot become selected executable actions.
-- [ ] Add a test that all enabled action sheet items map to current Trust MVP actions or a documented fallback.
-- [ ] Run `swift test --package-path Packages/Features/ActionsFeature` and fix failures.
+- [x] Add or update ActionsFeature tests to prove disabled/future actions cannot become selected executable actions.
+- [x] Add a test that all enabled action sheet items map to current Trust MVP actions or a documented fallback.
+- [x] Run `swift test --package-path Packages/Features/ActionsFeature` and fix failures.
 
 ### Task 4: Validate app integration
 - [ ] Verify `MainScene.handleActionSheet` no longer has UI paths that show "Action not available yet" for actions that looked executable.

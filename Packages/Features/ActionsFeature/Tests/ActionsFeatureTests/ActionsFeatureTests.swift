@@ -15,7 +15,10 @@ struct ActionsFeatureTests {
     @Test func executableActionsMatchTrustMVPSurface() {
         let ids = ActionItem.executable.map(\.id)
         #expect(ids == [.reply, .archive, .star, .markRead, .trash])
-        #expect(ids.compactMap(\.trustMVPAction) == TrustMVPAction.allCases)
+
+        let mappedActions = ids.map(\.trustMVPAction)
+        #expect(!mappedActions.contains(nil))
+        #expect(mappedActions.compactMap(\.self) == TrustMVPAction.allCases)
     }
 
     @Test func roadmapActionsAreSeparatedFromExecutableGrid() {
@@ -42,6 +45,30 @@ struct ActionsFeatureTests {
         #expect(!ActionExecutionSupport.isEnabled(.unsub))
         #expect(!ActionExecutionSupport.isEnabled(.rule))
         #expect(!ActionExecutionSupport.isEnabled(.share))
+    }
+
+    @Test func futureActionsCannotResolveToExecutableSelections() {
+        let futureActions = ActionItem.roadmap.map(\.id)
+        #expect(!futureActions.isEmpty)
+
+        for action in futureActions {
+            #expect(!ActionExecutionSupport.isEnabled(action))
+            #expect(ActionSheetPresentation.selectedExecutableAction(action) == nil)
+            #expect(!ActionSheetPresentation.isPrimaryCTAEnabled(for: action))
+        }
+    }
+
+    @Test func enabledActionSheetItemsMapToTrustMVPOrDocumentedFallback() {
+        let documentedFallbacks = Set<ActionID>()
+        let enabledIDs = ActionItem.executable.map(\.id)
+
+        for action in enabledIDs {
+            let isTrustMVPAction = action.trustMVPAction != nil
+            #expect(isTrustMVPAction || documentedFallbacks.contains(action))
+        }
+
+        #expect(documentedFallbacks.isEmpty)
+        #expect(Set(enabledIDs.compactMap(\.trustMVPAction)) == Set(TrustMVPAction.allCases))
     }
 
     @Test func actionSheetStartsWithoutExecutableSelection() {
