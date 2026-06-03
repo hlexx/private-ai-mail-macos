@@ -329,10 +329,37 @@ extension MainScene {
             },
             sidebarWidth: CGFloat(sidebarWidth),
             sidebarCollapsed: sidebarCollapsed,
+            filterOptions: toolbarFilterOptions,
+            onSelectFilterOption: { id in
+                selectToolbarFilterOption(id)
+            },
             searchFocused: $searchFocused,
             searchText: toolbarSearchText,
             onSubmitSearch: { inboxStore.submitSearch() }
         )
+    }
+
+    private var toolbarFilterOptions: [RBToolbarFilterOption] {
+        Self.toolbarFilterOptions(currentFilter: inboxStore.filter)
+    }
+
+    static func toolbarFilterOptions(currentFilter: ThreadFilter) -> [RBToolbarFilterOption] {
+        ThreadFilter.allCases.map { filter in
+            RBToolbarFilterOption(
+                id: filter.rawValue,
+                label: filter.label,
+                isSelected: filter == currentFilter
+            )
+        }
+    }
+
+    private func selectToolbarFilterOption(_ id: RBToolbarFilterOption.ID) {
+        guard let filter = Self.threadFilter(forToolbarOptionID: id) else { return }
+        inboxStore.filter = filter
+    }
+
+    static func threadFilter(forToolbarOptionID id: RBToolbarFilterOption.ID) -> ThreadFilter? {
+        ThreadFilter(rawValue: id)
     }
 }
 

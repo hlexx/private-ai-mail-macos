@@ -31,10 +31,10 @@ Fix the toolbar Filter icon so it is not a no-op. Chosen approach: make it open 
 Decision: implement a compact app-layer toolbar popover. `InboxStore.filter` and `ThreadFilter` remain owned by `InboxFeature`; `InboxView` keeps the visible chip row as the canonical in-pane filter indicator. `MainScene` should bridge `ThreadFilter.allCases`, the current `inboxStore.filter`, and a setter into `RBToolbar`. `RBToolbar` can stay decoupled by accepting generic option values such as id, label, selected state, and selection callback, without importing `InboxFeature` or moving filter semantics into `DesignSystem`.
 
 ### Task 2: Implement the working affordance
-- [ ] Replace the empty Filter action in `RBToolbar` with a real handler and accessibility label/help text.
-- [ ] If using a popover, expose current filter and choices from MainScene and update `inboxStore.filter` from the toolbar popover.
-- [ ] Keep the visible filter chip row as the canonical in-pane filter indicator; the toolbar popover must mirror the same state, not create another filter model.
-- [ ] If removing the icon, remove all dead callback plumbing and leave search/filter discovery intact in `InboxView`.
+- [x] Replace the empty Filter action in `RBToolbar` with a real handler and accessibility label/help text.
+- [x] If using a popover, expose current filter and choices from MainScene and update `inboxStore.filter` from the toolbar popover.
+- [x] Keep the visible filter chip row as the canonical in-pane filter indicator; the toolbar popover must mirror the same state, not create another filter model.
+- [x] If removing the icon, remove all dead callback plumbing and leave search/filter discovery intact in `InboxView`.
 
 ### Task 3: Test filter behavior
 - [ ] Add or update InboxFeature tests proving filter changes still affect filtered threads.

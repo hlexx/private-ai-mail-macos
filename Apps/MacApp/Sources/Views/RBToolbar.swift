@@ -2,6 +2,12 @@ import DesignSystem
 import Persistence
 import SwiftUI
 
+struct RBToolbarFilterOption: Identifiable, Hashable {
+    let id: String
+    let label: String
+    let isSelected: Bool
+}
+
 struct RBToolbar: View {
 
     let accounts: [AccountRecord]
@@ -16,10 +22,13 @@ struct RBToolbar: View {
     var onToggleBriefPlacement: (() -> Void)?
     var sidebarWidth: CGFloat = RBLayout.sidebarWidth
     var sidebarCollapsed: Bool = false
+    var filterOptions: [RBToolbarFilterOption] = []
+    var onSelectFilterOption: (RBToolbarFilterOption.ID) -> Void = { _ in }
     var searchFocused: FocusState<Bool>.Binding
     @Binding var searchText: String
     let onSubmitSearch: () -> Void
 
+    @State private var filterPopoverPresented = false
     @AppStorage("rb-theme") private var themeRaw: String = RBTheme.system.rawValue
     private var theme: RBTheme {
         RBTheme(rawValue: themeRaw) ?? .system
@@ -81,10 +90,7 @@ struct RBToolbar: View {
             Spacer(minLength: RBSpace.s2)
 
             HStack(spacing: 4) {
-                RBIconButton(
-                    systemName: "line.3.horizontal.decrease",
-                    accessibilityLabel: String(localized: "toolbar.filter", defaultValue: "Filter")
-                ) {}
+                filterButton
 
                 RBIconButton(
                     systemName: themeIconName,
@@ -125,6 +131,43 @@ struct RBToolbar: View {
         }
     }
 
+    private var filterButton: some View {
+        RBIconButton(
+            systemName: "line.3.horizontal.decrease",
+            accessibilityLabel: filterAccessibilityLabel,
+            action: { filterPopoverPresented.toggle() }
+        )
+        .disabled(filterOptions.isEmpty)
+        .help(filterHelpText)
+        .popover(isPresented: $filterPopoverPresented, arrowEdge: .top) {
+            RBToolbarFilterPopover(
+                options: filterOptions,
+                onSelect: { id in
+                    onSelectFilterOption(id)
+                    filterPopoverPresented = false
+                }
+            )
+        }
+    }
+
+    private var selectedFilterLabel: String? {
+        filterOptions.first(where: \.isSelected)?.label
+    }
+
+    private var filterAccessibilityLabel: String {
+        if let selectedFilterLabel {
+            return "Filter: \(selectedFilterLabel)"
+        }
+        return String(localized: "toolbar.filter", defaultValue: "Filter")
+    }
+
+    private var filterHelpText: String {
+        if let selectedFilterLabel {
+            return "Filter inbox threads. Current filter: \(selectedFilterLabel)"
+        }
+        return String(localized: "toolbar.filter.help", defaultValue: "Filter inbox threads")
+    }
+
     private var themeIconName: String {
         switch theme {
         case .light: return "moon"
@@ -153,6 +196,47 @@ struct RBToolbar: View {
 
     private func dotColor(for account: AccountRecord) -> Color {
         AccountRow.deterministicColor(for: account.id)
+    }
+}
+
+private struct RBToolbarFilterPopover: View {
+    let options: [RBToolbarFilterOption]
+    let onSelect: (RBToolbarFilterOption.ID) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(String(localized: "toolbar.filter.menuTitle", defaultValue: "Filter"))
+                .font(.rbGeist(12, weight: .semibold))
+                .foregroundStyle(Color.rbFg2)
+                .padding(.horizontal, RBSpace.s2)
+                .padding(.bottom, 4)
+
+            ForEach(options) { option in
+                Button {
+                    onSelect(option.id)
+                } label: {
+                    HStack(spacing: RBSpace.s2) {
+                        Text(option.label)
+                            .font(.rbGeist(13, weight: .medium))
+                            .foregroundStyle(Color.rbFg1)
+                        Spacer(minLength: RBSpace.s4)
+                        if option.isSelected {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.rbAccent)
+                        }
+                    }
+                    .frame(width: 172, alignment: .leading)
+                    .padding(.horizontal, RBSpace.s2)
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(option.isSelected ? "\(option.label), selected" : option.label)
+            }
+        }
+        .padding(8)
+        .background(Color.rbBgElev1)
     }
 }
 
