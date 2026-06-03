@@ -169,6 +169,27 @@ struct InboxStoreFilterTests {
     }
 
     @MainActor
+    @Test func changingFilterAfterObservationRefreshesVisibleThreads() async throws {
+        let db = try makeDB()
+        try seedData(db: db)
+        let store = InboxStore(db: db)
+        store.setSelection(.folder(.inbox))
+        store.startObserving()
+        defer { store.stopObserving() }
+
+        var ids = try await waitForThreadIDs(in: store) { $0 == Set(["t1", "t2", "t4", "t5"]) }
+        #expect(ids == Set(["t1", "t2", "t4", "t5"]))
+
+        store.filter = .hasAttachment
+        ids = try await waitForThreadIDs(in: store) { $0 == Set(["t2"]) }
+        #expect(ids == Set(["t2"]))
+
+        store.filter = .all
+        ids = try await waitForThreadIDs(in: store) { $0 == Set(["t1", "t2", "t4", "t5"]) }
+        #expect(ids == Set(["t1", "t2", "t4", "t5"]))
+    }
+
+    @MainActor
     @Test func folderCountsArePopulated() async throws {
         let db = try makeDB()
         try seedData(db: db)

@@ -380,6 +380,10 @@ extension MainScene {
             },
             sidebarWidth: CGFloat(sidebarWidth),
             sidebarCollapsed: sidebarCollapsed,
+            filterMenu: RBToolbarFilterMenu(
+                selectedFilter: inboxStore.filter,
+                onSelect: { inboxStore.filter = $0 }
+            ),
             searchFocused: $searchFocused,
             searchText: toolbarSearchText,
             onSubmitSearch: { inboxStore.submitSearch() }

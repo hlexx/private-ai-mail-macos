@@ -23,6 +23,10 @@
   action-outbox support. Future actions remain in the roadmap section only; they
   must not be selectable executable actions, show operational preview copy, or
   enable the primary CTA.
+- Toolbar/header controls that mirror feature-owned state should bridge that
+  state in `MainScene` with typed app-layer callbacks. Keep `ThreadFilter` and
+  `InboxStore.filter` semantics in `InboxFeature`; do not create a second
+  string-ID filter model or move feature semantics into `DesignSystem`.
 - Privacy-safe logs go through `PrivacyObservability`; raw message bodies,
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.
@@ -32,6 +36,7 @@
 - Default release gate: `PATH=/opt/homebrew/bin:$PATH ./scripts/verify-trust-mvp.sh`
 - Full local release gate: `PATH=/opt/homebrew/bin:$PATH FULL_TRUST_MVP_GATE=1 ./scripts/verify-trust-mvp.sh`
 - Gate dry run: `VERIFY_TRUST_MVP_DRY_RUN=1 ./scripts/verify-trust-mvp.sh`
+- App-level toolbar tests: `xcodebuild test -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -only-testing:MacAppTests/RBToolbarTests`
 - Mac app generation/build gate: `tuist generate --no-open` followed by
   `xcodebuild build -workspace PrivateAIMail.xcworkspace -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 

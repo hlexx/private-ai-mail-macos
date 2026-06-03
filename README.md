@@ -111,9 +111,10 @@ cd Packages/Mail/MailDomain && swift test
 Open `PrivateAIMail.xcworkspace`, select the `MacApp` scheme, run.
 
 The app opens the Re:Box mail workspace with Gmail account connection, folder
-filters, thread reading, local search, local AI briefs, reply drafting, mailbox
-actions, and Gmail send. Outlook appears as a beta provider but remains disabled
-until the Trust MVP release gate records passing real-account smoke evidence.
+and inbox thread filters available from the filter row and toolbar Filter menu,
+thread reading, local search, local AI briefs, reply drafting, mailbox actions,
+and Gmail send. Outlook appears as a beta provider but remains disabled until
+the Trust MVP release gate records passing real-account smoke evidence.
 
 ## Validation
 

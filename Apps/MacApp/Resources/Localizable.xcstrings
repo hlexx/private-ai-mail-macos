@@ -242,6 +242,30 @@
         "de": { "stringUnit": { "state": "translated", "value": "Filter" } }
       }
     },
+    "toolbar.filter.currentPrefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Filter: " } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Фильтр: " } },
+        "de": { "stringUnit": { "state": "translated", "value": "Filter: " } }
+      }
+    },
+    "toolbar.filter.helpPrefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Filter inbox threads. Current filter: " } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Фильтровать письма. Текущий фильтр: " } },
+        "de": { "stringUnit": { "state": "translated", "value": "E-Mail-Konversationen filtern. Aktueller Filter: " } }
+      }
+    },
+    "toolbar.filter.selectedSuffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": ", selected" } },
+        "ru": { "stringUnit": { "state": "translated", "value": ", выбрано" } },
+        "de": { "stringUnit": { "state": "translated", "value": ", ausgewählt" } }
+      }
+    },
     "toolbar.settings": {
       "extractionState": "manual",
       "localizations": {

@@ -1,6 +1,16 @@
 import DesignSystem
+import InboxFeature
 import Persistence
 import SwiftUI
+
+struct RBToolbarFilterMenu {
+    let selectedFilter: ThreadFilter
+    let onSelect: (ThreadFilter) -> Void
+
+    func select(_ filter: ThreadFilter) {
+        onSelect(filter)
+    }
+}
 
 struct RBToolbar: View {
 
@@ -16,10 +26,12 @@ struct RBToolbar: View {
     var onToggleBriefPlacement: (() -> Void)?
     var sidebarWidth: CGFloat = RBLayout.sidebarWidth
     var sidebarCollapsed: Bool = false
+    let filterMenu: RBToolbarFilterMenu
     var searchFocused: FocusState<Bool>.Binding
     @Binding var searchText: String
     let onSubmitSearch: () -> Void
 
+    @State private var filterPopoverPresented = false
     @AppStorage("rb-theme") private var themeRaw: String = RBTheme.system.rawValue
     private var theme: RBTheme {
         RBTheme(rawValue: themeRaw) ?? .system
@@ -81,10 +93,7 @@ struct RBToolbar: View {
             Spacer(minLength: RBSpace.s2)
 
             HStack(spacing: 4) {
-                RBIconButton(
-                    systemName: "line.3.horizontal.decrease",
-                    accessibilityLabel: String(localized: "toolbar.filter", defaultValue: "Filter")
-                ) {}
+                filterButton
 
                 RBIconButton(
                     systemName: themeIconName,
@@ -125,6 +134,43 @@ struct RBToolbar: View {
         }
     }
 
+    private var filterButton: some View {
+        RBIconButton(
+            systemName: "line.3.horizontal.decrease",
+            accessibilityLabel: filterAccessibilityLabel,
+            action: { filterPopoverPresented.toggle() }
+        )
+        .help(filterHelpText)
+        .popover(isPresented: $filterPopoverPresented, arrowEdge: .top) {
+            RBToolbarFilterPopover(
+                menu: filterMenu,
+                onSelect: { filter in
+                    filterMenu.select(filter)
+                    filterPopoverPresented = false
+                }
+            )
+        }
+    }
+
+    private var filterAccessibilityLabel: String {
+        "\(localizedFilterCurrentPrefix)\(filterMenu.selectedFilter.label)"
+    }
+
+    private var filterHelpText: String {
+        "\(localizedFilterHelpPrefix)\(filterMenu.selectedFilter.label)"
+    }
+
+    private var localizedFilterCurrentPrefix: String {
+        String(localized: "toolbar.filter.currentPrefix", defaultValue: "Filter: ")
+    }
+
+    private var localizedFilterHelpPrefix: String {
+        String(
+            localized: "toolbar.filter.helpPrefix",
+            defaultValue: "Filter inbox threads. Current filter: "
+        )
+    }
+
     private var themeIconName: String {
         switch theme {
         case .light: return "moon"
@@ -156,6 +202,53 @@ struct RBToolbar: View {
     }
 }
 
+private struct RBToolbarFilterPopover: View {
+    let menu: RBToolbarFilterMenu
+    let onSelect: (ThreadFilter) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(String(localized: "toolbar.filter", defaultValue: "Filter"))
+                .font(.rbGeist(12, weight: .semibold))
+                .foregroundStyle(Color.rbFg2)
+                .padding(.horizontal, RBSpace.s2)
+                .padding(.bottom, 4)
+
+            ForEach(ThreadFilter.allCases, id: \.self) { filter in
+                Button {
+                    onSelect(filter)
+                } label: {
+                    HStack(spacing: RBSpace.s2) {
+                        Text(filter.label)
+                            .font(.rbGeist(13, weight: .medium))
+                            .foregroundStyle(Color.rbFg1)
+                        Spacer(minLength: RBSpace.s4)
+                        if filter == menu.selectedFilter {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.rbAccent)
+                        }
+                    }
+                    .frame(width: 172, alignment: .leading)
+                    .padding(.horizontal, RBSpace.s2)
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(accessibilityLabel(for: filter))
+            }
+        }
+        .padding(8)
+        .background(Color.rbBgElev1)
+    }
+
+    private func accessibilityLabel(for filter: ThreadFilter) -> String {
+        guard filter == menu.selectedFilter else { return filter.label }
+        let suffix = String(localized: "toolbar.filter.selectedSuffix", defaultValue: ", selected")
+        return "\(filter.label)\(suffix)"
+    }
+}
+
 #if DEBUG
 struct RBToolbarPreview: View {
     @FocusState private var focused: Bool
@@ -167,6 +260,7 @@ struct RBToolbarPreview: View {
             onToggleTheme: {},
             onOpenSettings: {},
             onCompose: {},
+            filterMenu: RBToolbarFilterMenu(selectedFilter: .all, onSelect: { _ in }),
             searchFocused: $focused,
             searchText: .constant(""),
             onSubmitSearch: {}
