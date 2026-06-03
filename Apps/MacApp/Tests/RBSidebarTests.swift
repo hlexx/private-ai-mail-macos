@@ -1,4 +1,5 @@
 import AppKit
+import DesignSystem
 import InboxFeature
 import SwiftUI
 import Testing
@@ -77,6 +78,11 @@ struct RBSidebarTests {
         let color1 = AccountRow.deterministicColor(for: "test-id-1")
         let color2 = AccountRow.deterministicColor(for: "test-id-1")
         #expect(color1 == color2)
+    }
+
+    @Test func sidebarTargetsUseCompactHitSize() {
+        #expect(RBSidebarMetrics.sectionHeaderMinHeight >= RBControlMetrics.compactHitTarget)
+        #expect(RBSidebarMetrics.rowMinHeight >= RBControlMetrics.compactHitTarget)
     }
 
     @MainActor

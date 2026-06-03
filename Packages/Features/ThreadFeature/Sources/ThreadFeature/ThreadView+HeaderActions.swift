@@ -1,6 +1,10 @@
 import DesignSystem
 import SwiftUI
 
+enum ThreadActionMetrics {
+    static let compactTargetSize = RBControlMetrics.compactHitTarget
+}
+
 extension ThreadView {
     @ViewBuilder
     var actionBar: some View {
@@ -140,14 +144,20 @@ extension ThreadView {
     ) -> some View {
         Button(action: action) {
             if compact {
-                Image(systemName: systemImage)
-                    .frame(width: 18, height: 18)
+                Label(title, systemImage: systemImage)
+                    .labelStyle(.iconOnly)
+                    .frame(
+                        minWidth: ThreadActionMetrics.compactTargetSize,
+                        minHeight: ThreadActionMetrics.compactTargetSize
+                    )
             } else {
                 Label(title, systemImage: systemImage)
+                    .lineLimit(1)
             }
         }
         .buttonStyle(.rbGhost)
         .disabled(disabled)
+        .accessibilityLabel(title)
         .help(title)
     }
 }

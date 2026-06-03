@@ -14,6 +14,12 @@ struct ThreadFeatureTests {
         #expect(ThreadFeature.moduleName == "ThreadFeature")
     }
 
+    @Test func compactActionTargetsUseCompactHitSize() {
+        #expect(ThreadActionMetrics.compactTargetSize >= RBControlMetrics.compactHitTarget)
+        #expect(ThreadBottomPanelMetrics.tabMinHeight >= RBControlMetrics.compactHitTarget)
+        #expect(ThreadBottomPanelMetrics.collapseButtonMinSize >= RBControlMetrics.compactHitTarget)
+    }
+
     // MARK: - MessageRow
 
     @Test func messageRowExtractsNameFromDisplayFormat() {

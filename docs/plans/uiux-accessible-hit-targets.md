@@ -46,10 +46,10 @@ Task 1 audit findings:
 - [x] Update DesignSystem previews/tests as needed.
 
 ### Task 3: Update feature-level rows and compact controls
-- [ ] Add stable min heights or content shapes for sidebar section headers and rows.
-- [ ] Review thread header compact action buttons so icon-only fallbacks still have accessible labels/help and stable target size.
-- [ ] Review bottom panel collapse and tab controls for stable click targets.
-- [ ] Fix any text wrapping introduced by larger targets.
+- [x] Add stable min heights or content shapes for sidebar section headers and rows.
+- [x] Review thread header compact action buttons so icon-only fallbacks still have accessible labels/help and stable target size.
+- [x] Review bottom panel collapse and tab controls for stable click targets.
+- [x] Fix any text wrapping introduced by larger targets.
 
 ### Task 4: Validate accessibility-adjacent behavior
 - [ ] Run `swift test --package-path Packages/Core/DesignSystem` and fix failures.

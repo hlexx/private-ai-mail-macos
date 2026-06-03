@@ -1,6 +1,12 @@
 import DesignSystem
 import SwiftUI
 
+enum ThreadBottomPanelMetrics {
+    static let collapsedHeight: CGFloat = 42
+    static let tabMinHeight = RBControlMetrics.compactHitTarget
+    static let collapseButtonMinSize = RBControlMetrics.compactHitTarget
+}
+
 extension ThreadView {
     var hasBottomPanel: Bool {
         showsComposerPanel || showsBriefInBottomPanel
@@ -28,7 +34,7 @@ extension ThreadView {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .frame(height: bottomPanelCollapsed ? 42 : 318, alignment: .top)
+        .frame(height: bottomPanelCollapsed ? ThreadBottomPanelMetrics.collapsedHeight : 318, alignment: .top)
         .frame(maxWidth: .infinity)
         .background(Color.rbBgCanvas)
         .overlay(alignment: .top) {
@@ -56,11 +62,24 @@ extension ThreadView {
                     bottomPanelCollapsed.toggle()
                 }
             } label: {
-                Image(systemName: bottomPanelCollapsed ? "chevron.up" : "chevron.down")
+                Label(
+                    bottomPanelCollapsed
+                        ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
+                        : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel"),
+                    systemImage: bottomPanelCollapsed ? "chevron.up" : "chevron.down"
+                )
+                .labelStyle(.iconOnly)
                     .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 22, height: 22)
+                    .frame(
+                        minWidth: ThreadBottomPanelMetrics.collapseButtonMinSize,
+                        minHeight: ThreadBottomPanelMetrics.collapseButtonMinSize
+                    )
             }
             .buttonStyle(.rbGhost)
+            .accessibilityLabel(bottomPanelCollapsed
+                ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
+                : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
+            )
             .help(bottomPanelCollapsed
                 ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
                 : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
@@ -81,12 +100,16 @@ extension ThreadView {
             Label(tabTitle(tab), systemImage: tabIcon(tab))
                 .font(.rbGeist(12, weight: selected ? .medium : .regular))
                 .foregroundStyle(selected ? Color.rbFg1 : Color.rbFg3)
+                .lineLimit(1)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
+                .frame(minHeight: ThreadBottomPanelMetrics.tabMinHeight, alignment: .center)
+                .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
                 .background(selected ? Color.rbBgElev2 : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(tabTitle(tab))
         .help(tabTitle(tab))
     }
 
