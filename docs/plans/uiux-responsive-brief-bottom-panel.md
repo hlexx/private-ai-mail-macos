@@ -24,9 +24,9 @@ Make the side/bottom brief and bottom work panel adapt to window size so reading
 - `xcodebuild build -project PrivateAIMail.xcodeproj -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 
 ### Task 1: Define responsive layout policy
-- [ ] Inspect `Apps/MacApp/Sources/Views/MainSplitController.swift`, `Apps/MacApp/Sources/Scenes/MainScene.swift`, `Apps/MacApp/Sources/Scenes/MainSceneBriefPanel.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift`, and `ThreadView+BottomPanel.swift`.
-- [ ] Define minimum comfortable reading width and bottom panel height behavior using `RBLayout` constants where possible.
-- [ ] Keep user preference (`pam.layout.briefPlacement`, collapsed states, stored widths) intact unless the current window cannot satisfy constraints.
+- [x] Inspect `Apps/MacApp/Sources/Views/MainSplitController.swift`, `Apps/MacApp/Sources/Scenes/MainScene.swift`, `Apps/MacApp/Sources/Scenes/MainSceneBriefPanel.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift`, and `ThreadView+BottomPanel.swift`.
+- [x] Define minimum comfortable reading width and bottom panel height behavior using `RBLayout` constants where possible.
+- [x] Keep user preference (`pam.layout.briefPlacement`, collapsed states, stored widths) intact unless the current window cannot satisfy constraints.
 
 ### Task 2: Make bottom panel height safer
 - [ ] Replace the fixed `318` expanded bottom panel height with a constrained responsive height that respects the available window height.

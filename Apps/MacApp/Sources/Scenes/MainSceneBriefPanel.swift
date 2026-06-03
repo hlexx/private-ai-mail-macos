@@ -3,11 +3,27 @@ import DesignSystem
 import SwiftUI
 
 extension MainScene {
-    var briefPanelIsBottom: Bool {
-        briefPlacementRaw == BriefPanelPlacement.bottom.rawValue
+    var preferredBriefPlacement: BriefPanelPlacement {
+        BriefPanelPlacement(rawValue: briefPlacementRaw) ?? .side
     }
 
-    var effectiveBriefCollapsed: Binding<Bool> {
+    func effectiveBriefPlacement(availableWidth: CGFloat) -> BriefPanelPlacement {
+        RBResponsiveLayoutPolicy.effectiveBriefPlacement(
+            preferredPlacement: preferredBriefPlacement,
+            availableWidth: availableWidth,
+            sidebarCollapsed: sidebarCollapsed,
+            briefCollapsed: briefCollapsed,
+            sidebarWidth: CGFloat(sidebarWidth),
+            threadListWidth: CGFloat(threadlistWidth),
+            briefWidth: CGFloat(briefWidth)
+        )
+    }
+
+    func effectiveBriefPanelIsBottom(availableWidth: CGFloat) -> Bool {
+        effectiveBriefPlacement(availableWidth: availableWidth) == .bottom
+    }
+
+    func effectiveBriefCollapsed(briefPanelIsBottom: Bool) -> Binding<Bool> {
         Binding(
             get: { briefPanelIsBottom || briefCollapsed },
             set: { newValue in

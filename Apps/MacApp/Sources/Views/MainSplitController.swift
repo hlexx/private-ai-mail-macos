@@ -1,4 +1,5 @@
 import AppKit
+import DesignSystem
 import SwiftUI
 
 /// Wraps `NSSplitViewController` for the 4-pane main layout:
@@ -60,8 +61,8 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         let sidebarItem = NSSplitViewItem(
             sidebarWithViewController: NSHostingController(rootView: sidebar)
         )
-        sidebarItem.minimumThickness = 180
-        sidebarItem.maximumThickness = 320
+        sidebarItem.minimumThickness = RBLayout.sidebarMinWidth
+        sidebarItem.maximumThickness = RBLayout.sidebarMaxWidth
         sidebarItem.canCollapse = true
         sidebarItem.collapseBehavior = .preferResizingSplitViewWithFixedSiblings
         sidebarItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 251)
@@ -70,23 +71,23 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         let threadlistItem = NSSplitViewItem(
             viewController: NSHostingController(rootView: threadlist)
         )
-        threadlistItem.minimumThickness = 280
-        threadlistItem.maximumThickness = 480
+        threadlistItem.minimumThickness = RBLayout.threadListMinWidth
+        threadlistItem.maximumThickness = RBLayout.threadListMaxWidth
         threadlistItem.canCollapse = false
         threadlistItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 252)
 
         let readingItem = NSSplitViewItem(
             viewController: NSHostingController(rootView: reading)
         )
-        readingItem.minimumThickness = 480
+        readingItem.minimumThickness = RBLayout.readingMinWidth
         readingItem.canCollapse = false
         readingItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 249)
 
         let briefItem = NSSplitViewItem(
             viewController: NSHostingController(rootView: brief)
         )
-        briefItem.minimumThickness = 280
-        briefItem.maximumThickness = 420
+        briefItem.minimumThickness = RBLayout.briefRailMinWidth
+        briefItem.maximumThickness = RBLayout.briefRailMaxWidth
         briefItem.canCollapse = true
         briefItem.collapseBehavior = .preferResizingSplitViewWithFixedSiblings
         briefItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 251)

@@ -12,10 +12,7 @@ import SwiftUI
 import ThreadFeature
 import TranslationFeature
 
-enum BriefPanelPlacement: String {
-    case side
-    case bottom
-}
+typealias BriefPanelPlacement = RBBriefPanelPlacement
 
 struct MainScene: View {
 
@@ -38,10 +35,10 @@ struct MainScene: View {
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage(TranslationLanguagePreferences.storageKey) var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
     @AppStorage("pam.defaultTone") var defaultToneRaw: String = "warm"
-    @AppStorage("pam.layout.sidebar") private var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
-    @AppStorage("pam.layout.threadlist") private var threadlistWidth: Double = Double(RBLayout.threadListWidth)
-    @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
-    @AppStorage("pam.layout.sidebarCollapsed") private var sidebarCollapsed: Bool = false
+    @AppStorage("pam.layout.sidebar") var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
+    @AppStorage("pam.layout.threadlist") var threadlistWidth: Double = Double(RBLayout.threadListWidth)
+    @AppStorage("pam.layout.brief") var briefWidth: Double = Double(RBLayout.briefRailWidth)
+    @AppStorage("pam.layout.sidebarCollapsed") var sidebarCollapsed: Bool = false
     @AppStorage("pam.layout.briefCollapsed") var briefCollapsed: Bool = false
     @AppStorage("pam.layout.briefPlacement") var briefPlacementRaw: String = BriefPanelPlacement.side.rawValue
     @AppStorage("pam.layout.threadBottomPanelCollapsed") var bottomPanelCollapsed: Bool = false
@@ -49,133 +46,137 @@ struct MainScene: View {
     @Environment(\.openSettings) var openSettings
 
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
+        GeometryReader { geometry in
+            let briefPanelIsBottom = effectiveBriefPanelIsBottom(availableWidth: geometry.size.width)
 
-            MainSplitController(
-                sidebarCollapsed: $sidebarCollapsed,
-                briefCollapsed: effectiveBriefCollapsed,
-                sidebarWidth: $sidebarWidth,
-                threadlistWidth: $threadlistWidth,
-                briefWidth: $briefWidth,
-                sidebar: {
-                    RBSidebar(
-                        folders: sidebarFolders,
-                        accounts: accounts.map { AccountRow(account: $0) },
-                        selection: $sidebarSelection,
-                        jumpPulse: folderJumpPulse
-                    )
-                },
-                threadlist: {
-                    InboxView(
-                        store: inboxStore,
-                        actionStore: composition.trustActionStore,
-                        onArchive: { threadId, accountId in
-                            Task {
-                                do {
-                                    try await composition.mailMutator.archive(threadId, accountId: accountId)
-                                    showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
-                                } catch {
-                                    showMutationError(error, fallback: "Archive failed")
+            VStack(spacing: 0) {
+                toolbar(briefPanelIsBottom: briefPanelIsBottom)
+
+                MainSplitController(
+                    sidebarCollapsed: $sidebarCollapsed,
+                    briefCollapsed: effectiveBriefCollapsed(briefPanelIsBottom: briefPanelIsBottom),
+                    sidebarWidth: $sidebarWidth,
+                    threadlistWidth: $threadlistWidth,
+                    briefWidth: $briefWidth,
+                    sidebar: {
+                        RBSidebar(
+                            folders: sidebarFolders,
+                            accounts: accounts.map { AccountRow(account: $0) },
+                            selection: $sidebarSelection,
+                            jumpPulse: folderJumpPulse
+                        )
+                    },
+                    threadlist: {
+                        InboxView(
+                            store: inboxStore,
+                            actionStore: composition.trustActionStore,
+                            onArchive: { threadId, accountId in
+                                Task {
+                                    do {
+                                        try await composition.mailMutator.archive(threadId, accountId: accountId)
+                                        showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
+                                    } catch {
+                                        showMutationError(error, fallback: "Archive failed")
+                                    }
                                 }
+                            },
+                            onTrash: { threadId, accountId in
+                                trashThread(threadId, accountId: accountId)
                             }
-                        },
-                        onTrash: { threadId, accountId in
-                            trashThread(threadId, accountId: accountId)
-                        }
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .strokeBorder(Color.rbAccent.opacity(threadListWrapPulse ? 0.6 : 0), lineWidth: 2)
-                    )
-                    .animation(.easeOut(duration: 0.18), value: threadListWrapPulse)
-                },
-                reading: {
-                    ThreadView(
-                        store: threadStore,
-                        actionStore: composition.trustActionStore,
-                        onArchive: { archiveSelectedThread() },
-                        onStar: { starSelectedThread() },
-                        onMarkRead: { markReadSelectedThread() },
-                        onTrash: { trashSelectedThread() },
-                        showTranslated: translationStore.showTranslated,
-                        translatedTexts: translationStore.translatedTexts,
-                        translatedNodes: translationStore.allTranslatedNodes(
-                            target: translationTargetLanguage
-                        ),
-                        onTextNodesExtracted: { messageId, nodes in
-                            let incoming = nodes.map { ($0.id, $0.text) }
-                            // Only invalidate cache if extracted nodes actually changed
-                            let existing = translationStore.extractedNodes[messageId]
-                            let changed = existing == nil
-                                || existing?.count != incoming.count
-                                || zip(existing!, incoming).contains { $0.0 != $1.0 || $0.1 != $1.1 }
-                            if changed {
-                                _ = translationStore.nextGeneration(for: messageId)
-                                translationStore.clearNodeTranslations(for: messageId)
-                                if translationStore.showTranslated {
-                                    translationStore.needsRetranslation = true
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .strokeBorder(Color.rbAccent.opacity(threadListWrapPulse ? 0.6 : 0), lineWidth: 2)
+                        )
+                        .animation(.easeOut(duration: 0.18), value: threadListWrapPulse)
+                    },
+                    reading: {
+                        ThreadView(
+                            store: threadStore,
+                            actionStore: composition.trustActionStore,
+                            onArchive: { archiveSelectedThread() },
+                            onStar: { starSelectedThread() },
+                            onMarkRead: { markReadSelectedThread() },
+                            onTrash: { trashSelectedThread() },
+                            showTranslated: translationStore.showTranslated,
+                            translatedTexts: translationStore.translatedTexts,
+                            translatedNodes: translationStore.allTranslatedNodes(
+                                target: translationTargetLanguage
+                            ),
+                            onTextNodesExtracted: { messageId, nodes in
+                                let incoming = nodes.map { ($0.id, $0.text) }
+                                // Only invalidate cache if extracted nodes actually changed
+                                let existing = translationStore.extractedNodes[messageId]
+                                let changed = existing == nil
+                                    || existing?.count != incoming.count
+                                    || zip(existing!, incoming).contains { $0.0 != $1.0 || $0.1 != $1.1 }
+                                if changed {
+                                    _ = translationStore.nextGeneration(for: messageId)
+                                    translationStore.clearNodeTranslations(for: messageId)
+                                    if translationStore.showTranslated {
+                                        translationStore.needsRetranslation = true
+                                    }
                                 }
-                            }
-                            translationStore.setExtractedNodes(for: messageId, nodes: incoming)
-                        },
-                        onScrollProxy: { proxy in
-                            threadScrollProxy = proxy
-                        },
-                        attachmentSummaryStore: aiReady ? composition.attachmentSummaryStore : nil,
-                        showsComposerPanel: aiReady,
-                        showsBriefInBottomPanel: briefPanelIsBottom,
-                        composer: {
-                            if aiReady, let threadID = inboxStore.selectedThreadID {
-                                InlineComposer(
-                                    threadID: threadID,
-                                    accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
-                                    replyLanguage: detectReplyLanguage(),
-                                    replyStore: composition.replyStore,
-                                    sendState: composition.composeViewModel.sendState,
-                                    onEditInFull: { draftText in
-                                        prefillComposeForReply()
-                                        composition.composeViewModel.bodyText = draftText
-                                        composition.showCompose = true
-                                    },
-                                    onSend: { bodyText in
-                                        prefillComposeForReply()
-                                        composition.composeViewModel.bodyText = bodyText
-                                        composition.composeViewModel.requestSend()
-                                    },
-                                    onCancelSend: { composition.composeViewModel.cancelSend() },
-                                    onRetrySend: { composition.composeViewModel.retrySend() },
-                                    onConfirmSendNow: { composition.composeViewModel.confirmSendNow() },
-                                    onReauthorize: { composition.composeViewModel.reauthorizeAndRetry() }
+                                translationStore.setExtractedNodes(for: messageId, nodes: incoming)
+                            },
+                            onScrollProxy: { proxy in
+                                threadScrollProxy = proxy
+                            },
+                            attachmentSummaryStore: aiReady ? composition.attachmentSummaryStore : nil,
+                            showsComposerPanel: aiReady,
+                            showsBriefInBottomPanel: briefPanelIsBottom,
+                            composer: {
+                                if aiReady, let threadID = inboxStore.selectedThreadID {
+                                    InlineComposer(
+                                        threadID: threadID,
+                                        accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
+                                        replyLanguage: detectReplyLanguage(),
+                                        replyStore: composition.replyStore,
+                                        sendState: composition.composeViewModel.sendState,
+                                        onEditInFull: { draftText in
+                                            prefillComposeForReply()
+                                            composition.composeViewModel.bodyText = draftText
+                                            composition.showCompose = true
+                                        },
+                                        onSend: { bodyText in
+                                            prefillComposeForReply()
+                                            composition.composeViewModel.bodyText = bodyText
+                                            composition.composeViewModel.requestSend()
+                                        },
+                                        onCancelSend: { composition.composeViewModel.cancelSend() },
+                                        onRetrySend: { composition.composeViewModel.retrySend() },
+                                        onConfirmSendNow: { composition.composeViewModel.confirmSendNow() },
+                                        onReauthorize: { composition.composeViewModel.reauthorizeAndRetry() }
+                                    )
+                                }
+                            },
+                            briefRail: {
+                                if briefPanelIsBottom {
+                                    briefPanelContent
+                                }
+                            },
+                            translationHeader: {
+                                TranslationToggleView(
+                                    store: translationStore,
+                                    detectedLanguage: detectThreadLanguage(),
+                                    preferredLanguage: preferredLanguage,
+                                    translationLanguages: translationLanguageCodes,
+                                    autoTranslate: autoTranslate,
+                                    messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
+                                    htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
                                 )
                             }
-                        },
-                        briefRail: {
-                            if briefPanelIsBottom {
-                                briefPanelContent
-                            }
-                        },
-                        translationHeader: {
-                            TranslationToggleView(
-                                store: translationStore,
-                                detectedLanguage: detectThreadLanguage(),
-                                preferredLanguage: preferredLanguage,
-                                translationLanguages: translationLanguageCodes,
-                                autoTranslate: autoTranslate,
-                                messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
-                                htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
-                            )
+                        )
+                    },
+                    brief: {
+                        if !briefPanelIsBottom {
+                            briefPanelContent
+                        } else {
+                            Color.rbBgCanvas
                         }
-                    )
-                },
-                brief: {
-                    if !briefPanelIsBottom {
-                        briefPanelContent
-                    } else {
-                        Color.rbBgCanvas
                     }
-                }
-            )
+                )
+            }
         }
         // Extend our 56pt RBToolbar all the way to the top of the window,
         // under the (transparent) titlebar / traffic-light zone. Without
@@ -304,7 +305,7 @@ extension MainScene {
         )
     }
 
-    private var toolbar: some View {
+    private func toolbar(briefPanelIsBottom: Bool) -> some View {
         RBToolbar(
             accounts: accounts,
             activeAccountID: composition.activeAccountID,
