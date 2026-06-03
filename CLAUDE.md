@@ -19,6 +19,10 @@
   explicit generation uses `ReplyStore.generateIfNeeded`, and Retry/Regenerate
   use `ReplyStore.regenerate`. Bottom Draft tab selection must not start model
   work.
+- `ActionSheetView` executable mailbox items must stay gated by the selected account's
+  action-outbox support. Future actions remain in the roadmap section only; they
+  must not be selectable executable actions, show operational preview copy, or
+  enable the primary CTA.
 - Privacy-safe logs go through `PrivacyObservability`; raw message bodies,
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.

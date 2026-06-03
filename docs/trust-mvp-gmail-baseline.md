@@ -19,7 +19,7 @@ This audit keeps Gmail as the reference implementation for the provider contract
 
 No-op UI cleanup from this audit:
 
-- The action sheet now enables only implemented actions: Draft reply and Archive. Unsupported actions are disabled in the sheet instead of closing without work.
+- The action sheet now enables only implemented Trust MVP Gmail actions: Draft reply, Archive, Star, Mark read, and Trash. Snooze, CRM log, task, unsubscribe, rule, and share remain visible only as unavailable roadmap items and cannot drive the primary `Do it` CTA.
 - Thread-level Snooze and Send to controls are disabled with unavailable tooltips.
 - Attachment Preview is limited to supported cached local file types; attachment byte download remains available through Summarize.
 - Full compose Save draft and Rewrite controls keep their labels but are disabled with unavailable tooltips.

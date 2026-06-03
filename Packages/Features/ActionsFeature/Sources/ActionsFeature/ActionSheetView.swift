@@ -4,21 +4,48 @@ import SwiftUI
 // MARK: - Action Model
 
 public enum ActionID: String, CaseIterable, Sendable {
-    case reply, snooze, log, task, archive, unsub, rule, share
-}
+    case reply
+    case archive
+    case star
+    case markRead
+    case trash
+    case snooze
+    case log
+    case task
+    case unsub
+    case rule
+    case share
 
-public enum ActionExecutionSupport {
-    public static func isEnabled(_ action: ActionID) -> Bool {
-        switch action {
-        case .reply, .archive:
-            return true
+    var trustMVPAction: TrustMVPAction? {
+        switch self {
+        case .reply:
+            .draftReply
+        case .archive:
+            .archiveThread
+        case .star:
+            .starThread
+        case .markRead:
+            .markRead
+        case .trash:
+            .trashThread
         case .snooze, .log, .task, .unsub, .rule, .share:
-            return false
+            nil
         }
     }
 
-    static func preview(for action: ActionID) -> String {
-        previews[action] ?? ""
+    init(trustMVPAction: TrustMVPAction) {
+        switch trustMVPAction {
+        case .draftReply:
+            self = .reply
+        case .archiveThread:
+            self = .archive
+        case .starThread:
+            self = .star
+        case .markRead:
+            self = .markRead
+        case .trashThread:
+            self = .trash
+        }
     }
 }
 
@@ -28,30 +55,69 @@ struct ActionItem: Identifiable {
     let color: Color
     let systemName: String
 
-    static let all: [ActionItem] = [
-        ActionItem(id: .reply, label: String(localized: "action.draftReply", defaultValue: "Draft reply"), color: .rbAccent, systemName: "arrowshape.turn.up.left.fill"),
-        ActionItem(id: .snooze, label: String(localized: "action.snoozeToFri", defaultValue: "Snooze to Fri"), color: .rbAccentSecondary, systemName: "clock.fill"),
-        ActionItem(id: .log, label: String(localized: "action.logCRM", defaultValue: "Log to CRM"), color: .rbAccentTertiary, systemName: "arrow.up.forward.square.fill"),
-        ActionItem(id: .task, label: String(localized: "action.makeTask", defaultValue: "Make a task"), color: .rbBurntOrange500, systemName: "diamond.fill"),
-        ActionItem(id: .archive, label: String(localized: "action.archive", defaultValue: "Archive"), color: .rbGraphite500, systemName: "archivebox.fill"),
-        ActionItem(id: .unsub, label: String(localized: "action.unsubscribe", defaultValue: "Unsubscribe"), color: .rbGraphite500, systemName: "xmark.circle.fill"),
-        ActionItem(id: .rule, label: String(localized: "action.makeRule", defaultValue: "Make a rule"), color: .rbGraphite500, systemName: "line.3.horizontal.decrease.circle.fill"),
-        ActionItem(id: .share, label: String(localized: "action.shareThread", defaultValue: "Share thread"), color: .rbGraphite500, systemName: "arrow.up.forward.circle.fill"),
+    static let executable: [ActionItem] = TrustMVPAction.allCases.map { action in
+        ActionItem(
+            id: ActionID(trustMVPAction: action),
+            label: action.title,
+            color: executableColor(for: action),
+            systemName: "\(action.systemImage).fill"
+        )
+    }
+
+    static let roadmap: [ActionItem] = [
+        ActionItem(
+            id: .snooze,
+            label: String(localized: "action.snoozeToFri", defaultValue: "Snooze to Fri"),
+            color: .rbGraphite500,
+            systemName: "clock"
+        ),
+        ActionItem(
+            id: .log,
+            label: String(localized: "action.logCRM", defaultValue: "Log to CRM"),
+            color: .rbGraphite500,
+            systemName: "arrow.up.forward.square"
+        ),
+        ActionItem(
+            id: .task,
+            label: String(localized: "action.makeTask", defaultValue: "Make a task"),
+            color: .rbGraphite500,
+            systemName: "diamond"
+        ),
+        ActionItem(
+            id: .unsub,
+            label: String(localized: "action.unsubscribe", defaultValue: "Unsubscribe"),
+            color: .rbGraphite500,
+            systemName: "xmark.circle.fill"
+        ),
+        ActionItem(
+            id: .rule,
+            label: String(localized: "action.makeRule", defaultValue: "Make a rule"),
+            color: .rbGraphite500,
+            systemName: "line.3.horizontal.decrease.circle.fill"
+        ),
+        ActionItem(
+            id: .share,
+            label: String(localized: "action.shareThread", defaultValue: "Share thread"),
+            color: .rbGraphite500,
+            systemName: "arrow.up.forward.circle.fill"
+        ),
     ]
+
+    private static func executableColor(for action: TrustMVPAction) -> Color {
+        switch action {
+        case .draftReply:
+            .rbAccent
+        case .archiveThread:
+            .rbGraphite500
+        case .starThread:
+            .rbAccentSecondary
+        case .markRead:
+            .rbAccentTertiary
+        case .trashThread:
+            .rbBurntOrange500
+        }
+    }
 }
-
-// MARK: - Preview Text
-
-private let previews: [ActionID: String] = [
-    .reply: "I'll draft a reply matching your tone and ask for the contract attachment.",
-    .snooze: "Thread will resurface Friday at 9:00 AM, with the brief pre-loaded.",
-    .log: "I'll push the summary and two action items to HubSpot under Acme GmbH.",
-    .task: "I'll create 'Send contract draft to Marta' due Fri, linked to this thread.",
-    .archive: "Thread is archived. Re:Box keeps the summary searchable.",
-    .unsub: "Re:Box will unsubscribe and filter future mail from this sender.",
-    .rule: "Suggested rule: From: marta@acme.de → label 'Acme · Contracts'.",
-    .share: "Generate a one-time link to share the brief with your team.",
-]
 
 // MARK: - Action Tile
 
@@ -68,7 +134,7 @@ struct ActionTile: View {
     }
 
     private var borderColor: Color {
-        (isSelected || isHovered) ? Color.rbAccent : Color.rbStroke1
+        (isSelected || (isEnabled && isHovered)) ? Color.rbAccent : Color.rbStroke1
     }
 
     var body: some View {
@@ -102,16 +168,68 @@ struct ActionTile: View {
     }
 }
 
+// MARK: - Roadmap Tile
+
+struct RoadmapActionTile: View {
+    let item: ActionItem
+
+    var body: some View {
+        HStack(spacing: RBSpace.s2) {
+            Image(systemName: item.systemName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.rbFg3.opacity(0.75))
+                .frame(width: 22, height: 22)
+                .background(Color.rbBgElev2.opacity(0.55))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            Text(item.label)
+                .font(.rbGeist(11.5, weight: .medium))
+                .foregroundStyle(Color.rbFg3)
+                .lineLimit(1)
+
+            Spacer(minLength: RBSpace.s2)
+
+            Text(String(localized: "action.roadmap.badge", defaultValue: "Unavailable"))
+                .font(.rbMono(9, weight: .medium))
+                .foregroundStyle(Color.rbFg3)
+        }
+        .padding(.vertical, RBSpace.s2)
+        .padding(.horizontal, RBSpace.s2)
+        .background(Color.rbBgElev2.opacity(0.28))
+        .overlay(
+            RoundedRectangle(cornerRadius: RBRadius.md)
+                .strokeBorder(Color.rbStroke1.opacity(0.45), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
+        .help(String(localized: "action.roadmap.help", defaultValue: "Not available in this build"))
+        .accessibilityLabel(
+            Text(
+                String(
+                    localized: "action.roadmap.accessibility",
+                    defaultValue: "\(item.label), unavailable in this build"
+                )
+            )
+        )
+        .accessibilityAddTraits(.isStaticText)
+    }
+}
+
 // MARK: - ActionSheetView
 
 public struct ActionSheetView: View {
     let threadSubject: String
-    let onAction: (ActionID?) -> Void
+    let executionAvailability: ActionExecutionAvailability
+    let onAction: (TrustMVPAction?) -> Void
 
-    @State private var picked: ActionID = .reply
+    @State private var picked: ActionID?
 
-    public init(threadSubject: String, onAction: @escaping (ActionID?) -> Void) {
+    public init(
+        threadSubject: String,
+        executionAvailability: ActionExecutionAvailability = .supported,
+        onAction: @escaping (TrustMVPAction?) -> Void
+    ) {
         self.threadSubject = threadSubject
+        self.executionAvailability = executionAvailability
         self.onAction = onAction
     }
 
@@ -145,15 +263,32 @@ public struct ActionSheetView: View {
                     }
                     .padding(.bottom, RBSpace.s3)
 
-                    // 4x2 grid
+                    // Executable action grid
                     LazyVGrid(columns: columns, spacing: RBSpace.s2) {
-                        ForEach(ActionItem.all) { item in
+                        ForEach(ActionItem.executable) { item in
                             ActionTile(
                                 item: item,
                                 isSelected: picked == item.id,
-                                isEnabled: ActionExecutionSupport.isEnabled(item.id)
+                                isEnabled: ActionExecutionSupport.isEnabled(
+                                    item.id,
+                                    availability: executionAvailability
+                                )
                             ) {
                                 picked = item.id
+                            }
+                        }
+                    }
+                    .padding(.bottom, RBSpace.s3)
+
+                    VStack(alignment: .leading, spacing: RBSpace.s2) {
+                        Text(String(localized: "action.roadmap.title", defaultValue: "Unavailable in this build"))
+                            .font(.rbMono(10, weight: .medium))
+                            .tracking(0.14 * 10)
+                            .foregroundStyle(Color.rbFg3)
+
+                        LazyVGrid(columns: columns, spacing: RBSpace.s2) {
+                            ForEach(ActionItem.roadmap) { item in
+                                RoadmapActionTile(item: item)
                             }
                         }
                     }
@@ -162,25 +297,31 @@ public struct ActionSheetView: View {
                     // Preview block
                     VStack(alignment: .leading, spacing: RBSpace.s2) {
                         HStack {
-                            Text(String(localized: "action.preview.eyebrow", defaultValue: "◆ RE:BOX WILL"))
+                            Text(String(localized: "action.preview.eyebrow", defaultValue: "ACTION PREVIEW"))
                                 .font(.rbMono(10, weight: .medium))
                                 .tracking(0.14 * 10)
                                 .foregroundStyle(Color.rbSignalSuccess)
 
                             Spacer()
 
-                            Text(String(localized: "action.preview.undo", defaultValue: "UNDO IN 5S"))
+                            Text(String(localized: "action.preview.scope", defaultValue: "CURRENT BUILD"))
                                 .font(.rbMono(10, weight: .medium))
                                 .tracking(0.14 * 10)
                                 .foregroundStyle(Color.rbFg3)
                         }
 
-                        Text(ActionExecutionSupport.preview(for: picked))
+                        Text(ActionSheetPresentation.previewText(
+                            for: picked,
+                            availability: executionAvailability
+                        ))
                             .rbTextStyle(.bodySM)
                             .foregroundStyle(Color.rbFg2)
                             .lineSpacing(4)
 
-                        Text(String(localized: "action.preview.privacy", defaultValue: "on-device · 0 bytes uploaded"))
+                        Text(ActionSheetPresentation.privacyText(
+                            for: picked,
+                            availability: executionAvailability
+                        ))
                             .font(.rbMono(10.5))
                             .foregroundStyle(Color.rbFg3)
                             .padding(.top, RBSpace.s1)
@@ -198,9 +339,19 @@ public struct ActionSheetView: View {
                         Spacer()
                         Button(String(localized: "action.cta.cancel", defaultValue: "Cancel")) { onAction(nil) }
                             .buttonStyle(.rbGhost)
-                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) { onAction(picked) }
+                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) {
+                            if let action = ActionSheetPresentation.selectedTrustAction(
+                                picked,
+                                availability: executionAvailability
+                            ) {
+                                onAction(action)
+                            }
+                        }
                             .buttonStyle(.rbPrimary)
-                            .disabled(!ActionExecutionSupport.isEnabled(picked))
+                            .disabled(!ActionSheetPresentation.isPrimaryCTAEnabled(
+                                for: picked,
+                                availability: executionAvailability
+                            ))
                     }
                     .padding(.top, RBSpace.s3)
                 }
@@ -224,6 +375,12 @@ public struct ActionSheetView: View {
                 .opacity(0)
                 .accessibilityHidden(true)
         )
+        .onChange(of: executionAvailability) { _, availability in
+            guard ActionSheetPresentation.selectedTrustAction(picked, availability: availability) != nil else {
+                picked = nil
+                return
+            }
+        }
     }
 }
 

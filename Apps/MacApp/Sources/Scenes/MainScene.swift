@@ -63,6 +63,7 @@ struct MainScene: View {
             if composition.showActionSheet {
                 ActionSheetView(
                     threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
+                    executionAvailability: actionSheetExecutionAvailability,
                     onAction: { action in
                         composition.showActionSheet = false
                         handleActionSheet(action)
@@ -316,16 +317,35 @@ extension MainScene {
 // MARK: - Action Sheet
 
 extension MainScene {
-    func handleActionSheet(_ action: ActionID?) {
-        guard let action else { return }
-        switch action {
-        case .reply:
-            draftReply()
-        case .archive:
-            requestTrustActionForSelectedThread(.archiveThread)
-        case .snooze, .log, .task, .unsub, .rule, .share:
-            showToast("Action not available yet", undo: nil)
+    var actionSheetExecutionAvailability: ActionExecutionAvailability {
+        Self.actionSheetExecutionAvailability(
+            selectedThreadID: inboxStore.selectedThreadID,
+            threads: inboxStore.threads,
+            accounts: accounts
+        )
+    }
+
+    static func actionSheetExecutionAvailability(
+        selectedThreadID: String?,
+        threads: [ThreadRow],
+        accounts: [AccountRecord]
+    ) -> ActionExecutionAvailability {
+        guard let threadId = selectedThreadID,
+              let thread = threads.first(where: { $0.id == threadId }),
+               let account = accounts.first(where: { $0.id == thread.accountId }),
+               account.provider == MailProviderIdentifier.gmail.rawValue else {
+            return .unsupportedProvider
         }
+        return .supported
+    }
+
+    func handleActionSheet(_ action: TrustMVPAction?) {
+        guard let action else { return }
+        if action == .draftReply {
+            draftReply()
+            return
+        }
+        requestTrustActionForSelectedThread(action)
     }
 
     private var toolbarSearchText: Binding<String> {
