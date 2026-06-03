@@ -12,10 +12,7 @@ import SwiftUI
 import ThreadFeature
 import TranslationFeature
 
-enum BriefPanelPlacement: String {
-    case side
-    case bottom
-}
+typealias BriefPanelPlacement = RBBriefPanelPlacement
 
 struct MainScene: View {
 
@@ -37,10 +34,10 @@ struct MainScene: View {
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage(TranslationLanguagePreferences.storageKey) var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
-    @AppStorage("pam.layout.sidebar") private var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
-    @AppStorage("pam.layout.threadlist") private var threadlistWidth: Double = Double(RBLayout.threadListWidth)
-    @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
-    @AppStorage("pam.layout.sidebarCollapsed") private var sidebarCollapsed: Bool = false
+    @AppStorage("pam.layout.sidebar") var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
+    @AppStorage("pam.layout.threadlist") var threadlistWidth: Double = Double(RBLayout.threadListWidth)
+    @AppStorage("pam.layout.brief") var briefWidth: Double = Double(RBLayout.briefRailWidth)
+    @AppStorage("pam.layout.sidebarCollapsed") var sidebarCollapsed: Bool = false
     @AppStorage("pam.layout.briefCollapsed") var briefCollapsed: Bool = false
     @AppStorage("pam.layout.briefPlacement") var briefPlacementRaw: String = BriefPanelPlacement.side.rawValue
     @AppStorage("pam.layout.threadBottomPanelCollapsed") var bottomPanelCollapsed: Bool = false
@@ -49,9 +46,21 @@ struct MainScene: View {
     @Environment(\.openSettings) var openSettings
 
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
-            mainSplitContent
+        GeometryReader { geometry in
+            let currentBriefPlacement = effectiveBriefPlacement(
+                availableWidth: geometry.size.width
+            )
+            let briefPanelIsBottom = currentBriefPlacement == .bottom
+
+            syncBriefTabReveal(
+                currentPlacement: currentBriefPlacement,
+                availableWidth: geometry.size.width
+            ) {
+                VStack(spacing: 0) {
+                    toolbar(briefPanelIsBottom: briefPanelIsBottom)
+                    mainSplitContent(briefPanelIsBottom: briefPanelIsBottom)
+                }
+            }
         }
         // Extend our 56pt RBToolbar all the way to the top of the window,
         // under the (transparent) titlebar / traffic-light zone. Without
@@ -159,27 +168,17 @@ struct MainScene: View {
         }
         .animation(.easeInOut(duration: 0.25), value: composition.toastMessage)
     }
-
-    private var sidebarFolders: [FolderItem] {
-        var folders = FolderItem.defaultFolders
-        let counts = inboxStore.folderCounts
-        for idx in folders.indices {
-            let c = counts[folders[idx].id]
-            folders[idx].count = (c ?? 0) > 0 ? c : nil
-        }
-        return folders
-    }
-
 }
 
 // MARK: - Main Split Content
 
 extension MainScene {
     @ViewBuilder
-    var mainSplitContent: some View {
+    func mainSplitContent(briefPanelIsBottom: Bool) -> some View {
         MainSplitController(
             sidebarCollapsed: $sidebarCollapsed,
-            briefCollapsed: effectiveBriefCollapsed,
+            briefCollapsed: $briefCollapsed,
+            forceBriefCollapsed: briefPanelIsBottom,
             sidebarWidth: $sidebarWidth,
             threadlistWidth: $threadlistWidth,
             briefWidth: $briefWidth,
@@ -355,8 +354,10 @@ extension MainScene {
         )
     }
 
-    private var toolbar: some View {
-        RBToolbar(
+    private func toolbar(briefPanelIsBottom: Bool) -> some View {
+        let preferredBriefPanelIsBottom = preferredBriefPlacement == .bottom
+
+        return RBToolbar(
             accounts: accounts,
             activeAccountID: composition.activeAccountID,
             onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
@@ -368,10 +369,10 @@ extension MainScene {
             },
             onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
             onToggleBrief: briefPanelIsBottom ? nil : { withAnimation { briefCollapsed.toggle() } },
-            briefPlacementIsBottom: briefPanelIsBottom,
+            briefPlacementIsBottom: preferredBriefPanelIsBottom,
             onToggleBriefPlacement: {
                 withAnimation {
-                    if briefPanelIsBottom {
+                    if preferredBriefPanelIsBottom {
                         moveBriefToSide()
                     } else {
                         moveBriefToBottom()

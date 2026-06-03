@@ -1,4 +1,5 @@
 import AppKit
+import DesignSystem
 import SwiftUI
 
 /// Wraps `NSSplitViewController` for the 4-pane main layout:
@@ -12,6 +13,7 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
 
     @Binding var sidebarCollapsed: Bool
     @Binding var briefCollapsed: Bool
+    let forceBriefCollapsed: Bool
 
     let sidebarWidth: Binding<Double>
     let threadlistWidth: Binding<Double>
@@ -25,6 +27,7 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
     init(
         sidebarCollapsed: Binding<Bool>,
         briefCollapsed: Binding<Bool>,
+        forceBriefCollapsed: Bool = false,
         sidebarWidth: Binding<Double>,
         threadlistWidth: Binding<Double>,
         briefWidth: Binding<Double>,
@@ -35,6 +38,7 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
     ) {
         self._sidebarCollapsed = sidebarCollapsed
         self._briefCollapsed = briefCollapsed
+        self.forceBriefCollapsed = forceBriefCollapsed
         self.sidebarWidth = sidebarWidth
         self.threadlistWidth = threadlistWidth
         self.briefWidth = briefWidth
@@ -60,8 +64,8 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         let sidebarItem = NSSplitViewItem(
             sidebarWithViewController: NSHostingController(rootView: sidebar)
         )
-        sidebarItem.minimumThickness = 180
-        sidebarItem.maximumThickness = 320
+        sidebarItem.minimumThickness = RBLayout.sidebarMinWidth
+        sidebarItem.maximumThickness = RBLayout.sidebarMaxWidth
         sidebarItem.canCollapse = true
         sidebarItem.collapseBehavior = .preferResizingSplitViewWithFixedSiblings
         sidebarItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 251)
@@ -70,27 +74,27 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         let threadlistItem = NSSplitViewItem(
             viewController: NSHostingController(rootView: threadlist)
         )
-        threadlistItem.minimumThickness = 280
-        threadlistItem.maximumThickness = 480
+        threadlistItem.minimumThickness = RBLayout.threadListMinWidth
+        threadlistItem.maximumThickness = RBLayout.threadListMaxWidth
         threadlistItem.canCollapse = false
         threadlistItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 252)
 
         let readingItem = NSSplitViewItem(
             viewController: NSHostingController(rootView: reading)
         )
-        readingItem.minimumThickness = 480
+        readingItem.minimumThickness = RBLayout.readingMinWidth
         readingItem.canCollapse = false
         readingItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 249)
 
         let briefItem = NSSplitViewItem(
             viewController: NSHostingController(rootView: brief)
         )
-        briefItem.minimumThickness = 280
-        briefItem.maximumThickness = 420
+        briefItem.minimumThickness = RBLayout.briefRailMinWidth
+        briefItem.maximumThickness = RBLayout.briefRailMaxWidth
         briefItem.canCollapse = true
         briefItem.collapseBehavior = .preferResizingSplitViewWithFixedSiblings
         briefItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 251)
-        briefItem.isCollapsed = briefCollapsed
+        briefItem.isCollapsed = effectiveBriefCollapsed
 
         controller.addSplitViewItem(sidebarItem)
         controller.addSplitViewItem(threadlistItem)
@@ -100,32 +104,19 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         // Set initial widths from stored values once the split view
         // has a valid frame (non-zero width). DispatchQueue.main.async
         // may fire before the view is laid out, so guard on frame width.
-        context.coordinator.pendingInitialLayout = { [sidebarCollapsed, briefCollapsed] splitView in
+        context.coordinator.pendingInitialLayout = { [sidebarCollapsed, effectiveBriefCollapsed] splitView in
             let totalWidth = Double(splitView.frame.width)
             guard totalWidth > 0 else { return false }
             let sWidth = sidebarCollapsed ? 0.0 : sidebarWidth.wrappedValue
             splitView.setPosition(CGFloat(sWidth), ofDividerAt: 0)
             splitView.setPosition(CGFloat(sWidth + threadlistWidth.wrappedValue), ofDividerAt: 1)
-            if !briefCollapsed {
+            if !effectiveBriefCollapsed {
                 splitView.setPosition(CGFloat(totalWidth - briefWidth.wrappedValue), ofDividerAt: 2)
             }
             return true
         }
 
-        context.coordinator.onWidthsChanged = { sWidth, tWidth, bWidth in
-            if sWidth > 0 { sidebarWidth.wrappedValue = sWidth }
-            if tWidth > 0 { threadlistWidth.wrappedValue = tWidth }
-            if bWidth > 0 { briefWidth.wrappedValue = bWidth }
-        }
-
-        context.coordinator.onCollapseChanged = { sidebarIsCollapsed, briefIsCollapsed in
-            if _sidebarCollapsed.wrappedValue != sidebarIsCollapsed {
-                _sidebarCollapsed.wrappedValue = sidebarIsCollapsed
-            }
-            if _briefCollapsed.wrappedValue != briefIsCollapsed {
-                _briefCollapsed.wrappedValue = briefIsCollapsed
-            }
-        }
+        configureCoordinatorCallbacks(context.coordinator)
 
         return controller
     }
@@ -133,6 +124,8 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
     func updateNSViewController(_ controller: NSSplitViewController, context: Context) {
         let items = controller.splitViewItems
         guard items.count == 4 else { return }
+
+        configureCoordinatorCallbacks(context.coordinator)
 
         // Update hosted views
         (items[0].viewController as? NSHostingController<Sidebar>)?.rootView = sidebar
@@ -144,8 +137,15 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         if items[0].isCollapsed != sidebarCollapsed {
             items[0].animator().isCollapsed = sidebarCollapsed
         }
-        if items[3].isCollapsed != briefCollapsed {
-            items[3].animator().isCollapsed = briefCollapsed
+        if items[3].isCollapsed != effectiveBriefCollapsed {
+            let wasCollapsed = items[3].isCollapsed
+            items[3].animator().isCollapsed = effectiveBriefCollapsed
+            if wasCollapsed, !effectiveBriefCollapsed {
+                context.coordinator.restoreBriefWidth(
+                    in: controller.splitView,
+                    storedBriefWidth: briefWidth.wrappedValue
+                )
+            }
         }
     }
 
@@ -156,7 +156,8 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
     @MainActor
     class Coordinator: NSObject {
         var onWidthsChanged: ((Double, Double, Double) -> Void)?
-        var onCollapseChanged: ((Bool, Bool) -> Void)?
+        var onCollapseChanged: ((Bool, Bool, Bool) -> Void)?
+        var forceBriefCollapsed = false
         /// Deferred initial layout closure. Returns `true` when layout succeeded
         /// (frame had a valid non-zero width), `false` to retry on next resize.
         var pendingInitialLayout: ((NSSplitView) -> Bool)?
@@ -212,16 +213,61 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             let sWidth = sidebarIsCollapsed ? 0.0 : Double(splitView.subviews[0].frame.width)
             let tWidth = Double(splitView.subviews[1].frame.width)
             let bWidth = briefIsCollapsed ? 0.0 : Double(splitView.subviews[3].frame.width)
+            let shouldPersistWidths = !forceBriefCollapsed
+            let shouldPersistBriefCollapse = !forceBriefCollapsed
 
             // Debounce writes to UserDefaults — splitViewDidResizeSubviews
             // fires on every frame during drag.
             debounceWorkItem?.cancel()
             let work = DispatchWorkItem { [weak self] in
-                self?.onWidthsChanged?(sWidth, tWidth, bWidth)
-                self?.onCollapseChanged?(sidebarIsCollapsed, briefIsCollapsed)
+                if shouldPersistWidths {
+                    self?.onWidthsChanged?(sWidth, tWidth, bWidth)
+                }
+                self?.onCollapseChanged?(
+                    sidebarIsCollapsed,
+                    briefIsCollapsed,
+                    shouldPersistBriefCollapse
+                )
             }
             debounceWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
+        }
+
+        func restoreBriefWidth(in splitView: NSSplitView, storedBriefWidth: Double) {
+            let clampedBriefWidth = min(
+                max(CGFloat(storedBriefWidth), RBLayout.briefRailMinWidth),
+                RBLayout.briefRailMaxWidth
+            )
+            DispatchQueue.main.async {
+                let totalWidth = splitView.frame.width
+                guard totalWidth > 0, splitView.subviews.count == 4 else { return }
+                splitView.setPosition(totalWidth - clampedBriefWidth, ofDividerAt: 2)
+            }
+        }
+    }
+}
+
+private extension MainSplitController {
+    var effectiveBriefCollapsed: Bool {
+        forceBriefCollapsed || briefCollapsed
+    }
+
+    func configureCoordinatorCallbacks(_ coordinator: Coordinator) {
+        coordinator.forceBriefCollapsed = forceBriefCollapsed
+        coordinator.onWidthsChanged = { sWidth, tWidth, bWidth in
+            if sWidth > 0 { sidebarWidth.wrappedValue = sWidth }
+            if tWidth > 0 { threadlistWidth.wrappedValue = tWidth }
+            if bWidth > 0 { briefWidth.wrappedValue = bWidth }
+        }
+
+        coordinator.onCollapseChanged = { sidebarIsCollapsed, briefIsCollapsed, shouldPersistBriefCollapse in
+            if _sidebarCollapsed.wrappedValue != sidebarIsCollapsed {
+                _sidebarCollapsed.wrappedValue = sidebarIsCollapsed
+            }
+            guard shouldPersistBriefCollapse else { return }
+            if _briefCollapsed.wrappedValue != briefIsCollapsed {
+                _briefCollapsed.wrappedValue = briefIsCollapsed
+            }
         }
     }
 }

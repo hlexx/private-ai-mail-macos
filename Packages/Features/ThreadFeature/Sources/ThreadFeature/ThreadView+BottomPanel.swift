@@ -1,34 +1,67 @@
 import DesignSystem
 import SwiftUI
 
+enum ThreadBottomPanelLayout {
+    static func presentation(
+        availableHeight: CGFloat,
+        isCollapsed: Bool
+    ) -> ThreadBottomPanelPresentation {
+        guard !isCollapsed else {
+            let expandedHeight = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+                availableHeight: availableHeight
+            )
+            return ThreadBottomPanelPresentation(
+                height: RBLayout.bottomPanelCollapsedHeight,
+                showsContent: false,
+                canShowContent: expandedHeight >= RBLayout.bottomPanelMinExpandedHeight
+            )
+        }
+
+        let height = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+            availableHeight: availableHeight
+        )
+        let canShowContent = height >= RBLayout.bottomPanelMinExpandedHeight
+        return ThreadBottomPanelPresentation(
+            height: height,
+            showsContent: canShowContent,
+            canShowContent: canShowContent
+        )
+    }
+}
+
+struct ThreadBottomPanelPresentation {
+    let height: CGFloat
+    let showsContent: Bool
+    let canShowContent: Bool
+}
+
 extension ThreadView {
     var hasBottomPanel: Bool {
         showsComposerPanel || showsBriefInBottomPanel
     }
 
     var resolvedBottomPanelTab: ThreadBottomPanelTab {
-        let selected = ThreadBottomPanelTab(rawValue: bottomPanelTabRaw) ?? .draft
-        switch selected {
-        case .draft where showsComposerPanel:
-            return .draft
-        case .brief where showsBriefInBottomPanel:
-            return .brief
-        case .draft:
-            return showsBriefInBottomPanel ? .brief : .draft
-        case .brief:
-            return showsComposerPanel ? .draft : .brief
-        }
+        ThreadBottomPanelTab.resolved(
+            rawValue: bottomPanelTabRaw,
+            showsComposerPanel: showsComposerPanel,
+            showsBriefInBottomPanel: showsBriefInBottomPanel
+        )
     }
 
-    var bottomWorkPanel: some View {
-        VStack(spacing: 0) {
-            bottomPanelChrome
-            if !bottomPanelCollapsed {
+    func bottomWorkPanel(availableHeight: CGFloat) -> some View {
+        let presentation = ThreadBottomPanelLayout.presentation(
+            availableHeight: availableHeight,
+            isCollapsed: bottomPanelCollapsed
+        )
+
+        return VStack(spacing: 0) {
+            bottomPanelChrome(presentation: presentation)
+            if presentation.showsContent {
                 bottomPanelContent
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .frame(height: bottomPanelCollapsed ? 42 : 318, alignment: .top)
+        .frame(height: presentation.height, alignment: .top)
         .frame(maxWidth: .infinity)
         .background(Color.rbBgCanvas)
         .overlay(alignment: .top) {
@@ -40,37 +73,38 @@ extension ThreadView {
         .animation(.easeInOut(duration: 0.18), value: bottomPanelTabRaw)
     }
 
-    private var bottomPanelChrome: some View {
+    private func bottomPanelChrome(presentation: ThreadBottomPanelPresentation) -> some View {
         HStack(spacing: 8) {
             if showsComposerPanel {
-                bottomPanelTabButton(.draft)
+                bottomPanelTabButton(.draft, canShowContent: presentation.canShowContent)
             }
             if showsBriefInBottomPanel {
-                bottomPanelTabButton(.brief)
+                bottomPanelTabButton(.brief, canShowContent: presentation.canShowContent)
             }
 
             Spacer(minLength: 12)
 
             Button {
                 withAnimation(.easeInOut(duration: 0.18)) {
-                    bottomPanelCollapsed.toggle()
+                    bottomPanelCollapsed = presentation.showsContent
                 }
             } label: {
-                Image(systemName: bottomPanelCollapsed ? "chevron.up" : "chevron.down")
+                Image(systemName: presentation.showsContent ? "chevron.down" : "chevron.up")
                     .font(.system(size: 12, weight: .semibold))
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.rbGhost)
-            .help(bottomPanelCollapsed
-                ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
-                : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
-            )
+            .disabled(!presentation.canShowContent)
+            .help(bottomPanelToggleHelp(presentation: presentation))
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 8)
     }
 
-    private func bottomPanelTabButton(_ tab: ThreadBottomPanelTab) -> some View {
+    private func bottomPanelTabButton(
+        _ tab: ThreadBottomPanelTab,
+        canShowContent: Bool
+    ) -> some View {
         let selected = resolvedBottomPanelTab == tab
         return Button {
             withAnimation(.easeInOut(duration: 0.18)) {
@@ -87,7 +121,22 @@ extension ThreadView {
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
         }
         .buttonStyle(.plain)
+        .disabled(!canShowContent)
         .help(tabTitle(tab))
+    }
+
+    private func bottomPanelToggleHelp(
+        presentation: ThreadBottomPanelPresentation
+    ) -> String {
+        guard presentation.canShowContent else {
+            return String(
+                localized: "thread.bottomPanel.windowTooShort",
+                defaultValue: "Window is too short to expand bottom panel"
+            )
+        }
+        return presentation.showsContent
+            ? String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
+            : String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
     }
 
     @ViewBuilder

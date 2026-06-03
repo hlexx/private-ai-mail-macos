@@ -27,6 +27,11 @@
   state in `MainScene` with typed app-layer callbacks. Keep `ThreadFilter` and
   `InboxStore.filter` semantics in `InboxFeature`; do not create a second
   string-ID filter model or move feature semantics into `DesignSystem`.
+- Responsive main workspace layout policy lives in `DesignSystem` via
+  `RBLayout`, `RBBriefPanelPlacement`, and `RBResponsiveLayoutPolicy`.
+  `MainScene` owns persisted AppStorage preferences and computes effective
+  placement transiently from window geometry; `ThreadFeature` bottom-panel
+  sizing delegates to the shared policy instead of hard-coding layout literals.
 - Privacy-safe logs go through `PrivacyObservability`; raw message bodies,
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.
