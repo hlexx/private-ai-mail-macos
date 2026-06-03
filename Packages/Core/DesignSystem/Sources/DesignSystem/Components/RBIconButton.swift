@@ -30,6 +30,7 @@ public struct RBIconButton: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .accessibilityLabel(accessibilityLabel)
+        .help(accessibilityLabel)
     }
 }
 
