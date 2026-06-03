@@ -52,10 +52,10 @@ Task 1 audit findings:
 - [x] Fix any text wrapping introduced by larger targets.
 
 ### Task 4: Validate accessibility-adjacent behavior
-- [ ] Run `swift test --package-path Packages/Core/DesignSystem` and fix failures.
-- [ ] Run relevant InboxFeature and ThreadFeature tests.
-- [ ] Run `swiftlint --strict --reporter xcode`.
-- [ ] Run `git diff --check` and the MacApp Debug build; fix failures.
+- [x] Run `swift test --package-path Packages/Core/DesignSystem` and fix failures.
+- [x] Run relevant InboxFeature and ThreadFeature tests.
+- [x] Run `swiftlint --strict --reporter xcode`.
+- [x] Run `git diff --check` and the MacApp Debug build; fix failures.
 
 ## Rollback / Recovery
 - Revert DesignSystem atom sizing and local row/control adjustments. No migration is involved.
