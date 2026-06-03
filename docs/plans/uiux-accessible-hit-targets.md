@@ -25,9 +25,19 @@ Increase small interactive target stability across toolbar icons, filter chips, 
 - `xcodebuild build -project PrivateAIMail.xcodeproj -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 
 ### Task 1: Audit target sizes in code
-- [ ] Inspect `Packages/Core/DesignSystem/Sources/DesignSystem/Components/RBIconButton.swift`, `RBFilterChip.swift`, `RBButtonStyle.swift`, and `RBToneSegment.swift`.
-- [ ] Inspect local controls in `Apps/MacApp/Sources/Views/RBSidebar.swift`, `Apps/MacApp/Sources/Views/RBToolbar.swift`, `ThreadView+HeaderActions.swift`, `ThreadView+BottomPanel.swift`, and `InlineComposer.swift`.
-- [ ] Identify controls below a stable desktop target size, especially 28x28 icon buttons and chips with 4px vertical padding.
+- [x] Inspect `Packages/Core/DesignSystem/Sources/DesignSystem/Components/RBIconButton.swift`, `RBFilterChip.swift`, `RBButtonStyle.swift`, and `RBToneSegment.swift`.
+- [x] Inspect local controls in `Apps/MacApp/Sources/Views/RBSidebar.swift`, `Apps/MacApp/Sources/Views/RBToolbar.swift`, `ThreadView+HeaderActions.swift`, `ThreadView+BottomPanel.swift`, and `InlineComposer.swift`.
+- [x] Identify controls below a stable desktop target size, especially 28x28 icon buttons and chips with 4px vertical padding.
+
+Task 1 audit findings:
+- `RBIconButton` is the primary shared issue: it is documented as 28x28 and frames its image container to 28x28, so every toolbar icon button using it inherits an undersized target.
+- `RBFilterChip` and `RBToneSegment` both use 12px text with 4px vertical padding and no explicit minimum height, leaving chip and segment targets content-driven.
+- `RBPrimaryButtonStyle`, `RBSecondaryButtonStyle`, and `RBGhostButtonStyle` use shared padding but no minimum height or focus treatment, so text buttons and compact icon-only buttons depend on label size and caller controlSize.
+- `RBToolbar` uses `RBIconButton` for sidebar, filter, theme, Brief, settings, and compose actions. Its `AccountSwitcher` uses 5px vertical padding and no minimum height.
+- `RBSidebar` section headers and folder/account rows use plain buttons with content shapes and 6px vertical row padding, but no stable minimum row height.
+- `ThreadView+HeaderActions` compact action buttons constrain only the icon to 18x18 and rely on the shared ghost button padding for the actual hit area; they already provide help text via the title.
+- `ThreadView+BottomPanel` collapse uses a 22x22 icon frame with `rbGhost`, and panel tabs use 5px vertical padding with no minimum height.
+- `InlineComposer` has a language chevron as a plain icon-only button without an explicit target size, language-picker rows with 6px vertical padding, status-strip buttons forced to `.controlSize(.small)`, and a narrow icon-only edit button that relies on shared secondary button sizing.
 
 ### Task 2: Update shared atom sizing
 - [ ] Increase `RBIconButton` to a stable target size, preferably 32x32 or 36x36, while preserving visual density.
