@@ -39,10 +39,10 @@ Reduce action sheet overpromising by making only currently executable Trust MVP 
 - [x] Run `swift test --package-path Packages/Features/ActionsFeature` and fix failures.
 
 ### Task 4: Validate app integration
-- [ ] Verify `MainScene.handleActionSheet` no longer has UI paths that show "Action not available yet" for actions that looked executable.
-- [ ] Run `swiftlint --strict --reporter xcode`.
-- [ ] Run `git diff --check`.
-- [ ] Run the MacApp Debug build and fix failures.
+- [x] Verify `MainScene.handleActionSheet` no longer has UI paths that show "Action not available yet" for actions that looked executable.
+- [x] Run `swiftlint --strict --reporter xcode`.
+- [x] Run `git diff --check`.
+- [x] Run the MacApp Debug build and fix failures.
 
 ## Rollback / Recovery
 - Revert ActionsFeature and MainScene action-sheet changes. No migration or persisted state is involved.

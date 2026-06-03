@@ -299,7 +299,7 @@ extension MainScene {
         case .trash:
             requestTrustActionForSelectedThread(.trashThread)
         case .snooze, .log, .task, .unsub, .rule, .share:
-            showToast("Action not available yet", undo: nil)
+            break
         }
     }
 
