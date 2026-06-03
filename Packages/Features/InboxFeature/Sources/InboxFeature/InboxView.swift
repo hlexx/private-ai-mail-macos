@@ -5,17 +5,20 @@ import SwiftUI
 public struct InboxView: View {
     @Bindable var store: InboxStore
     let actionStore: TrustActionUIStore?
+    var onDraftReply: ((String, String) -> Void)?
     var onArchive: ((String, String) -> Void)?
     var onTrash: ((String, String) -> Void)?
 
     public init(
         store: InboxStore,
         actionStore: TrustActionUIStore? = nil,
+        onDraftReply: ((String, String) -> Void)? = nil,
         onArchive: ((String, String) -> Void)? = nil,
         onTrash: ((String, String) -> Void)? = nil
     ) {
         self.store = store
         self.actionStore = actionStore
+        self.onDraftReply = onDraftReply
         self.onArchive = onArchive
         self.onTrash = onTrash
     }
@@ -243,7 +246,7 @@ public struct InboxView: View {
                     }
                     .contextMenu {
                         Button {
-                            Task { await requestAction(.draftReply, for: thread) }
+                            requestDraftReply(for: thread)
                         } label: {
                             Label(String(localized: "inbox.action.draftReply", defaultValue: "Draft reply"), systemImage: "arrowshape.turn.up.left")
                         }

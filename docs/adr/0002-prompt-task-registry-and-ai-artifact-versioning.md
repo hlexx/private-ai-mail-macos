@@ -53,6 +53,26 @@ future integrations may receive only user-approved minimized payloads. Logs must
 not include raw prompt text, raw model output, attachment contents, email body
 text, bearer tokens, refresh tokens, or connector secrets.
 
+## Draft Reply Initiation Policy
+
+Draft reply generation is a user-triggered AI task, not a side effect of
+opening or focusing a thread. Reading a thread, showing the inline composer, or
+opening the bottom Draft panel may prepare local UI state and may surface an
+already-generated cached draft for the same thread, tone, and language, but it
+must not start a new `draftReply` model invocation.
+
+Explicit generation entry points are limited to draft-specific user actions:
+the brief rail draft CTA, the thread Draft action, the inline composer Generate,
+Retry, and Regenerate controls, and existing edit/send flows after a draft
+already exists. Tone or reply-language changes may regenerate only after the
+user has already requested a draft for the current composer context; before
+that first request, the composer must keep showing an explicit ready state.
+
+This policy keeps AI output creation separate from passive mail reading. It
+also keeps observability aligned with user intent: privacy-safe `ai.draft_reply`
+generated or failed events are emitted only when a draft generation request
+actually starts, never when a thread is merely selected.
+
 ## Consequences
 
 - Prompt changes become testable and cache-safe.

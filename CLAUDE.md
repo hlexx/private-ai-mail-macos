@@ -10,9 +10,15 @@
   connection, sync invariants, and rollback.
 - `IntegrationDomain` stays provider-neutral. Gmail-specific draft and mailbox
   mutation behavior belongs in `MailProviders` or `MailSync`.
-- `TrustActionUIStore` owns approval and recent outbox UI state. Draft reply and
-  trash require explicit confirmation; archive, star, and mark-read use the fast
-  action path. AI output must not auto-run actions.
+- `TrustActionUIStore` owns approval and recent outbox UI state for provider
+  mutations. Trash requires explicit confirmation; archive, star, and mark-read
+  use the fast action path. AI output must not auto-run actions.
+- Local AI draft generation is not a `TrustActionUIStore` outbox action.
+  `ThreadView.onDraftReply` and `InboxView.onDraftReply` open or focus the
+  inline composer, passive composer display uses `ReplyStore.prepareForDisplay`,
+  explicit generation uses `ReplyStore.generateIfNeeded`, and Retry/Regenerate
+  use `ReplyStore.regenerate`. Bottom Draft tab selection must not start model
+  work.
 - Privacy-safe logs go through `PrivacyObservability`; raw message bodies,
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.

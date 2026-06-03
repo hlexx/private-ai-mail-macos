@@ -41,6 +41,7 @@ public struct TranslationToggleView: View {
     @Bindable var store: TranslationStore
     let detectedLanguage: String?
     let preferredLanguage: String
+    let translationLanguages: Set<String>
     let autoTranslate: Bool
     let messages: [(id: String, text: String)]
     let htmlMessageIds: Set<String>
@@ -56,6 +57,7 @@ public struct TranslationToggleView: View {
         store: TranslationStore,
         detectedLanguage: String?,
         preferredLanguage: String,
+        translationLanguages: Set<String>,
         autoTranslate: Bool = false,
         messages: [(id: String, text: String)],
         htmlMessageIds: Set<String> = []
@@ -63,33 +65,70 @@ public struct TranslationToggleView: View {
         self.store = store
         self.detectedLanguage = detectedLanguage
         self.preferredLanguage = preferredLanguage
+        self.translationLanguages = translationLanguages
         self.autoTranslate = autoTranslate
         self.messages = messages
         self.htmlMessageIds = htmlMessageIds
     }
 
     private var effectivePreferredLanguage: String {
-        if preferredLanguage.isEmpty {
-            return Locale.current.language.languageCode?.identifier ?? "en"
+        let requestedLanguage = if preferredLanguage.isEmpty {
+            Locale.current.language.languageCode?.identifier ?? "en"
+        } else {
+            preferredLanguage
         }
-        return preferredLanguage
+        if languageIsAllowed(requestedLanguage) {
+            return requestedLanguage
+        }
+        if translationLanguages.contains("en") {
+            return "en"
+        }
+        return translationLanguages.sorted().first ?? "en"
     }
 
     private var shouldShow: Bool {
-        // For HTML messages, always show — per-node detection may find
-        // foreign-language nodes even when dominant matches preferred,
-        // and thread-level detection may return nil for short snippets.
-        if !htmlMessageIds.isEmpty { return true }
+        guard !translationLanguages.isEmpty else { return false }
+        if hasForeignDetectedLanguage { return true }
+        if !htmlMessageIds.isEmpty {
+            return hasTranslatableHTMLBatch
+        }
+        return false
+    }
+
+    private var hasForeignDetectedLanguage: Bool {
         guard let detectedLanguage else { return false }
+        guard languageIsAllowed(detectedLanguage) else { return false }
         return !TranslationGroupingService.languagesMatch(detectedLanguage, effectivePreferredLanguage)
+    }
+
+    private var hasTranslatableHTMLBatch: Bool {
+        let target = effectivePreferredLanguage
+        for messageId in htmlMessageIds {
+            guard let nodes = store.extractedNodes[messageId], !nodes.isEmpty else { continue }
+            let grouped = TranslationGroupingService.group(
+                nodes: nodes,
+                preferredLanguage: target,
+                allowedSourceLanguages: translationLanguages
+            )
+            if !grouped.batches.isEmpty {
+                return true
+            }
+        }
+        return false
     }
 
     /// Whether auto-translate should fire: only for threads where the
     /// dominant language is detected AND differs from preferred.
     private var shouldAutoTranslate: Bool {
         guard autoTranslate else { return false }
-        guard let detectedLanguage else { return false }
-        return !TranslationGroupingService.languagesMatch(detectedLanguage, effectivePreferredLanguage)
+        return hasForeignDetectedLanguage || hasTranslatableHTMLBatch
+    }
+
+    private func languageIsAllowed(_ language: String) -> Bool {
+        guard !translationLanguages.isEmpty else { return false }
+        return translationLanguages.contains {
+            TranslationGroupingService.languagesMatch($0, language)
+        }
     }
 
     public var body: some View {
@@ -106,8 +145,8 @@ public struct TranslationToggleView: View {
                         .foregroundStyle(Color.rbFg3)
                 }
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 6)
             .translationTask(plainTextConfig) { session in
                 await translatePlainText(session: session)
             }
@@ -139,7 +178,9 @@ public struct TranslationToggleView: View {
             }
         }
     }
+}
 
+private extension TranslationToggleView {
     private var segmentedControl: some View {
         HStack(spacing: 0) {
             segmentButton(
@@ -198,7 +239,10 @@ public struct TranslationToggleView: View {
         let hasUncachedPlainText = messages.contains { msg in
             !htmlMessageIds.contains(msg.id) && store.translatedText(for: msg.id) == nil
         }
-        if hasUncachedPlainText, let detected = detectedLanguage, !TranslationGroupingService.languagesMatch(detected, target) {
+        if hasUncachedPlainText,
+           let detected = detectedLanguage,
+           languageIsAllowed(detected),
+           !TranslationGroupingService.languagesMatch(detected, target) {
             let source = Locale.Language(identifier: detected)
             let targetLang = Locale.Language(identifier: target)
             if plainTextConfig == nil {
@@ -224,7 +268,8 @@ public struct TranslationToggleView: View {
 
             let (batches, skipped) = TranslationGroupingService.group(
                 nodes: nodes,
-                preferredLanguage: target
+                preferredLanguage: target,
+                allowedSourceLanguages: translationLanguages
             )
 
             // Store original text for skipped nodes immediately

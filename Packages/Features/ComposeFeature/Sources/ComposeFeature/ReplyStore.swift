@@ -17,6 +17,7 @@ public final class ReplyStore {
     private let db: AppDatabase?
     private var replyCache: [CacheKey: AIThreadReply] = [:]
     private var inflightTask: Task<Void, Never>?
+    private var displayedKey: CacheKey?
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -49,6 +50,7 @@ public final class ReplyStore {
         locale: Locale = .current
     ) {
         inflightTask?.cancel()
+        inflightTask = nil
         error = nil
 
         guard let aiService, let db else {
@@ -58,17 +60,13 @@ public final class ReplyStore {
         }
 
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        if let cached = replyCache[key] {
-            if Self.isDisplayableDraft(cached.body) {
-                reply = cached
-                isLoading = false
-                return
-            }
-            replyCache.removeValue(forKey: key)
+        if displayCachedDraft(for: key, focus: false) {
+            return
         }
 
         isLoading = true
         reply = nil
+        displayedKey = key
 
         inflightTask = Task {
             do {
@@ -90,6 +88,7 @@ public final class ReplyStore {
 
                 replyCache[key] = aiReply
                 reply = aiReply
+                displayedKey = key
                 isLoading = false
                 error = nil
                 Self.logDraftReply(status: "generated", accountId: key.accountId)
@@ -99,6 +98,7 @@ public final class ReplyStore {
                 self.error = error
                 isLoading = false
                 reply = nil
+                displayedKey = key
                 Self.logDraftReply(
                     status: "failed",
                     accountId: key.accountId,
@@ -107,42 +107,6 @@ public final class ReplyStore {
                 )
             }
         }
-    }
-
-    public func regenerate(
-        threadID: String,
-        accountId: String? = nil,
-        tone: AIReplyTone,
-        replyLanguage: String?,
-        locale: Locale = .current
-    ) {
-        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        replyCache.removeValue(forKey: key)
-        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
-    }
-
-    public func generateIfNeeded(
-        threadID: String,
-        accountId: String? = nil,
-        tone: AIReplyTone,
-        replyLanguage: String?,
-        locale: Locale = .current
-    ) {
-        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        if let cached = replyCache[key] {
-            if Self.isDisplayableDraft(cached.body) {
-                reply = cached
-                focusRequestCount += 1
-                return
-            }
-            replyCache.removeValue(forKey: key)
-        }
-        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
-    }
-
-    public func invalidate(threadID: String) {
-        replyCache = replyCache.filter { $0.key.threadID != threadID }
-        reply = nil
     }
 
     // MARK: - Private
@@ -249,6 +213,106 @@ public final class ReplyStore {
             "n/a",
         ]
         return !blockedValues.contains(trimmed.lowercased())
+    }
+}
+
+// MARK: - Display Preparation
+
+extension ReplyStore {
+    public func regenerate(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?,
+        locale: Locale = .current
+    ) {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        replyCache.removeValue(forKey: key)
+        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
+    }
+
+    @discardableResult
+    public func prepareForDisplay(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?
+    ) -> Bool {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        inflightTask?.cancel()
+        inflightTask = nil
+        isLoading = false
+
+        if displayedKey == key, let reply, Self.isDisplayableDraft(reply.body) {
+            publishCachedDraft(reply, for: key, focus: true)
+            return true
+        }
+
+        if displayCachedDraft(for: key, focus: true) {
+            return true
+        }
+
+        guard aiService != nil, db != nil else {
+            return reply.map { Self.isDisplayableDraft($0.body) } ?? false
+        }
+
+        reply = nil
+        error = nil
+        displayedKey = key
+        return false
+    }
+
+    /// Explicit draft intent boundary.
+    ///
+    /// Brief CTAs, thread Draft actions, and already-authored draft focus requests
+    /// should enter through this method so cached drafts can be shown without new
+    /// AI work. Bottom Draft tab selection should only reveal the composer unless
+    /// it came from one of those actions. Retry and Regenerate intentionally use
+    /// `regenerate`; Edit in full and Send consume the current draft text.
+    public func generateIfNeeded(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?,
+        locale: Locale = .current
+    ) {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        inflightTask?.cancel()
+        inflightTask = nil
+        if displayedKey == key, let reply, Self.isDisplayableDraft(reply.body) {
+            publishCachedDraft(reply, for: key, focus: true)
+            return
+        }
+        if displayCachedDraft(for: key, focus: true) {
+            return
+        }
+        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
+    }
+
+    public func invalidate(threadID: String) {
+        replyCache = replyCache.filter { $0.key.threadID != threadID }
+        reply = nil
+        displayedKey = nil
+    }
+
+    private func displayCachedDraft(for key: CacheKey, focus: Bool) -> Bool {
+        guard let cached = replyCache[key] else { return false }
+        guard Self.isDisplayableDraft(cached.body) else {
+            replyCache.removeValue(forKey: key)
+            return false
+        }
+        publishCachedDraft(cached, for: key, focus: focus)
+        return true
+    }
+
+    private func publishCachedDraft(_ cached: AIThreadReply, for key: CacheKey, focus: Bool) {
+        reply = cached
+        displayedKey = key
+        isLoading = false
+        error = nil
+        if focus {
+            focusRequestCount += 1
+        }
     }
 }
 

@@ -5,6 +5,7 @@ import AppKit
 @testable import InboxFeature
 import DesignSystem
 import MailDomain
+import Persistence
 
 @Suite("InboxFeature")
 struct InboxFeatureTests {
@@ -178,6 +179,42 @@ struct InboxFeatureTests {
 
         #expect(store.pendingApproval == nil)
         #expect(store.outboxItems.isEmpty)
+        #expect(queue.started.isEmpty)
+    }
+
+    @MainActor
+    @Test func draftReplyContextActionUsesInlineDraftCallback() async throws {
+        let queue = TestTrustActionQueue(outcomes: [
+            .init(opId: "draft-provider", status: .completed, message: "Provider draft queued"),
+        ])
+        let actionStore = TrustActionUIStore(queue: queue)
+        var requestedThread: (threadId: String, accountId: String)?
+        let view = InboxView(
+            store: InboxStore(db: try AppDatabase.openInMemorySync(), searchService: nil),
+            actionStore: actionStore,
+            onDraftReply: { threadId, accountId in
+                requestedThread = (threadId, accountId)
+            }
+        )
+        let thread = ThreadRow(
+            record: ThreadRecord(
+                id: "t1",
+                accountId: "a1",
+                subject: "Subject",
+                snippet: "Snippet",
+                lastMessageAt: 1,
+                messageCount: 1
+            ),
+            latestFromAddr: "sender@example.com"
+        )
+
+        view.requestDraftReply(for: thread)
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(requestedThread?.threadId == "t1")
+        #expect(requestedThread?.accountId == "a1")
+        #expect(actionStore.pendingApproval == nil)
+        #expect(actionStore.outboxItems.isEmpty)
         #expect(queue.started.isEmpty)
     }
 }

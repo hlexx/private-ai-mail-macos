@@ -13,8 +13,8 @@ public enum NodeLanguageDetector {
     /// should pass through untranslated.
     public static func detect(
         _ text: String,
-        minimumLength: Int = 4,
-        minimumConfidence: Double = 0.5
+        minimumLength: Int = 20,
+        minimumConfidence: Double = 0.8
     ) -> DetectedLanguage? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= minimumLength else { return nil }

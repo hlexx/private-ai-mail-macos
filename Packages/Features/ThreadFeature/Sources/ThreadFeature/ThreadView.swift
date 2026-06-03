@@ -7,15 +7,23 @@ public enum ThreadViewAnchor: Hashable {
     case composer
 }
 
+enum ThreadBottomPanelTab: String {
+    case draft
+    case brief
+}
+
 public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationHeader: View>: View {
     let store: ThreadStore
     let composerContent: ComposerContent
     let briefContent: BriefContent
     let translationHeader: TranslationHeader
+    let showsComposerPanel: Bool
+    let showsBriefInBottomPanel: Bool
     var onArchive: (() -> Void)?
     var onStar: (() -> Void)?
     var onMarkRead: (() -> Void)?
     var onTrash: (() -> Void)?
+    var onDraftReply: (() -> Void)?
     let actionStore: TrustActionUIStore?
     var showTranslated: Bool
     var translatedTexts: [String: String]
@@ -24,6 +32,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     var onScrollProxy: ((ScrollViewProxy) -> Void)?
     var attachmentSummaryStore: AttachmentSummaryStore?
     var attachmentUIStateProvider: (AttachmentInfo) -> AttachmentUIState
+    @AppStorage("pam.layout.threadBottomPanelCollapsed") var bottomPanelCollapsed: Bool = false
+    @AppStorage("pam.layout.threadBottomPanelTab") var bottomPanelTabRaw: String = ThreadBottomPanelTab.draft.rawValue
 
     public init(
         store: ThreadStore,
@@ -32,6 +42,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         onStar: (() -> Void)? = nil,
         onMarkRead: (() -> Void)? = nil,
         onTrash: (() -> Void)? = nil,
+        onDraftReply: (() -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
         translatedNodes: [String: [String: String]] = [:],
@@ -39,6 +50,8 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         onScrollProxy: ((ScrollViewProxy) -> Void)? = nil,
         attachmentSummaryStore: AttachmentSummaryStore? = nil,
         attachmentUIStateProvider: ((AttachmentInfo) -> AttachmentUIState)? = nil,
+        showsComposerPanel: Bool = true,
+        showsBriefInBottomPanel: Bool = false,
         @ViewBuilder composer: () -> ComposerContent,
         @ViewBuilder briefRail: () -> BriefContent = { EmptyView() },
         @ViewBuilder translationHeader: () -> TranslationHeader = { EmptyView() }
@@ -49,9 +62,12 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.onStar = onStar
         self.onMarkRead = onMarkRead
         self.onTrash = onTrash
+        self.onDraftReply = onDraftReply
         self.showTranslated = showTranslated
         self.translatedTexts = translatedTexts
         self.translatedNodes = translatedNodes
+        self.showsComposerPanel = showsComposerPanel
+        self.showsBriefInBottomPanel = showsBriefInBottomPanel
         self.onTextNodesExtracted = onTextNodesExtracted
         self.onScrollProxy = onScrollProxy
         self.attachmentSummaryStore = attachmentSummaryStore
@@ -74,36 +90,28 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     headSection
                     actionOutboxStrip
                     translationHeader
-                    HStack(spacing: 0) {
-                        ScrollViewReader { proxy in
-                            VStack(spacing: 0) {
-                                ScrollView {
-                                    VStack(alignment: .leading, spacing: 0) {
-                                        threadColumn
-                                        if store.hasAttachment {
-                                            attachmentBlock
-                                        }
+                    ScrollViewReader { proxy in
+                        VStack(spacing: 0) {
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    threadColumn
+                                    if store.hasAttachment {
+                                        attachmentBlock
                                     }
-                                    .padding(.horizontal, 28)
-                                    .padding(.top, 20)
-                                    .padding(.bottom, 24)
                                 }
-                                .onAppear { onScrollProxy?(proxy) }
+                                .padding(.horizontal, 24)
+                                .padding(.top, 12)
+                                .padding(.bottom, hasBottomPanel ? 16 : 24)
+                            }
+                            .onAppear { onScrollProxy?(proxy) }
 
-                                composerContent
+                            if hasBottomPanel {
+                                bottomWorkPanel
                                     .id(ThreadViewAnchor.composer)
-                                    .padding(.horizontal, 28)
-                                    .padding(.bottom, 24)
-                                    .background(Color.rbBgCanvas)
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                        // Brief rail sits beside the thread column, under the
-                        // shared head. The rail enforces its own width via
-                        // RBLayout.briefRailWidth at the caller site.
-                        briefContent
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .background(Color.rbBgCanvas)
             }
@@ -132,78 +140,26 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     // MARK: - Head Section
 
     private var headSection: some View {
-        VStack(alignment: .leading, spacing: RBSpace.s2) {
-            Text(store.subject)
-                .rbTextStyle(.h2)
-                .foregroundStyle(Color.rbFg1)
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(store.subject)
+                    .rbTextStyle(.h2)
+                    .foregroundStyle(Color.rbFg1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            metaLine
-
-            HStack(spacing: RBSpace.s2) {
-                Spacer()
-                Button { requestActionOrFallback(.draftReply, fallback: nil) } label: {
-                    Label(String(localized: "thread.action.draftReply", defaultValue: "Draft"), systemImage: "arrowshape.turn.up.left")
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(actionTarget == nil)
-
-                Button { requestActionOrFallback(.archiveThread, fallback: onArchive) } label: {
-                    Label(String(localized: "thread.action.archive", defaultValue: "Archive"), systemImage: "archivebox")
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(actionStore == nil && onArchive == nil)
-
-                Button {
-                    if store.isStarred {
-                        onStar?()
-                    } else {
-                        requestActionOrFallback(.starThread, fallback: onStar)
-                    }
-                } label: {
-                    Label(
-                        store.isStarred
-                            ? String(localized: "thread.action.unstar", defaultValue: "Unstar")
-                            : String(localized: "thread.action.star", defaultValue: "Star"),
-                        systemImage: store.isStarred ? "star.fill" : "star"
-                    )
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(actionStore == nil && onStar == nil)
-
-                Button { requestActionOrFallback(.markRead, fallback: onMarkRead) } label: {
-                    Label(String(localized: "thread.action.markRead", defaultValue: "Mark read"), systemImage: "envelope.open")
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(actionStore == nil && onMarkRead == nil)
-
-                Button(role: .destructive) { requestActionOrFallback(.trashThread, fallback: onTrash) } label: {
-                    Label(String(localized: "thread.action.trash", defaultValue: "Trash"), systemImage: "trash")
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(actionStore == nil && onTrash == nil)
-
-                Button {} label: {
-                    Label(String(localized: "thread.action.snooze", defaultValue: "Snooze"), systemImage: "clock")
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(true)
-                .help(String(localized: "thread.action.snooze.help", defaultValue: "Not available yet"))
-
-                Button {} label: {
-                    Label {
-                        Text(String(localized: "thread.action.sendTo", defaultValue: "Send to"))
-                    } icon: {
-                        Image(systemName: "paperplane")
-                    }
-                }
-                .buttonStyle(.rbGhost)
-                .disabled(true)
-                .help(String(localized: "thread.action.sendTo.help", defaultValue: "Not available yet"))
+                metaLine
             }
+            .layoutPriority(1)
+
+            Spacer(minLength: 12)
+
+            actionBar
+                .padding(.top, 1)
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 18)
-        .padding(.bottom, 12)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.rbStroke1)
@@ -259,7 +215,8 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
         onMarkRead: (() -> Void)? = nil,
-        onTrash: (() -> Void)? = nil
+        onTrash: (() -> Void)? = nil,
+        onDraftReply: (() -> Void)? = nil
     ) {
         self.store = store
         self.actionStore = actionStore
@@ -267,9 +224,12 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.onStar = onStar
         self.onMarkRead = onMarkRead
         self.onTrash = onTrash
+        self.onDraftReply = onDraftReply
         self.showTranslated = false
         self.translatedTexts = [:]
         self.translatedNodes = [:]
+        self.showsComposerPanel = false
+        self.showsBriefInBottomPanel = false
         self.onTextNodesExtracted = nil
         self.onScrollProxy = nil
         self.attachmentSummaryStore = nil

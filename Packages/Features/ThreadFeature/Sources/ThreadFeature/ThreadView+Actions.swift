@@ -28,4 +28,8 @@ extension ThreadView {
             await actionStore.requestAction(TrustActionRequest(action: action, target: actionTarget))
         }
     }
+
+    func requestDraftReply() {
+        onDraftReply?()
+    }
 }

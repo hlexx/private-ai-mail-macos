@@ -49,12 +49,18 @@ local sync/refresh, local search over synced mail, mailbox actions, attachment
 metadata with narrow local preview/summary support, supervised compose/reply,
 and Gmail send.
 
-Gmail Trust MVP actions support draft reply, archive, star, mark read, and
-trash through the supervised action outbox. Draft reply and trash require
-explicit user confirmation; archive, star, and mark-read use the fast action
-path. The UI shows recent pending, running, completed, and failed action state,
-and retry is exposed only for retryable failures. AI output never auto-runs an
-action.
+Gmail Trust MVP actions support archive, star, mark read, and trash through the
+supervised action outbox. Trash requires explicit user confirmation; archive,
+star, and mark-read use the fast action path. The UI shows recent pending,
+running, completed, and failed action state, and retry is exposed only for
+retryable failures. AI output never auto-runs an action.
+
+Local AI reply drafting is explicit and separate from provider mutations:
+selecting a thread or opening the bottom Draft panel does not generate reply
+text. Draft generation starts only from Draft, Generate, Retry, or Regenerate
+actions, and cached drafts may be shown without new model work. The thread and
+inbox Draft actions open or focus the local inline composer; they do not create
+a provider draft outbox mutation.
 
 Outlook/Microsoft 365 support is beta-disabled in the app by default until
 real-account smoke tests pass. The repo contains Microsoft Graph contracts,

@@ -1,5 +1,4 @@
 import ActionsFeature
-import AIKit
 import ComposeFeature
 import DesignSystem
 import GRDB
@@ -9,57 +8,41 @@ import MailSync
 import Persistence
 import SwiftUI
 import ThreadFeature
-import TranslationFeature
-
-// MARK: - Translation Helpers
-
-extension MainScene {
-
-    func lastIncomingText() -> String? {
-        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
-            return lastIncoming.bestPlainText
-        }
-        return threadStore.messages.last?.bestPlainText
-    }
-
-    func detectThreadLanguage() -> String? {
-        guard let text = lastIncomingText() else { return nil }
-        return NodeLanguageDetector.detect(text)?.bcp47
-    }
-
-    func detectReplyLanguage() -> String? {
-        guard let text = lastIncomingText(), !text.isEmpty else {
-            return preferredLanguage.isEmpty ? nil : preferredLanguage
-        }
-        guard let detected = NodeLanguageDetector.detect(text),
-              detected.confidence >= 0.5 else {
-            return preferredLanguage.isEmpty ? nil : preferredLanguage
-        }
-        return detected.bcp47
-    }
-}
 
 // MARK: - Mutation & Toast Helpers
 
 extension MainScene {
 
-    func draftReply() {
+    func draftReply(threadID requestedThreadID: String? = nil, accountId requestedAccountID: String? = nil) {
         guard composition.aiModelController.isAIReady else {
             openSettings()
             return
         }
-        guard let threadID = inboxStore.selectedThreadID else { return }
-        let accountId = inboxStore.threads.first(where: { $0.id == threadID })?.accountId
+        let threadID = requestedThreadID ?? inboxStore.selectedThreadID
+        guard let threadID else { return }
+        guard let thread = threadRow(threadID: threadID, accountId: requestedAccountID) else { return }
+        if inboxStore.selectedThreadID != threadID {
+            inboxStore.selectedThreadID = threadID
+        }
+        bottomPanelCollapsed = false
+        bottomPanelTabRaw = "draft"
         withAnimation {
             threadScrollProxy?.scrollTo(ThreadViewAnchor.composer, anchor: .top)
         }
-        let tone = AIReplyTone(rawValue: defaultToneRaw) ?? .warm
-        composition.replyStore.generateIfNeeded(
-            threadID: threadID,
-            accountId: accountId,
-            tone: tone,
-            replyLanguage: detectReplyLanguage()
-        )
+        draftGenerationRequest = InlineDraftGenerationRequest(threadID: thread.id, accountId: thread.accountId)
+    }
+
+    func moveBriefToBottom() {
+        briefPlacementRaw = BriefPanelPlacement.bottom.rawValue
+        briefCollapsed = true
+        bottomPanelCollapsed = false
+        bottomPanelTabRaw = "brief"
+    }
+
+    func moveBriefToSide() {
+        briefPlacementRaw = BriefPanelPlacement.side.rawValue
+        briefCollapsed = false
+        bottomPanelTabRaw = "draft"
     }
 
     func requestTrustActionForSelectedThread(_ action: TrustMVPAction) {
