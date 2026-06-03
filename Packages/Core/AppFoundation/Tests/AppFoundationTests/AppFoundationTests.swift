@@ -8,6 +8,26 @@ struct AppFoundationTests {
         #expect(AppFoundation.moduleName == "AppFoundation")
     }
 
+    @Test func translationLanguagePreferencesDefaultToEnglishRussianThai() {
+        #expect(TranslationLanguagePreferences.defaultRawValue == "en,ru,th")
+        #expect(TranslationLanguagePreferences.defaultCodes == ["en", "ru", "th"])
+    }
+
+    @Test func translationLanguagePreferencesNormalizeSupportedCodesOnly() {
+        let parsed = TranslationLanguagePreferences.parse("ru, pl, th, en, de")
+
+        #expect(parsed == ["en", "ru", "th"])
+        #expect(TranslationLanguagePreferences.rawValue(for: parsed) == "en,ru,th")
+    }
+
+    @Test func translationLanguagePreferencesMatchPrimarySubtags() {
+        let allowed: Set<String> = ["en", "ru", "th"]
+
+        #expect(TranslationLanguagePreferences.isAllowed("en-US", in: allowed))
+        #expect(TranslationLanguagePreferences.isAllowed("ru", in: allowed))
+        #expect(!TranslationLanguagePreferences.isAllowed("pl", in: allowed))
+    }
+
     @Test func privacyObservabilityCategoriesCoverTrustMVPSubsystems() {
         #expect(PrivacyObservabilityCategory.allCases.map(\.rawValue) == [
             "Sync",

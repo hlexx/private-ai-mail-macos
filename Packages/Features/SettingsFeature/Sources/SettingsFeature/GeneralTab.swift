@@ -1,9 +1,11 @@
+import AppFoundation
 import SwiftUI
 
 public struct GeneralTab: View {
     @AppStorage("pam.preferredLanguage") private var preferredLanguage: String = ""
     @AppStorage("pam.defaultTone") private var defaultTone: String = "warm"
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
+    @AppStorage(TranslationLanguagePreferences.storageKey) private var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
 
     public init() {}
 
@@ -35,6 +37,25 @@ public struct GeneralTab: View {
                     String(localized: "general.autoTranslate", defaultValue: "Auto-translate foreign threads"),
                     isOn: $autoTranslate
                 )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(String(localized: "general.translationLanguages", defaultValue: "Translation languages"))
+                        .font(.headline)
+
+                    ForEach(TranslationLanguagePreferences.availableLanguages, id: \.code) { language in
+                        Toggle(language.name, isOn: translationLanguageBinding(for: language.code))
+                    }
+
+                    if selectedTranslationLanguages.isEmpty {
+                        Text(String(
+                            localized: "general.translationLanguages.emptyHint",
+                            defaultValue: "No languages are selected, so translation is disabled."
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 4)
             } header: {
                 Text(String(localized: "general.section.language", defaultValue: "Language & AI"))
             } footer: {
@@ -53,6 +74,24 @@ public struct GeneralTab: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+
+    private var selectedTranslationLanguages: Set<String> {
+        TranslationLanguagePreferences.parse(translationLanguagesRaw)
+    }
+
+    private func translationLanguageBinding(for code: String) -> Binding<Bool> {
+        Binding {
+            selectedTranslationLanguages.contains(code)
+        } set: { isSelected in
+            var next = selectedTranslationLanguages
+            if isSelected {
+                next.insert(code)
+            } else {
+                next.remove(code)
+            }
+            translationLanguagesRaw = TranslationLanguagePreferences.rawValue(for: next)
+        }
     }
 
     nonisolated static let supportedLanguages: [(code: String, name: String)] = [

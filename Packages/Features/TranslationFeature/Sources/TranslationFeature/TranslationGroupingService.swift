@@ -21,12 +21,18 @@ public enum TranslationGroupingService {
 
     public static func group(
         nodes: [(id: String, text: String)],
-        preferredLanguage: String
+        preferredLanguage: String,
+        allowedSourceLanguages: Set<String>? = nil
     ) -> (batches: [NodeBatch], skipped: Set<String>) {
         var bySource: [String: [(id: String, text: String)]] = [:]
         var skipped: Set<String> = []
         for node in nodes {
             guard let detected = NodeLanguageDetector.detect(node.text) else {
+                skipped.insert(node.id)
+                continue
+            }
+            if let allowedSourceLanguages,
+               !isAllowed(detected.bcp47, in: allowedSourceLanguages) {
                 skipped.insert(node.id)
                 continue
             }
@@ -38,5 +44,10 @@ public enum TranslationGroupingService {
         }
         let batches = bySource.map { NodeBatch(sourceLanguage: $0.key, nodes: $0.value) }
         return (batches, skipped)
+    }
+
+    private static func isAllowed(_ language: String, in allowedLanguages: Set<String>) -> Bool {
+        guard !allowedLanguages.isEmpty else { return false }
+        return allowedLanguages.contains { languagesMatch($0, language) }
     }
 }

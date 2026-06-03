@@ -9,35 +9,6 @@ import MailSync
 import Persistence
 import SwiftUI
 import ThreadFeature
-import TranslationFeature
-
-// MARK: - Translation Helpers
-
-extension MainScene {
-
-    func lastIncomingText() -> String? {
-        if let lastIncoming = threadStore.messages.last(where: { !$0.isSentByMe }) {
-            return lastIncoming.bestPlainText
-        }
-        return threadStore.messages.last?.bestPlainText
-    }
-
-    func detectThreadLanguage() -> String? {
-        guard let text = lastIncomingText() else { return nil }
-        return NodeLanguageDetector.detect(text)?.bcp47
-    }
-
-    func detectReplyLanguage() -> String? {
-        guard let text = lastIncomingText(), !text.isEmpty else {
-            return preferredLanguage.isEmpty ? nil : preferredLanguage
-        }
-        guard let detected = NodeLanguageDetector.detect(text),
-              detected.confidence >= 0.5 else {
-            return preferredLanguage.isEmpty ? nil : preferredLanguage
-        }
-        return detected.bcp47
-    }
-}
 
 // MARK: - Mutation & Toast Helpers
 
@@ -50,6 +21,8 @@ extension MainScene {
         }
         guard let threadID = inboxStore.selectedThreadID else { return }
         let accountId = inboxStore.threads.first(where: { $0.id == threadID })?.accountId
+        bottomPanelCollapsed = false
+        bottomPanelTabRaw = "draft"
         withAnimation {
             threadScrollProxy?.scrollTo(ThreadViewAnchor.composer, anchor: .top)
         }
@@ -60,6 +33,19 @@ extension MainScene {
             tone: tone,
             replyLanguage: detectReplyLanguage()
         )
+    }
+
+    func moveBriefToBottom() {
+        briefPlacementRaw = BriefPanelPlacement.bottom.rawValue
+        briefCollapsed = true
+        bottomPanelCollapsed = false
+        bottomPanelTabRaw = "brief"
+    }
+
+    func moveBriefToSide() {
+        briefPlacementRaw = BriefPanelPlacement.side.rawValue
+        briefCollapsed = false
+        bottomPanelTabRaw = "draft"
     }
 
     func requestTrustActionForSelectedThread(_ action: TrustMVPAction) {
