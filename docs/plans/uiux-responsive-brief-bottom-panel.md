@@ -40,10 +40,10 @@ Make the side/bottom brief and bottom work panel adapt to window size so reading
 - [x] Ensure `briefCollapsed` and `briefPlacementRaw` do not fight each other when switching between bottom and side placement.
 
 ### Task 4: Add tests and validate
-- [ ] Add tests for layout policy helpers if extracted.
-- [ ] Add ThreadFeature tests/previews for bottom panel collapsed, expanded, draft tab, and brief tab states.
-- [ ] Run `swift test --package-path Packages/Features/ThreadFeature` and fix failures.
-- [ ] Run `swift test --package-path Packages/Core/DesignSystem`, `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
+- [x] Add tests for layout policy helpers if extracted.
+- [x] Add ThreadFeature tests/previews for bottom panel collapsed, expanded, draft tab, and brief tab states.
+- [x] Run `swift test --package-path Packages/Features/ThreadFeature` and fix failures.
+- [x] Run `swift test --package-path Packages/Core/DesignSystem`, `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
 
 ## Rollback / Recovery
 - Revert layout policy, ThreadView bottom panel, and MainSplitController changes. Existing AppStorage layout values remain compatible.

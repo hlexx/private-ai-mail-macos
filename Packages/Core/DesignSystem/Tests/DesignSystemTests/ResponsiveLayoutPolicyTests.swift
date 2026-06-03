@@ -117,4 +117,21 @@ struct ResponsiveLayoutPolicyTests {
         #expect(RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 560) == 240)
         #expect(RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 500) == 180)
     }
+
+    @Test("Expanded bottom panel height clamps oversized preferred heights")
+    func expandedBottomPanelHeightClampsOversizedPreferredHeight() {
+        let height = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+            availableHeight: 700,
+            preferredHeight: 500
+        )
+
+        #expect(height == 380)
+    }
+
+    @Test("Expanded bottom panel height never hides collapsed chrome")
+    func expandedBottomPanelHeightNeverHidesCollapsedChrome() {
+        let height = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 280)
+
+        #expect(height == RBLayout.bottomPanelCollapsedHeight)
+    }
 }

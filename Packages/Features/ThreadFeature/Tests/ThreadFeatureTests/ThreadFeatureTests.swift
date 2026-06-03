@@ -510,11 +510,7 @@ struct ThreadViewSnapshotTests {
 
     @MainActor
     @Test func threadViewRendersComposerWithLongMessage() async throws {
-        let db = try makeThreadViewDatabase()
-        let store = ThreadStore(db: db)
-        store.accountEmail = "alex@example.com"
-        store.observe(threadId: "t1", accountId: "acc1")
-        try await waitUntil { !store.messages.isEmpty }
+        let store = try await makeObservedThreadStore()
 
         let view = ThreadView(
             store: store,
@@ -534,6 +530,64 @@ struct ThreadViewSnapshotTests {
         let host = NSHostingView(rootView: view)
         host.frame = NSRect(x: 0, y: 0, width: 900, height: 700)
         host.layout()
+    }
+
+    @MainActor
+    @Test func threadViewRendersCollapsedBottomPanelChrome() async throws {
+        let view = try await threadViewBottomPanelFixture(
+            collapsed: true,
+            selectedTab: .draft,
+            showsComposerPanel: true,
+            showsBriefInBottomPanel: true
+        )
+        .frame(width: 900, height: 520)
+
+        hostAndLayout(view, width: 900, height: 520)
+    }
+
+    @MainActor
+    @Test func threadViewRendersExpandedDraftBottomPanel() async throws {
+        let view = try await threadViewBottomPanelFixture(
+            collapsed: false,
+            selectedTab: .draft,
+            showsComposerPanel: true,
+            showsBriefInBottomPanel: true
+        )
+        .frame(width: 900, height: 700)
+
+        hostAndLayout(view, width: 900, height: 700)
+    }
+
+    @MainActor
+    @Test func threadViewRendersExpandedBriefBottomPanel() async throws {
+        let view = try await threadViewBottomPanelFixture(
+            collapsed: false,
+            selectedTab: .brief,
+            showsComposerPanel: true,
+            showsBriefInBottomPanel: true
+        )
+        .frame(width: 900, height: 700)
+
+        hostAndLayout(view, width: 900, height: 700)
+    }
+
+    @MainActor
+    @Test func bottomPanelTabFallsBackToAvailablePanel() async throws {
+        let draftOnly = try await threadViewBottomPanelFixture(
+            collapsed: false,
+            selectedTab: .brief,
+            showsComposerPanel: true,
+            showsBriefInBottomPanel: false
+        )
+        let briefOnly = try await threadViewBottomPanelFixture(
+            collapsed: false,
+            selectedTab: .draft,
+            showsComposerPanel: false,
+            showsBriefInBottomPanel: true
+        )
+
+        #expect(draftOnly.resolvedBottomPanelTab == .draft)
+        #expect(briefOnly.resolvedBottomPanelTab == .brief)
     }
 
     private func emptyStateView() -> some View {
@@ -719,6 +773,55 @@ struct ThreadViewSnapshotTests {
                 """, arguments: ["body": String(repeating: "Long billing update paragraph. ", count: 120)])
         }
         return db
+    }
+
+    @MainActor
+    private func makeObservedThreadStore() async throws -> ThreadStore {
+        let db = try makeThreadViewDatabase()
+        let store = ThreadStore(db: db)
+        store.accountEmail = "alex@example.com"
+        store.observe(threadId: "t1", accountId: "acc1")
+        try await waitUntil { !store.messages.isEmpty }
+        return store
+    }
+
+    @MainActor
+    private func threadViewBottomPanelFixture(
+        collapsed: Bool,
+        selectedTab: ThreadBottomPanelTab,
+        showsComposerPanel: Bool,
+        showsBriefInBottomPanel: Bool
+    ) async throws -> ThreadView<AnyView, AnyView, EmptyView> {
+        let view = ThreadView(
+            store: try await makeObservedThreadStore(),
+            showsComposerPanel: showsComposerPanel,
+            showsBriefInBottomPanel: showsBriefInBottomPanel,
+            composer: {
+                AnyView(
+                    Text("Draft reply panel")
+                        .frame(maxWidth: .infinity, minHeight: 160)
+                        .background(Color.rbBgElev1)
+                )
+            },
+            briefRail: {
+                AnyView(
+                    Text("Brief panel")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .padding(16)
+                        .background(Color.rbBgElev1)
+                )
+            }
+        )
+        view.bottomPanelCollapsed = collapsed
+        view.bottomPanelTabRaw = selectedTab.rawValue
+        return view
+    }
+
+    @MainActor
+    private func hostAndLayout<V: View>(_ view: V, width: CGFloat, height: CGFloat) {
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: width, height: height)
+        host.layout()
     }
 
     private func waitUntil(timeout: Duration = .seconds(3), _ condition: @MainActor () -> Bool) async throws {
