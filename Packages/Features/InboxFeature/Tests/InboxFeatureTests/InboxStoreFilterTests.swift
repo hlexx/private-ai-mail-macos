@@ -175,6 +175,7 @@ struct InboxStoreFilterTests {
         let store = InboxStore(db: db)
         store.setSelection(.folder(.inbox))
         store.startObserving()
+        defer { store.stopObserving() }
 
         var ids = try await waitForThreadIDs(in: store) { $0 == Set(["t1", "t2", "t4", "t5"]) }
         #expect(ids == Set(["t1", "t2", "t4", "t5"]))

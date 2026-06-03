@@ -7,8 +7,7 @@ import Testing
 /// Wrapper that owns the @FocusState needed by RBToolbar.
 private struct ToolbarTestHost: View {
     @FocusState private var searchFocused: Bool
-    var filterOptions: [RBToolbarFilterOption] = []
-    var onSelectFilterOption: (RBToolbarFilterOption.ID) -> Void = { _ in }
+    var filterMenu = RBToolbarFilterMenu(selectedFilter: .all, onSelect: { _ in })
 
     var body: some View {
         RBToolbar(
@@ -18,8 +17,7 @@ private struct ToolbarTestHost: View {
             onToggleTheme: {},
             onOpenSettings: {},
             onCompose: {},
-            filterOptions: filterOptions,
-            onSelectFilterOption: onSelectFilterOption,
+            filterMenu: filterMenu,
             searchFocused: $searchFocused,
             searchText: .constant(""),
             onSubmitSearch: {}
@@ -37,8 +35,8 @@ struct RBToolbarTests {
     }
 
     @MainActor
-    private func makeToolbar(filterOptions: [RBToolbarFilterOption]) -> some View {
-        ToolbarTestHost(filterOptions: filterOptions)
+    private func makeToolbar(filterMenu: RBToolbarFilterMenu) -> some View {
+        ToolbarTestHost(filterMenu: filterMenu)
     }
 
     @MainActor
@@ -60,9 +58,9 @@ struct RBToolbarTests {
     }
 
     @MainActor
-    @Test func toolbarBuildsWithFilterOptions() {
+    @Test func toolbarBuildsWithFilterMenu() {
         let view = makeToolbar(
-            filterOptions: MainScene.toolbarFilterOptions(currentFilter: .needsReply)
+            filterMenu: RBToolbarFilterMenu(selectedFilter: .needsReply, onSelect: { _ in })
         )
         .preferredColorScheme(.dark)
         let host = NSHostingView(rootView: view)
@@ -71,34 +69,15 @@ struct RBToolbarTests {
     }
 
     @MainActor
-    @Test func toolbarFilterOptionsMirrorThreadFilterSelection() {
-        let options = MainScene.toolbarFilterOptions(currentFilter: .hasDeadline)
-        #expect(options.count == ThreadFilter.allCases.count)
-        #expect(options.first(where: \.isSelected)?.id == ThreadFilter.hasDeadline.rawValue)
-        #expect(options.filter(\.isSelected).count == 1)
-    }
+    @Test func filterMenuSelectionUpdatesBoundInboxFilter() {
+        var currentFilter = ThreadFilter.all
+        let menu = RBToolbarFilterMenu(
+            selectedFilter: currentFilter,
+            onSelect: { currentFilter = $0 }
+        )
 
-    @MainActor
-    @Test func toolbarFilterOptionsUseInboxFilterContract() {
-        let options = MainScene.toolbarFilterOptions(currentFilter: .aiHandled)
+        menu.select(.hasAttachment)
 
-        for filter in ThreadFilter.allCases {
-            let option = options.first { $0.id == filter.rawValue }
-            #expect(option?.label == filter.label)
-            #expect(option?.isSelected == (filter == .aiHandled))
-        }
-    }
-
-    @MainActor
-    @Test func toolbarFilterOptionIDsRoundTripToInboxFilters() {
-        for filter in ThreadFilter.allCases {
-            let resolved = MainScene.threadFilter(forToolbarOptionID: filter.rawValue)
-            #expect(resolved == filter)
-        }
-    }
-
-    @MainActor
-    @Test func unknownToolbarFilterOptionIsIgnored() {
-        #expect(MainScene.threadFilter(forToolbarOptionID: "unknown") == nil)
+        #expect(currentFilter == .hasAttachment)
     }
 }
