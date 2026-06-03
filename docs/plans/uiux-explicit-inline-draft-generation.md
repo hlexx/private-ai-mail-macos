@@ -41,10 +41,10 @@ Make AI draft generation in the inline composer explicit instead of automatic on
 - [x] Add or update ComposeFeature and ThreadFeature tests for no auto-generation on view appear and generation on explicit action.
 
 ### Task 4: Document the policy and validate
-- [ ] Update the relevant ADR or create a new ADR for the explicit draft-generation trust contract.
-- [ ] Run `swift test --package-path Packages/Features/ComposeFeature` and fix failures.
-- [ ] Run `swift test --package-path Packages/Features/ThreadFeature` and fix failures.
-- [ ] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
+- [x] Update the relevant ADR or create a new ADR for the explicit draft-generation trust contract.
+- [x] Run `swift test --package-path Packages/Features/ComposeFeature` and fix failures.
+- [x] Run `swift test --package-path Packages/Features/ThreadFeature` and fix failures.
+- [x] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
 
 ## Rollback / Recovery
 - Revert the ComposeFeature/ThreadFeature/MainScene changes and the ADR/doc update. No data migration is involved.
