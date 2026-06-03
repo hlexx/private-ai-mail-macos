@@ -59,9 +59,9 @@ extension ThreadView {
             title: String(localized: "thread.action.draftReply", defaultValue: "Draft"),
             systemImage: "arrowshape.turn.up.left",
             compact: compact,
-            disabled: actionTarget == nil
+            disabled: onDraftReply == nil
         ) {
-            requestActionOrFallback(.draftReply, fallback: nil)
+            requestDraftReply()
         }
     }
 

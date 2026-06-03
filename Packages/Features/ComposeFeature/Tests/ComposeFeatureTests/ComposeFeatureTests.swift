@@ -172,6 +172,38 @@ struct ReplyStoreGenerateIfNeededTests {
     }
 
     @MainActor
+    @Test func inlineComposerExplicitGenerationActionStartsDrafting() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+        let composer = InlineComposer(threadID: "t1", replyStore: store)
+
+        composer.requestDraftGeneration(force: false)
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(mock.callCount == 1)
+        #expect(store.reply?.body == "Reply")
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
+    @Test func inlineComposerRegenerateActionPreservesExplicitDraftWorkflow() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+        let composer = InlineComposer(threadID: "t1", replyStore: store)
+
+        composer.requestDraftGeneration(force: false)
+        try await Task.sleep(for: .milliseconds(500))
+        composer.requestDraftGeneration(force: true)
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(mock.callCount == 2)
+        #expect(store.reply?.body == "Reply")
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
     @Test func generateShowsFailureStateWhenAIServiceThrows() async throws {
         let db = try await makeDB()
         let store = ReplyStore(aiService: FailingAIService(), db: db)

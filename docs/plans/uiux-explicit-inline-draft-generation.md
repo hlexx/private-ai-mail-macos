@@ -35,10 +35,10 @@ Make AI draft generation in the inline composer explicit instead of automatic on
 - [x] Ensure changing tone or reply language regenerates only after a draft has already been requested, or exposes an explicit generate action before the first request.
 
 ### Task 3: Wire explicit user actions to generation
-- [ ] Wire `BriefRail` draft CTA and thread `Draft` action to call an explicit generate/focus path such as `ReplyStore.generateIfNeeded`.
-- [ ] Ensure opening the bottom Draft panel does not generate unless it was opened through a draft action or the user presses Generate.
-- [ ] Preserve `Edit in full`, Send, Retry, Re-authorize, and Regenerate behavior after an explicit draft exists.
-- [ ] Add or update ComposeFeature and ThreadFeature tests for no auto-generation on view appear and generation on explicit action.
+- [x] Wire `BriefRail` draft CTA and thread `Draft` action to call an explicit generate/focus path such as `ReplyStore.generateIfNeeded`.
+- [x] Ensure opening the bottom Draft panel does not generate unless it was opened through a draft action or the user presses Generate.
+- [x] Preserve `Edit in full`, Send, Retry, Re-authorize, and Regenerate behavior after an explicit draft exists.
+- [x] Add or update ComposeFeature and ThreadFeature tests for no auto-generation on view appear and generation on explicit action.
 
 ### Task 4: Document the policy and validate
 - [ ] Update the relevant ADR or create a new ADR for the explicit draft-generation trust contract.

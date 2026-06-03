@@ -98,6 +98,7 @@ struct MainScene: View {
                         onStar: { starSelectedThread() },
                         onMarkRead: { markReadSelectedThread() },
                         onTrash: { trashSelectedThread() },
+                        onDraftReply: { draftReply() },
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.allTranslatedNodes(
@@ -289,7 +290,7 @@ extension MainScene {
         guard let action else { return }
         switch action {
         case .reply:
-            requestTrustActionForSelectedThread(.draftReply)
+            draftReply()
         case .archive:
             requestTrustActionForSelectedThread(.archiveThread)
         case .snooze, .log, .task, .unsub, .rule, .share:
@@ -442,7 +443,7 @@ extension MainScene {
     // swiftlint:disable:next cyclomatic_complexity
     private func handleAction(_ key: ActionKey) {
         switch key {
-        case .reply:            requestTrustActionForSelectedThread(.draftReply)
+        case .reply:            draftReply()
         case .replyAll:         replyAll()
         case .forward:          forwardThread()
         case .archive:          archiveSelectedThread()

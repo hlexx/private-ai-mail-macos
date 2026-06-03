@@ -23,6 +23,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
     var onStar: (() -> Void)?
     var onMarkRead: (() -> Void)?
     var onTrash: (() -> Void)?
+    var onDraftReply: (() -> Void)?
     let actionStore: TrustActionUIStore?
     var showTranslated: Bool
     var translatedTexts: [String: String]
@@ -41,6 +42,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         onStar: (() -> Void)? = nil,
         onMarkRead: (() -> Void)? = nil,
         onTrash: (() -> Void)? = nil,
+        onDraftReply: (() -> Void)? = nil,
         showTranslated: Bool = false,
         translatedTexts: [String: String] = [:],
         translatedNodes: [String: [String: String]] = [:],
@@ -60,6 +62,7 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
         self.onStar = onStar
         self.onMarkRead = onMarkRead
         self.onTrash = onTrash
+        self.onDraftReply = onDraftReply
         self.showTranslated = showTranslated
         self.translatedTexts = translatedTexts
         self.translatedNodes = translatedNodes
@@ -212,7 +215,8 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         onArchive: (() -> Void)? = nil,
         onStar: (() -> Void)? = nil,
         onMarkRead: (() -> Void)? = nil,
-        onTrash: (() -> Void)? = nil
+        onTrash: (() -> Void)? = nil,
+        onDraftReply: (() -> Void)? = nil
     ) {
         self.store = store
         self.actionStore = actionStore
@@ -220,6 +224,7 @@ extension ThreadView where ComposerContent == EmptyView, BriefContent == EmptyVi
         self.onStar = onStar
         self.onMarkRead = onMarkRead
         self.onTrash = onTrash
+        self.onDraftReply = onDraftReply
         self.showTranslated = false
         self.translatedTexts = [:]
         self.translatedNodes = [:]

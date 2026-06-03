@@ -304,6 +304,44 @@ struct ThreadFeatureTests {
         #expect(store.outboxItems.first?.status == .failedNonRetryable)
         #expect(store.outboxItems.first?.canRetry == false)
     }
+
+    @MainActor
+    @Test func threadDraftActionUsesExplicitDraftCallback() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        var draftRequests = 0
+        let view = ThreadView(
+            store: ThreadStore(db: db),
+            onDraftReply: {
+                draftRequests += 1
+            }
+        )
+
+        view.requestDraftReply()
+
+        #expect(draftRequests == 1)
+    }
+
+    @MainActor
+    @Test func threadDraftActionDoesNotQueueProviderDraftMutation() async throws {
+        let db = try makeAttachmentSummaryDatabase()
+        let queue = ThreadTrustActionQueue(outcome: .init(
+            opId: "draft-provider-1",
+            status: .completed,
+            message: "Provider draft queued"
+        ))
+        let actionStore = TrustActionUIStore(queue: queue)
+        let view = ThreadView(
+            store: ThreadStore(db: db),
+            actionStore: actionStore
+        )
+
+        view.requestDraftReply()
+        try? await Task.sleep(for: .milliseconds(100))
+
+        #expect(actionStore.pendingApproval == nil)
+        #expect(actionStore.outboxItems.isEmpty)
+        #expect(queue.started.isEmpty)
+    }
 }
 
 @MainActor
