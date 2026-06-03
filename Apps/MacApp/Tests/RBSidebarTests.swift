@@ -89,6 +89,36 @@ struct RBSidebarTests {
     }
 
     @MainActor
+    @Test func sidebarLongLabelsLayoutAtCompactWidth() {
+        var folders = FolderItem.defaultFolders
+        folders[0] = FolderItem(
+            id: .inbox,
+            name: "Very long inbox label that should truncate cleanly",
+            icon: "tray",
+            count: 999
+        )
+
+        let view = RBSidebar(
+            folders: folders,
+            accounts: [
+                AccountRow(
+                    id: "long-account",
+                    email: "very.long.account.name@example.company",
+                    dotColor: .rbCobalt400
+                ),
+            ],
+            selection: .constant(.folder(.inbox)),
+            jumpPulse: nil
+        )
+        .frame(width: 180, height: 600)
+        .background(Color.rbBgDeep)
+
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 180, height: 600)
+        host.layout()
+    }
+
+    @MainActor
     @Test func sidebarAccountSelected() {
         let view = makeSidebarWithSelection(.account("g1"))
             .preferredColorScheme(.dark)

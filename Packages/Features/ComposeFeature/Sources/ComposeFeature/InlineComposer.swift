@@ -168,15 +168,9 @@ public struct InlineComposer: View {
     }
 
     private var languageChevron: some View {
-        Button {
+        InlineComposerLanguageChevron {
             showLanguagePicker.toggle()
-        } label: {
-            Image(systemName: "chevron.down")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(Color.rbFg3)
         }
-        .buttonStyle(.plain)
-        .help(String(localized: "composer.languagePicker.tooltip", defaultValue: "Change reply language"))
         .popover(isPresented: $showLanguagePicker, arrowEdge: .bottom) {
             languagePickerContent
         }
@@ -186,25 +180,12 @@ public struct InlineComposer: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(Self.commonLanguages, id: \.code) { lang in
-                    Button {
+                    InlineComposerLanguagePickerRow(
+                        name: lang.name,
+                        isSelected: (displayLanguage ?? "") == lang.code
+                    ) {
                         handleLanguageSelection(lang.code)
-                    } label: {
-                        HStack {
-                            Text(lang.name)
-                                .font(.rbGeist(13))
-                                .foregroundStyle(Color.rbFg1)
-                            Spacer()
-                            if (displayLanguage ?? "") == lang.code {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(Color.rbAccent)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.vertical, 8)

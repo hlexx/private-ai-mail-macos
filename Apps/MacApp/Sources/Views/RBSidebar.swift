@@ -143,12 +143,14 @@ struct RBSidebar: View {
                     .font(.rbMono(10, weight: .medium))
                     .tracking(0.14 * 10)
                     .foregroundStyle(Color.rbFg3)
+                    .lineLimit(1)
                 Spacer(minLength: 0)
             }
-            .contentShape(Rectangle())
             .padding(.horizontal, 8)
             .padding(.top, 10)
             .padding(.bottom, 6)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -173,16 +175,21 @@ struct RBSidebar: View {
                     .frame(width: 16)
                 Text(folder.name)
                     .font(.rbGeist(13))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Spacer()
                 if let count = folder.count {
                     Text("\(count)")
                         .font(.rbMono(11))
                         .foregroundStyle(isActive ? Color.rbCitron500 : Color.rbFg3)
+                        .lineLimit(1)
                 }
             }
             .foregroundStyle(isActive ? Color.rbFg1 : Color.rbFg2)
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
+            .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
                     .fill(isActive
@@ -200,7 +207,6 @@ struct RBSidebar: View {
             .animation(.easeOut(duration: 0.18), value: isPulsing)
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     // MARK: - All Accounts row
@@ -226,9 +232,12 @@ struct RBSidebar: View {
                     .font(.rbGeist(12))
                     .foregroundStyle(isActive ? Color.rbFg1 : Color.rbFg2)
                     .lineLimit(1)
+                    .truncationMode(.tail)
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
+            .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
                     .fill(isActive ? Color.rbCobalt400.opacity(isPulsing ? 0.28 : 0.12) : Color.clear)
@@ -236,7 +245,6 @@ struct RBSidebar: View {
             .animation(.easeOut(duration: 0.18), value: isPulsing)
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     // MARK: - Account row
@@ -261,6 +269,8 @@ struct RBSidebar: View {
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
+            .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
                     .fill(isActive
@@ -269,7 +279,6 @@ struct RBSidebar: View {
             )
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     // MARK: - Footer

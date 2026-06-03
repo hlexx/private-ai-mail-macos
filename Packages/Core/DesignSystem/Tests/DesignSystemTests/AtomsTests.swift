@@ -93,6 +93,125 @@ struct AtomsTests {
         .background(Color.rbBgCanvas)
     }
 
+    @MainActor
+    @Test func compactInteractiveMetricUsesStableDesktopTarget() {
+        #expect(RBControlMetrics.compactHitTarget == 32)
+    }
+
+    @MainActor
+    @Test func compactInteractiveControlsMeetMinimumTargets() {
+        assertFittingSize(
+            of: RBIconButton(systemName: "gearshape", accessibilityLabel: "Settings") {},
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: RBFilterChip(label: "All", isOn: true) {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: Button("Primary") {}
+                .buttonStyle(.rbPrimary),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: Button("Secondary") {}
+                .buttonStyle(.rbSecondary),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: Button("Ghost") {}
+                .buttonStyle(.rbGhost),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: iconOnlyButton(style: .rbPrimary),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: iconOnlyButton(style: .rbSecondary),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: iconOnlyButton(style: .rbGhost),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: bareToneSegmentView(),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: AccountSwitcher(dotColor: .rbCobalt500, label: "alex@studio.eu") {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+    }
+
+    @MainActor
+    @Test func disabledCompactInteractiveControlsKeepMinimumTargets() {
+        assertFittingSize(
+            of: RBIconButton(systemName: "gearshape", accessibilityLabel: "Settings") {}
+                .disabled(true),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: Button("Primary") {}
+                .buttonStyle(.rbPrimary)
+                .disabled(true),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: RBFilterChip(label: "All", isOn: true, isEnabled: false) {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: bareToneSegmentView(isEnabled: false),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: AccountSwitcher(dotColor: .rbCobalt500, label: "alex@studio.eu", isEnabled: false) {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+    }
+
+    @MainActor
+    private func iconOnlyButton(style: some ButtonStyle) -> some View {
+        Button {} label: {
+            Image(systemName: "pencil")
+        }
+        .buttonStyle(style)
+    }
+
+    @MainActor
+    private func assertFittingSize(
+        of view: some View,
+        minWidth: CGFloat = 0,
+        minHeight: CGFloat
+    ) {
+        let host = NSHostingView(rootView: view)
+        host.layout()
+        let size = host.fittingSize
+
+        #expect(size.width >= minWidth)
+        #expect(size.height >= minHeight)
+    }
+
     // MARK: - RBIconButton
 
     @MainActor
@@ -321,6 +440,25 @@ struct AtomsTests {
             }
         }
         return Wrapper()
+    }
+
+    private func bareToneSegmentView(isEnabled: Bool = true) -> some View {
+        struct Wrapper: View {
+            let isEnabled: Bool
+            @State var selection = "warm"
+            var body: some View {
+                RBToneSegment(
+                    segments: [
+                        .init(id: "concise", label: "Concise", detail: "42w"),
+                        .init(id: "warm", label: "Warm", detail: "61w"),
+                        .init(id: "direct", label: "Direct", detail: "28w"),
+                    ],
+                    selection: $selection,
+                    isEnabled: isEnabled
+                )
+            }
+        }
+        return Wrapper(isEnabled: isEnabled)
     }
 
     // MARK: - RBFilterChip

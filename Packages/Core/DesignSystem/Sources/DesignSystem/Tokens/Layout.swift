@@ -41,7 +41,7 @@ public enum RBLayout {
 
     // MARK: Bottom work panel
 
-    public static let bottomPanelCollapsedHeight: CGFloat = 42
+    public static let bottomPanelCollapsedHeight: CGFloat = RBControlMetrics.compactHitTarget + 16
     public static let bottomPanelExpandedHeight: CGFloat = 318
     public static let bottomPanelMinExpandedHeight: CGFloat = 220
     public static let bottomPanelMinReadingHeight: CGFloat = 320

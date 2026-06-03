@@ -2,6 +2,10 @@ import DesignSystem
 import SwiftUI
 
 enum ThreadBottomPanelLayout {
+    static let chromeVerticalPadding: CGFloat = 8
+    static let collapsedHeight = RBLayout.bottomPanelCollapsedHeight
+    static let expandedHeight = RBLayout.bottomPanelExpandedHeight
+
     static func presentation(
         availableHeight: CGFloat,
         isCollapsed: Bool
@@ -11,18 +15,18 @@ enum ThreadBottomPanelLayout {
                 availableHeight: availableHeight
             )
             return ThreadBottomPanelPresentation(
-                height: RBLayout.bottomPanelCollapsedHeight,
+                height: collapsedHeight,
                 showsContent: false,
                 canShowContent: expandedHeight >= RBLayout.bottomPanelMinExpandedHeight
             )
         }
 
-        let height = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+        let expandedHeight = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
             availableHeight: availableHeight
         )
-        let canShowContent = height >= RBLayout.bottomPanelMinExpandedHeight
+        let canShowContent = expandedHeight >= RBLayout.bottomPanelMinExpandedHeight
         return ThreadBottomPanelPresentation(
-            height: height,
+            height: canShowContent ? expandedHeight : collapsedHeight,
             showsContent: canShowContent,
             canShowContent: canShowContent
         )
@@ -84,21 +88,19 @@ extension ThreadView {
 
             Spacer(minLength: 12)
 
-            Button {
+            RBIconButton(
+                systemName: presentation.showsContent ? "chevron.down" : "chevron.up",
+                accessibilityLabel: bottomPanelToggleHelp(presentation: presentation)
+            ) {
                 withAnimation(.easeInOut(duration: 0.18)) {
                     bottomPanelCollapsed = presentation.showsContent
                 }
-            } label: {
-                Image(systemName: presentation.showsContent ? "chevron.down" : "chevron.up")
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 22, height: 22)
             }
-            .buttonStyle(.rbGhost)
             .disabled(!presentation.canShowContent)
             .help(bottomPanelToggleHelp(presentation: presentation))
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 8)
+        .padding(.vertical, ThreadBottomPanelLayout.chromeVerticalPadding)
     }
 
     private func bottomPanelTabButton(
@@ -115,13 +117,17 @@ extension ThreadView {
             Label(tabTitle(tab), systemImage: tabIcon(tab))
                 .font(.rbGeist(12, weight: selected ? .medium : .regular))
                 .foregroundStyle(selected ? Color.rbFg1 : Color.rbFg3)
+                .lineLimit(1)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
+                .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
+                .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
                 .background(selected ? Color.rbBgElev2 : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
         }
         .buttonStyle(.plain)
         .disabled(!canShowContent)
+        .accessibilityLabel(tabTitle(tab))
         .help(tabTitle(tab))
     }
 

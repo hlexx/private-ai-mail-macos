@@ -183,6 +183,11 @@ in §4 of the design doc.
 - **One `xcstrings` catalog per package** under `Sources/<Name>/Resources/`.
   MVP ships `en` only, but every package is i18n-ready (see §14.1 of the
   design doc).
+- **Dense SwiftUI controls use shared hit-target metrics.** Use
+  `RBControlMetrics.compactHitTarget` from `DesignSystem` for compact desktop
+  icon buttons, chips, segmented controls, and local picker rows. Avoid
+  hard-coded 22/28 pt icon frames or content-driven chip/button heights unless
+  the local layout explicitly preserves the shared compact target.
 - **Single-writer DB pattern.** Persistence writes that cross concurrency
   boundaries go through `@DatabaseActor` in the `Persistence` package.
 - **Module names avoid collision with Apple frameworks.** The Core package

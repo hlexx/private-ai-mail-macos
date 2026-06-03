@@ -45,6 +45,19 @@ extension MainScene {
         bottomPanelTabRaw = "draft"
     }
 
+    func moveBriefToBottom() {
+        briefPlacementRaw = BriefPanelPlacement.bottom.rawValue
+        briefCollapsed = true
+        bottomPanelCollapsed = false
+        bottomPanelTabRaw = "brief"
+    }
+
+    func moveBriefToSide() {
+        briefPlacementRaw = BriefPanelPlacement.side.rawValue
+        briefCollapsed = false
+        bottomPanelTabRaw = "draft"
+    }
+
     func requestTrustActionForSelectedThread(_ action: TrustMVPAction) {
         guard let threadId = inboxStore.selectedThreadID,
               let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }

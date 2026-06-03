@@ -138,16 +138,31 @@ extension ThreadView {
         disabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            if compact {
+        if compact {
+            if disabled {
                 Image(systemName: systemImage)
-                    .frame(width: 18, height: 18)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.rbFg4)
+                    .frame(
+                        width: RBControlMetrics.compactHitTarget,
+                        height: RBControlMetrics.compactHitTarget
+                    )
+                    .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
+                    .accessibilityLabel(title)
+                    .help(title)
             } else {
-                Label(title, systemImage: systemImage)
+                RBIconButton(systemName: systemImage, accessibilityLabel: title, action: action)
+                    .help(title)
             }
+        } else {
+            Button(action: action) {
+                Label(title, systemImage: systemImage)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.rbGhost)
+            .disabled(disabled)
+            .accessibilityLabel(title)
+            .help(title)
         }
-        .buttonStyle(.rbGhost)
-        .disabled(disabled)
-        .help(title)
     }
 }

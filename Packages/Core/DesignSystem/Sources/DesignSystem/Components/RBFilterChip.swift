@@ -6,11 +6,17 @@ import SwiftUI
 public struct RBFilterChip: View {
     public let label: String
     public let isOn: Bool
+    public let isEnabled: Bool
     public let action: () -> Void
 
     public init(label: String, isOn: Bool, action: @escaping () -> Void) {
+        self.init(label: label, isOn: isOn, isEnabled: true, action: action)
+    }
+
+    public init(label: String, isOn: Bool, isEnabled: Bool = true, action: @escaping () -> Void) {
         self.label = label
         self.isOn = isOn
+        self.isEnabled = isEnabled
         self.action = action
     }
 
@@ -18,17 +24,25 @@ public struct RBFilterChip: View {
         Button(action: action) {
             Text(label)
                 .font(.rbGeist(12))
-                .foregroundStyle(isOn ? Color.rbCitron600 : Color.rbFg2)
+                .foregroundStyle(foregroundColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(isOn ? Color.rbCitron500.opacity(0.18) : Color.rbBgElev1)
+                .frame(minHeight: RBControlMetrics.compactHitTarget)
+                .background(isOn && isEnabled ? Color.rbCitron500.opacity(0.18) : Color.rbBgElev1)
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()
-                        .strokeBorder(isOn ? Color.rbCitron500 : Color.rbStroke1, lineWidth: 1)
+                        .strokeBorder(isOn && isEnabled ? Color.rbCitron500 : Color.rbStroke1, lineWidth: 1)
                 )
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    private var foregroundColor: Color {
+        if !isEnabled { return .rbFg4 }
+        return isOn ? .rbCitron600 : .rbFg2
     }
 }
 

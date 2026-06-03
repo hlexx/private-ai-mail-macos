@@ -43,7 +43,7 @@ struct ThreadFeatureTests {
     @Test func bottomPanelHeightKeepsCollapsedChromeStable() {
         let presentation = ThreadBottomPanelLayout.presentation(availableHeight: 120, isCollapsed: true)
 
-        #expect(presentation.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(presentation.height == ThreadBottomPanelLayout.collapsedHeight)
         #expect(!presentation.showsContent)
     }
 
@@ -55,7 +55,7 @@ struct ThreadFeatureTests {
             isCollapsed: false
         )
 
-        #expect(presentation.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(presentation.height == ThreadBottomPanelLayout.collapsedHeight)
         #expect(!presentation.showsContent)
         #expect(!presentation.canShowContent)
     }
@@ -64,12 +64,36 @@ struct ThreadFeatureTests {
         let zeroHeight = ThreadBottomPanelLayout.presentation(availableHeight: 0, isCollapsed: false)
         let negativeHeight = ThreadBottomPanelLayout.presentation(availableHeight: -120, isCollapsed: false)
 
-        #expect(zeroHeight.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(zeroHeight.height == ThreadBottomPanelLayout.collapsedHeight)
         #expect(!zeroHeight.showsContent)
         #expect(!zeroHeight.canShowContent)
-        #expect(negativeHeight.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(negativeHeight.height == ThreadBottomPanelLayout.collapsedHeight)
         #expect(!negativeHeight.showsContent)
         #expect(!negativeHeight.canShowContent)
+    }
+
+    @Test func bottomPanelCollapsedHeightContainsChrome() {
+        #expect(ThreadBottomPanelLayout.collapsedHeight == RBControlMetrics.compactHitTarget + 16)
+        #expect(ThreadBottomPanelLayout.expandedHeight > ThreadBottomPanelLayout.collapsedHeight)
+    }
+
+    @MainActor
+    @Test func compactActionIconBarKeepsFinalHitTargetWidth() {
+        let buttonCount = 7
+        let spacing: CGFloat = 2
+        let view = HStack(spacing: spacing) {
+            ForEach(0..<buttonCount, id: \.self) { index in
+                RBIconButton(systemName: "archivebox", accessibilityLabel: "Action \(index)") {}
+            }
+        }
+
+        let host = NSHostingView(rootView: view)
+        host.layout()
+        let expectedWidth = CGFloat(buttonCount) * RBControlMetrics.compactHitTarget
+            + CGFloat(buttonCount - 1) * spacing
+
+        #expect(host.fittingSize.width <= expectedWidth + 1)
+        #expect(host.fittingSize.height >= RBControlMetrics.compactHitTarget)
     }
 
     // MARK: - MessageRow

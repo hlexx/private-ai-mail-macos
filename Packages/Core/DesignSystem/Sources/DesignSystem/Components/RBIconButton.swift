@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A 28x28 square button hosting an SF Symbol with hover background.
+/// A compact square button hosting an SF Symbol with hover background.
 public struct RBIconButton: View {
     private let systemName: String
     private let accessibilityLabel: String
@@ -19,13 +19,18 @@ public struct RBIconButton: View {
             Image(systemName: systemName)
                 .font(.system(size: 13))
                 .foregroundStyle(isHovered ? Color.rbFg1 : Color.rbFg2)
-                .frame(width: 28, height: 28)
+                .frame(
+                    width: RBControlMetrics.compactHitTarget,
+                    height: RBControlMetrics.compactHitTarget
+                )
                 .background(isHovered ? Color.rbBgElev1 : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
+                .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .accessibilityLabel(accessibilityLabel)
+        .help(accessibilityLabel)
     }
 }
 
