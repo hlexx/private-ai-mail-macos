@@ -44,6 +44,37 @@ struct ActionsFeatureTests {
         #expect(!ActionExecutionSupport.isEnabled(.share))
     }
 
+    @Test func actionSheetStartsWithoutExecutableSelection() {
+        #expect(ActionSheetPresentation.defaultSelection == nil)
+        #expect(!ActionSheetPresentation.isPrimaryCTAEnabled(for: nil))
+        #expect(ActionSheetPresentation.previewText(for: nil).contains("Select an available action"))
+    }
+
+    @Test func primaryCTAOnlyEnablesForExecutableSelections() {
+        for item in ActionItem.executable {
+            #expect(ActionSheetPresentation.isPrimaryCTAEnabled(for: item.id))
+            #expect(ActionSheetPresentation.selectedExecutableAction(item.id) == item.id)
+        }
+
+        for item in ActionItem.roadmap {
+            #expect(!ActionSheetPresentation.isPrimaryCTAEnabled(for: item.id))
+            #expect(ActionSheetPresentation.selectedExecutableAction(item.id) == nil)
+        }
+    }
+
+    @Test func previewCopyIsOnlyOperationalForExecutableActions() throws {
+        for item in ActionItem.executable {
+            let preview = try #require(ActionExecutionSupport.preview(for: item.id))
+            #expect(!preview.isEmpty)
+            #expect(!preview.localizedCaseInsensitiveContains("Re:Box will"))
+        }
+
+        for item in ActionItem.roadmap {
+            #expect(ActionExecutionSupport.preview(for: item.id) == nil)
+            #expect(ActionSheetPresentation.previewText(for: item.id).contains("Select an available action"))
+        }
+    }
+
     // MARK: - ActionSheetView snapshot (dark)
 
     @MainActor

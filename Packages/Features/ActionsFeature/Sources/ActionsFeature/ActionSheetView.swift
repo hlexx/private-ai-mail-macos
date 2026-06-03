@@ -34,16 +34,6 @@ public enum ActionID: String, CaseIterable, Sendable {
     }
 }
 
-public enum ActionExecutionSupport {
-    public static func isEnabled(_ action: ActionID) -> Bool {
-        action.trustMVPAction != nil
-    }
-
-    static func preview(for action: ActionID) -> String {
-        previews[action] ?? ""
-    }
-}
-
 struct ActionItem: Identifiable {
     let id: ActionID
     let label: String
@@ -123,16 +113,6 @@ struct ActionItem: Identifiable {
     ]
 }
 
-// MARK: - Preview Text
-
-private let previews: [ActionID: String] = [
-    .reply: "I'll draft a reply matching your tone and ask for the contract attachment.",
-    .archive: "Thread is archived. Re:Box keeps the summary searchable.",
-    .star: "Thread is starred so it stays visible in follow-up review.",
-    .markRead: "Thread is marked read without changing labels or draft state.",
-    .trash: "Thread moves to trash after explicit confirmation.",
-]
-
 // MARK: - Action Tile
 
 struct ActionTile: View {
@@ -191,31 +171,40 @@ struct RoadmapActionTile: View {
         HStack(spacing: RBSpace.s2) {
             Image(systemName: item.systemName)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.rbFg3)
+                .foregroundStyle(Color.rbFg3.opacity(0.75))
                 .frame(width: 22, height: 22)
-                .background(Color.rbBgElev2)
+                .background(Color.rbBgElev2.opacity(0.55))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
             Text(item.label)
                 .font(.rbGeist(11.5, weight: .medium))
-                .foregroundStyle(Color.rbFg2)
+                .foregroundStyle(Color.rbFg3)
                 .lineLimit(1)
 
             Spacer(minLength: RBSpace.s2)
 
-            Text(String(localized: "action.roadmap.badge", defaultValue: "Roadmap"))
+            Text(String(localized: "action.roadmap.badge", defaultValue: "Unavailable"))
                 .font(.rbMono(9, weight: .medium))
                 .foregroundStyle(Color.rbFg3)
         }
         .padding(.vertical, RBSpace.s2)
         .padding(.horizontal, RBSpace.s2)
-        .background(Color.rbBgElev1.opacity(0.55))
+        .background(Color.rbBgElev2.opacity(0.28))
         .overlay(
             RoundedRectangle(cornerRadius: RBRadius.md)
-                .strokeBorder(Color.rbStroke1.opacity(0.7), lineWidth: 1)
+                .strokeBorder(Color.rbStroke1.opacity(0.45), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
         .help(String(localized: "action.roadmap.help", defaultValue: "Not available in this build"))
+        .accessibilityLabel(
+            Text(
+                String(
+                    localized: "action.roadmap.accessibility",
+                    defaultValue: "\(item.label), unavailable in this build"
+                )
+            )
+        )
+        .accessibilityAddTraits(.isStaticText)
     }
 }
 
@@ -225,7 +214,7 @@ public struct ActionSheetView: View {
     let threadSubject: String
     let onAction: (ActionID?) -> Void
 
-    @State private var picked: ActionID = .reply
+    @State private var picked: ActionID? = ActionSheetPresentation.defaultSelection
 
     public init(threadSubject: String, onAction: @escaping (ActionID?) -> Void) {
         self.threadSubject = threadSubject
@@ -277,7 +266,7 @@ public struct ActionSheetView: View {
                     .padding(.bottom, RBSpace.s3)
 
                     VStack(alignment: .leading, spacing: RBSpace.s2) {
-                        Text(String(localized: "action.roadmap.title", defaultValue: "Roadmap"))
+                        Text(String(localized: "action.roadmap.title", defaultValue: "Unavailable in this build"))
                             .font(.rbMono(10, weight: .medium))
                             .tracking(0.14 * 10)
                             .foregroundStyle(Color.rbFg3)
@@ -293,20 +282,20 @@ public struct ActionSheetView: View {
                     // Preview block
                     VStack(alignment: .leading, spacing: RBSpace.s2) {
                         HStack {
-                            Text(String(localized: "action.preview.eyebrow", defaultValue: "◆ RE:BOX WILL"))
+                            Text(String(localized: "action.preview.eyebrow", defaultValue: "ACTION PREVIEW"))
                                 .font(.rbMono(10, weight: .medium))
                                 .tracking(0.14 * 10)
                                 .foregroundStyle(Color.rbSignalSuccess)
 
                             Spacer()
 
-                            Text(String(localized: "action.preview.undo", defaultValue: "UNDO IN 5S"))
+                            Text(String(localized: "action.preview.scope", defaultValue: "CURRENT BUILD"))
                                 .font(.rbMono(10, weight: .medium))
                                 .tracking(0.14 * 10)
                                 .foregroundStyle(Color.rbFg3)
                         }
 
-                        Text(ActionExecutionSupport.preview(for: picked))
+                        Text(ActionSheetPresentation.previewText(for: picked))
                             .rbTextStyle(.bodySM)
                             .foregroundStyle(Color.rbFg2)
                             .lineSpacing(4)
@@ -329,9 +318,13 @@ public struct ActionSheetView: View {
                         Spacer()
                         Button(String(localized: "action.cta.cancel", defaultValue: "Cancel")) { onAction(nil) }
                             .buttonStyle(.rbGhost)
-                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) { onAction(picked) }
+                        Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) {
+                            if let action = ActionSheetPresentation.selectedExecutableAction(picked) {
+                                onAction(action)
+                            }
+                        }
                             .buttonStyle(.rbPrimary)
-                            .disabled(!ActionExecutionSupport.isEnabled(picked))
+                            .disabled(!ActionSheetPresentation.isPrimaryCTAEnabled(for: picked))
                     }
                     .padding(.top, RBSpace.s3)
                 }

@@ -28,10 +28,10 @@ Reduce action sheet overpromising by making only currently executable Trust MVP 
 - [x] Move non-executable actions (`snooze`, `log`, `task`, `unsub`, `rule`, `share`) out of the primary action grid or label them as unavailable roadmap items without `Do it` preview.
 
 ### Task 2: Rewrite preview and CTA behavior
-- [ ] Ensure the preview text describes only actions that can run in this build.
-- [ ] Remove "Re:Box will" preview copy for disabled future integrations.
-- [ ] Keep the primary CTA disabled only when no executable action is selected; avoid a default selected future action.
-- [ ] Make unavailable items visually secondary and non-confusable with enabled tiles.
+- [x] Ensure the preview text describes only actions that can run in this build.
+- [x] Remove "Re:Box will" preview copy for disabled future integrations.
+- [x] Keep the primary CTA disabled only when no executable action is selected; avoid a default selected future action.
+- [x] Make unavailable items visually secondary and non-confusable with enabled tiles.
 
 ### Task 3: Add tests for trust scope
 - [ ] Add or update ActionsFeature tests to prove disabled/future actions cannot become selected executable actions.
