@@ -205,6 +205,7 @@ struct DesignComplianceTests {
 
         // .rb-row.active::before { width: 3px }
         #expect(RBLayout.activeRowIndicatorWidth == 3)
+
     }
 
     // ───────────────────────────────────────────────

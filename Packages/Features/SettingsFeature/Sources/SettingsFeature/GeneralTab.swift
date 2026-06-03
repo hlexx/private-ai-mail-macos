@@ -1,4 +1,5 @@
 import AppFoundation
+import DesignSystem
 import SwiftUI
 
 public struct GeneralTab: View {
@@ -38,24 +39,7 @@ public struct GeneralTab: View {
                     isOn: $autoTranslate
                 )
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(String(localized: "general.translationLanguages", defaultValue: "Translation languages"))
-                        .font(.headline)
-
-                    ForEach(TranslationLanguagePreferences.availableLanguages, id: \.code) { language in
-                        Toggle(language.name, isOn: translationLanguageBinding(for: language.code))
-                    }
-
-                    if selectedTranslationLanguages.isEmpty {
-                        Text(String(
-                            localized: "general.translationLanguages.emptyHint",
-                            defaultValue: "No languages are selected, so translation is disabled."
-                        ))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.top, 4)
+                translationLanguagesGroup
             } header: {
                 Text(String(localized: "general.section.language", defaultValue: "Language & AI"))
             } footer: {
@@ -73,7 +57,38 @@ public struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.rbBgCanvas)
         .padding()
+    }
+
+    private var translationLanguagesGroup: some View {
+        VStack(alignment: .leading, spacing: RBSpace.s2) {
+            Text(String(localized: "general.translationLanguages", defaultValue: "Translation languages"))
+                .font(.headline)
+
+            translationLanguageOptions
+
+            if selectedTranslationLanguages.isEmpty {
+                Text(String(
+                    localized: "general.translationLanguages.emptyHint",
+                    defaultValue: "No languages are selected, so translation is disabled."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.top, RBSpace.s1)
+    }
+
+    @ViewBuilder
+    private var translationLanguageOptions: some View {
+        HStack(alignment: .firstTextBaseline, spacing: RBSpace.s5) {
+            ForEach(TranslationLanguagePreferences.availableLanguages, id: \.code) { language in
+                Toggle(language.name, isOn: translationLanguageBinding(for: language.code))
+                    .frame(minWidth: TranslationLanguagesLayout.optionMinWidth, alignment: .leading)
+            }
+        }
     }
 
     private var selectedTranslationLanguages: Set<String> {
@@ -112,4 +127,9 @@ public struct GeneralTab: View {
         ("pl", "Polski"),
         ("nl", "Nederlands"),
     ]
+
+}
+
+enum TranslationLanguagesLayout {
+    static let optionMinWidth: CGFloat = 108
 }

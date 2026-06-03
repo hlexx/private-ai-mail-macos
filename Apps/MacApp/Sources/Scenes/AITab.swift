@@ -91,6 +91,8 @@ struct AITab: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.rbBgCanvas)
         .task {
             queue.refreshCounts()
             await modelController.refreshInstalledStatus()
