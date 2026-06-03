@@ -24,9 +24,16 @@ Bring Settings closer to the Re:Box design quality without sacrificing native ma
 - `xcodebuild build -project PrivateAIMail.xcodeproj -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 
 ### Task 1: Inventory Settings surfaces and copy density
-- [ ] Inspect `Apps/MacApp/Sources/Scenes/SettingsScene.swift`, `Packages/Features/SettingsFeature/Sources/SettingsFeature/GeneralTab.swift`, `PrivacyTab.swift`, `AccountsTab.swift`, and `AITab`.
-- [ ] Identify rows where long privacy copy wraps awkwardly or competes with accessory controls.
-- [ ] Keep native form semantics where they improve keyboard navigation and accessibility.
+- [x] Inspect `Apps/MacApp/Sources/Scenes/SettingsScene.swift`, `Packages/Features/SettingsFeature/Sources/SettingsFeature/GeneralTab.swift`, `PrivacyTab.swift`, `AccountsTab.swift`, and `AITab`.
+- [x] Identify rows where long privacy copy wraps awkwardly or competes with accessory controls.
+- [x] Keep native form semantics where they improve keyboard navigation and accessibility.
+
+Inventory findings:
+- `SettingsScene` uses a direct `TabView` with `RBLayout.settingsWidth` and `RBLayout.settingsHeight` set by DesignSystem tokens; the current 520 x 360 frame is the main shared constraint before tab-level layout work.
+- `GeneralTab` is already a native grouped `Form`, but the translation language controls render as a nested vertical toggle list inside the Language & AI section, making the section read as an undifferentiated list rather than a grouped preference area.
+- `PrivacyTab` keeps useful native `Form` and `Section` semantics, but `rowView(_:)` places long detail copy and accessories in the same horizontal `HStack`. The rows most likely to crowd or wrap awkwardly are `no-mailbox-mirroring`, `connected-provider-empty`, `provider-api-use`, `gmail-permissions-*`, `outlook-permissions-*`, `ai-mode`, `cloud-fallback`, and `cache-control-*`.
+- `AccountsTab` uses a custom vertical surface with list/provider rows. The provider option row can become tight when a disabled reason and action button share the trailing side, but its copy is shorter than the Privacy copy and does not need privacy-specific treatment.
+- `AITab` uses native grouped `Form` sections and long footer text. It should keep that structure unless later polishing introduces a shared tab container that preserves `Form` keyboard navigation and accessibility.
 
 ### Task 2: Resize and structure the Settings window
 - [ ] Increase `RBLayout.settingsWidth` and `RBLayout.settingsHeight` to fit current tabs without cramped vertical scrolling.
