@@ -43,9 +43,9 @@ Decision: implement a compact app-layer toolbar popover. `InboxStore.filter` and
 - [x] Run `swift test --package-path Packages/Core/DesignSystem` if any shared atoms changed.
 
 ### Task 4: Validate final integration
-- [ ] Run `swiftlint --strict --reporter xcode`.
-- [ ] Run `git diff --check`.
-- [ ] Run the MacApp Debug build and fix failures.
+- [x] Run `swiftlint --strict --reporter xcode`.
+- [x] Run `git diff --check`.
+- [x] Run the MacApp Debug build and fix failures.
 
 ## Rollback / Recovery
 - Revert toolbar/MainScene/InboxFeature changes. No data migration is involved.
