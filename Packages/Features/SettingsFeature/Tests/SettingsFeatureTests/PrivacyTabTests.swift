@@ -63,6 +63,38 @@ struct PrivacyTabTests {
         #expect(isEnabled)
     }
 
+    @Test func gmailReauthorizationPhasesExposeStableCopyKeys() throws {
+        let account = account(id: "gmail-1", provider: "gmail", email: "user@gmail.com")
+        let cases: [(ProviderReauthorizationPhase, String, String)] = [
+            (.idle, PrivacyCopyKey.gmailReauthorizeAction, "Re-authorize Gmail"),
+            (.authorizing, PrivacyCopyKey.gmailReauthorizeProgress, "Re-authorizing..."),
+            (.done, PrivacyCopyKey.gmailReauthorizeDone, "Consent refreshed"),
+            (.error("Network unavailable"), PrivacyCopyKey.gmailReauthorizeRetryAction, "Retry re-authorization"),
+        ]
+
+        for (phase, expectedKey, expectedValue) in cases {
+            let state = PrivacySettingsState.make(
+                accounts: [account],
+                reauthorizationPhases: [account.id: phase]
+            )
+            let row = try #require(state.rows.first { $0.id == "gmail-permissions-gmail-1" })
+
+            #expect(state.copyKeys.contains(expectedKey))
+            switch row.accessory {
+            case .button(let copy, let action, let isEnabled):
+                #expect(copy.key == expectedKey)
+                #expect(copy.defaultValue == expectedValue)
+                #expect(action == .reauthorize(account.id))
+                #expect(isEnabled)
+            case .progress(let copy), .status(let copy):
+                #expect(copy.key == expectedKey)
+                #expect(copy.defaultValue == expectedValue)
+            default:
+                Issue.record("Expected Gmail re-authorization accessory for phase \(phase)")
+            }
+        }
+    }
+
     @Test func outlookPermissionsStayHumanReadableWithoutUnsupportedReconsentControl() throws {
         let state = PrivacySettingsState.make(accounts: [
             account(id: "outlook-1", provider: "outlook", email: "user@outlook.com"),

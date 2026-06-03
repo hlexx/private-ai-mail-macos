@@ -47,10 +47,10 @@ Inventory findings:
 - [x] Do not change privacy claims unless backed by docs/tests.
 
 ### Task 4: Test and validate Settings
-- [ ] Update SettingsFeature tests for any changed state models or copy keys.
-- [ ] Run `swift test --package-path Packages/Features/SettingsFeature` and fix failures.
-- [ ] Run `swift test --package-path Packages/Core/DesignSystem` if shared components changed.
-- [ ] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
+- [x] Update SettingsFeature tests for any changed state models or copy keys.
+- [x] Run `swift test --package-path Packages/Features/SettingsFeature` and fix failures.
+- [x] Run `swift test --package-path Packages/Core/DesignSystem` if shared components changed.
+- [x] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
 
 ## Rollback / Recovery
 - Revert SettingsScene, SettingsFeature, and DesignSystem changes. Existing settings values remain compatible.
