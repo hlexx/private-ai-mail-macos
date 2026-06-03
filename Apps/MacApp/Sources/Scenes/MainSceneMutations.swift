@@ -13,13 +13,14 @@ import ThreadFeature
 
 extension MainScene {
 
-    func draftReply(threadID requestedThreadID: String? = nil) {
+    func draftReply(threadID requestedThreadID: String? = nil, accountId requestedAccountID: String? = nil) {
         guard composition.aiModelController.isAIReady else {
             openSettings()
             return
         }
         let threadID = requestedThreadID ?? inboxStore.selectedThreadID
         guard let threadID else { return }
+        guard let thread = threadRow(threadID: threadID, accountId: requestedAccountID) else { return }
         if inboxStore.selectedThreadID != threadID {
             inboxStore.selectedThreadID = threadID
         }
@@ -28,7 +29,7 @@ extension MainScene {
         withAnimation {
             threadScrollProxy?.scrollTo(ThreadViewAnchor.composer, anchor: .top)
         }
-        draftGenerationRequestID += 1
+        draftGenerationRequest = InlineDraftGenerationRequest(threadID: thread.id, accountId: thread.accountId)
     }
 
     func moveBriefToBottom() {

@@ -1,7 +1,39 @@
 import AIKit
 import Foundation
 
+public struct InlineDraftGenerationRequest: Equatable, Sendable {
+    public let id: UUID
+    public let threadID: String
+    public let accountId: String?
+
+    public init(id: UUID = UUID(), threadID: String, accountId: String?) {
+        self.id = id
+        self.threadID = threadID
+        self.accountId = accountId
+    }
+
+    func matches(threadID: String, accountId: String?) -> Bool {
+        self.threadID == threadID && self.accountId == accountId
+    }
+}
+
 extension InlineComposer {
+    func handleDisplayIdentityChange() {
+        let contextChanged = preparedContextIdentity != displayContextIdentity
+        preparedContextIdentity = displayContextIdentity
+
+        if contextChanged {
+            draftGenerationRequested = false
+            prepareDraftDisplay()
+            handleExternalDraftRequestIfNeeded()
+        } else if draftGenerationRequested {
+            requestDraftGeneration(force: false)
+        } else {
+            prepareDraftDisplay()
+            handleExternalDraftRequestIfNeeded()
+        }
+    }
+
     func prepareDraftDisplay() {
         let hasExistingDraft = replyStore.prepareForDisplay(
             threadID: threadID,
@@ -49,9 +81,13 @@ extension InlineComposer {
     }
 
     func handleExternalDraftRequestIfNeeded() {
-        guard draftRequestID > 0, draftRequestID != handledDraftRequestID else { return }
-        handledDraftRequestID = draftRequestID
+        guard let draftRequest,
+              draftRequest.id != handledDraftRequestID,
+              draftRequest.matches(threadID: threadID, accountId: accountId)
+        else { return }
+        handledDraftRequestID = draftRequest.id
         requestDraftGeneration(force: false)
+        onDraftRequestHandled(draftRequest.id)
     }
 
     func handleToneChange(_ newTone: AIReplyTone) {

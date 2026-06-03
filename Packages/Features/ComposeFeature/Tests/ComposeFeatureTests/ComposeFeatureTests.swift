@@ -226,7 +226,14 @@ struct ReplyStoreGenerateIfNeededTests {
         let mock = CountingAIService()
         let db = try await makeDB()
         let store = ReplyStore(aiService: mock, db: db)
-        let view = InlineComposer(threadID: "t1", draftRequestID: 1, replyStore: store)
+        let request = InlineDraftGenerationRequest(threadID: "t1", accountId: nil)
+        var handledRequests: [UUID] = []
+        let view = InlineComposer(
+            threadID: "t1",
+            draftRequest: request,
+            replyStore: store,
+            onDraftRequestHandled: { handledRequests.append($0) }
+        )
             .padding(24)
             .background(Color(.windowBackgroundColor))
             .frame(width: 600, height: 400)
@@ -239,6 +246,35 @@ struct ReplyStoreGenerateIfNeededTests {
         #expect(mock.callCount == 1)
         #expect(store.reply?.body == "Reply")
         #expect(store.isLoading == false)
+        #expect(handledRequests == [request.id])
+    }
+
+    @MainActor
+    @Test func inlineComposerIgnoresExternalDraftRequestForDifferentThread() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+        let request = InlineDraftGenerationRequest(threadID: "other-thread", accountId: nil)
+        var handledRequests: [UUID] = []
+        let view = InlineComposer(
+            threadID: "t1",
+            draftRequest: request,
+            replyStore: store,
+            onDraftRequestHandled: { handledRequests.append($0) }
+        )
+            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            .frame(width: 600, height: 400)
+        let host = NSHostingView(rootView: view)
+
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
+        host.layout()
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(mock.callCount == 0)
+        #expect(store.reply == nil)
+        #expect(store.isLoading == false)
+        #expect(handledRequests.isEmpty)
     }
 
     @MainActor

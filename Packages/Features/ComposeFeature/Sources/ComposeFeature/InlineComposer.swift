@@ -13,14 +13,15 @@ public struct InlineComposer: View {
     @State var detectedLanguage: String?
     @State var languageOverride: String?
     @State var draftGenerationRequested = false
-    @State var handledDraftRequestID = 0
+    @State var handledDraftRequestID: UUID?
+    @State var preparedContextIdentity: String?
     @State var showLanguagePicker = false
     @FocusState var isEditorFocused: Bool
 
     let threadID: String
     let accountId: String?
     let replyLanguage: String?
-    let draftRequestID: Int
+    let draftRequest: InlineDraftGenerationRequest?
     let replyStore: ReplyStore
     let sendState: ComposeSendState
     let onEditInFull: (String) -> Void
@@ -29,12 +30,13 @@ public struct InlineComposer: View {
     let onRetrySend: () -> Void
     let onConfirmSendNow: () -> Void
     let onReauthorize: () -> Void
+    let onDraftRequestHandled: (UUID) -> Void
 
     public init(
         threadID: String,
         accountId: String? = nil,
         replyLanguage: String? = nil,
-        draftRequestID: Int = 0,
+        draftRequest: InlineDraftGenerationRequest? = nil,
         replyStore: ReplyStore,
         sendState: ComposeSendState = .idle,
         onEditInFull: @escaping (String) -> Void = { _ in },
@@ -42,12 +44,13 @@ public struct InlineComposer: View {
         onCancelSend: @escaping () -> Void = {},
         onRetrySend: @escaping () -> Void = {},
         onConfirmSendNow: @escaping () -> Void = {},
-        onReauthorize: @escaping () -> Void = {}
+        onReauthorize: @escaping () -> Void = {},
+        onDraftRequestHandled: @escaping (UUID) -> Void = { _ in }
     ) {
         self.threadID = threadID
         self.accountId = accountId
         self.replyLanguage = replyLanguage
-        self.draftRequestID = draftRequestID
+        self.draftRequest = draftRequest
         self.replyStore = replyStore
         self.sendState = sendState
         self.onEditInFull = onEditInFull
@@ -56,6 +59,7 @@ public struct InlineComposer: View {
         self.onRetrySend = onRetrySend
         self.onConfirmSendNow = onConfirmSendNow
         self.onReauthorize = onReauthorize
+        self.onDraftRequestHandled = onDraftRequestHandled
         // Read default tone synchronously so .task uses the correct value
         let raw = UserDefaults.standard.string(forKey: "pam.defaultTone") ?? "warm"
         _tone = State(initialValue: AIReplyTone(rawValue: raw) ?? .warm)
@@ -84,8 +88,7 @@ public struct InlineComposer: View {
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         .padding(.top, 18)
         .task(id: displayIdentity) {
-            prepareDraftDisplay()
-            handleExternalDraftRequestIfNeeded()
+            handleDisplayIdentityChange()
         }
         .onChange(of: replyStore.reply) { _, newReply in
             if let newReply, ReplyStore.isDisplayableDraft(newReply.body) {
@@ -105,7 +108,7 @@ public struct InlineComposer: View {
         .onChange(of: replyStore.error != nil) { _, hasError in
             if hasError { draftText = "" }
         }
-        .onChange(of: draftRequestID) { _, _ in
+        .onChange(of: draftRequest) { _, _ in
             handleExternalDraftRequestIfNeeded()
         }
     }
@@ -306,6 +309,10 @@ public struct InlineComposer: View {
 
     private var displayIdentity: String {
         "\(threadID)_\(accountId ?? "")_\(replyLanguage ?? "")"
+    }
+
+    var displayContextIdentity: String {
+        "\(threadID)_\(accountId ?? "")"
     }
 }
 
