@@ -14,6 +14,31 @@ struct ThreadFeatureTests {
         #expect(ThreadFeature.moduleName == "ThreadFeature")
     }
 
+    @Test func bottomPanelHeightUsesPreferredExpandedHeightWhenSpaceAllows() {
+        let availableHeight = RBLayout.bottomPanelMinReadingHeight
+            + RBLayout.bottomPanelExpandedHeight
+            + 100
+        let height = ThreadBottomPanelLayout.height(
+            availableHeight: availableHeight,
+            isCollapsed: false
+        )
+
+        #expect(height == RBLayout.bottomPanelExpandedHeight)
+    }
+
+    @Test func bottomPanelHeightPreservesMinimumReadingArea() {
+        let availableHeight = RBLayout.bottomPanelMinReadingHeight + 180
+        let height = ThreadBottomPanelLayout.height(availableHeight: availableHeight, isCollapsed: false)
+
+        #expect(height == 180)
+    }
+
+    @Test func bottomPanelHeightKeepsCollapsedChromeStable() {
+        let height = ThreadBottomPanelLayout.height(availableHeight: 120, isCollapsed: true)
+
+        #expect(height == RBLayout.bottomPanelCollapsedHeight)
+    }
+
     // MARK: - MessageRow
 
     @Test func messageRowExtractsNameFromDisplayFormat() {

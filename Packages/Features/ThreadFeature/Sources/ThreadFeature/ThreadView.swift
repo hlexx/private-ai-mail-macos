@@ -88,23 +88,25 @@ public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationH
                     actionOutboxStrip
                     translationHeader
                     ScrollViewReader { proxy in
-                        VStack(spacing: 0) {
-                            ScrollView {
-                                VStack(alignment: .leading, spacing: 0) {
-                                    threadColumn
-                                    if store.hasAttachment {
-                                        attachmentBlock
+                        GeometryReader { geometry in
+                            VStack(spacing: 0) {
+                                ScrollView {
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        threadColumn
+                                        if store.hasAttachment {
+                                            attachmentBlock
+                                        }
                                     }
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 12)
+                                    .padding(.bottom, hasBottomPanel ? 16 : 24)
                                 }
-                                .padding(.horizontal, 24)
-                                .padding(.top, 12)
-                                .padding(.bottom, hasBottomPanel ? 16 : 24)
-                            }
-                            .onAppear { onScrollProxy?(proxy) }
+                                .onAppear { onScrollProxy?(proxy) }
 
-                            if hasBottomPanel {
-                                bottomWorkPanel
-                                    .id(ThreadViewAnchor.composer)
+                                if hasBottomPanel {
+                                    bottomWorkPanel(availableHeight: geometry.size.height)
+                                        .id(ThreadViewAnchor.composer)
+                                }
                             }
                         }
                     }

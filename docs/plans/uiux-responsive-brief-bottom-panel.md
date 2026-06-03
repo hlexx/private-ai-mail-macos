@@ -29,10 +29,10 @@ Make the side/bottom brief and bottom work panel adapt to window size so reading
 - [x] Keep user preference (`pam.layout.briefPlacement`, collapsed states, stored widths) intact unless the current window cannot satisfy constraints.
 
 ### Task 2: Make bottom panel height safer
-- [ ] Replace the fixed `318` expanded bottom panel height with a constrained responsive height that respects the available window height.
-- [ ] Ensure collapsed height remains stable and does not hide tab controls.
-- [ ] Prevent the bottom panel from covering or shrinking the message scroll area below a usable minimum.
-- [ ] Preserve animations without animating expensive or layout-jarring properties beyond SwiftUI/AppKit norms.
+- [x] Replace the fixed `318` expanded bottom panel height with a constrained responsive height that respects the available window height.
+- [x] Ensure collapsed height remains stable and does not hide tab controls.
+- [x] Prevent the bottom panel from covering or shrinking the message scroll area below a usable minimum.
+- [x] Preserve animations without animating expensive or layout-jarring properties beyond SwiftUI/AppKit norms.
 
 ### Task 3: Improve side brief collapse behavior
 - [ ] Adjust `MainSplitController` constraints or MainScene policy so side brief can auto-collapse or prefer bottom layout when total width is too small.

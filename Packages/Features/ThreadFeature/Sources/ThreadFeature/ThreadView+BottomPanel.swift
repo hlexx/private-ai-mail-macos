@@ -1,6 +1,14 @@
 import DesignSystem
 import SwiftUI
 
+enum ThreadBottomPanelLayout {
+    static func height(availableHeight: CGFloat, isCollapsed: Bool) -> CGFloat {
+        guard !isCollapsed else { return RBLayout.bottomPanelCollapsedHeight }
+        guard availableHeight > 0 else { return RBLayout.bottomPanelExpandedHeight }
+        return RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: availableHeight)
+    }
+}
+
 extension ThreadView {
     var hasBottomPanel: Bool {
         showsComposerPanel || showsBriefInBottomPanel
@@ -20,7 +28,7 @@ extension ThreadView {
         }
     }
 
-    var bottomWorkPanel: some View {
+    func bottomWorkPanel(availableHeight: CGFloat) -> some View {
         VStack(spacing: 0) {
             bottomPanelChrome
             if !bottomPanelCollapsed {
@@ -28,7 +36,13 @@ extension ThreadView {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .frame(height: bottomPanelCollapsed ? 42 : 318, alignment: .top)
+        .frame(
+            height: ThreadBottomPanelLayout.height(
+                availableHeight: availableHeight,
+                isCollapsed: bottomPanelCollapsed
+            ),
+            alignment: .top
+        )
         .frame(maxWidth: .infinity)
         .background(Color.rbBgCanvas)
         .overlay(alignment: .top) {
