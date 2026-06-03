@@ -2,11 +2,30 @@ import DesignSystem
 import SwiftUI
 
 enum ThreadBottomPanelLayout {
-    static func height(availableHeight: CGFloat, isCollapsed: Bool) -> CGFloat {
-        guard !isCollapsed else { return RBLayout.bottomPanelCollapsedHeight }
-        guard availableHeight > 0 else { return RBLayout.bottomPanelExpandedHeight }
-        return RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: availableHeight)
+    static func presentation(
+        availableHeight: CGFloat,
+        isCollapsed: Bool
+    ) -> ThreadBottomPanelPresentation {
+        guard !isCollapsed else {
+            return ThreadBottomPanelPresentation(
+                height: RBLayout.bottomPanelCollapsedHeight,
+                showsContent: false
+            )
+        }
+
+        let height = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+            availableHeight: availableHeight
+        )
+        return ThreadBottomPanelPresentation(
+            height: height,
+            showsContent: height >= RBLayout.bottomPanelMinExpandedHeight
+        )
     }
+}
+
+struct ThreadBottomPanelPresentation {
+    let height: CGFloat
+    let showsContent: Bool
 }
 
 extension ThreadView {
@@ -15,32 +34,28 @@ extension ThreadView {
     }
 
     var resolvedBottomPanelTab: ThreadBottomPanelTab {
-        let selected = ThreadBottomPanelTab(rawValue: bottomPanelTabRaw) ?? .draft
-        switch selected {
-        case .draft where showsComposerPanel:
-            return .draft
-        case .brief where showsBriefInBottomPanel:
-            return .brief
-        case .draft:
-            return showsBriefInBottomPanel ? .brief : .draft
-        case .brief:
-            return showsComposerPanel ? .draft : .brief
-        }
+        ThreadBottomPanelTab.resolved(
+            rawValue: bottomPanelTabRaw,
+            showsComposerPanel: showsComposerPanel,
+            showsBriefInBottomPanel: showsBriefInBottomPanel
+        )
     }
 
     func bottomWorkPanel(availableHeight: CGFloat) -> some View {
-        VStack(spacing: 0) {
+        let presentation = ThreadBottomPanelLayout.presentation(
+            availableHeight: availableHeight,
+            isCollapsed: bottomPanelCollapsed
+        )
+
+        return VStack(spacing: 0) {
             bottomPanelChrome
-            if !bottomPanelCollapsed {
+            if presentation.showsContent {
                 bottomPanelContent
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .frame(
-            height: ThreadBottomPanelLayout.height(
-                availableHeight: availableHeight,
-                isCollapsed: bottomPanelCollapsed
-            ),
+            height: presentation.height,
             alignment: .top
         )
         .frame(maxWidth: .infinity)

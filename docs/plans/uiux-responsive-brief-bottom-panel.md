@@ -50,3 +50,4 @@ Make the side/bottom brief and bottom work panel adapt to window size so reading
 
 ## Notes
 - Project `CLAUDE.md` context is required; launch ralphex with `--codex --pass-claude-md`.
+- ADR note for the shared layout policy: `docs/adr/0006-responsive-main-workspace-layout-policy.md`.

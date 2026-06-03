@@ -233,8 +233,9 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
         }
 
         func restoreBriefWidth(in splitView: NSSplitView, storedBriefWidth: Double) {
-            let clampedBriefWidth = CGFloat(storedBriefWidth).clamped(
-                to: RBLayout.briefRailMinWidth...RBLayout.briefRailMaxWidth
+            let clampedBriefWidth = min(
+                max(CGFloat(storedBriefWidth), RBLayout.briefRailMinWidth),
+                RBLayout.briefRailMaxWidth
             )
             DispatchQueue.main.async {
                 let totalWidth = splitView.frame.width
@@ -242,11 +243,5 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
                 splitView.setPosition(totalWidth - clampedBriefWidth, ofDividerAt: 2)
             }
         }
-    }
-}
-
-private extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
     }
 }

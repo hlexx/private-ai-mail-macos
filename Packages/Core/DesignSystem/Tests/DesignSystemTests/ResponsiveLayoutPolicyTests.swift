@@ -115,7 +115,7 @@ struct ResponsiveLayoutPolicyTests {
     func expandedBottomPanelHeightKeepsReadingAreaAvailable() {
         #expect(RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 900) == 318)
         #expect(RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 560) == 240)
-        #expect(RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 500) == 180)
+        #expect(RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 540) == 220)
     }
 
     @Test("Expanded bottom panel height clamps oversized preferred heights")
@@ -128,10 +128,36 @@ struct ResponsiveLayoutPolicyTests {
         #expect(height == 380)
     }
 
+    @Test("Expanded bottom panel height respects the minimum expanded height")
+    func expandedBottomPanelHeightRespectsMinimumExpandedHeight() {
+        let shortHeight = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+            availableHeight: 539
+        )
+        let undersizedPreferredHeight = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(
+            availableHeight: 900,
+            preferredHeight: 120
+        )
+
+        #expect(shortHeight == RBLayout.bottomPanelCollapsedHeight)
+        #expect(undersizedPreferredHeight == RBLayout.bottomPanelMinExpandedHeight)
+    }
+
     @Test("Expanded bottom panel height never hides collapsed chrome")
     func expandedBottomPanelHeightNeverHidesCollapsedChrome() {
         let height = RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 280)
 
         #expect(height == RBLayout.bottomPanelCollapsedHeight)
+    }
+
+    @Test("Expanded bottom panel height treats zero and negative heights as chrome only")
+    func expandedBottomPanelHeightTreatsInvalidHeightsAsChromeOnly() {
+        #expect(
+            RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: 0)
+                == RBLayout.bottomPanelCollapsedHeight
+        )
+        #expect(
+            RBResponsiveLayoutPolicy.expandedBottomPanelHeight(availableHeight: -120)
+                == RBLayout.bottomPanelCollapsedHeight
+        )
     }
 }

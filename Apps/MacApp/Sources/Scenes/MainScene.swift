@@ -47,9 +47,16 @@ struct MainScene: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let briefPanelIsBottom = effectiveBriefPanelIsBottom(availableWidth: geometry.size.width)
+            let currentBriefPlacement = effectiveBriefPlacement(
+                availableWidth: geometry.size.width
+            )
+            let briefPanelIsBottom = currentBriefPlacement == .bottom
 
-            VStack(spacing: 0) {
+            syncBriefTabReveal(
+                currentPlacement: currentBriefPlacement,
+                availableWidth: geometry.size.width
+            ) {
+                VStack(spacing: 0) {
                 toolbar(briefPanelIsBottom: briefPanelIsBottom)
 
                 MainSplitController(
@@ -176,6 +183,7 @@ struct MainScene: View {
                         }
                     }
                 )
+                }
             }
         }
         // Extend our 56pt RBToolbar all the way to the top of the window,
@@ -270,17 +278,6 @@ struct MainScene: View {
         }
         .animation(.easeInOut(duration: 0.25), value: composition.toastMessage)
     }
-
-    private var sidebarFolders: [FolderItem] {
-        var folders = FolderItem.defaultFolders
-        let counts = inboxStore.folderCounts
-        for idx in folders.indices {
-            let c = counts[folders[idx].id]
-            folders[idx].count = (c ?? 0) > 0 ? c : nil
-        }
-        return folders
-    }
-
 }
 
 // MARK: - Action Sheet

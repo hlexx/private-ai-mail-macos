@@ -13,6 +13,11 @@
 - `TrustActionUIStore` owns approval and recent outbox UI state. Draft reply and
   trash require explicit confirmation; archive, star, and mark-read use the fast
   action path. AI output must not auto-run actions.
+- Responsive main workspace layout policy lives in `DesignSystem` via
+  `RBLayout`, `RBBriefPanelPlacement`, and `RBResponsiveLayoutPolicy`.
+  `MainScene` owns persisted AppStorage preferences and computes effective
+  placement transiently from window geometry; `ThreadFeature` bottom-panel
+  sizing delegates to the shared policy instead of hard-coding layout literals.
 - Privacy-safe logs go through `PrivacyObservability`; raw message bodies,
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.

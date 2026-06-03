@@ -18,25 +18,53 @@ struct ThreadFeatureTests {
         let availableHeight = RBLayout.bottomPanelMinReadingHeight
             + RBLayout.bottomPanelExpandedHeight
             + 100
-        let height = ThreadBottomPanelLayout.height(
+        let presentation = ThreadBottomPanelLayout.presentation(
             availableHeight: availableHeight,
             isCollapsed: false
         )
 
-        #expect(height == RBLayout.bottomPanelExpandedHeight)
+        #expect(presentation.height == RBLayout.bottomPanelExpandedHeight)
+        #expect(presentation.showsContent)
     }
 
     @Test func bottomPanelHeightPreservesMinimumReadingArea() {
-        let availableHeight = RBLayout.bottomPanelMinReadingHeight + 180
-        let height = ThreadBottomPanelLayout.height(availableHeight: availableHeight, isCollapsed: false)
+        let availableHeight = RBLayout.bottomPanelMinReadingHeight + 240
+        let presentation = ThreadBottomPanelLayout.presentation(
+            availableHeight: availableHeight,
+            isCollapsed: false
+        )
 
-        #expect(height == 180)
+        #expect(presentation.height == 240)
+        #expect(presentation.showsContent)
     }
 
     @Test func bottomPanelHeightKeepsCollapsedChromeStable() {
-        let height = ThreadBottomPanelLayout.height(availableHeight: 120, isCollapsed: true)
+        let presentation = ThreadBottomPanelLayout.presentation(availableHeight: 120, isCollapsed: true)
 
-        #expect(height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(presentation.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(!presentation.showsContent)
+    }
+
+    @Test func bottomPanelHidesContentWhenExpandedMinimumCannotFit() {
+        let presentation = ThreadBottomPanelLayout.presentation(
+            availableHeight: RBLayout.bottomPanelMinReadingHeight
+                + RBLayout.bottomPanelMinExpandedHeight
+                - 1,
+            isCollapsed: false
+        )
+
+        #expect(presentation.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(!presentation.showsContent)
+    }
+
+    @Test func bottomPanelInvalidHeightsRenderChromeOnly() {
+        let zeroHeight = ThreadBottomPanelLayout.presentation(availableHeight: 0, isCollapsed: false)
+        let negativeHeight = ThreadBottomPanelLayout.presentation(availableHeight: -120, isCollapsed: false)
+
+        #expect(zeroHeight.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(!zeroHeight.showsContent)
+        #expect(negativeHeight.height == RBLayout.bottomPanelCollapsedHeight)
+        #expect(!negativeHeight.showsContent)
     }
 
     // MARK: - MessageRow
@@ -573,21 +601,34 @@ struct ThreadViewSnapshotTests {
 
     @MainActor
     @Test func bottomPanelTabFallsBackToAvailablePanel() async throws {
-        let draftOnly = try await threadViewBottomPanelFixture(
-            collapsed: false,
-            selectedTab: .brief,
-            showsComposerPanel: true,
-            showsBriefInBottomPanel: false
+        #expect(
+            ThreadBottomPanelTab.resolved(
+                rawValue: ThreadBottomPanelTab.brief.rawValue,
+                showsComposerPanel: true,
+                showsBriefInBottomPanel: false
+            ) == .draft
         )
-        let briefOnly = try await threadViewBottomPanelFixture(
-            collapsed: false,
-            selectedTab: .draft,
-            showsComposerPanel: false,
-            showsBriefInBottomPanel: true
+        #expect(
+            ThreadBottomPanelTab.resolved(
+                rawValue: ThreadBottomPanelTab.draft.rawValue,
+                showsComposerPanel: false,
+                showsBriefInBottomPanel: true
+            ) == .brief
         )
-
-        #expect(draftOnly.resolvedBottomPanelTab == .draft)
-        #expect(briefOnly.resolvedBottomPanelTab == .brief)
+        #expect(
+            ThreadBottomPanelTab.resolved(
+                rawValue: ThreadBottomPanelTab.brief.rawValue,
+                showsComposerPanel: true,
+                showsBriefInBottomPanel: true
+            ) == .brief
+        )
+        #expect(
+            ThreadBottomPanelTab.resolved(
+                rawValue: ThreadBottomPanelTab.draft.rawValue,
+                showsComposerPanel: true,
+                showsBriefInBottomPanel: true
+            ) == .draft
+        )
     }
 
     private func emptyStateView() -> some View {
@@ -782,6 +823,7 @@ struct ThreadViewSnapshotTests {
         store.accountEmail = "alex@example.com"
         store.observe(threadId: "t1", accountId: "acc1")
         try await waitUntil { !store.messages.isEmpty }
+        try #require(!store.messages.isEmpty, "Expected observed thread messages")
         return store
     }
 
@@ -828,7 +870,8 @@ struct ThreadViewSnapshotTests {
         let deadline = ContinuousClock.now + timeout
         while !condition() {
             if ContinuousClock.now >= deadline {
-                break
+                Issue.record("Timed out waiting for condition")
+                return
             }
             try await Task.sleep(for: .milliseconds(50))
         }

@@ -108,6 +108,10 @@ The app opens the Re:Box mail workspace with Gmail account connection, folder
 filters, thread reading, local search, local AI briefs, reply drafting, mailbox
 actions, and Gmail send. Outlook appears as a beta provider but remains disabled
 until the Trust MVP release gate records passing real-account smoke evidence.
+The reading workspace keeps the AI brief in the side rail when the window can
+fit it, moves the brief into the bottom Draft/Brief panel on narrower windows,
+and sizes that bottom panel to preserve usable message reading space. Stored
+side/bottom preference and pane widths are preserved when wider layouts return.
 
 ## Validation
 

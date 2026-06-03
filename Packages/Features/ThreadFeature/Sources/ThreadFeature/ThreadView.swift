@@ -10,6 +10,24 @@ public enum ThreadViewAnchor: Hashable {
 enum ThreadBottomPanelTab: String {
     case draft
     case brief
+
+    static func resolved(
+        rawValue: String,
+        showsComposerPanel: Bool,
+        showsBriefInBottomPanel: Bool
+    ) -> ThreadBottomPanelTab {
+        let selected = ThreadBottomPanelTab(rawValue: rawValue) ?? .draft
+        switch selected {
+        case .draft where showsComposerPanel:
+            return .draft
+        case .brief where showsBriefInBottomPanel:
+            return .brief
+        case .draft:
+            return showsBriefInBottomPanel ? .brief : .draft
+        case .brief:
+            return showsComposerPanel ? .draft : .brief
+        }
+    }
 }
 
 public struct ThreadView<ComposerContent: View, BriefContent: View, TranslationHeader: View>: View {

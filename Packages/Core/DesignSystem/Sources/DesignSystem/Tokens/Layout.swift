@@ -70,7 +70,7 @@ public enum RBBriefPanelPlacement: String, Equatable {
 }
 
 public enum RBResponsiveLayoutPolicy {
-    public static func minimumWidthForSideBrief(
+    static func minimumWidthForSideBrief(
         sidebarCollapsed: Bool,
         sidebarWidth: CGFloat = RBLayout.sidebarWidth,
         threadListWidth: CGFloat = RBLayout.threadListWidth,
@@ -78,12 +78,14 @@ public enum RBResponsiveLayoutPolicy {
     ) -> CGFloat {
         let effectiveSidebarWidth = sidebarCollapsed
             ? 0
-            : sidebarWidth.clamped(to: RBLayout.sidebarMinWidth...RBLayout.sidebarMaxWidth)
-        let effectiveThreadListWidth = threadListWidth.clamped(
-            to: RBLayout.threadListMinWidth...RBLayout.threadListMaxWidth
+            : min(max(sidebarWidth, RBLayout.sidebarMinWidth), RBLayout.sidebarMaxWidth)
+        let effectiveThreadListWidth = min(
+            max(threadListWidth, RBLayout.threadListMinWidth),
+            RBLayout.threadListMaxWidth
         )
-        let effectiveBriefWidth = briefWidth.clamped(
-            to: RBLayout.briefRailMinWidth...RBLayout.briefRailMaxWidth
+        let effectiveBriefWidth = min(
+            max(briefWidth, RBLayout.briefRailMinWidth),
+            RBLayout.briefRailMaxWidth
         )
 
         return effectiveSidebarWidth
@@ -114,7 +116,7 @@ public enum RBResponsiveLayoutPolicy {
         ) ? .bottom : .side
     }
 
-    public static func sideBriefRequiresBottomPlacement(
+    static func sideBriefRequiresBottomPlacement(
         availableWidth: CGFloat,
         sidebarCollapsed: Bool,
         sidebarWidth: CGFloat = RBLayout.sidebarWidth,
@@ -136,14 +138,9 @@ public enum RBResponsiveLayoutPolicy {
     ) -> CGFloat {
         let maximumHeight = availableHeight - RBLayout.bottomPanelMinReadingHeight
         guard maximumHeight >= RBLayout.bottomPanelMinExpandedHeight else {
-            return max(RBLayout.bottomPanelCollapsedHeight, maximumHeight)
+            return RBLayout.bottomPanelCollapsedHeight
         }
-        return min(preferredHeight, maximumHeight)
-    }
-}
-
-private extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
+        let effectivePreferredHeight = max(preferredHeight, RBLayout.bottomPanelMinExpandedHeight)
+        return min(effectivePreferredHeight, maximumHeight)
     }
 }

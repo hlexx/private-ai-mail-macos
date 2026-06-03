@@ -44,7 +44,6 @@ extension MainScene {
     func moveBriefToSide() {
         briefPlacementRaw = BriefPanelPlacement.side.rawValue
         briefCollapsed = false
-        bottomPanelTabRaw = "draft"
     }
 
     func requestTrustActionForSelectedThread(_ action: TrustMVPAction) {
