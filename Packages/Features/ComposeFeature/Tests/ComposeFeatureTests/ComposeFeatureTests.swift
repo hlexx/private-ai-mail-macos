@@ -113,6 +113,65 @@ struct ReplyStoreGenerateIfNeededTests {
     }
 
     @MainActor
+    @Test func prepareForDisplayDoesNotGenerateOnCacheMiss() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+
+        let displayedDraft = store.prepareForDisplay(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(displayedDraft == false)
+        #expect(mock.callCount == 0)
+        #expect(store.reply == nil)
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
+    @Test func prepareForDisplayShowsCachedDraftWithoutGenerating() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+
+        store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(mock.callCount == 1)
+
+        store.generate(threadID: "t1", tone: .direct, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(mock.callCount == 2)
+
+        let focusRequestsBeforeCacheHit = store.focusRequestCount
+        let displayedDraft = store.prepareForDisplay(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(displayedDraft == true)
+        #expect(mock.callCount == 2)
+        #expect(store.reply?.body == "Reply")
+        #expect(store.focusRequestCount == focusRequestsBeforeCacheHit + 1)
+    }
+
+    @MainActor
+    @Test func inlineComposerDoesNotGenerateOnAppear() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+        let view = InlineComposer(threadID: "t1", replyStore: store)
+            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            .frame(width: 600, height: 400)
+        let host = NSHostingView(rootView: view)
+
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
+        host.layout()
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(mock.callCount == 0)
+        #expect(store.reply == nil)
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
     @Test func generateShowsFailureStateWhenAIServiceThrows() async throws {
         let db = try await makeDB()
         let store = ReplyStore(aiService: FailingAIService(), db: db)

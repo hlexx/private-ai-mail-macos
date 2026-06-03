@@ -17,6 +17,7 @@ public final class ReplyStore {
     private let db: AppDatabase?
     private var replyCache: [CacheKey: AIThreadReply] = [:]
     private var inflightTask: Task<Void, Never>?
+    private var displayedKey: CacheKey?
 
     public init(aiService: any AIService, db: AppDatabase) {
         self.aiService = aiService
@@ -61,6 +62,7 @@ public final class ReplyStore {
         if let cached = replyCache[key] {
             if Self.isDisplayableDraft(cached.body) {
                 reply = cached
+                displayedKey = key
                 isLoading = false
                 return
             }
@@ -69,6 +71,7 @@ public final class ReplyStore {
 
         isLoading = true
         reply = nil
+        displayedKey = key
 
         inflightTask = Task {
             do {
@@ -90,6 +93,7 @@ public final class ReplyStore {
 
                 replyCache[key] = aiReply
                 reply = aiReply
+                displayedKey = key
                 isLoading = false
                 error = nil
                 Self.logDraftReply(status: "generated", accountId: key.accountId)
@@ -99,6 +103,7 @@ public final class ReplyStore {
                 self.error = error
                 isLoading = false
                 reply = nil
+                displayedKey = key
                 Self.logDraftReply(
                     status: "failed",
                     accountId: key.accountId,
@@ -107,49 +112,6 @@ public final class ReplyStore {
                 )
             }
         }
-    }
-
-    public func regenerate(
-        threadID: String,
-        accountId: String? = nil,
-        tone: AIReplyTone,
-        replyLanguage: String?,
-        locale: Locale = .current
-    ) {
-        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        replyCache.removeValue(forKey: key)
-        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
-    }
-
-    /// Explicit draft intent boundary.
-    ///
-    /// Brief CTAs, thread Draft actions, and already-authored draft focus requests
-    /// should enter through this method so cached drafts can be shown without new
-    /// AI work. Bottom Draft tab selection should only reveal the composer unless
-    /// it came from one of those actions. Retry and Regenerate intentionally use
-    /// `regenerate`; Edit in full and Send consume the current draft text.
-    public func generateIfNeeded(
-        threadID: String,
-        accountId: String? = nil,
-        tone: AIReplyTone,
-        replyLanguage: String?,
-        locale: Locale = .current
-    ) {
-        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        if let cached = replyCache[key] {
-            if Self.isDisplayableDraft(cached.body) {
-                reply = cached
-                focusRequestCount += 1
-                return
-            }
-            replyCache.removeValue(forKey: key)
-        }
-        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
-    }
-
-    public func invalidate(threadID: String) {
-        replyCache = replyCache.filter { $0.key.threadID != threadID }
-        reply = nil
     }
 
     // MARK: - Private
@@ -256,6 +218,99 @@ public final class ReplyStore {
             "n/a",
         ]
         return !blockedValues.contains(trimmed.lowercased())
+    }
+}
+
+// MARK: - Display Preparation
+
+extension ReplyStore {
+    public func regenerate(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?,
+        locale: Locale = .current
+    ) {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        replyCache.removeValue(forKey: key)
+        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
+    }
+
+    @discardableResult
+    public func prepareForDisplay(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?,
+        focusCachedDraft: Bool = true
+    ) -> Bool {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        inflightTask?.cancel()
+        inflightTask = nil
+        isLoading = false
+
+        if displayedKey == key, let reply, Self.isDisplayableDraft(reply.body) {
+            error = nil
+            if focusCachedDraft {
+                focusRequestCount += 1
+            }
+            return true
+        }
+
+        if let cached = replyCache[key] {
+            if Self.isDisplayableDraft(cached.body) {
+                reply = cached
+                displayedKey = key
+                error = nil
+                if focusCachedDraft {
+                    focusRequestCount += 1
+                }
+                return true
+            }
+            replyCache.removeValue(forKey: key)
+        }
+
+        guard aiService != nil, db != nil else {
+            return reply.map { Self.isDisplayableDraft($0.body) } ?? false
+        }
+
+        reply = nil
+        error = nil
+        displayedKey = key
+        return false
+    }
+
+    /// Explicit draft intent boundary.
+    ///
+    /// Brief CTAs, thread Draft actions, and already-authored draft focus requests
+    /// should enter through this method so cached drafts can be shown without new
+    /// AI work. Bottom Draft tab selection should only reveal the composer unless
+    /// it came from one of those actions. Retry and Regenerate intentionally use
+    /// `regenerate`; Edit in full and Send consume the current draft text.
+    public func generateIfNeeded(
+        threadID: String,
+        accountId: String? = nil,
+        tone: AIReplyTone,
+        replyLanguage: String?,
+        locale: Locale = .current
+    ) {
+        let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
+        if let cached = replyCache[key] {
+            if Self.isDisplayableDraft(cached.body) {
+                reply = cached
+                displayedKey = key
+                focusRequestCount += 1
+                return
+            }
+            replyCache.removeValue(forKey: key)
+        }
+        generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
+    }
+
+    public func invalidate(threadID: String) {
+        replyCache = replyCache.filter { $0.key.threadID != threadID }
+        reply = nil
+        displayedKey = nil
     }
 }
 

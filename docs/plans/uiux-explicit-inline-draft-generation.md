@@ -29,10 +29,10 @@ Make AI draft generation in the inline composer explicit instead of automatic on
 - [x] Record the intended behavior in code comments or tests only where it affects an ambiguous boundary.
 
 ### Task 2: Stop automatic draft generation on thread open
-- [ ] Change `InlineComposer` so `.task(id:)` does not call `replyStore.generate` merely because the view appears.
-- [ ] Add an explicit empty/ready state in the inline composer that explains local draft generation without starting it.
-- [ ] Keep cached draft display/focus behavior when a user already generated a draft for the same thread/tone/language.
-- [ ] Ensure changing tone or reply language regenerates only after a draft has already been requested, or exposes an explicit generate action before the first request.
+- [x] Change `InlineComposer` so `.task(id:)` does not call `replyStore.generate` merely because the view appears.
+- [x] Add an explicit empty/ready state in the inline composer that explains local draft generation without starting it.
+- [x] Keep cached draft display/focus behavior when a user already generated a draft for the same thread/tone/language.
+- [x] Ensure changing tone or reply language regenerates only after a draft has already been requested, or exposes an explicit generate action before the first request.
 
 ### Task 3: Wire explicit user actions to generation
 - [ ] Wire `BriefRail` draft CTA and thread `Draft` action to call an explicit generate/focus path such as `ReplyStore.generateIfNeeded`.
