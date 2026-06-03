@@ -64,8 +64,10 @@ struct RBToolbar: View {
 
     private var leadingSection: some View {
         HStack(spacing: 14) {
-            Spacer()
-                .frame(width: 68)
+            if !sidebarCollapsed {
+                Spacer()
+                    .frame(width: 68)
+            }
 
             if let toggle = onToggleSidebar {
                 RBIconButton(
