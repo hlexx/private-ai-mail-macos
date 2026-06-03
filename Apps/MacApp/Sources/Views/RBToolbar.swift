@@ -12,6 +12,8 @@ struct RBToolbar: View {
     let onCompose: () -> Void
     var onToggleSidebar: (() -> Void)?
     var onToggleBrief: (() -> Void)?
+    var briefPlacementIsBottom: Bool = false
+    var onToggleBriefPlacement: (() -> Void)?
     var sidebarWidth: CGFloat = RBLayout.sidebarWidth
     var sidebarCollapsed: Bool = false
     var searchFocused: FocusState<Bool>.Binding
@@ -98,6 +100,15 @@ struct RBToolbar: View {
                     )
                 }
 
+                if let togglePlacement = onToggleBriefPlacement {
+                    RBIconButton(
+                        systemName: briefPlacementIcon,
+                        accessibilityLabel: briefPlacementAccessibilityLabel,
+                        action: togglePlacement
+                    )
+                    .help(briefPlacementAccessibilityLabel)
+                }
+
                 RBIconButton(
                     systemName: "gearshape",
                     accessibilityLabel: String(localized: "toolbar.settings", defaultValue: "Settings")
@@ -128,6 +139,16 @@ struct RBToolbar: View {
         case .dark: return "Switch to light"
         case .system: return "Switch to dark"
         }
+    }
+
+    private var briefPlacementIcon: String {
+        briefPlacementIsBottom ? "sidebar.right" : "rectangle.bottomthird.inset.filled"
+    }
+
+    private var briefPlacementAccessibilityLabel: String {
+        briefPlacementIsBottom
+            ? String(localized: "toolbar.moveBriefToSide", defaultValue: "Move Brief to side panel")
+            : String(localized: "toolbar.moveBriefToBottom", defaultValue: "Move Brief to bottom panel")
     }
 
     private func dotColor(for account: AccountRecord) -> Color {

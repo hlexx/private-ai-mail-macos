@@ -6,10 +6,19 @@ import SwiftUI
 public struct BriefRail: View {
     @Bindable var store: BriefStore
     var onDraftReply: (() -> Void)?
+    var onMoveToBottom: (() -> Void)?
+    var onMoveToSide: (() -> Void)?
 
-    public init(store: BriefStore, onDraftReply: (() -> Void)? = nil) {
+    public init(
+        store: BriefStore,
+        onDraftReply: (() -> Void)? = nil,
+        onMoveToBottom: (() -> Void)? = nil,
+        onMoveToSide: (() -> Void)? = nil
+    ) {
         self.store = store
         self.onDraftReply = onDraftReply
+        self.onMoveToBottom = onMoveToBottom
+        self.onMoveToSide = onMoveToSide
     }
 
     public var body: some View {
@@ -47,6 +56,8 @@ public struct BriefRail: View {
                 Text("confidence \(Int(brief.confidence * 100))%")
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
+
+                placementButton
             }
             .padding(.bottom, 10)
 
@@ -159,6 +170,7 @@ public struct BriefRail: View {
                     .tracking(1.47)
                     .foregroundStyle(Color.rbSignalLocalAi)
                 Spacer()
+                placementButton
             }
             .padding(.bottom, 4)
 
@@ -178,6 +190,7 @@ public struct BriefRail: View {
             HStack {
                 EyebrowLabel(String(localized: "brief.error.eyebrow", defaultValue: "Re:Box brief"))
                 Spacer()
+                placementButton
             }
 
             Text(String(localized: "brief.error.message", defaultValue: "Brief generation failed"))
@@ -218,6 +231,7 @@ public struct BriefRail: View {
                 Text(String(localized: "brief.empty.status", defaultValue: "no action found"))
                     .font(.rbMono(10.5))
                     .foregroundStyle(Color.rbFg3)
+                placementButton
             }
 
             Text(String(localized: "brief.empty.message", defaultValue: "Nothing to summarize here \u{2014} informational thread."))
@@ -242,6 +256,31 @@ public struct BriefRail: View {
     }
 
     // MARK: - Rail Background
+
+    @ViewBuilder
+    private var placementButton: some View {
+        if let onMoveToBottom {
+            Button {
+                onMoveToBottom()
+            } label: {
+                Image(systemName: "rectangle.bottomthird.inset.filled")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.rbGhost)
+            .help(String(localized: "brief.moveToBottom", defaultValue: "Move brief to bottom panel"))
+        } else if let onMoveToSide {
+            Button {
+                onMoveToSide()
+            } label: {
+                Image(systemName: "sidebar.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.rbGhost)
+            .help(String(localized: "brief.moveToSide", defaultValue: "Move brief to side panel"))
+        }
+    }
 
     @Environment(\.colorScheme) private var colorScheme
 
