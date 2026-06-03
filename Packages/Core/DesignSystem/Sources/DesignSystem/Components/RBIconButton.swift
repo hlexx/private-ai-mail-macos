@@ -20,8 +20,8 @@ public struct RBIconButton: View {
                 .font(.system(size: 13))
                 .foregroundStyle(isHovered ? Color.rbFg1 : Color.rbFg2)
                 .frame(
-                    width: RBControlMetrics.iconButtonTargetSize,
-                    height: RBControlMetrics.iconButtonTargetSize
+                    width: RBControlMetrics.compactHitTarget,
+                    height: RBControlMetrics.compactHitTarget
                 )
                 .background(isHovered ? Color.rbBgElev1 : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))

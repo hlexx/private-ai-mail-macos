@@ -1,6 +1,7 @@
 import AIKit
 import AppKit
 @testable import ComposeFeature
+import DesignSystem
 import GRDB
 import MailDomain
 import Persistence
@@ -202,6 +203,34 @@ struct InlineComposerSnapshotTests {
         let host = NSHostingView(rootView: view)
         host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
         host.layout()
+    }
+
+    @MainActor
+    @Test func inlineComposerLanguageControlsMeetMinimumTargets() {
+        assertFittingSize(
+            of: InlineComposerLanguageChevron {},
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: InlineComposerLanguagePickerRow(name: "English", isSelected: true) {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+    }
+
+    @MainActor
+    private func assertFittingSize(
+        of view: some View,
+        minWidth: CGFloat = 0,
+        minHeight: CGFloat
+    ) {
+        let host = NSHostingView(rootView: view)
+        host.layout()
+        let size = host.fittingSize
+
+        #expect(size.width >= minWidth)
+        #expect(size.height >= minHeight)
     }
 
     // MARK: - CTA Layout Snapshots (Task 9)

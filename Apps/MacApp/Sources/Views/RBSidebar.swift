@@ -53,11 +53,6 @@ struct AccountRow: Identifiable, Hashable {
     }
 }
 
-enum RBSidebarMetrics {
-    static let sectionHeaderMinHeight = RBControlMetrics.compactHitTarget
-    static let rowMinHeight = RBControlMetrics.compactHitTarget
-}
-
 // MARK: - RBSidebar
 
 struct RBSidebar: View {
@@ -154,7 +149,7 @@ struct RBSidebar: View {
             .padding(.horizontal, 8)
             .padding(.top, 10)
             .padding(.bottom, 6)
-            .frame(minHeight: RBSidebarMetrics.sectionHeaderMinHeight, alignment: .center)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -193,7 +188,7 @@ struct RBSidebar: View {
             .foregroundStyle(isActive ? Color.rbFg1 : Color.rbFg2)
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
-            .frame(minHeight: RBSidebarMetrics.rowMinHeight, alignment: .center)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
@@ -241,7 +236,7 @@ struct RBSidebar: View {
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
-            .frame(minHeight: RBSidebarMetrics.rowMinHeight, alignment: .center)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)
@@ -274,7 +269,7 @@ struct RBSidebar: View {
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
-            .frame(minHeight: RBSidebarMetrics.rowMinHeight, alignment: .center)
+            .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: RBRadius.sm)

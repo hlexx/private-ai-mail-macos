@@ -30,15 +30,18 @@ public struct AccountSwitcher: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
+            .frame(minHeight: RBControlMetrics.compactHitTarget)
             .background(isHovered ? Color.rbBgElev2 : Color.rbBgElev1)
             .overlay(
                 Capsule()
                     .strokeBorder(Color.rbStroke1, lineWidth: 1)
             )
             .clipShape(Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
+        .accessibilityLabel(label)
     }
 }
 

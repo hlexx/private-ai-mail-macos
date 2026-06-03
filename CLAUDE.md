@@ -17,6 +17,15 @@
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.
 
+## UI / DesignSystem Conventions
+
+- Shared dense-control hit targets live in `RBControlMetrics` in `DesignSystem`.
+  Feature views should consume the shared compact target instead of introducing
+  parallel public sizing aliases.
+- Icon-only controls need explicit accessibility labels/help and stable final
+  target dimensions. Avoid stacking a 32 pt inner icon frame inside a padded
+  text-button style when the control is meant to remain compact.
+
 ## Validation Commands
 
 - Default release gate: `PATH=/opt/homebrew/bin:$PATH ./scripts/verify-trust-mvp.sh`

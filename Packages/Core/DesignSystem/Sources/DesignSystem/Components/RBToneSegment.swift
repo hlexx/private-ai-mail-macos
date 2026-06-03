@@ -41,7 +41,7 @@ public struct RBToneSegment<ID: Hashable>: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .frame(minHeight: RBControlMetrics.toneSegmentMinHeight)
+                    .frame(minHeight: RBControlMetrics.compactHitTarget)
                     .background(
                         isSelected
                             ? AnyShapeStyle(Color.rbAccentSoft)

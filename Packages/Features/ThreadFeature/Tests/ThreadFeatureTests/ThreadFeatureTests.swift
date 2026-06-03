@@ -14,10 +14,28 @@ struct ThreadFeatureTests {
         #expect(ThreadFeature.moduleName == "ThreadFeature")
     }
 
-    @Test func compactActionTargetsUseCompactHitSize() {
-        #expect(ThreadActionMetrics.compactTargetSize >= RBControlMetrics.compactHitTarget)
-        #expect(ThreadBottomPanelMetrics.tabMinHeight >= RBControlMetrics.compactHitTarget)
-        #expect(ThreadBottomPanelMetrics.collapseButtonMinSize >= RBControlMetrics.compactHitTarget)
+    @Test func bottomPanelCollapsedHeightContainsChrome() {
+        #expect(ThreadBottomPanelLayout.collapsedHeight == RBControlMetrics.compactHitTarget + 16)
+        #expect(ThreadBottomPanelLayout.expandedHeight > ThreadBottomPanelLayout.collapsedHeight)
+    }
+
+    @MainActor
+    @Test func compactActionIconBarKeepsFinalHitTargetWidth() {
+        let buttonCount = 7
+        let spacing: CGFloat = 2
+        let view = HStack(spacing: spacing) {
+            ForEach(0..<buttonCount, id: \.self) { index in
+                RBIconButton(systemName: "archivebox", accessibilityLabel: "Action \(index)") {}
+            }
+        }
+
+        let host = NSHostingView(rootView: view)
+        host.layout()
+        let expectedWidth = CGFloat(buttonCount) * RBControlMetrics.compactHitTarget
+            + CGFloat(buttonCount - 1) * spacing
+
+        #expect(host.fittingSize.width <= expectedWidth + 1)
+        #expect(host.fittingSize.height >= RBControlMetrics.compactHitTarget)
     }
 
     // MARK: - MessageRow

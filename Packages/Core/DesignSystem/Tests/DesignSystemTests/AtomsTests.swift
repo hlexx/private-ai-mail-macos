@@ -94,49 +94,76 @@ struct AtomsTests {
     }
 
     @MainActor
-    @Test func compactInteractiveMetricsUseStableDesktopTargets() {
+    @Test func compactInteractiveMetricUsesStableDesktopTarget() {
         #expect(RBControlMetrics.compactHitTarget == 32)
-        #expect(RBControlMetrics.iconButtonTargetSize == 32)
-        #expect(RBControlMetrics.filterChipMinHeight == 32)
-        #expect(RBControlMetrics.buttonMinHeight == 32)
-        #expect(RBControlMetrics.toneSegmentMinHeight == 32)
     }
 
     @MainActor
     @Test func compactInteractiveControlsMeetMinimumTargets() {
         assertFittingSize(
             of: RBIconButton(systemName: "gearshape", accessibilityLabel: "Settings") {},
-            minWidth: RBControlMetrics.iconButtonTargetSize,
-            minHeight: RBControlMetrics.iconButtonTargetSize
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
         )
 
         assertFittingSize(
             of: RBFilterChip(label: "All", isOn: true) {},
-            minHeight: RBControlMetrics.filterChipMinHeight
+            minHeight: RBControlMetrics.compactHitTarget
         )
 
         assertFittingSize(
             of: Button("Primary") {}
                 .buttonStyle(.rbPrimary),
-            minHeight: RBControlMetrics.buttonMinHeight
+            minHeight: RBControlMetrics.compactHitTarget
         )
 
         assertFittingSize(
             of: Button("Secondary") {}
                 .buttonStyle(.rbSecondary),
-            minHeight: RBControlMetrics.buttonMinHeight
+            minHeight: RBControlMetrics.compactHitTarget
         )
 
         assertFittingSize(
             of: Button("Ghost") {}
                 .buttonStyle(.rbGhost),
-            minHeight: RBControlMetrics.buttonMinHeight
+            minHeight: RBControlMetrics.compactHitTarget
         )
 
         assertFittingSize(
-            of: toneSegmentView(),
-            minHeight: RBControlMetrics.toneSegmentMinHeight
+            of: iconOnlyButton(style: .rbPrimary),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
         )
+
+        assertFittingSize(
+            of: iconOnlyButton(style: .rbSecondary),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: iconOnlyButton(style: .rbGhost),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: bareToneSegmentView(),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: AccountSwitcher(dotColor: .rbCobalt500, label: "alex@studio.eu") {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+    }
+
+    @MainActor
+    private func iconOnlyButton(style: some ButtonStyle) -> some View {
+        Button {} label: {
+            Image(systemName: "pencil")
+        }
+        .buttonStyle(style)
     }
 
     @MainActor
@@ -378,6 +405,23 @@ struct AtomsTests {
                 )
                 .padding()
                 .background(Color.rbBgCanvas)
+            }
+        }
+        return Wrapper()
+    }
+
+    private func bareToneSegmentView() -> some View {
+        struct Wrapper: View {
+            @State var selection = "warm"
+            var body: some View {
+                RBToneSegment(
+                    segments: [
+                        .init(id: "concise", label: "Concise", detail: "42w"),
+                        .init(id: "warm", label: "Warm", detail: "61w"),
+                        .init(id: "direct", label: "Direct", detail: "28w"),
+                    ],
+                    selection: $selection
+                )
             }
         }
         return Wrapper()

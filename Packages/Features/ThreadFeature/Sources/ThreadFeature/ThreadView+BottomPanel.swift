@@ -1,10 +1,10 @@
 import DesignSystem
 import SwiftUI
 
-enum ThreadBottomPanelMetrics {
-    static let collapsedHeight: CGFloat = 42
-    static let tabMinHeight = RBControlMetrics.compactHitTarget
-    static let collapseButtonMinSize = RBControlMetrics.compactHitTarget
+enum ThreadBottomPanelLayout {
+    static let chromeVerticalPadding: CGFloat = 8
+    static let collapsedHeight = RBControlMetrics.compactHitTarget + chromeVerticalPadding * 2
+    static let expandedHeight: CGFloat = 318
 }
 
 extension ThreadView {
@@ -34,7 +34,12 @@ extension ThreadView {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .frame(height: bottomPanelCollapsed ? ThreadBottomPanelMetrics.collapsedHeight : 318, alignment: .top)
+        .frame(
+            height: bottomPanelCollapsed
+                ? ThreadBottomPanelLayout.collapsedHeight
+                : ThreadBottomPanelLayout.expandedHeight,
+            alignment: .top
+        )
         .frame(maxWidth: .infinity)
         .background(Color.rbBgCanvas)
         .overlay(alignment: .top) {
@@ -47,7 +52,11 @@ extension ThreadView {
     }
 
     private var bottomPanelChrome: some View {
-        HStack(spacing: 8) {
+        let collapseTitle = bottomPanelCollapsed
+            ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
+            : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
+
+        return HStack(spacing: 8) {
             if showsComposerPanel {
                 bottomPanelTabButton(.draft)
             }
@@ -57,36 +66,18 @@ extension ThreadView {
 
             Spacer(minLength: 12)
 
-            Button {
+            RBIconButton(
+                systemName: bottomPanelCollapsed ? "chevron.up" : "chevron.down",
+                accessibilityLabel: collapseTitle
+            ) {
                 withAnimation(.easeInOut(duration: 0.18)) {
                     bottomPanelCollapsed.toggle()
                 }
-            } label: {
-                Label(
-                    bottomPanelCollapsed
-                        ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
-                        : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel"),
-                    systemImage: bottomPanelCollapsed ? "chevron.up" : "chevron.down"
-                )
-                .labelStyle(.iconOnly)
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(
-                        minWidth: ThreadBottomPanelMetrics.collapseButtonMinSize,
-                        minHeight: ThreadBottomPanelMetrics.collapseButtonMinSize
-                    )
             }
-            .buttonStyle(.rbGhost)
-            .accessibilityLabel(bottomPanelCollapsed
-                ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
-                : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
-            )
-            .help(bottomPanelCollapsed
-                ? String(localized: "thread.bottomPanel.expand", defaultValue: "Expand bottom panel")
-                : String(localized: "thread.bottomPanel.collapse", defaultValue: "Collapse bottom panel")
-            )
+            .help(collapseTitle)
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 8)
+        .padding(.vertical, ThreadBottomPanelLayout.chromeVerticalPadding)
     }
 
     private func bottomPanelTabButton(_ tab: ThreadBottomPanelTab) -> some View {
@@ -103,7 +94,7 @@ extension ThreadView {
                 .lineLimit(1)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .frame(minHeight: ThreadBottomPanelMetrics.tabMinHeight, alignment: .center)
+                .frame(minHeight: RBControlMetrics.compactHitTarget, alignment: .center)
                 .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
                 .background(selected ? Color.rbBgElev2 : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))

@@ -10,7 +10,7 @@ public struct RBPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Color.rbFgOnAccent)
             .padding(.horizontal, RBSpace.s3)
             .padding(.vertical, RBSpace.s2)
-            .frame(minHeight: RBControlMetrics.buttonMinHeight)
+            .frame(minHeight: RBControlMetrics.compactHitTarget)
             .background(configuration.isPressed ? Color.rbAccentPress : Color.rbAccent)
             .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
             .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
@@ -27,7 +27,7 @@ public struct RBSecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(Color.rbFg1)
             .padding(.horizontal, RBSpace.s3)
             .padding(.vertical, RBSpace.s2)
-            .frame(minHeight: RBControlMetrics.buttonMinHeight)
+            .frame(minHeight: RBControlMetrics.compactHitTarget)
             .background(configuration.isPressed ? Color.rbBgElev3 : Color.rbBgElev2)
             .clipShape(RoundedRectangle(cornerRadius: RBRadius.sm))
             .contentShape(RoundedRectangle(cornerRadius: RBRadius.sm))
@@ -53,7 +53,7 @@ private struct RBGhostButtonBody: View {
             .foregroundStyle(Color.rbFg2)
             .padding(.horizontal, RBSpace.s3)
             .padding(.vertical, RBSpace.s2)
-            .frame(minHeight: RBControlMetrics.buttonMinHeight)
+            .frame(minHeight: RBControlMetrics.compactHitTarget)
             .background(
                 configuration.isPressed
                     ? Color.rbBgElev2

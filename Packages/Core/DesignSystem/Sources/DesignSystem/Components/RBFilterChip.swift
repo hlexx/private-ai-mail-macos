@@ -21,7 +21,7 @@ public struct RBFilterChip: View {
                 .foregroundStyle(isOn ? Color.rbCitron600 : Color.rbFg2)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .frame(minHeight: RBControlMetrics.filterChipMinHeight)
+                .frame(minHeight: RBControlMetrics.compactHitTarget)
                 .background(isOn ? Color.rbCitron500.opacity(0.18) : Color.rbBgElev1)
                 .clipShape(Capsule())
                 .overlay(

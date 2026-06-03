@@ -57,6 +57,18 @@ Task 1 audit findings:
 - [x] Run `swiftlint --strict --reporter xcode`.
 - [x] Run `git diff --check` and the MacApp Debug build; fix failures.
 
+Code review follow-up:
+- Fixed audited targets that were still unresolved after the first pass:
+  `AccountSwitcher`, the InlineComposer language chevron, and InlineComposer
+  language picker rows now use the shared compact hit target.
+- Simplified the shared sizing contract to `RBControlMetrics.compactHitTarget`
+  instead of public aliases that all pointed at the same value.
+- Kept compact thread header actions at a final 32 pt target by using
+  `RBIconButton` instead of stacking the compact frame inside `.rbGhost`
+  padding.
+- Increased the collapsed bottom panel height to contain the 32 pt chrome plus
+  vertical padding.
+
 ## Rollback / Recovery
 - Revert DesignSystem atom sizing and local row/control adjustments. No migration is involved.
 
