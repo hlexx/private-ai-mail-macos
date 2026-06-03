@@ -123,7 +123,9 @@ struct PrivacyTabTests {
     @Test func privacyRowLayoutPreservesReadableCopyWidth() {
         #expect(PrivacySettingsLayout.detailMaxWidth == 520)
         #expect(PrivacySettingsLayout.accessoryMaxWidth == 180)
-        #expect(PrivacySettingsLayout.detailMaxWidth > PrivacySettingsLayout.accessoryMaxWidth * 2)
+        #expect(PrivacySettingsLayout.copyColumnMinWidth >= 360)
+        #expect(PrivacySettingsLayout.accessoryColumnWidth > PrivacySettingsLayout.accessoryMaxWidth)
+        #expect(PrivacySettingsLayout.detailMaxWidth > PrivacySettingsLayout.accessoryColumnWidth * 2)
     }
 
     private func account(id: String, provider: String, email: String) -> AccountRecord {

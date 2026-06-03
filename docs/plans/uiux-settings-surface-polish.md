@@ -41,10 +41,10 @@ Inventory findings:
 - [x] Ensure the Privacy tab supports long text with readable line length and clear accessory alignment.
 
 ### Task 3: Improve General and Privacy tab scanability
-- [ ] Group translation language controls so they do not appear as an undifferentiated long toggle list.
-- [ ] Preserve all existing AppStorage bindings and tests for language preferences.
-- [ ] Rework Privacy rows to show status/accessory controls without crowding the explanatory copy.
-- [ ] Do not change privacy claims unless backed by docs/tests.
+- [x] Group translation language controls so they do not appear as an undifferentiated long toggle list.
+- [x] Preserve all existing AppStorage bindings and tests for language preferences.
+- [x] Rework Privacy rows to show status/accessory controls without crowding the explanatory copy.
+- [x] Do not change privacy claims unless backed by docs/tests.
 
 ### Task 4: Test and validate Settings
 - [ ] Update SettingsFeature tests for any changed state models or copy keys.

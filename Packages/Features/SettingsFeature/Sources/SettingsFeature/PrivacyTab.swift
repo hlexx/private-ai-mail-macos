@@ -40,25 +40,40 @@ public struct PrivacyTab: View {
     }
 
     private func rowView(_ row: PrivacySettingsRow) -> some View {
-        VStack(alignment: .leading, spacing: RBSpace.s1) {
-            HStack(alignment: .firstTextBaseline, spacing: RBSpace.s3) {
-                Text(row.title.defaultValue)
-                    .font(.body)
+        HStack(alignment: .top, spacing: RBSpace.s4) {
+            privacyCopyView(row)
+                .frame(
+                    minWidth: PrivacySettingsLayout.copyColumnMinWidth,
+                    maxWidth: PrivacySettingsLayout.detailMaxWidth,
+                    alignment: .leading
+                )
 
-                Spacer(minLength: RBSpace.s4)
+            Spacer(minLength: RBSpace.s3)
 
+            if row.accessory != nil {
                 accessoryView(row.accessory)
+                    .frame(
+                        width: PrivacySettingsLayout.accessoryColumnWidth,
+                        alignment: .trailing
+                    )
+                    .padding(.top, PrivacySettingsLayout.accessoryTopPadding)
             }
+        }
+        .padding(.vertical, RBSpace.s2)
+    }
+
+    private func privacyCopyView(_ row: PrivacySettingsRow) -> some View {
+        VStack(alignment: .leading, spacing: RBSpace.s1) {
+            Text(row.title.defaultValue)
+                .font(.body)
 
             if let detail = row.detail {
                 Text(detail.defaultValue)
                     .font(.caption)
                     .foregroundStyle(Color.rbFg3)
-                    .frame(maxWidth: PrivacySettingsLayout.detailMaxWidth, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, RBSpace.s1)
     }
 
     @ViewBuilder
@@ -113,4 +128,7 @@ public struct PrivacyTab: View {
 enum PrivacySettingsLayout {
     static let detailMaxWidth: CGFloat = 520
     static let accessoryMaxWidth: CGFloat = 180
+    static let copyColumnMinWidth: CGFloat = 360
+    static let accessoryColumnWidth: CGFloat = 190
+    static let accessoryTopPadding: CGFloat = 1
 }
