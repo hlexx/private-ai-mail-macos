@@ -67,6 +67,28 @@ struct ReplyStoreGenerateIfNeededTests {
         }
     }
 
+    private final class MutableAIService: AIService, @unchecked Sendable {
+        private(set) var callCount = 0
+        var error: (any Error)?
+
+        func threadBrief(_ input: AIThreadInput) async throws -> AIThreadBrief {
+            AIThreadBrief(summary: "test", confidence: 0.9)
+        }
+
+        func draftReply(
+            _ input: AIThreadInput,
+            tone: AIReplyTone,
+            locale: Locale,
+            replyLanguage: String?
+        ) async throws -> AIThreadReply {
+            callCount += 1
+            if let error {
+                throw error
+            }
+            return AIThreadReply(body: "Reply \(callCount)", confidence: 0.9)
+        }
+    }
+
     private func makeDB() async throws -> AppDatabase {
         let db = try AppDatabase.openInMemorySync()
         try await db.dbQueue.write { database in
@@ -152,6 +174,34 @@ struct ReplyStoreGenerateIfNeededTests {
     }
 
     @MainActor
+    @Test func generateIfNeededCacheHitClearsStaleErrorAndLoadingState() async throws {
+        let ai = MutableAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: ai, db: db)
+
+        store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(ai.callCount == 1)
+        #expect(store.reply?.body == "Reply 1")
+
+        ai.error = AIError.invalidStructuredOutput("malformed")
+        store.generate(threadID: "t1", tone: .direct, replyLanguage: "en")
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(ai.callCount == 2)
+        #expect(store.reply == nil)
+        #expect(store.error != nil)
+
+        let focusRequestsBeforeCacheHit = store.focusRequestCount
+        store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
+
+        #expect(ai.callCount == 2)
+        #expect(store.reply?.body == "Reply 1")
+        #expect(store.error == nil)
+        #expect(store.isLoading == false)
+        #expect(store.focusRequestCount == focusRequestsBeforeCacheHit + 1)
+    }
+
+    @MainActor
     @Test func inlineComposerDoesNotGenerateOnAppear() async throws {
         let mock = CountingAIService()
         let db = try await makeDB()
@@ -168,6 +218,26 @@ struct ReplyStoreGenerateIfNeededTests {
 
         #expect(mock.callCount == 0)
         #expect(store.reply == nil)
+        #expect(store.isLoading == false)
+    }
+
+    @MainActor
+    @Test func inlineComposerExternalDraftRequestStartsDraftingOnAppear() async throws {
+        let mock = CountingAIService()
+        let db = try await makeDB()
+        let store = ReplyStore(aiService: mock, db: db)
+        let view = InlineComposer(threadID: "t1", draftRequestID: 1, replyStore: store)
+            .padding(24)
+            .background(Color(.windowBackgroundColor))
+            .frame(width: 600, height: 400)
+        let host = NSHostingView(rootView: view)
+
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
+        host.layout()
+        try await Task.sleep(for: .milliseconds(500))
+
+        #expect(mock.callCount == 1)
+        #expect(store.reply?.body == "Reply")
         #expect(store.isLoading == false)
     }
 

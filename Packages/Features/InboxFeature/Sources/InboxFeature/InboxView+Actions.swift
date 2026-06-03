@@ -22,4 +22,8 @@ extension InboxView {
             )
         ))
     }
+
+    func requestDraftReply(for thread: ThreadRow) {
+        onDraftReply?(thread.id, thread.accountId)
+    }
 }

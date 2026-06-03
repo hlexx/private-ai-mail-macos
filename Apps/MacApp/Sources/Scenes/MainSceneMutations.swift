@@ -1,5 +1,4 @@
 import ActionsFeature
-import AIKit
 import ComposeFeature
 import DesignSystem
 import GRDB
@@ -14,25 +13,22 @@ import ThreadFeature
 
 extension MainScene {
 
-    func draftReply() {
+    func draftReply(threadID requestedThreadID: String? = nil) {
         guard composition.aiModelController.isAIReady else {
             openSettings()
             return
         }
-        guard let threadID = inboxStore.selectedThreadID else { return }
-        let accountId = inboxStore.threads.first(where: { $0.id == threadID })?.accountId
+        let threadID = requestedThreadID ?? inboxStore.selectedThreadID
+        guard let threadID else { return }
+        if inboxStore.selectedThreadID != threadID {
+            inboxStore.selectedThreadID = threadID
+        }
         bottomPanelCollapsed = false
         bottomPanelTabRaw = "draft"
         withAnimation {
             threadScrollProxy?.scrollTo(ThreadViewAnchor.composer, anchor: .top)
         }
-        let tone = AIReplyTone(rawValue: defaultToneRaw) ?? .warm
-        composition.replyStore.generateIfNeeded(
-            threadID: threadID,
-            accountId: accountId,
-            tone: tone,
-            replyLanguage: detectReplyLanguage()
-        )
+        draftGenerationRequestID += 1
     }
 
     func moveBriefToBottom() {

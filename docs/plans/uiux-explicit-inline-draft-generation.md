@@ -25,7 +25,7 @@ Make AI draft generation in the inline composer explicit instead of automatic on
 
 ### Task 1: Map current draft initiation paths
 - [x] Inspect `Apps/MacApp/Sources/Scenes/MainScene.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView+BottomPanel.swift`, `Packages/Features/ComposeFeature/Sources/ComposeFeature/InlineComposer.swift`, and `Packages/Features/ComposeFeature/Sources/ComposeFeature/ReplyStore.swift`.
-- [x] Identify every user action that should create/focus/regenerate a draft: brief CTA, thread Draft action, bottom panel Draft tab, regenerate, edit in full, and send.
+- [x] Identify every user action that should create/focus/regenerate a draft: brief CTA, thread/inbox Draft actions, inline Generate, Retry, and Regenerate trigger generation or focus; bottom Draft tab reveal, Edit in full, and Send consume existing draft state without starting first generation.
 - [x] Record the intended behavior in code comments or tests only where it affects an ambiguous boundary.
 
 ### Task 2: Stop automatic draft generation on thread open

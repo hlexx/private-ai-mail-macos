@@ -37,7 +37,6 @@ struct MainScene: View {
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage(TranslationLanguagePreferences.storageKey) var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
-    @AppStorage("pam.defaultTone") var defaultToneRaw: String = "warm"
     @AppStorage("pam.layout.sidebar") private var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
     @AppStorage("pam.layout.threadlist") private var threadlistWidth: Double = Double(RBLayout.threadListWidth)
     @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
@@ -46,6 +45,7 @@ struct MainScene: View {
     @AppStorage("pam.layout.briefPlacement") var briefPlacementRaw: String = BriefPanelPlacement.side.rawValue
     @AppStorage("pam.layout.threadBottomPanelCollapsed") var bottomPanelCollapsed: Bool = false
     @AppStorage("pam.layout.threadBottomPanelTab") var bottomPanelTabRaw: String = "draft"
+    @State var draftGenerationRequestID: Int = 0
     @Environment(\.openSettings) var openSettings
 
     var body: some View {
@@ -70,6 +70,7 @@ struct MainScene: View {
                     InboxView(
                         store: inboxStore,
                         actionStore: composition.trustActionStore,
+                        onDraftReply: { threadId, _ in draftReply(threadID: threadId) },
                         onArchive: { threadId, accountId in
                             Task {
                                 do {
@@ -132,6 +133,7 @@ struct MainScene: View {
                                     threadID: threadID,
                                     accountId: inboxStore.threads.first(where: { $0.id == threadID })?.accountId,
                                     replyLanguage: detectReplyLanguage(),
+                                    draftRequestID: draftGenerationRequestID,
                                     replyStore: composition.replyStore,
                                     sendState: composition.composeViewModel.sendState,
                                     onEditInFull: { draftText in

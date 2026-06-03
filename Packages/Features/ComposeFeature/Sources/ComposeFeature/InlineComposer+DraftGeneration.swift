@@ -48,6 +48,12 @@ extension InlineComposer {
         }
     }
 
+    func handleExternalDraftRequestIfNeeded() {
+        guard draftRequestID > 0, draftRequestID != handledDraftRequestID else { return }
+        handledDraftRequestID = draftRequestID
+        requestDraftGeneration(force: false)
+    }
+
     func handleToneChange(_ newTone: AIReplyTone) {
         if draftGenerationRequested {
             replyStore.regenerate(

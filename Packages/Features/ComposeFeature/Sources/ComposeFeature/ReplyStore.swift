@@ -50,6 +50,7 @@ public final class ReplyStore {
         locale: Locale = .current
     ) {
         inflightTask?.cancel()
+        inflightTask = nil
         error = nil
 
         guard let aiService, let db else {
@@ -59,14 +60,8 @@ public final class ReplyStore {
         }
 
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        if let cached = replyCache[key] {
-            if Self.isDisplayableDraft(cached.body) {
-                reply = cached
-                displayedKey = key
-                isLoading = false
-                return
-            }
-            replyCache.removeValue(forKey: key)
+        if displayCachedDraft(for: key, focus: false) {
+            return
         }
 
         isLoading = true
@@ -241,8 +236,7 @@ extension ReplyStore {
         threadID: String,
         accountId: String? = nil,
         tone: AIReplyTone,
-        replyLanguage: String?,
-        focusCachedDraft: Bool = true
+        replyLanguage: String?
     ) -> Bool {
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
         inflightTask?.cancel()
@@ -250,24 +244,12 @@ extension ReplyStore {
         isLoading = false
 
         if displayedKey == key, let reply, Self.isDisplayableDraft(reply.body) {
-            error = nil
-            if focusCachedDraft {
-                focusRequestCount += 1
-            }
+            publishCachedDraft(reply, for: key, focus: true)
             return true
         }
 
-        if let cached = replyCache[key] {
-            if Self.isDisplayableDraft(cached.body) {
-                reply = cached
-                displayedKey = key
-                error = nil
-                if focusCachedDraft {
-                    focusRequestCount += 1
-                }
-                return true
-            }
-            replyCache.removeValue(forKey: key)
+        if displayCachedDraft(for: key, focus: true) {
+            return true
         }
 
         guard aiService != nil, db != nil else {
@@ -295,14 +277,14 @@ extension ReplyStore {
         locale: Locale = .current
     ) {
         let key = CacheKey(threadID: threadID, accountId: accountId ?? "", tone: tone, replyLanguage: replyLanguage ?? "")
-        if let cached = replyCache[key] {
-            if Self.isDisplayableDraft(cached.body) {
-                reply = cached
-                displayedKey = key
-                focusRequestCount += 1
-                return
-            }
-            replyCache.removeValue(forKey: key)
+        inflightTask?.cancel()
+        inflightTask = nil
+        if displayedKey == key, let reply, Self.isDisplayableDraft(reply.body) {
+            publishCachedDraft(reply, for: key, focus: true)
+            return
+        }
+        if displayCachedDraft(for: key, focus: true) {
+            return
         }
         generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
     }
@@ -311,6 +293,26 @@ extension ReplyStore {
         replyCache = replyCache.filter { $0.key.threadID != threadID }
         reply = nil
         displayedKey = nil
+    }
+
+    private func displayCachedDraft(for key: CacheKey, focus: Bool) -> Bool {
+        guard let cached = replyCache[key] else { return false }
+        guard Self.isDisplayableDraft(cached.body) else {
+            replyCache.removeValue(forKey: key)
+            return false
+        }
+        publishCachedDraft(cached, for: key, focus: focus)
+        return true
+    }
+
+    private func publishCachedDraft(_ cached: AIThreadReply, for key: CacheKey, focus: Bool) {
+        reply = cached
+        displayedKey = key
+        isLoading = false
+        error = nil
+        if focus {
+            focusRequestCount += 1
+        }
     }
 }
 
