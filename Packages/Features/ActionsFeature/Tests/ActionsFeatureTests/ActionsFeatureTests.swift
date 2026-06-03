@@ -12,17 +12,20 @@ struct ActionsFeatureTests {
 
     // MARK: - ActionItem
 
-    @Test func allActionsHaveEightItems() {
-        #expect(ActionItem.all.count == 8)
+    @Test func executableActionsMatchTrustMVPSurface() {
+        let ids = ActionItem.executable.map(\.id)
+        #expect(ids == [.reply, .archive, .star, .markRead, .trash])
+        #expect(ids.compactMap(\.trustMVPAction) == TrustMVPAction.allCases)
     }
 
-    @Test func actionIDsMatchExpected() {
-        let ids = ActionItem.all.map(\.id)
-        #expect(ids == [.reply, .snooze, .log, .task, .archive, .unsub, .rule, .share])
+    @Test func roadmapActionsAreSeparatedFromExecutableGrid() {
+        let ids = ActionItem.roadmap.map(\.id)
+        #expect(ids == [.snooze, .log, .task, .unsub, .rule, .share])
+        #expect(ids.allSatisfy { $0.trustMVPAction == nil })
     }
 
     @Test func allActionIDCasesAreCovered() {
-        let itemIDs = Set(ActionItem.all.map(\.id))
+        let itemIDs = Set((ActionItem.executable + ActionItem.roadmap).map(\.id))
         let allCases = Set(ActionID.allCases)
         #expect(itemIDs == allCases)
     }
@@ -30,6 +33,9 @@ struct ActionsFeatureTests {
     @Test func onlyImplementedActionsAreExecutable() {
         #expect(ActionExecutionSupport.isEnabled(.reply))
         #expect(ActionExecutionSupport.isEnabled(.archive))
+        #expect(ActionExecutionSupport.isEnabled(.star))
+        #expect(ActionExecutionSupport.isEnabled(.markRead))
+        #expect(ActionExecutionSupport.isEnabled(.trash))
         #expect(!ActionExecutionSupport.isEnabled(.snooze))
         #expect(!ActionExecutionSupport.isEnabled(.log))
         #expect(!ActionExecutionSupport.isEnabled(.task))

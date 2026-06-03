@@ -23,9 +23,9 @@ Reduce action sheet overpromising by making only currently executable Trust MVP 
 - `xcodebuild build -project PrivateAIMail.xcodeproj -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 
 ### Task 1: Separate executable actions from future actions
-- [ ] Inspect `Packages/Features/ActionsFeature/Sources/ActionsFeature/ActionSheetView.swift` and `Packages/Features/ActionsFeature/Sources/ActionsFeature/TrustActionUIStore.swift`.
-- [ ] Keep executable actions aligned with `TrustMVPAction` and current implementation: draft reply, archive, star, mark read, trash if appropriate for this surface.
-- [ ] Move non-executable actions (`snooze`, `log`, `task`, `unsub`, `rule`, `share`) out of the primary action grid or label them as unavailable roadmap items without `Do it` preview.
+- [x] Inspect `Packages/Features/ActionsFeature/Sources/ActionsFeature/ActionSheetView.swift` and `Packages/Features/ActionsFeature/Sources/ActionsFeature/TrustActionUIStore.swift`.
+- [x] Keep executable actions aligned with `TrustMVPAction` and current implementation: draft reply, archive, star, mark read, trash if appropriate for this surface.
+- [x] Move non-executable actions (`snooze`, `log`, `task`, `unsub`, `rule`, `share`) out of the primary action grid or label them as unavailable roadmap items without `Do it` preview.
 
 ### Task 2: Rewrite preview and CTA behavior
 - [ ] Ensure the preview text describes only actions that can run in this build.

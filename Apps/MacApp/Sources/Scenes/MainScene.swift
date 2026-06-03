@@ -292,6 +292,12 @@ extension MainScene {
             requestTrustActionForSelectedThread(.draftReply)
         case .archive:
             requestTrustActionForSelectedThread(.archiveThread)
+        case .star:
+            requestTrustActionForSelectedThread(.starThread)
+        case .markRead:
+            requestTrustActionForSelectedThread(.markRead)
+        case .trash:
+            requestTrustActionForSelectedThread(.trashThread)
         case .snooze, .log, .task, .unsub, .rule, .share:
             showToast("Action not available yet", undo: nil)
         }
