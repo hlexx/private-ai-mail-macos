@@ -24,9 +24,9 @@ Make AI draft generation in the inline composer explicit instead of automatic on
 - `xcodebuild build -project PrivateAIMail.xcodeproj -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`
 
 ### Task 1: Map current draft initiation paths
-- [ ] Inspect `Apps/MacApp/Sources/Scenes/MainScene.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView+BottomPanel.swift`, `Packages/Features/ComposeFeature/Sources/ComposeFeature/InlineComposer.swift`, and `Packages/Features/ComposeFeature/Sources/ComposeFeature/ReplyStore.swift`.
-- [ ] Identify every user action that should create/focus/regenerate a draft: brief CTA, thread Draft action, bottom panel Draft tab, regenerate, edit in full, and send.
-- [ ] Record the intended behavior in code comments or tests only where it affects an ambiguous boundary.
+- [x] Inspect `Apps/MacApp/Sources/Scenes/MainScene.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView.swift`, `Packages/Features/ThreadFeature/Sources/ThreadFeature/ThreadView+BottomPanel.swift`, `Packages/Features/ComposeFeature/Sources/ComposeFeature/InlineComposer.swift`, and `Packages/Features/ComposeFeature/Sources/ComposeFeature/ReplyStore.swift`.
+- [x] Identify every user action that should create/focus/regenerate a draft: brief CTA, thread Draft action, bottom panel Draft tab, regenerate, edit in full, and send.
+- [x] Record the intended behavior in code comments or tests only where it affects an ambiguous boundary.
 
 ### Task 2: Stop automatic draft generation on thread open
 - [ ] Change `InlineComposer` so `.task(id:)` does not call `replyStore.generate` merely because the view appears.

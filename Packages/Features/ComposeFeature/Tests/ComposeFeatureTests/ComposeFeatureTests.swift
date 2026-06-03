@@ -97,9 +97,11 @@ struct ReplyStoreGenerateIfNeededTests {
         #expect(mock.callCount == 1)
 
         // Second call should be a no-op (cached)
+        let focusRequestsBeforeCacheHit = store.focusRequestCount
         store.generateIfNeeded(threadID: "t1", tone: .warm, replyLanguage: "en")
         try await Task.sleep(for: .milliseconds(200))
         #expect(mock.callCount == 1) // Not called again
+        #expect(store.focusRequestCount == focusRequestsBeforeCacheHit + 1)
     }
 
     @MainActor

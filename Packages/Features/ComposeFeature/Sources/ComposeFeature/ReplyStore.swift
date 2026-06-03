@@ -121,6 +121,13 @@ public final class ReplyStore {
         generate(threadID: threadID, accountId: accountId, tone: tone, replyLanguage: replyLanguage, locale: locale)
     }
 
+    /// Explicit draft intent boundary.
+    ///
+    /// Brief CTAs, thread Draft actions, and already-authored draft focus requests
+    /// should enter through this method so cached drafts can be shown without new
+    /// AI work. Bottom Draft tab selection should only reveal the composer unless
+    /// it came from one of those actions. Retry and Regenerate intentionally use
+    /// `regenerate`; Edit in full and Send consume the current draft text.
     public func generateIfNeeded(
         threadID: String,
         accountId: String? = nil,
