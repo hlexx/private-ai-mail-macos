@@ -21,5 +21,6 @@ struct KeyboardSettingsTab: View {
             }
             .padding(24)
         }
+        .background(Color.rbBgCanvas)
     }
 }

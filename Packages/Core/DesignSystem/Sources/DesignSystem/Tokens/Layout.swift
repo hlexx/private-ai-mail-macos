@@ -43,7 +43,7 @@ public enum RBLayout {
 
     // MARK: Settings window
 
-    /// `SettingsScene` TabView. Matches the design system's intended dialog scale.
-    public static let settingsWidth: CGFloat = 520
-    public static let settingsHeight: CGFloat = 360
+    /// `SettingsScene` TabView. Gives grouped forms room for tab chrome and long privacy rows.
+    public static let settingsWidth: CGFloat = 680
+    public static let settingsHeight: CGFloat = 520
 }

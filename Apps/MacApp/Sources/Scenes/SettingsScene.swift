@@ -7,49 +7,54 @@ struct SettingsScene: View {
     let composition: CompositionRoot
 
     var body: some View {
-        TabView {
-            GeneralTab()
-                .tabItem {
-                    Label(
-                        String(localized: "settings.tab.general", defaultValue: "General"),
-                        systemImage: "gearshape"
-                    )
-                }
+        ZStack {
+            Color.rbBgCanvas
+                .ignoresSafeArea()
 
-            AccountsTab(store: composition.accountsTabStore)
-                .tabItem {
-                    Label(
-                        String(localized: "settings.tab.accounts", defaultValue: "Accounts"),
-                        systemImage: "person.crop.circle"
-                    )
-                }
+            TabView {
+                GeneralTab()
+                    .tabItem {
+                        Label(
+                            String(localized: "settings.tab.general", defaultValue: "General"),
+                            systemImage: "gearshape"
+                        )
+                    }
 
-            PrivacyTab(store: composition.accountsTabStore)
-                .tabItem {
-                    Label(
-                        String(localized: "settings.tab.privacy", defaultValue: "Privacy"),
-                        systemImage: "lock.shield"
-                    )
-                }
+                AccountsTab(store: composition.accountsTabStore)
+                    .tabItem {
+                        Label(
+                            String(localized: "settings.tab.accounts", defaultValue: "Accounts"),
+                            systemImage: "person.crop.circle"
+                        )
+                    }
 
-            AITab(
-                queue: composition.briefBackgroundQueue,
-                modelController: composition.aiModelController
-            )
-            .tabItem {
-                Label(
-                    String(localized: "settings.tab.ai", defaultValue: "AI"),
-                    systemImage: "sparkles"
+                PrivacyTab(store: composition.accountsTabStore)
+                    .tabItem {
+                        Label(
+                            String(localized: "settings.tab.privacy", defaultValue: "Privacy"),
+                            systemImage: "lock.shield"
+                        )
+                    }
+
+                AITab(
+                    queue: composition.briefBackgroundQueue,
+                    modelController: composition.aiModelController
                 )
-            }
-
-            KeyboardSettingsTab()
                 .tabItem {
                     Label(
-                        String(localized: "settings.tab.keyboard", defaultValue: "Keyboard"),
-                        systemImage: "keyboard"
+                        String(localized: "settings.tab.ai", defaultValue: "AI"),
+                        systemImage: "sparkles"
                     )
                 }
+
+                KeyboardSettingsTab()
+                    .tabItem {
+                        Label(
+                            String(localized: "settings.tab.keyboard", defaultValue: "Keyboard"),
+                            systemImage: "keyboard"
+                        )
+                    }
+            }
         }
         .frame(width: RBLayout.settingsWidth, height: RBLayout.settingsHeight)
     }

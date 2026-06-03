@@ -1,3 +1,4 @@
+import DesignSystem
 import MailSync
 import Persistence
 import SwiftUI
@@ -45,6 +46,7 @@ public struct AccountsTab: View {
         .onDisappear {
             store.stopObserving()
         }
+        .background(Color.rbBgCanvas)
     }
 
     @ViewBuilder

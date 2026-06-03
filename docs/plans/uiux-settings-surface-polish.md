@@ -36,9 +36,9 @@ Inventory findings:
 - `AITab` uses native grouped `Form` sections and long footer text. It should keep that structure unless later polishing introduces a shared tab container that preserves `Form` keyboard navigation and accessibility.
 
 ### Task 2: Resize and structure the Settings window
-- [ ] Increase `RBLayout.settingsWidth` and `RBLayout.settingsHeight` to fit current tabs without cramped vertical scrolling.
-- [ ] Add a consistent tab content container or section treatment using DesignSystem colors/tokens where it does not break native form behavior.
-- [ ] Ensure the Privacy tab supports long text with readable line length and clear accessory alignment.
+- [x] Increase `RBLayout.settingsWidth` and `RBLayout.settingsHeight` to fit current tabs without cramped vertical scrolling.
+- [x] Add a consistent tab content container or section treatment using DesignSystem colors/tokens where it does not break native form behavior.
+- [x] Ensure the Privacy tab supports long text with readable line length and clear accessory alignment.
 
 ### Task 3: Improve General and Privacy tab scanability
 - [ ] Group translation language controls so they do not appear as an undifferentiated long toggle list.

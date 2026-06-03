@@ -1,4 +1,5 @@
 import AppFoundation
+import DesignSystem
 import SwiftUI
 
 public struct GeneralTab: View {
@@ -73,6 +74,8 @@ public struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.rbBgCanvas)
         .padding()
     }
 

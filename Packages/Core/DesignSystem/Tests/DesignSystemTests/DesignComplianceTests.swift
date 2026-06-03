@@ -205,6 +205,10 @@ struct DesignComplianceTests {
 
         // .rb-row.active::before { width: 3px }
         #expect(RBLayout.activeRowIndicatorWidth == 3)
+
+        // Settings grouped forms need room for tab chrome and long privacy text.
+        #expect(RBLayout.settingsWidth == 680)
+        #expect(RBLayout.settingsHeight == 520)
     }
 
     // ───────────────────────────────────────────────
