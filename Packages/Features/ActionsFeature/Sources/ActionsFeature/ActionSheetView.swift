@@ -32,6 +32,21 @@ public enum ActionID: String, CaseIterable, Sendable {
             nil
         }
     }
+
+    init(trustMVPAction: TrustMVPAction) {
+        switch trustMVPAction {
+        case .draftReply:
+            self = .reply
+        case .archiveThread:
+            self = .archive
+        case .starThread:
+            self = .star
+        case .markRead:
+            self = .markRead
+        case .trashThread:
+            self = .trash
+        }
+    }
 }
 
 struct ActionItem: Identifiable {
@@ -40,38 +55,14 @@ struct ActionItem: Identifiable {
     let color: Color
     let systemName: String
 
-    static let executable: [ActionItem] = [
+    static let executable: [ActionItem] = TrustMVPAction.allCases.map { action in
         ActionItem(
-            id: .reply,
-            label: String(localized: "action.draftReply", defaultValue: "Draft reply"),
-            color: .rbAccent,
-            systemName: "arrowshape.turn.up.left.fill"
-        ),
-        ActionItem(
-            id: .archive,
-            label: String(localized: "action.archive", defaultValue: "Archive"),
-            color: .rbGraphite500,
-            systemName: "archivebox.fill"
-        ),
-        ActionItem(
-            id: .star,
-            label: String(localized: "action.star", defaultValue: "Star"),
-            color: .rbAccentSecondary,
-            systemName: "star.fill"
-        ),
-        ActionItem(
-            id: .markRead,
-            label: String(localized: "action.markRead", defaultValue: "Mark read"),
-            color: .rbAccentTertiary,
-            systemName: "envelope.open.fill"
-        ),
-        ActionItem(
-            id: .trash,
-            label: String(localized: "action.trash", defaultValue: "Trash"),
-            color: .rbBurntOrange500,
-            systemName: "trash.fill"
-        ),
-    ]
+            id: ActionID(trustMVPAction: action),
+            label: action.title,
+            color: executableColor(for: action),
+            systemName: "\(action.systemImage).fill"
+        )
+    }
 
     static let roadmap: [ActionItem] = [
         ActionItem(
@@ -111,6 +102,21 @@ struct ActionItem: Identifiable {
             systemName: "arrow.up.forward.circle.fill"
         ),
     ]
+
+    private static func executableColor(for action: TrustMVPAction) -> Color {
+        switch action {
+        case .draftReply:
+            .rbAccent
+        case .archiveThread:
+            .rbGraphite500
+        case .starThread:
+            .rbAccentSecondary
+        case .markRead:
+            .rbAccentTertiary
+        case .trashThread:
+            .rbBurntOrange500
+        }
+    }
 }
 
 // MARK: - Action Tile
@@ -128,7 +134,7 @@ struct ActionTile: View {
     }
 
     private var borderColor: Color {
-        (isSelected || isHovered) ? Color.rbAccent : Color.rbStroke1
+        (isSelected || (isEnabled && isHovered)) ? Color.rbAccent : Color.rbStroke1
     }
 
     var body: some View {
@@ -212,12 +218,18 @@ struct RoadmapActionTile: View {
 
 public struct ActionSheetView: View {
     let threadSubject: String
-    let onAction: (ActionID?) -> Void
+    let executionAvailability: ActionExecutionAvailability
+    let onAction: (TrustMVPAction?) -> Void
 
-    @State private var picked: ActionID? = ActionSheetPresentation.defaultSelection
+    @State private var picked: ActionID?
 
-    public init(threadSubject: String, onAction: @escaping (ActionID?) -> Void) {
+    public init(
+        threadSubject: String,
+        executionAvailability: ActionExecutionAvailability = .supported,
+        onAction: @escaping (TrustMVPAction?) -> Void
+    ) {
         self.threadSubject = threadSubject
+        self.executionAvailability = executionAvailability
         self.onAction = onAction
     }
 
@@ -257,7 +269,10 @@ public struct ActionSheetView: View {
                             ActionTile(
                                 item: item,
                                 isSelected: picked == item.id,
-                                isEnabled: true
+                                isEnabled: ActionExecutionSupport.isEnabled(
+                                    item.id,
+                                    availability: executionAvailability
+                                )
                             ) {
                                 picked = item.id
                             }
@@ -295,12 +310,18 @@ public struct ActionSheetView: View {
                                 .foregroundStyle(Color.rbFg3)
                         }
 
-                        Text(ActionSheetPresentation.previewText(for: picked))
+                        Text(ActionSheetPresentation.previewText(
+                            for: picked,
+                            availability: executionAvailability
+                        ))
                             .rbTextStyle(.bodySM)
                             .foregroundStyle(Color.rbFg2)
                             .lineSpacing(4)
 
-                        Text(String(localized: "action.preview.privacy", defaultValue: "on-device · 0 bytes uploaded"))
+                        Text(ActionSheetPresentation.privacyText(
+                            for: picked,
+                            availability: executionAvailability
+                        ))
                             .font(.rbMono(10.5))
                             .foregroundStyle(Color.rbFg3)
                             .padding(.top, RBSpace.s1)
@@ -319,12 +340,18 @@ public struct ActionSheetView: View {
                         Button(String(localized: "action.cta.cancel", defaultValue: "Cancel")) { onAction(nil) }
                             .buttonStyle(.rbGhost)
                         Button(String(localized: "action.cta.doIt", defaultValue: "Do it")) {
-                            if let action = ActionSheetPresentation.selectedExecutableAction(picked) {
+                            if let action = ActionSheetPresentation.selectedTrustAction(
+                                picked,
+                                availability: executionAvailability
+                            ) {
                                 onAction(action)
                             }
                         }
                             .buttonStyle(.rbPrimary)
-                            .disabled(!ActionSheetPresentation.isPrimaryCTAEnabled(for: picked))
+                            .disabled(!ActionSheetPresentation.isPrimaryCTAEnabled(
+                                for: picked,
+                                availability: executionAvailability
+                            ))
                     }
                     .padding(.top, RBSpace.s3)
                 }
@@ -348,6 +375,12 @@ public struct ActionSheetView: View {
                 .opacity(0)
                 .accessibilityHidden(true)
         )
+        .onChange(of: executionAvailability) { _, availability in
+            guard ActionSheetPresentation.selectedTrustAction(picked, availability: availability) != nil else {
+                picked = nil
+                return
+            }
+        }
     }
 }
 

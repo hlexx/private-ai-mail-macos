@@ -13,6 +13,10 @@
 - `TrustActionUIStore` owns approval and recent outbox UI state. Draft reply and
   trash require explicit confirmation; archive, star, and mark-read use the fast
   action path. AI output must not auto-run actions.
+- `ActionSheetView` executable items must stay gated by the selected account's
+  action-outbox support. Future actions remain in the roadmap section only; they
+  must not be selectable executable actions, show operational preview copy, or
+  enable the primary CTA.
 - Privacy-safe logs go through `PrivacyObservability`; raw message bodies,
   attachment bytes, prompts, model outputs, provider payloads, bearer tokens,
   refresh tokens, and connector secrets must not be logged.

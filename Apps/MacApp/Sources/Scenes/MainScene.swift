@@ -187,6 +187,7 @@ struct MainScene: View {
             if composition.showActionSheet {
                 ActionSheetView(
                     threadSubject: threadStore.subject.isEmpty ? String(localized: "action.fallbackSubject", defaultValue: "Selected thread") : threadStore.subject,
+                    executionAvailability: actionSheetExecutionAvailability,
                     onAction: { action in
                         composition.showActionSheet = false
                         handleActionSheet(action)
@@ -285,22 +286,31 @@ struct MainScene: View {
 // MARK: - Action Sheet
 
 extension MainScene {
-    func handleActionSheet(_ action: ActionID?) {
-        guard let action else { return }
-        switch action {
-        case .reply:
-            requestTrustActionForSelectedThread(.draftReply)
-        case .archive:
-            requestTrustActionForSelectedThread(.archiveThread)
-        case .star:
-            requestTrustActionForSelectedThread(.starThread)
-        case .markRead:
-            requestTrustActionForSelectedThread(.markRead)
-        case .trash:
-            requestTrustActionForSelectedThread(.trashThread)
-        case .snooze, .log, .task, .unsub, .rule, .share:
-            break
+    var actionSheetExecutionAvailability: ActionExecutionAvailability {
+        Self.actionSheetExecutionAvailability(
+            selectedThreadID: inboxStore.selectedThreadID,
+            threads: inboxStore.threads,
+            accounts: accounts
+        )
+    }
+
+    static func actionSheetExecutionAvailability(
+        selectedThreadID: String?,
+        threads: [ThreadRow],
+        accounts: [AccountRecord]
+    ) -> ActionExecutionAvailability {
+        guard let threadId = selectedThreadID,
+              let thread = threads.first(where: { $0.id == threadId }),
+              let account = accounts.first(where: { $0.id == thread.accountId }),
+              account.provider == MailProviderIdentifier.gmail.rawValue else {
+            return .unsupportedProvider
         }
+        return .supported
+    }
+
+    func handleActionSheet(_ action: TrustMVPAction?) {
+        guard let action else { return }
+        requestTrustActionForSelectedThread(action)
     }
 
     private var toolbarSearchText: Binding<String> {
