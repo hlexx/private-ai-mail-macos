@@ -37,7 +37,6 @@ extension MainScene {
 
     func moveBriefToBottom() {
         briefPlacementRaw = BriefPanelPlacement.bottom.rawValue
-        briefCollapsed = true
         bottomPanelCollapsed = false
         bottomPanelTabRaw = "brief"
     }

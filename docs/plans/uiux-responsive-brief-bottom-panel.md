@@ -35,9 +35,9 @@ Make the side/bottom brief and bottom work panel adapt to window size so reading
 - [x] Preserve animations without animating expensive or layout-jarring properties beyond SwiftUI/AppKit norms.
 
 ### Task 3: Improve side brief collapse behavior
-- [ ] Adjust `MainSplitController` constraints or MainScene policy so side brief can auto-collapse or prefer bottom layout when total width is too small.
-- [ ] Preserve stored side width and restore it when returning to a wide window.
-- [ ] Ensure `briefCollapsed` and `briefPlacementRaw` do not fight each other when switching between bottom and side placement.
+- [x] Adjust `MainSplitController` constraints or MainScene policy so side brief can auto-collapse or prefer bottom layout when total width is too small.
+- [x] Preserve stored side width and restore it when returning to a wide window.
+- [x] Ensure `briefCollapsed` and `briefPlacementRaw` do not fight each other when switching between bottom and side placement.
 
 ### Task 4: Add tests and validate
 - [ ] Add tests for layout policy helpers if extracted.

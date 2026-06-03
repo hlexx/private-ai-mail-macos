@@ -306,7 +306,9 @@ extension MainScene {
     }
 
     private func toolbar(briefPanelIsBottom: Bool) -> some View {
-        RBToolbar(
+        let preferredBriefPanelIsBottom = preferredBriefPlacement == .bottom
+
+        return RBToolbar(
             accounts: accounts,
             activeAccountID: composition.activeAccountID,
             onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
@@ -318,10 +320,10 @@ extension MainScene {
             },
             onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
             onToggleBrief: briefPanelIsBottom ? nil : { withAnimation { briefCollapsed.toggle() } },
-            briefPlacementIsBottom: briefPanelIsBottom,
+            briefPlacementIsBottom: preferredBriefPanelIsBottom,
             onToggleBriefPlacement: {
                 withAnimation {
-                    if briefPanelIsBottom {
+                    if preferredBriefPanelIsBottom {
                         moveBriefToSide()
                     } else {
                         moveBriefToBottom()

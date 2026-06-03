@@ -63,6 +63,35 @@ struct ResponsiveLayoutPolicyTests {
         #expect(placement == .bottom)
     }
 
+    @Test("Side brief width constraint uses the same threshold as effective placement")
+    func sideBriefWidthConstraintMatchesEffectivePlacementThreshold() {
+        #expect(
+            RBResponsiveLayoutPolicy.sideBriefRequiresBottomPlacement(
+                availableWidth: 1_419,
+                sidebarCollapsed: false
+            )
+        )
+        #expect(
+            !RBResponsiveLayoutPolicy.sideBriefRequiresBottomPlacement(
+                availableWidth: 1_420,
+                sidebarCollapsed: false
+            )
+        )
+    }
+
+    @Test("Side brief width constraint preserves stored width by clamping for fit only")
+    func sideBriefWidthConstraintClampsForFitOnly() {
+        let requiresBottom = RBResponsiveLayoutPolicy.sideBriefRequiresBottomPlacement(
+            availableWidth: 1_499,
+            sidebarCollapsed: false,
+            sidebarWidth: 10_000,
+            threadListWidth: 1,
+            briefWidth: 10_000
+        )
+
+        #expect(requiresBottom)
+    }
+
     @Test("Effective placement does not rewrite explicit bottom or collapsed side states")
     func effectivePlacementPreservesExplicitStates() {
         let explicitBottom = RBResponsiveLayoutPolicy.effectiveBriefPlacement(

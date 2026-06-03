@@ -105,13 +105,29 @@ public enum RBResponsiveLayoutPolicy {
             return preferredPlacement
         }
 
+        return sideBriefRequiresBottomPlacement(
+            availableWidth: availableWidth,
+            sidebarCollapsed: sidebarCollapsed,
+            sidebarWidth: sidebarWidth,
+            threadListWidth: threadListWidth,
+            briefWidth: briefWidth
+        ) ? .bottom : .side
+    }
+
+    public static func sideBriefRequiresBottomPlacement(
+        availableWidth: CGFloat,
+        sidebarCollapsed: Bool,
+        sidebarWidth: CGFloat = RBLayout.sidebarWidth,
+        threadListWidth: CGFloat = RBLayout.threadListWidth,
+        briefWidth: CGFloat = RBLayout.briefRailWidth
+    ) -> Bool {
         let requiredWidth = minimumWidthForSideBrief(
             sidebarCollapsed: sidebarCollapsed,
             sidebarWidth: sidebarWidth,
             threadListWidth: threadListWidth,
             briefWidth: briefWidth
         )
-        return availableWidth >= requiredWidth ? .side : .bottom
+        return availableWidth < requiredWidth
     }
 
     public static func expandedBottomPanelHeight(

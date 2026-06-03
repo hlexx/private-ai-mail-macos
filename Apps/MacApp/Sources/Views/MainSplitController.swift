@@ -146,7 +146,14 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             items[0].animator().isCollapsed = sidebarCollapsed
         }
         if items[3].isCollapsed != briefCollapsed {
+            let wasCollapsed = items[3].isCollapsed
             items[3].animator().isCollapsed = briefCollapsed
+            if wasCollapsed, !briefCollapsed {
+                context.coordinator.restoreBriefWidth(
+                    in: controller.splitView,
+                    storedBriefWidth: briefWidth.wrappedValue
+                )
+            }
         }
     }
 
@@ -224,5 +231,22 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             debounceWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
         }
+
+        func restoreBriefWidth(in splitView: NSSplitView, storedBriefWidth: Double) {
+            let clampedBriefWidth = CGFloat(storedBriefWidth).clamped(
+                to: RBLayout.briefRailMinWidth...RBLayout.briefRailMaxWidth
+            )
+            DispatchQueue.main.async {
+                let totalWidth = splitView.frame.width
+                guard totalWidth > 0, splitView.subviews.count == 4 else { return }
+                splitView.setPosition(totalWidth - clampedBriefWidth, ofDividerAt: 2)
+            }
+        }
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }
