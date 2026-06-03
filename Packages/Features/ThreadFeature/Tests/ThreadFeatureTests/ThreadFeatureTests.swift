@@ -25,6 +25,7 @@ struct ThreadFeatureTests {
 
         #expect(presentation.height == RBLayout.bottomPanelExpandedHeight)
         #expect(presentation.showsContent)
+        #expect(presentation.canShowContent)
     }
 
     @Test func bottomPanelHeightPreservesMinimumReadingArea() {
@@ -36,6 +37,7 @@ struct ThreadFeatureTests {
 
         #expect(presentation.height == 240)
         #expect(presentation.showsContent)
+        #expect(presentation.canShowContent)
     }
 
     @Test func bottomPanelHeightKeepsCollapsedChromeStable() {
@@ -55,6 +57,7 @@ struct ThreadFeatureTests {
 
         #expect(presentation.height == RBLayout.bottomPanelCollapsedHeight)
         #expect(!presentation.showsContent)
+        #expect(!presentation.canShowContent)
     }
 
     @Test func bottomPanelInvalidHeightsRenderChromeOnly() {
@@ -63,8 +66,10 @@ struct ThreadFeatureTests {
 
         #expect(zeroHeight.height == RBLayout.bottomPanelCollapsedHeight)
         #expect(!zeroHeight.showsContent)
+        #expect(!zeroHeight.canShowContent)
         #expect(negativeHeight.height == RBLayout.bottomPanelCollapsedHeight)
         #expect(!negativeHeight.showsContent)
+        #expect(!negativeHeight.canShowContent)
     }
 
     // MARK: - MessageRow
@@ -538,7 +543,8 @@ struct ThreadViewSnapshotTests {
 
     @MainActor
     @Test func threadViewRendersComposerWithLongMessage() async throws {
-        let store = try await makeObservedThreadStore()
+        let store = try makeSnapshotThreadStore()
+        let defaults = makeBottomPanelDefaults(collapsed: false, selectedTab: .draft)
 
         let view = ThreadView(
             store: store,
@@ -553,6 +559,7 @@ struct ThreadViewSnapshotTests {
             }
         )
         .preferredColorScheme(.light)
+        .defaultAppStorage(defaults)
         .frame(width: 900, height: 700)
 
         let host = NSHostingView(rootView: view)
@@ -562,7 +569,7 @@ struct ThreadViewSnapshotTests {
 
     @MainActor
     @Test func threadViewRendersCollapsedBottomPanelChrome() async throws {
-        let view = try await threadViewBottomPanelFixture(
+        let view = try threadViewBottomPanelFixture(
             collapsed: true,
             selectedTab: .draft,
             showsComposerPanel: true,
@@ -575,7 +582,7 @@ struct ThreadViewSnapshotTests {
 
     @MainActor
     @Test func threadViewRendersExpandedDraftBottomPanel() async throws {
-        let view = try await threadViewBottomPanelFixture(
+        let view = try threadViewBottomPanelFixture(
             collapsed: false,
             selectedTab: .draft,
             showsComposerPanel: true,
@@ -588,7 +595,7 @@ struct ThreadViewSnapshotTests {
 
     @MainActor
     @Test func threadViewRendersExpandedBriefBottomPanel() async throws {
-        let view = try await threadViewBottomPanelFixture(
+        let view = try threadViewBottomPanelFixture(
             collapsed: false,
             selectedTab: .brief,
             showsComposerPanel: true,
@@ -797,33 +804,23 @@ struct ThreadViewSnapshotTests {
         .background(Color.rbBgCanvas)
     }
 
-    private func makeThreadViewDatabase() throws -> AppDatabase {
-        let db = try AppDatabase.openInMemorySync()
-        try db.dbQueue.write { dbConn in
-            try dbConn.execute(sql: """
-                INSERT INTO account (id, email, display_name, provider, created_at) VALUES
-                ('acc1', 'alex@example.com', 'Alex', 'gmail', 1000)
-                """)
-            try dbConn.execute(sql: """
-                INSERT INTO thread (id, account_id, subject, snippet, last_message_at, message_count, has_unread) VALUES
-                ('t1', 'acc1', 'Long email', 'snippet', 1000, 1, 0)
-                """)
-            try dbConn.execute(sql: """
-                INSERT INTO message (id, thread_id, account_id, from_addr, to_addr, sent_at, body_text, flags) VALUES
-                ('m1', 't1', 'acc1', 'OpenAI <billing@example.com>', 'alex@example.com', 1000, :body, 0)
-                """, arguments: ["body": String(repeating: "Long billing update paragraph. ", count: 120)])
-        }
-        return db
-    }
-
     @MainActor
-    private func makeObservedThreadStore() async throws -> ThreadStore {
-        let db = try makeThreadViewDatabase()
-        let store = ThreadStore(db: db)
-        store.accountEmail = "alex@example.com"
-        store.observe(threadId: "t1", accountId: "acc1")
-        try await waitUntil { !store.messages.isEmpty }
-        try #require(!store.messages.isEmpty, "Expected observed thread messages")
+    private func makeSnapshotThreadStore() throws -> ThreadStore {
+        let store = ThreadStore(db: try AppDatabase.openInMemorySync())
+        let message = MessageRow(record: MessageRecord(
+            id: "m1",
+            threadId: "t1",
+            accountId: "acc1",
+            fromAddr: "OpenAI <billing@example.com>",
+            toAddr: "alex@example.com",
+            sentAt: 1_000,
+            bodyText: String(repeating: "Long billing update paragraph. ", count: 120)
+        ))
+        store.seedSnapshotForTesting(
+            messages: [message],
+            subject: "Long email",
+            accountEmail: "alex@example.com"
+        )
         return store
     }
 
@@ -833,9 +830,13 @@ struct ThreadViewSnapshotTests {
         selectedTab: ThreadBottomPanelTab,
         showsComposerPanel: Bool,
         showsBriefInBottomPanel: Bool
-    ) async throws -> ThreadView<AnyView, AnyView, EmptyView> {
+    ) throws -> AnyView {
+        let defaults = makeBottomPanelDefaults(
+            collapsed: collapsed,
+            selectedTab: selectedTab
+        )
         let view = ThreadView(
-            store: try await makeObservedThreadStore(),
+            store: try makeSnapshotThreadStore(),
             showsComposerPanel: showsComposerPanel,
             showsBriefInBottomPanel: showsBriefInBottomPanel,
             composer: {
@@ -854,9 +855,7 @@ struct ThreadViewSnapshotTests {
                 )
             }
         )
-        view.bottomPanelCollapsed = collapsed
-        view.bottomPanelTabRaw = selectedTab.rawValue
-        return view
+        return AnyView(view.defaultAppStorage(defaults))
     }
 
     @MainActor
@@ -866,15 +865,15 @@ struct ThreadViewSnapshotTests {
         host.layout()
     }
 
-    private func waitUntil(timeout: Duration = .seconds(3), _ condition: @MainActor () -> Bool) async throws {
-        let deadline = ContinuousClock.now + timeout
-        while !condition() {
-            if ContinuousClock.now >= deadline {
-                Issue.record("Timed out waiting for condition")
-                return
-            }
-            try await Task.sleep(for: .milliseconds(50))
-        }
+    private func makeBottomPanelDefaults(
+        collapsed: Bool,
+        selectedTab: ThreadBottomPanelTab
+    ) -> UserDefaults {
+        let suiteName = "ThreadViewSnapshotTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(collapsed, forKey: "pam.layout.threadBottomPanelCollapsed")
+        defaults.set(selectedTab.rawValue, forKey: "pam.layout.threadBottomPanelTab")
+        return defaults
     }
 
     private func starButtonView(isStarred: Bool) -> some View {

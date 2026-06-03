@@ -250,6 +250,28 @@ public final class ThreadStore {
         observedAccountId = nil
     }
 
+    #if DEBUG
+    func seedSnapshotForTesting(
+        messages: [MessageRow],
+        subject: String,
+        accountEmail: String,
+        messageCount: Int? = nil,
+        attachments: [AttachmentInfo] = [],
+        isStarred: Bool = false
+    ) {
+        observationTask?.cancel()
+        observationTask = nil
+        observedThreadId = nil
+        observedAccountId = nil
+        self.messages = messages
+        self.subject = subject
+        self.accountEmail = accountEmail
+        self.messageCount = messageCount ?? messages.count
+        self.attachments = attachments
+        self.isStarred = isStarred
+    }
+    #endif
+
     private static func blobKey(messageId: String, attachmentId: String) -> String {
         "\(messageId)\u{1F}\(attachmentId)"
     }

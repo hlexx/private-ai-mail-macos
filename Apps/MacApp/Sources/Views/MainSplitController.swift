@@ -213,13 +213,16 @@ struct MainSplitController<Sidebar: View, Threadlist: View, Reading: View, Brief
             let sWidth = sidebarIsCollapsed ? 0.0 : Double(splitView.subviews[0].frame.width)
             let tWidth = Double(splitView.subviews[1].frame.width)
             let bWidth = briefIsCollapsed ? 0.0 : Double(splitView.subviews[3].frame.width)
+            let shouldPersistWidths = !forceBriefCollapsed
             let shouldPersistBriefCollapse = !forceBriefCollapsed
 
             // Debounce writes to UserDefaults — splitViewDidResizeSubviews
             // fires on every frame during drag.
             debounceWorkItem?.cancel()
             let work = DispatchWorkItem { [weak self] in
-                self?.onWidthsChanged?(sWidth, tWidth, bWidth)
+                if shouldPersistWidths {
+                    self?.onWidthsChanged?(sWidth, tWidth, bWidth)
+                }
                 self?.onCollapseChanged?(
                     sidebarIsCollapsed,
                     briefIsCollapsed,
