@@ -69,6 +69,14 @@ Code review follow-up:
 - Increased the collapsed bottom panel height to contain the 32 pt chrome plus
   vertical padding.
 
+Second review follow-up:
+- Added explicit disabled visual states for shared text buttons and the
+  compact chip, segment, and account-switcher atoms.
+- Kept `RBIconButton` internals on the stable path after verifying that
+  SwiftUI disabled/focus modifiers inside the atom crashed feature
+  `NSHostingView` snapshot tests with signal 11; disabled compact thread
+  actions now render a noninteractive 32 pt disabled icon instead.
+
 ## Rollback / Recovery
 - Revert DesignSystem atom sizing and local row/control adjustments. No migration is involved.
 

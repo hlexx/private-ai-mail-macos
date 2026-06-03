@@ -159,6 +159,38 @@ struct AtomsTests {
     }
 
     @MainActor
+    @Test func disabledCompactInteractiveControlsKeepMinimumTargets() {
+        assertFittingSize(
+            of: RBIconButton(systemName: "gearshape", accessibilityLabel: "Settings") {}
+                .disabled(true),
+            minWidth: RBControlMetrics.compactHitTarget,
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: Button("Primary") {}
+                .buttonStyle(.rbPrimary)
+                .disabled(true),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: RBFilterChip(label: "All", isOn: true, isEnabled: false) {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: bareToneSegmentView(isEnabled: false),
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+
+        assertFittingSize(
+            of: AccountSwitcher(dotColor: .rbCobalt500, label: "alex@studio.eu", isEnabled: false) {},
+            minHeight: RBControlMetrics.compactHitTarget
+        )
+    }
+
+    @MainActor
     private func iconOnlyButton(style: some ButtonStyle) -> some View {
         Button {} label: {
             Image(systemName: "pencil")
@@ -410,8 +442,9 @@ struct AtomsTests {
         return Wrapper()
     }
 
-    private func bareToneSegmentView() -> some View {
+    private func bareToneSegmentView(isEnabled: Bool = true) -> some View {
         struct Wrapper: View {
+            let isEnabled: Bool
             @State var selection = "warm"
             var body: some View {
                 RBToneSegment(
@@ -420,11 +453,12 @@ struct AtomsTests {
                         .init(id: "warm", label: "Warm", detail: "61w"),
                         .init(id: "direct", label: "Direct", detail: "28w"),
                     ],
-                    selection: $selection
+                    selection: $selection,
+                    isEnabled: isEnabled
                 )
             }
         }
-        return Wrapper()
+        return Wrapper(isEnabled: isEnabled)
     }
 
     // MARK: - RBFilterChip
