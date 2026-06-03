@@ -1,5 +1,6 @@
 // swiftlint:disable file_length
 import ActionsFeature
+import AppFoundation
 import BriefFeature
 import ComposeFeature
 import DesignSystem
@@ -10,6 +11,11 @@ import Persistence
 import SwiftUI
 import ThreadFeature
 import TranslationFeature
+
+enum BriefPanelPlacement: String {
+    case side
+    case bottom
+}
 
 struct MainScene: View {
 
@@ -30,19 +36,17 @@ struct MainScene: View {
     @State var lastScrolledMessageIndex: Int = 0
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
+    @AppStorage(TranslationLanguagePreferences.storageKey) var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
     @AppStorage("pam.defaultTone") var defaultToneRaw: String = "warm"
     @AppStorage("pam.layout.sidebar") private var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
     @AppStorage("pam.layout.threadlist") private var threadlistWidth: Double = Double(RBLayout.threadListWidth)
     @AppStorage("pam.layout.brief") private var briefWidth: Double = Double(RBLayout.briefRailWidth)
     @AppStorage("pam.layout.sidebarCollapsed") private var sidebarCollapsed: Bool = false
-    @AppStorage("pam.layout.briefCollapsed") private var briefCollapsed: Bool = false
+    @AppStorage("pam.layout.briefCollapsed") var briefCollapsed: Bool = false
+    @AppStorage("pam.layout.briefPlacement") var briefPlacementRaw: String = BriefPanelPlacement.side.rawValue
+    @AppStorage("pam.layout.threadBottomPanelCollapsed") var bottomPanelCollapsed: Bool = false
+    @AppStorage("pam.layout.threadBottomPanelTab") var bottomPanelTabRaw: String = "draft"
     @Environment(\.openSettings) var openSettings
-
-    var inboxStore: InboxStore { composition.inboxStore }
-    var threadStore: ThreadStore { composition.threadStore }
-    var briefStore: BriefStore { composition.briefStore }
-    var translationStore: TranslationStore { composition.translationStore }
-    var aiReady: Bool { composition.aiModelController.isAIReady }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,7 +54,7 @@ struct MainScene: View {
 
             MainSplitController(
                 sidebarCollapsed: $sidebarCollapsed,
-                briefCollapsed: $briefCollapsed,
+                briefCollapsed: effectiveBriefCollapsed,
                 sidebarWidth: $sidebarWidth,
                 threadlistWidth: $threadlistWidth,
                 briefWidth: $briefWidth,
@@ -97,9 +101,7 @@ struct MainScene: View {
                         showTranslated: translationStore.showTranslated,
                         translatedTexts: translationStore.translatedTexts,
                         translatedNodes: translationStore.allTranslatedNodes(
-                            target: preferredLanguage.isEmpty
-                                ? (Locale.current.language.languageCode?.identifier ?? "en")
-                                : preferredLanguage
+                            target: translationTargetLanguage
                         ),
                         onTextNodesExtracted: { messageId, nodes in
                             let incoming = nodes.map { ($0.id, $0.text) }
@@ -121,6 +123,8 @@ struct MainScene: View {
                             threadScrollProxy = proxy
                         },
                         attachmentSummaryStore: aiReady ? composition.attachmentSummaryStore : nil,
+                        showsComposerPanel: aiReady,
+                        showsBriefInBottomPanel: briefPanelIsBottom,
                         composer: {
                             if aiReady, let threadID = inboxStore.selectedThreadID {
                                 InlineComposer(
@@ -146,11 +150,17 @@ struct MainScene: View {
                                 )
                             }
                         },
+                        briefRail: {
+                            if briefPanelIsBottom {
+                                briefPanelContent
+                            }
+                        },
                         translationHeader: {
                             TranslationToggleView(
                                 store: translationStore,
                                 detectedLanguage: detectThreadLanguage(),
                                 preferredLanguage: preferredLanguage,
+                                translationLanguages: translationLanguageCodes,
                                 autoTranslate: autoTranslate,
                                 messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
                                 htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
@@ -159,14 +169,10 @@ struct MainScene: View {
                     )
                 },
                 brief: {
-                    if aiReady {
-                        BriefRail(store: briefStore, onDraftReply: { draftReply() })
-                            .frame(maxHeight: .infinity, alignment: .top)
+                    if !briefPanelIsBottom {
+                        briefPanelContent
                     } else {
-                        AIUnavailableRail(
-                            modelController: composition.aiModelController,
-                            openSettings: { openSettings() }
-                        )
+                        Color.rbBgCanvas
                     }
                 }
             )
@@ -203,6 +209,9 @@ struct MainScene: View {
             }
         }
         .onChange(of: preferredLanguage) { _, _ in
+            translationStore.clearCache()
+        }
+        .onChange(of: translationLanguagesRaw) { _, _ in
             translationStore.clearCache()
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
@@ -307,7 +316,17 @@ extension MainScene {
                 composition.showCompose = true
             },
             onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
-            onToggleBrief: { withAnimation { briefCollapsed.toggle() } },
+            onToggleBrief: briefPanelIsBottom ? nil : { withAnimation { briefCollapsed.toggle() } },
+            briefPlacementIsBottom: briefPanelIsBottom,
+            onToggleBriefPlacement: {
+                withAnimation {
+                    if briefPanelIsBottom {
+                        moveBriefToSide()
+                    } else {
+                        moveBriefToBottom()
+                    }
+                }
+            },
             sidebarWidth: CGFloat(sidebarWidth),
             sidebarCollapsed: sidebarCollapsed,
             searchFocused: $searchFocused,
@@ -377,6 +396,7 @@ extension MainScene {
             vm.selectedAccountEmail = replyAccountEmail
         }
     }
+
 }
 
 // MARK: - Helpers

@@ -104,10 +104,10 @@ struct MultiBatchTests {
     @Test("Lazada shape: Thai nodes grouped, English nodes skipped")
     func lazadaGrouping() {
         let thaiNodes: [(id: String, text: String)] = [
-            ("n0", "เติมเงิน & ดีลออนไลน์"),
-            ("n1", "คูปองลดจัดเต็ม"),
-            ("n2", "สินค้าชั้นนำจากต่างประเทศ"),
-            ("n3", "โปรดแจ้งให้เราทราบ"),
+            ("n0", "เติมเงินและดีลออนไลน์สำหรับลูกค้าทุกคน"),
+            ("n1", "คูปองลดจัดเต็มสำหรับคุณวันนี้เท่านั้น"),
+            ("n2", "สินค้าชั้นนำจากต่างประเทศพร้อมส่งถึงบ้าน"),
+            ("n3", "โปรดแจ้งให้เราทราบหากต้องการความช่วยเหลือ"),
         ]
         let englishNodes: [(id: String, text: String)] = [
             ("n4", "Your order has been delivered successfully"),
@@ -137,9 +137,9 @@ struct MultiBatchTests {
 
         let nodes: [(id: String, text: String)] = [
             ("n0", "Your order has been delivered"),
-            ("n1", "เติมเงิน & ดีลออนไลน์"),
+            ("n1", "เติมเงินและดีลออนไลน์สำหรับลูกค้าทุกคน"),
             ("n2", "Thank you for shopping"),
-            ("n3", "คูปองลดจัดเต็ม"),
+            ("n3", "คูปองลดจัดเต็มสำหรับคุณวันนี้เท่านั้น"),
         ]
         store.setExtractedNodes(for: "msg1", nodes: nodes)
 
@@ -210,6 +210,24 @@ struct MultiBatchTests {
         let languages = Set(batches.map(\.sourceLanguage))
         #expect(languages.contains("ru"))
         #expect(languages.contains("de"))
+    }
+
+    @Test("Allowed source languages suppress unsupported language batches")
+    func allowedSourceLanguagesSkipUnsupportedLanguage() {
+        let nodes: [(id: String, text: String)] = [
+            ("n0", "Dziękujemy za zakupy w naszym sklepie internetowym"),
+            ("n1", "Здравствуйте, ваш заказ доставлен успешно"),
+        ]
+
+        let (batches, skipped) = TranslationGroupingService.group(
+            nodes: nodes,
+            preferredLanguage: "en",
+            allowedSourceLanguages: ["en", "ru", "th"]
+        )
+
+        #expect(batches.count == 1)
+        #expect(batches.first?.sourceLanguage == "ru")
+        #expect(skipped.contains("n0"))
     }
 
     // MARK: - Per-target cache filtering
