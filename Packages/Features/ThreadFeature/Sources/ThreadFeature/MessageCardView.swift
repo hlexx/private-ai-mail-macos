@@ -35,8 +35,8 @@ struct MessageCardView: View {
             header
             bodyContent
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(Color.rbBgElev1)
         .clipShape(RoundedRectangle(cornerRadius: RBRadius.md))
         .overlay(
@@ -47,7 +47,7 @@ struct MessageCardView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            AvatarView(name: message.senderName, size: 28)
+            AvatarView(name: message.senderName, size: 24)
             Text(message.senderName)
                 .font(.rbGeist(13, weight: .semibold))
                 .foregroundStyle(Color.rbFg1)

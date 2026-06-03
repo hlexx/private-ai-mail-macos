@@ -17,7 +17,8 @@ let package = Package(
             dependencies: [
                 "DesignSystem",
                 "Persistence",
-            ]
+            ],
+            resources: [.process("Resources")]
         ),
         .testTarget(name: "TranslationFeatureTests", dependencies: ["TranslationFeature"]),
     ]
