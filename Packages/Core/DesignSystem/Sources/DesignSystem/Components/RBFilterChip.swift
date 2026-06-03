@@ -21,12 +21,14 @@ public struct RBFilterChip: View {
                 .foregroundStyle(isOn ? Color.rbCitron600 : Color.rbFg2)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
+                .frame(minHeight: RBControlMetrics.filterChipMinHeight)
                 .background(isOn ? Color.rbCitron500.opacity(0.18) : Color.rbBgElev1)
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()
                         .strokeBorder(isOn ? Color.rbCitron500 : Color.rbStroke1, lineWidth: 1)
                 )
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }

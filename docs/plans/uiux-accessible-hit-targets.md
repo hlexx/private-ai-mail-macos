@@ -40,10 +40,10 @@ Task 1 audit findings:
 - `InlineComposer` has a language chevron as a plain icon-only button without an explicit target size, language-picker rows with 6px vertical padding, status-strip buttons forced to `.controlSize(.small)`, and a narrow icon-only edit button that relies on shared secondary button sizing.
 
 ### Task 2: Update shared atom sizing
-- [ ] Increase `RBIconButton` to a stable target size, preferably 32x32 or 36x36, while preserving visual density.
-- [ ] Add minimum height to `RBFilterChip` and shared button styles if needed.
-- [ ] Ensure hover, disabled, and focus/keyboard states remain visible after resizing.
-- [ ] Update DesignSystem previews/tests as needed.
+- [x] Increase `RBIconButton` to a stable target size, preferably 32x32 or 36x36, while preserving visual density.
+- [x] Add minimum height to `RBFilterChip` and shared button styles if needed.
+- [x] Ensure hover, disabled, and focus/keyboard states remain visible after resizing.
+- [x] Update DesignSystem previews/tests as needed.
 
 ### Task 3: Update feature-level rows and compact controls
 - [ ] Add stable min heights or content shapes for sidebar section headers and rows.

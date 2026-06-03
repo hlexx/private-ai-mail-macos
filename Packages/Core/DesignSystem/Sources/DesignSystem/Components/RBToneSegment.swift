@@ -41,6 +41,7 @@ public struct RBToneSegment<ID: Hashable>: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
+                    .frame(minHeight: RBControlMetrics.toneSegmentMinHeight)
                     .background(
                         isSelected
                             ? AnyShapeStyle(Color.rbAccentSoft)
@@ -48,6 +49,7 @@ public struct RBToneSegment<ID: Hashable>: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: RBRadius.xs))
                     .shadow(color: isSelected ? .black.opacity(0.12) : .clear, radius: 2, y: 1)
+                    .contentShape(RoundedRectangle(cornerRadius: RBRadius.xs))
                 }
                 .buttonStyle(.plain)
             }

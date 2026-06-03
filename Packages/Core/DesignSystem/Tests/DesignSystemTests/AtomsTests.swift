@@ -93,6 +93,66 @@ struct AtomsTests {
         .background(Color.rbBgCanvas)
     }
 
+    @MainActor
+    @Test func compactInteractiveMetricsUseStableDesktopTargets() {
+        #expect(RBControlMetrics.compactHitTarget == 32)
+        #expect(RBControlMetrics.iconButtonTargetSize == 32)
+        #expect(RBControlMetrics.filterChipMinHeight == 32)
+        #expect(RBControlMetrics.buttonMinHeight == 32)
+        #expect(RBControlMetrics.toneSegmentMinHeight == 32)
+    }
+
+    @MainActor
+    @Test func compactInteractiveControlsMeetMinimumTargets() {
+        assertFittingSize(
+            of: RBIconButton(systemName: "gearshape", accessibilityLabel: "Settings") {},
+            minWidth: RBControlMetrics.iconButtonTargetSize,
+            minHeight: RBControlMetrics.iconButtonTargetSize
+        )
+
+        assertFittingSize(
+            of: RBFilterChip(label: "All", isOn: true) {},
+            minHeight: RBControlMetrics.filterChipMinHeight
+        )
+
+        assertFittingSize(
+            of: Button("Primary") {}
+                .buttonStyle(.rbPrimary),
+            minHeight: RBControlMetrics.buttonMinHeight
+        )
+
+        assertFittingSize(
+            of: Button("Secondary") {}
+                .buttonStyle(.rbSecondary),
+            minHeight: RBControlMetrics.buttonMinHeight
+        )
+
+        assertFittingSize(
+            of: Button("Ghost") {}
+                .buttonStyle(.rbGhost),
+            minHeight: RBControlMetrics.buttonMinHeight
+        )
+
+        assertFittingSize(
+            of: toneSegmentView(),
+            minHeight: RBControlMetrics.toneSegmentMinHeight
+        )
+    }
+
+    @MainActor
+    private func assertFittingSize(
+        of view: some View,
+        minWidth: CGFloat = 0,
+        minHeight: CGFloat
+    ) {
+        let host = NSHostingView(rootView: view)
+        host.layout()
+        let size = host.fittingSize
+
+        #expect(size.width >= minWidth)
+        #expect(size.height >= minHeight)
+    }
+
     // MARK: - RBIconButton
 
     @MainActor
