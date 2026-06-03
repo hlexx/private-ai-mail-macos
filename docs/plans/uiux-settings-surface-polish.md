@@ -52,6 +52,13 @@ Inventory findings:
 - [x] Run `swift test --package-path Packages/Core/DesignSystem` if shared components changed.
 - [x] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and the MacApp Debug build; fix failures.
 
+Validation results:
+- `git diff --check`: passed.
+- `swiftlint --strict --reporter xcode`: passed with 0 violations across 267 Swift files.
+- `swift test --package-path Packages/Features/SettingsFeature`: passed with 32 Swift Testing tests.
+- `swift test --package-path Packages/Core/DesignSystem`: passed with 46 Swift Testing tests.
+- `xcodebuild build -project PrivateAIMail.xcodeproj -scheme MacApp -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO`: passed under Xcode 26.2.
+
 ## Rollback / Recovery
 - Revert SettingsScene, SettingsFeature, and DesignSystem changes. Existing settings values remain compatible.
 

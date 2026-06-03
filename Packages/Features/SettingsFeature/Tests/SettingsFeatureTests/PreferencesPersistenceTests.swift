@@ -59,11 +59,6 @@ struct PreferencesPersistenceTests {
         #expect(readBack == "en,th")
     }
 
-    @Test func translationLanguageGroupCanRenderAvailableOptionsInline() {
-        #expect(TranslationLanguagePreferences.availableLanguages.count <= GeneralTab.translationLanguageInlineLimit)
-        #expect(TranslationLanguagesLayout.optionMinWidth >= 100)
-    }
-
     @Test func supportedLanguagesListIsNotEmpty() {
         #expect(!GeneralTab.supportedLanguages.isEmpty)
         #expect(GeneralTab.supportedLanguages.count == 16)

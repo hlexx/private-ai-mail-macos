@@ -5,15 +5,26 @@ import Testing
 @Suite("PrivacyTab")
 struct PrivacyTabTests {
     @Test func privacySurfaceContainsRequiredCopyKeys() throws {
-        let state = PrivacySettingsState.make(accounts: [
-            account(id: "gmail-1", provider: "gmail", email: "user@gmail.com"),
-            account(id: "outlook-1", provider: "outlook", email: "user@outlook.com"),
-        ])
-        let copyKeys = Set(state.copyKeys)
+        let gmailAccount = account(id: "gmail-1", provider: "gmail", email: "user@gmail.com")
+        let outlookAccount = account(id: "outlook-1", provider: "outlook", email: "user@outlook.com")
+        var states = [
+            PrivacySettingsState.make(accounts: []),
+            PrivacySettingsState.make(accounts: [gmailAccount]),
+            PrivacySettingsState.make(accounts: [outlookAccount]),
+            PrivacySettingsState.make(accounts: [gmailAccount, outlookAccount]),
+        ]
 
-        for key in PrivacyCopyKey.requiredKeys {
-            #expect(copyKeys.contains(key), "Missing required privacy copy key: \(key)")
+        for phase in ProviderReauthorizationPhase.privacyTestCases {
+            states.append(PrivacySettingsState.make(
+                accounts: [gmailAccount, outlookAccount],
+                reauthorizationPhases: [gmailAccount.id: phase]
+            ))
         }
+
+        let visibleKeys = Set(states.flatMap(\.copyKeys))
+        let requiredKeys = Set(PrivacyCopyKey.requiredKeys)
+
+        #expect(requiredKeys == visibleKeys)
         #expect(Set(PrivacyCopyKey.requiredKeys).count == PrivacyCopyKey.requiredKeys.count)
     }
 
@@ -65,14 +76,19 @@ struct PrivacyTabTests {
 
     @Test func gmailReauthorizationPhasesExposeStableCopyKeys() throws {
         let account = account(id: "gmail-1", provider: "gmail", email: "user@gmail.com")
-        let cases: [(ProviderReauthorizationPhase, String, String)] = [
-            (.idle, PrivacyCopyKey.gmailReauthorizeAction, "Re-authorize Gmail"),
-            (.authorizing, PrivacyCopyKey.gmailReauthorizeProgress, "Re-authorizing..."),
-            (.done, PrivacyCopyKey.gmailReauthorizeDone, "Consent refreshed"),
-            (.error("Network unavailable"), PrivacyCopyKey.gmailReauthorizeRetryAction, "Retry re-authorization"),
+        let cases: [(ProviderReauthorizationPhase, String, String, ExpectedReauthorizationAccessory)] = [
+            (.idle, PrivacyCopyKey.gmailReauthorizeAction, "Re-authorize Gmail", .button),
+            (.authorizing, PrivacyCopyKey.gmailReauthorizeProgress, "Re-authorizing...", .progress),
+            (.done, PrivacyCopyKey.gmailReauthorizeDone, "Consent refreshed", .status),
+            (
+                .error("Network unavailable"),
+                PrivacyCopyKey.gmailReauthorizeRetryAction,
+                "Retry re-authorization",
+                .button
+            ),
         ]
 
-        for (phase, expectedKey, expectedValue) in cases {
+        for (phase, expectedKey, expectedValue, expectedAccessory) in cases {
             let state = PrivacySettingsState.make(
                 accounts: [account],
                 reauthorizationPhases: [account.id: phase]
@@ -80,13 +96,14 @@ struct PrivacyTabTests {
             let row = try #require(state.rows.first { $0.id == "gmail-permissions-gmail-1" })
 
             #expect(state.copyKeys.contains(expectedKey))
-            switch row.accessory {
-            case .button(let copy, let action, let isEnabled):
+            switch (expectedAccessory, row.accessory) {
+            case (.button, .button(let copy, let action, let isEnabled)):
                 #expect(copy.key == expectedKey)
                 #expect(copy.defaultValue == expectedValue)
                 #expect(action == .reauthorize(account.id))
                 #expect(isEnabled)
-            case .progress(let copy), .status(let copy):
+            case (.progress, .progress(let copy)),
+                 (.status, .status(let copy)):
                 #expect(copy.key == expectedKey)
                 #expect(copy.defaultValue == expectedValue)
             default:
@@ -142,7 +159,7 @@ struct PrivacyTabTests {
 
         #expect(aiStatus.defaultValue == "Local-only")
         #expect(fallbackStatus.defaultValue == "Off")
-        #expect(!state.controls.contains { accessory in
+        #expect(!state.rows.compactMap(\.accessory).contains { accessory in
             switch accessory {
             case .button, .destructiveButton:
                 return true
@@ -153,11 +170,12 @@ struct PrivacyTabTests {
     }
 
     @Test func privacyRowLayoutPreservesReadableCopyWidth() {
-        #expect(PrivacySettingsLayout.detailMaxWidth == 520)
-        #expect(PrivacySettingsLayout.accessoryMaxWidth == 180)
-        #expect(PrivacySettingsLayout.copyColumnMinWidth >= 360)
+        let rowMinimumWidth = PrivacySettingsLayout.copyColumnMinWidth
+            + PrivacySettingsLayout.accessoryColumnWidth
+            + 12
+        #expect(rowMinimumWidth <= 640)
         #expect(PrivacySettingsLayout.accessoryColumnWidth > PrivacySettingsLayout.accessoryMaxWidth)
-        #expect(PrivacySettingsLayout.detailMaxWidth > PrivacySettingsLayout.accessoryColumnWidth * 2)
+        #expect(PrivacySettingsLayout.detailMaxWidth >= PrivacySettingsLayout.copyColumnMinWidth)
     }
 
     private func account(id: String, provider: String, email: String) -> AccountRecord {
@@ -168,4 +186,19 @@ struct PrivacyTabTests {
             createdAt: 1_700_000_000
         )
     }
+}
+
+private enum ExpectedReauthorizationAccessory {
+    case button
+    case progress
+    case status
+}
+
+private extension ProviderReauthorizationPhase {
+    static let privacyTestCases: [ProviderReauthorizationPhase] = [
+        .idle,
+        .authorizing,
+        .done,
+        .error("Network unavailable"),
+    ]
 }

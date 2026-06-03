@@ -83,28 +83,10 @@ public struct GeneralTab: View {
 
     @ViewBuilder
     private var translationLanguageOptions: some View {
-        if TranslationLanguagePreferences.availableLanguages.count <= Self.translationLanguageInlineLimit {
-            HStack(alignment: .firstTextBaseline, spacing: RBSpace.s5) {
-                ForEach(TranslationLanguagePreferences.availableLanguages, id: \.code) { language in
-                    Toggle(language.name, isOn: translationLanguageBinding(for: language.code))
-                        .frame(minWidth: TranslationLanguagesLayout.optionMinWidth, alignment: .leading)
-                }
-            }
-        } else {
-            LazyVGrid(
-                columns: [
-                    GridItem(
-                        .adaptive(minimum: TranslationLanguagesLayout.optionMinWidth),
-                        alignment: .leading
-                    ),
-                ],
-                alignment: .leading,
-                spacing: RBSpace.s2
-            ) {
-                ForEach(TranslationLanguagePreferences.availableLanguages, id: \.code) { language in
-                    Toggle(language.name, isOn: translationLanguageBinding(for: language.code))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+        HStack(alignment: .firstTextBaseline, spacing: RBSpace.s5) {
+            ForEach(TranslationLanguagePreferences.availableLanguages, id: \.code) { language in
+                Toggle(language.name, isOn: translationLanguageBinding(for: language.code))
+                    .frame(minWidth: TranslationLanguagesLayout.optionMinWidth, alignment: .leading)
             }
         }
     }
@@ -146,7 +128,6 @@ public struct GeneralTab: View {
         ("nl", "Nederlands"),
     ]
 
-    nonisolated static let translationLanguageInlineLimit = 4
 }
 
 enum TranslationLanguagesLayout {

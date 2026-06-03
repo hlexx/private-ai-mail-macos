@@ -20,10 +20,6 @@ struct PrivacySettingsState: Equatable, Sendable {
         return keys
     }
 
-    var controls: [PrivacySettingsAccessory] {
-        rows.compactMap(\.accessory)
-    }
-
     static func make(
         accounts: [AccountRecord],
         reauthorizationPhases: [String: ProviderReauthorizationPhase] = [:]
@@ -179,9 +175,8 @@ private func makePrivacyProviderUseSection(
                     PrivacyCopyKey.gmailPermissionsDetail,
                     "\(gmailPermissionSummary) Account: \(account.email)."
                 ),
-                accessory: reauthorizationAccessory(
+                accessory: gmailReauthorizationAccessory(
                     accountId: account.id,
-                    provider: .gmail,
                     phase: reauthorizationPhases[account.id] ?? .idle
                 )
             )
@@ -285,9 +280,8 @@ private func makePrivacyCacheControlsSection(accounts: [AccountRecord]) -> Priva
     )
 }
 
-private func reauthorizationAccessory(
+private func gmailReauthorizationAccessory(
     accountId: String,
-    provider: AuthProvider,
     phase: ProviderReauthorizationPhase
 ) -> PrivacySettingsAccessory {
     switch phase {
@@ -295,7 +289,7 @@ private func reauthorizationAccessory(
         return .button(
             PrivacyCopy(PrivacyCopyKey.gmailReauthorizeAction, "Re-authorize Gmail"),
             action: .reauthorize(accountId),
-            isEnabled: provider == .gmail
+            isEnabled: true
         )
     case .authorizing:
         return .progress(PrivacyCopy(PrivacyCopyKey.gmailReauthorizeProgress, "Re-authorizing..."))
@@ -305,7 +299,7 @@ private func reauthorizationAccessory(
         return .button(
             PrivacyCopy(PrivacyCopyKey.gmailReauthorizeRetryAction, "Retry re-authorization"),
             action: .reauthorize(accountId),
-            isEnabled: provider == .gmail
+            isEnabled: true
         )
     }
 }

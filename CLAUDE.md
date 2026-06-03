@@ -37,3 +37,7 @@ linting because SourceKitten cannot load the active arm64 sourcekitd.
 - The SwiftLint baseline is temporary debt for pre-existing size/nesting
   violations. Do not add new entries without either splitting the touched code
   or documenting why the structural fix is deferred.
+- Settings privacy rows are modeled in `PrivacySettingsState.swift`, stable copy
+  keys live in `PrivacyCopyKey.swift`, and `PrivacyTab.swift` should stay focused
+  on rendering plus action dispatch. When adding privacy rows or controls, update
+  `PrivacyCopyKey.requiredKeys` and `PrivacyTabTests`.
