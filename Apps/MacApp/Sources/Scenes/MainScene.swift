@@ -61,7 +61,8 @@ struct MainScene: View {
 
                 MainSplitController(
                     sidebarCollapsed: $sidebarCollapsed,
-                    briefCollapsed: effectiveBriefCollapsed(briefPanelIsBottom: briefPanelIsBottom),
+                    briefCollapsed: $briefCollapsed,
+                    forceBriefCollapsed: briefPanelIsBottom,
                     sidebarWidth: $sidebarWidth,
                     threadlistWidth: $threadlistWidth,
                     briefWidth: $briefWidth,

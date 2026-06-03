@@ -10,12 +10,13 @@ enum BriefPanelTabRevealPolicy {
         preferredPlacement: BriefPanelPlacement,
         effectivePlacement: BriefPanelPlacement,
         sideBriefCollapsed: Bool,
+        bottomPanelCollapsed: Bool,
         currentTabRaw: String
     ) -> Bool {
         preferredPlacement == .side
             && effectivePlacement == .bottom
             && !sideBriefCollapsed
-            && currentTabRaw != briefTabRaw
+            && (bottomPanelCollapsed || currentTabRaw != briefTabRaw)
     }
 }
 
@@ -45,11 +46,14 @@ extension MainScene {
             preferredPlacement: preferredBriefPlacement,
             effectivePlacement: effectivePlacement,
             sideBriefCollapsed: briefCollapsed,
+            bottomPanelCollapsed: bottomPanelCollapsed,
             currentTabRaw: bottomPanelTabRaw
         ) else { return }
 
         bottomPanelCollapsed = false
-        bottomPanelTabRaw = BriefPanelTabRevealPolicy.briefTabRaw
+        if bottomPanelTabRaw != BriefPanelTabRevealPolicy.briefTabRaw {
+            bottomPanelTabRaw = BriefPanelTabRevealPolicy.briefTabRaw
+        }
     }
 
     func syncBriefTabReveal<Content: View>(
@@ -70,17 +74,6 @@ extension MainScene {
                 )
                 revealBriefTabIfNeeded(effectivePlacement: updatedPlacement)
             }
-    }
-
-    func effectiveBriefCollapsed(briefPanelIsBottom: Bool) -> Binding<Bool> {
-        Binding(
-            get: { briefPanelIsBottom || briefCollapsed },
-            set: { newValue in
-                if !briefPanelIsBottom {
-                    briefCollapsed = newValue
-                }
-            }
-        )
     }
 
     @ViewBuilder

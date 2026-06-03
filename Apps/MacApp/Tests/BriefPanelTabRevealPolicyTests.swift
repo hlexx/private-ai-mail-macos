@@ -8,6 +8,7 @@ struct BriefPanelTabRevealPolicyTests {
             preferredPlacement: .side,
             effectivePlacement: .bottom,
             sideBriefCollapsed: false,
+            bottomPanelCollapsed: false,
             currentTabRaw: BriefPanelTabRevealPolicy.draftTabRaw
         )
 
@@ -19,6 +20,7 @@ struct BriefPanelTabRevealPolicyTests {
             preferredPlacement: .bottom,
             effectivePlacement: .bottom,
             sideBriefCollapsed: false,
+            bottomPanelCollapsed: false,
             currentTabRaw: BriefPanelTabRevealPolicy.draftTabRaw
         )
 
@@ -30,6 +32,7 @@ struct BriefPanelTabRevealPolicyTests {
             preferredPlacement: .side,
             effectivePlacement: .bottom,
             sideBriefCollapsed: true,
+            bottomPanelCollapsed: false,
             currentTabRaw: BriefPanelTabRevealPolicy.draftTabRaw
         )
 
@@ -41,9 +44,22 @@ struct BriefPanelTabRevealPolicyTests {
             preferredPlacement: .side,
             effectivePlacement: .bottom,
             sideBriefCollapsed: false,
+            bottomPanelCollapsed: false,
             currentTabRaw: BriefPanelTabRevealPolicy.briefTabRaw
         )
 
         #expect(!shouldReveal)
+    }
+
+    @Test func revealsCollapsedBottomPanelWhenBriefTabIsAlreadySelected() {
+        let shouldReveal = BriefPanelTabRevealPolicy.shouldRevealBriefTab(
+            preferredPlacement: .side,
+            effectivePlacement: .bottom,
+            sideBriefCollapsed: false,
+            bottomPanelCollapsed: true,
+            currentTabRaw: BriefPanelTabRevealPolicy.briefTabRaw
+        )
+
+        #expect(shouldReveal)
     }
 }
