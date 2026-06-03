@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import AppFoundation
 @testable import SettingsFeature
 
 @Suite("Preferences Persistence")
@@ -43,6 +44,19 @@ struct PreferencesPersistenceTests {
         defaults.set(true, forKey: "pam.autoTranslate")
         let readBack = defaults.bool(forKey: "pam.autoTranslate")
         #expect(readBack == true)
+    }
+
+    @Test func translationLanguagesDefaultToEnglishRussianThai() {
+        #expect(TranslationLanguagePreferences.defaultRawValue == "en,ru,th")
+        #expect(TranslationLanguagePreferences.availableLanguages.map(\.code) == ["en", "ru", "th"])
+    }
+
+    @Test func translationLanguagesPersistAsNormalizedRawValue() {
+        let selected: Set<String> = ["th", "en"]
+        defaults.set(TranslationLanguagePreferences.rawValue(for: selected), forKey: TranslationLanguagePreferences.storageKey)
+
+        let readBack = defaults.string(forKey: TranslationLanguagePreferences.storageKey)
+        #expect(readBack == "en,th")
     }
 
     @Test func supportedLanguagesListIsNotEmpty() {
