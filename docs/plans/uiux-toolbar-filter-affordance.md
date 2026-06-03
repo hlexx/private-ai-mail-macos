@@ -37,10 +37,10 @@ Decision: implement a compact app-layer toolbar popover. `InboxStore.filter` and
 - [x] If removing the icon, remove all dead callback plumbing and leave search/filter discovery intact in `InboxView`.
 
 ### Task 3: Test filter behavior
-- [ ] Add or update InboxFeature tests proving filter changes still affect filtered threads.
-- [ ] Add a light App-level test if existing test infrastructure supports constructing toolbar filter state without launching the app.
-- [ ] Run `swift test --package-path Packages/Features/InboxFeature` and fix failures.
-- [ ] Run `swift test --package-path Packages/Core/DesignSystem` if any shared atoms changed.
+- [x] Add or update InboxFeature tests proving filter changes still affect filtered threads.
+- [x] Add a light App-level test if existing test infrastructure supports constructing toolbar filter state without launching the app.
+- [x] Run `swift test --package-path Packages/Features/InboxFeature` and fix failures.
+- [x] Run `swift test --package-path Packages/Core/DesignSystem` if any shared atoms changed.
 
 ### Task 4: Validate final integration
 - [ ] Run `swiftlint --strict --reporter xcode`.

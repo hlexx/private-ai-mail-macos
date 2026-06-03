@@ -79,10 +79,26 @@ struct RBToolbarTests {
     }
 
     @MainActor
+    @Test func toolbarFilterOptionsUseInboxFilterContract() {
+        let options = MainScene.toolbarFilterOptions(currentFilter: .aiHandled)
+
+        for filter in ThreadFilter.allCases {
+            let option = options.first { $0.id == filter.rawValue }
+            #expect(option?.label == filter.label)
+            #expect(option?.isSelected == (filter == .aiHandled))
+        }
+    }
+
+    @MainActor
     @Test func toolbarFilterOptionIDsRoundTripToInboxFilters() {
         for filter in ThreadFilter.allCases {
             let resolved = MainScene.threadFilter(forToolbarOptionID: filter.rawValue)
             #expect(resolved == filter)
         }
+    }
+
+    @MainActor
+    @Test func unknownToolbarFilterOptionIsIgnored() {
+        #expect(MainScene.threadFilter(forToolbarOptionID: "unknown") == nil)
     }
 }
