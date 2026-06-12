@@ -24,8 +24,19 @@ enum BriefPanelTabRevealPolicy {
 }
 
 extension MainScene {
+    var layoutState: MainSceneLayoutState {
+        MainSceneLayoutState(
+            preferredBriefPlacementRaw: briefPlacementRaw,
+            sidebarCollapsed: sidebarCollapsed,
+            briefCollapsed: briefCollapsed,
+            sidebarWidth: sidebarWidth,
+            threadListWidth: threadlistWidth,
+            briefWidth: briefWidth
+        )
+    }
+
     var preferredBriefPlacement: BriefPanelPlacement {
-        BriefPanelPlacement(rawValue: briefPlacementRaw) ?? .side
+        layoutState.preferredBriefPlacement
     }
 
     var briefPanelIsBottom: Bool {
@@ -33,15 +44,7 @@ extension MainScene {
     }
 
     func effectiveBriefPlacement(availableWidth: CGFloat) -> BriefPanelPlacement {
-        RBResponsiveLayoutPolicy.effectiveBriefPlacement(
-            preferredPlacement: preferredBriefPlacement,
-            availableWidth: availableWidth,
-            sidebarCollapsed: sidebarCollapsed,
-            briefCollapsed: briefCollapsed,
-            sidebarWidth: CGFloat(sidebarWidth),
-            threadListWidth: CGFloat(threadlistWidth),
-            briefWidth: CGFloat(briefWidth)
-        )
+        layoutState.effectiveBriefPlacement(availableWidth: availableWidth)
     }
 
     func effectiveBriefPanelIsBottom(availableWidth: CGFloat) -> Bool {

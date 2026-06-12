@@ -37,31 +37,32 @@ struct MainScene: View {
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
     @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
     @AppStorage(TranslationLanguagePreferences.storageKey) var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
-    @AppStorage("pam.layout.sidebar") var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
-    @AppStorage("pam.layout.threadlist") var threadlistWidth: Double = Double(RBLayout.threadListWidth)
-    @AppStorage("pam.layout.brief") var briefWidth: Double = Double(RBLayout.briefRailWidth)
-    @AppStorage("pam.layout.sidebarCollapsed") var sidebarCollapsed: Bool = false
-    @AppStorage("pam.layout.briefCollapsed") var briefCollapsed: Bool = false
-    @AppStorage("pam.layout.briefPlacement") var briefPlacementRaw: String = BriefPanelPlacement.side.rawValue
-    @AppStorage("pam.layout.threadBottomPanelCollapsed") var bottomPanelCollapsed: Bool = false
-    @AppStorage("pam.layout.threadBottomPanelTab") var bottomPanelTabRaw: String = "draft"
+    @AppStorage(MainSceneLayoutStorageKey.sidebarWidth) var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
+    @AppStorage(MainSceneLayoutStorageKey.threadListWidth) var threadlistWidth: Double =
+        Double(RBLayout.threadListWidth)
+    @AppStorage(MainSceneLayoutStorageKey.briefWidth) var briefWidth: Double = Double(RBLayout.briefRailWidth)
+    @AppStorage(MainSceneLayoutStorageKey.sidebarCollapsed) var sidebarCollapsed: Bool = false
+    @AppStorage(MainSceneLayoutStorageKey.briefCollapsed) var briefCollapsed: Bool = false
+    @AppStorage(MainSceneLayoutStorageKey.briefPlacement) var briefPlacementRaw: String =
+        BriefPanelPlacement.side.rawValue
+    @AppStorage(MainSceneLayoutStorageKey.bottomPanelCollapsed) var bottomPanelCollapsed: Bool = false
+    @AppStorage(MainSceneLayoutStorageKey.bottomPanelTab) var bottomPanelTabRaw: String = "draft"
     @State var draftGenerationRequest: InlineDraftGenerationRequest?
     @Environment(\.openSettings) var openSettings
 
     var body: some View {
         GeometryReader { geometry in
-            let currentBriefPlacement = effectiveBriefPlacement(
+            let splitConfiguration = layoutState.splitConfiguration(
                 availableWidth: geometry.size.width
             )
-            let briefPanelIsBottom = currentBriefPlacement == .bottom
 
             syncBriefTabReveal(
-                currentPlacement: currentBriefPlacement,
+                currentPlacement: splitConfiguration.effectiveBriefPlacement,
                 availableWidth: geometry.size.width
             ) {
                 VStack(spacing: 0) {
-                    toolbar(briefPanelIsBottom: briefPanelIsBottom)
-                    mainSplitContent(briefPanelIsBottom: briefPanelIsBottom)
+                    toolbar(briefPanelIsBottom: splitConfiguration.showsBottomBrief)
+                    mainSplitContent(splitConfiguration: splitConfiguration)
                 }
             }
         }
@@ -180,11 +181,11 @@ extension MainScene {
     // layout/action/translation extraction brings this function under threshold.
     // swiftlint:disable function_body_length
     @ViewBuilder
-    func mainSplitContent(briefPanelIsBottom: Bool) -> some View {
+    func mainSplitContent(splitConfiguration: MainSceneSplitConfiguration) -> some View {
         MainSplitController(
             sidebarCollapsed: $sidebarCollapsed,
             briefCollapsed: $briefCollapsed,
-            forceBriefCollapsed: briefPanelIsBottom,
+            forceBriefCollapsed: splitConfiguration.forceSideBriefCollapsed,
             sidebarWidth: $sidebarWidth,
             threadlistWidth: $threadlistWidth,
             briefWidth: $briefWidth,
@@ -256,7 +257,7 @@ extension MainScene {
                     },
                     attachmentSummaryStore: aiReady ? composition.attachmentSummaryStore : nil,
                     showsComposerPanel: aiReady,
-                    showsBriefInBottomPanel: briefPanelIsBottom,
+                    showsBriefInBottomPanel: splitConfiguration.showsBottomBrief,
                     composer: {
                         if aiReady, let threadID = inboxStore.selectedThreadID {
                             InlineComposer(
@@ -291,7 +292,7 @@ extension MainScene {
                         }
                     },
                     briefRail: {
-                        if briefPanelIsBottom {
+                        if splitConfiguration.showsBottomBrief {
                             briefPanelContent
                         }
                     },
@@ -309,7 +310,7 @@ extension MainScene {
                 )
             },
             brief: {
-                if !briefPanelIsBottom {
+                if !splitConfiguration.showsBottomBrief {
                     briefPanelContent
                 } else {
                     Color.rbBgCanvas

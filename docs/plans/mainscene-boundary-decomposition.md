@@ -31,10 +31,10 @@ Reduce `MainScene` composition-root pressure without changing user-visible behav
 - [x] Write down the target file ownership in comments only where ambiguity would cause future boundary leaks.
 
 ### Task 2: Extract layout and brief placement policy
-- [ ] Move brief placement, collapse, width, and bottom-panel layout policy into an app-local helper or focused extension file.
-- [ ] Keep `pam.layout.*` AppStorage keys unchanged.
-- [ ] Ensure `MainSplitController` remains responsible only for split-view hosting and constraints, not business decisions.
-- [ ] Run focused build/tests after extraction before continuing.
+- [x] Move brief placement, collapse, width, and bottom-panel layout policy into an app-local helper or focused extension file.
+- [x] Keep `pam.layout.*` AppStorage keys unchanged.
+- [x] Ensure `MainSplitController` remains responsible only for split-view hosting and constraints, not business decisions.
+- [x] Run focused build/tests after extraction before continuing.
 
 ### Task 3: Extract action and compose routing without changing behavior
 - [ ] Move `handleAction`, toolbar action handlers, and `handleActionSheet` routing into focused app-local files or helpers.
