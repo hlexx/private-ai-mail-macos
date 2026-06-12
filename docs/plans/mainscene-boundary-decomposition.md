@@ -43,10 +43,10 @@ Reduce `MainScene` composition-root pressure without changing user-visible behav
 - [x] Verify reply, reply all, forward, archive, star, mark read, trash, and compose send shortcuts behave as before.
 
 ### Task 4: Extract translation wiring and reduce view-state churn
-- [ ] Keep TranslationFeature logic in its package and move only app-level wiring out of the main view body.
-- [ ] Preserve `TranslationLanguagePreferences.storageKey`, preferred language, and auto-translate AppStorage behavior.
-- [ ] Ensure translation UI state changes do not trigger unnecessary layout churn or draft regeneration.
-- [ ] Run TranslationFeature tests if touched.
+- [x] Keep TranslationFeature logic in its package and move only app-level wiring out of the main view body.
+- [x] Preserve `TranslationLanguagePreferences.storageKey`, preferred language, and auto-translate AppStorage behavior.
+- [x] Ensure translation UI state changes do not trigger unnecessary layout churn or draft regeneration.
+- [x] Run TranslationFeature tests if touched.
 
 ### Task 5: Remove avoidable lint suppression and validate
 - [ ] Re-run SwiftLint and remove `file_length` suppression from `MainScene.swift` only if the file is now under threshold.

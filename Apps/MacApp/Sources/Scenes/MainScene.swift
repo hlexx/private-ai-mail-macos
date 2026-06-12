@@ -9,7 +9,6 @@ import MailDomain
 import Persistence
 import SwiftUI
 import ThreadFeature
-import TranslationFeature
 
 typealias BriefPanelPlacement = RBBriefPanelPlacement
 
@@ -34,7 +33,7 @@ struct MainScene: View {
     @State var threadScrolledToBottom: Bool = false
     @State var lastScrolledMessageIndex: Int = 0
     @AppStorage("pam.preferredLanguage") var preferredLanguage: String = ""
-    @AppStorage("pam.autoTranslate") private var autoTranslate: Bool = false
+    @AppStorage("pam.autoTranslate") var autoTranslate: Bool = false
     @AppStorage(TranslationLanguagePreferences.storageKey) var translationLanguagesRaw: String = TranslationLanguagePreferences.defaultRawValue
     @AppStorage(MainSceneLayoutStorageKey.sidebarWidth) var sidebarWidth: Double = Double(RBLayout.sidebarWidth)
     @AppStorage(MainSceneLayoutStorageKey.threadListWidth) var threadlistWidth: Double =
@@ -98,15 +97,15 @@ struct MainScene: View {
             }
         }
         .onChange(of: preferredLanguage) { _, _ in
-            translationStore.clearCache()
+            translationPreferencesDidChange()
         }
         .onChange(of: translationLanguagesRaw) { _, _ in
-            translationStore.clearCache()
+            translationPreferencesDidChange()
         }
         .onChange(of: inboxStore.selectedThreadID) { _, newValue in
             threadScrolledToBottom = false
             lastScrolledMessageIndex = 0
-            translationStore.clearCache()
+            selectedThreadTranslationDidChange()
             if let request = draftGenerationRequest, request.threadID != newValue {
                 draftGenerationRequest = nil
             }
@@ -225,24 +224,9 @@ extension MainScene {
                     onDraftReply: { draftReply() },
                     showTranslated: translationStore.showTranslated,
                     translatedTexts: translationStore.translatedTexts,
-                    translatedNodes: translationStore.allTranslatedNodes(
-                        target: translationTargetLanguage
-                    ),
+                    translatedNodes: translatedThreadNodes,
                     onTextNodesExtracted: { messageId, nodes in
-                        let incoming = nodes.map { ($0.id, $0.text) }
-                        // Only invalidate cache if extracted nodes actually changed
-                        let existing = translationStore.extractedNodes[messageId]
-                        let changed = existing == nil
-                            || existing?.count != incoming.count
-                            || zip(existing!, incoming).contains { $0.0 != $1.0 || $0.1 != $1.1 }
-                        if changed {
-                            _ = translationStore.nextGeneration(for: messageId)
-                            translationStore.clearNodeTranslations(for: messageId)
-                            if translationStore.showTranslated {
-                                translationStore.needsRetranslation = true
-                            }
-                        }
-                        translationStore.setExtractedNodes(for: messageId, nodes: incoming)
+                        handleExtractedTranslationNodes(messageId: messageId, nodes: nodes)
                     },
                     onScrollProxy: { proxy in
                         threadScrollProxy = proxy
@@ -289,15 +273,7 @@ extension MainScene {
                         }
                     },
                     translationHeader: {
-                        TranslationToggleView(
-                            store: translationStore,
-                            detectedLanguage: detectThreadLanguage(),
-                            preferredLanguage: preferredLanguage,
-                            translationLanguages: translationLanguageCodes,
-                            autoTranslate: autoTranslate,
-                            messages: threadStore.messages.map { ($0.id, $0.bestPlainText) },
-                            htmlMessageIds: Set(threadStore.messages.compactMap { $0.bodyHtml != nil ? $0.id : nil })
-                        )
+                        translationHeader()
                     }
                 )
             },
