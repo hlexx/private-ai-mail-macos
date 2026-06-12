@@ -9,6 +9,9 @@ import Persistence
 import SwiftUI
 import ThreadFeature
 
+// Owns app-shell compose/action routing and toast side effects. Supervised
+// mailbox mutations should enter through TrustActionUIStore when supported;
+// direct MailMutating calls here are the existing guarded fallback path.
 // MARK: - Mutation & Toast Helpers
 
 extension MainScene {

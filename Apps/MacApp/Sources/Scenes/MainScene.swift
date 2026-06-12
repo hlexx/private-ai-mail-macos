@@ -14,6 +14,9 @@ import TranslationFeature
 
 typealias BriefPanelPlacement = RBBriefPanelPlacement
 
+// MainScene is the app composition root for the macOS shell. Keep feature
+// semantics in their packages; app-local files may own only wiring, persisted
+// shell preferences, and command routing between existing stores/views.
 struct MainScene: View {
 
     let composition: CompositionRoot
@@ -173,6 +176,9 @@ struct MainScene: View {
 // MARK: - Main Split Content
 
 extension MainScene {
+    // Debt owner: mainscene-boundary-decomposition plan. Remove after app-local
+    // layout/action/translation extraction brings this function under threshold.
+    // swiftlint:disable function_body_length
     @ViewBuilder
     func mainSplitContent(briefPanelIsBottom: Bool) -> some View {
         MainSplitController(
@@ -311,11 +317,15 @@ extension MainScene {
             }
         )
     }
+    // swiftlint:enable function_body_length
 }
 
 // MARK: - Action Sheet
 
 extension MainScene {
+    // Toolbar bindings adapt app-shell state to RBToolbar controls. Filter
+    // semantics remain owned by InboxFeature, and brief placement policy remains
+    // app-local so DesignSystem stays provider and feature agnostic.
     var actionSheetExecutionAvailability: ActionExecutionAvailability {
         Self.actionSheetExecutionAvailability(
             selectedThreadID: inboxStore.selectedThreadID,
@@ -497,6 +507,9 @@ extension MainScene {
 // MARK: - Keyboard Dispatcher Wiring
 
 extension MainScene {
+    // Keyboard dispatch translates command keys into the same app-shell routes
+    // used by toolbar and contextual UI. Keep provider mutations behind the
+    // trust/action helpers in MainSceneMutations.
     func wireDispatcher() {
         keyboardDispatcher.actionHandler = { [self] actionKey in
             handleAction(actionKey)

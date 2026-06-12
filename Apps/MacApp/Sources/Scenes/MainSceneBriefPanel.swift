@@ -2,6 +2,9 @@ import BriefFeature
 import DesignSystem
 import SwiftUI
 
+// Owns app-shell brief placement state, responsive reveal policy, and brief rail
+// wiring. DesignSystem owns only generic layout tokens/policy; ThreadFeature and
+// BriefFeature keep their feature behavior.
 enum BriefPanelTabRevealPolicy {
     static let draftTabRaw = "draft"
     static let briefTabRaw = "brief"

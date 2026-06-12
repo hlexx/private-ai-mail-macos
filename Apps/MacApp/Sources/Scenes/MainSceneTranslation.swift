@@ -2,6 +2,9 @@ import AppFoundation
 import Foundation
 import TranslationFeature
 
+// Owns app-shell translation preferences and language detection wiring. Keep
+// translation execution, cache semantics, and package behavior in
+// TranslationFeature.
 extension MainScene {
 
     var translationLanguageCodes: Set<String> {

@@ -25,10 +25,10 @@ Reduce `MainScene` composition-root pressure without changing user-visible behav
 - `PATH=/opt/homebrew/bin:$PATH ./scripts/verify-trust-mvp.sh`
 
 ### Task 1: Inventory current responsibilities and existing split files
-- [ ] Inspect `Apps/MacApp/Sources/Scenes/MainScene.swift`, `MainSceneMutations.swift`, `MainSceneBriefPanel.swift`, `MainSceneStores.swift`, and `MainSceneTranslation.swift`.
-- [ ] Identify responsibilities that are pure state/policy and can move without touching feature packages: layout placement, toolbar bindings, keyboard dispatch, action routing, compose focus, translation wiring.
-- [ ] Preserve existing untracked or in-progress split files; do not collapse or overwrite user work.
-- [ ] Write down the target file ownership in comments only where ambiguity would cause future boundary leaks.
+- [x] Inspect `Apps/MacApp/Sources/Scenes/MainScene.swift`, `MainSceneMutations.swift`, `MainSceneBriefPanel.swift`, `MainSceneStores.swift`, and `MainSceneTranslation.swift`.
+- [x] Identify responsibilities that are pure state/policy and can move without touching feature packages: layout placement, toolbar bindings, keyboard dispatch, action routing, compose focus, translation wiring.
+- [x] Preserve existing untracked or in-progress split files; do not collapse or overwrite user work.
+- [x] Write down the target file ownership in comments only where ambiguity would cause future boundary leaks.
 
 ### Task 2: Extract layout and brief placement policy
 - [ ] Move brief placement, collapse, width, and bottom-panel layout policy into an app-local helper or focused extension file.
