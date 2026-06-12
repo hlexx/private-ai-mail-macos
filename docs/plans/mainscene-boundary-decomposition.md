@@ -49,10 +49,10 @@ Reduce `MainScene` composition-root pressure without changing user-visible behav
 - [x] Run TranslationFeature tests if touched.
 
 ### Task 5: Remove avoidable lint suppression and validate
-- [ ] Re-run SwiftLint and remove `file_length` suppression from `MainScene.swift` only if the file is now under threshold.
-- [ ] Add or update App-level tests only where helpers expose pure behavior worth testing.
-- [ ] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and `PATH=/opt/homebrew/bin:$PATH ./scripts/verify-trust-mvp.sh`.
-- [ ] If any behavior changes are discovered, revert that extraction slice and keep only behavior-preserving pieces.
+- [x] Re-run SwiftLint and remove `file_length` suppression from `MainScene.swift` only if the file is now under threshold.
+- [x] Add or update App-level tests only where helpers expose pure behavior worth testing.
+- [x] Run `swiftlint --strict --reporter xcode`, `git diff --check`, and `PATH=/opt/homebrew/bin:$PATH ./scripts/verify-trust-mvp.sh`.
+- [x] If any behavior changes are discovered, revert that extraction slice and keep only behavior-preserving pieces.
 
 ## Rollback / Recovery
 - Revert app-target extraction commits. No persisted data, schema, provider contract, or auth state is changed.
