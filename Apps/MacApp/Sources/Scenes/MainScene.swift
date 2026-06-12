@@ -1,4 +1,3 @@
-// swiftlint:disable file_length
 import ActionsFeature
 import AppFoundation
 import BriefFeature
@@ -22,11 +21,11 @@ struct MainScene: View {
     let composition: CompositionRoot
     let keyboardDispatcher: KeyboardDispatcher
 
-    @State private var sidebarSelection: SidebarSelection = .default
+    @State var sidebarSelection: SidebarSelection = .default
     @State var threadListWrapPulse: Bool = false
-    @State private var folderJumpPulse: SidebarSelection?
+    @State var folderJumpPulse: SidebarSelection?
     // keyboardDispatcher.showKeyboardHelp lives on keyboardDispatcher so the app-level Help menu can toggle it too
-    @FocusState private var searchFocused: Bool
+    @FocusState var searchFocused: Bool
     @State var accounts: [AccountRecord] = []
     // NOTE — these three were declared `private` initially; relaxed to
     // internal so MainSceneMutations (separate file in same target)
@@ -203,14 +202,7 @@ extension MainScene {
                     actionStore: composition.trustActionStore,
                     onDraftReply: { threadId, accountId in draftReply(threadID: threadId, accountId: accountId) },
                     onArchive: { threadId, accountId in
-                        Task {
-                            do {
-                                try await composition.mailMutator.archive(threadId, accountId: accountId)
-                                showToast("Archived", undo: .unarchive(threadId: threadId, accountId: accountId))
-                            } catch {
-                                showMutationError(error, fallback: "Archive failed")
-                            }
-                        }
+                        archiveThread(threadId, accountId: accountId)
                     },
                     onTrash: { threadId, accountId in
                         trashThread(threadId, accountId: accountId)
@@ -321,151 +313,6 @@ extension MainScene {
     // swiftlint:enable function_body_length
 }
 
-// MARK: - Action Sheet
-
-extension MainScene {
-    // Toolbar bindings adapt app-shell state to RBToolbar controls. Filter
-    // semantics remain owned by InboxFeature, and brief placement policy remains
-    // app-local so DesignSystem stays provider and feature agnostic.
-    var actionSheetExecutionAvailability: ActionExecutionAvailability {
-        Self.actionSheetExecutionAvailability(
-            selectedThreadID: inboxStore.selectedThreadID,
-            threads: inboxStore.threads,
-            accounts: accounts
-        )
-    }
-
-    static func actionSheetExecutionAvailability(
-        selectedThreadID: String?,
-        threads: [ThreadRow],
-        accounts: [AccountRecord]
-    ) -> ActionExecutionAvailability {
-        guard let threadId = selectedThreadID,
-              let thread = threads.first(where: { $0.id == threadId }),
-               let account = accounts.first(where: { $0.id == thread.accountId }),
-               account.provider == MailProviderIdentifier.gmail.rawValue else {
-            return .unsupportedProvider
-        }
-        return .supported
-    }
-
-    func handleActionSheet(_ action: TrustMVPAction?) {
-        guard let action else { return }
-        if action == .draftReply {
-            draftReply()
-            return
-        }
-        requestTrustActionForSelectedThread(action)
-    }
-
-    private var toolbarSearchText: Binding<String> {
-        Binding(
-            get: { inboxStore.searchText },
-            set: { inboxStore.searchText = $0 }
-        )
-    }
-
-    private func toolbar(briefPanelIsBottom: Bool) -> some View {
-        let preferredBriefPanelIsBottom = preferredBriefPlacement == .bottom
-
-        return RBToolbar(
-            accounts: accounts,
-            activeAccountID: composition.activeAccountID,
-            onCycleAccount: { composition.cycleActiveAccount(accounts: accounts) },
-            onToggleTheme: { toggleTheme() },
-            onOpenSettings: { openSettings() },
-            onCompose: {
-                prepareNewCompose()
-                composition.showCompose = true
-            },
-            onToggleSidebar: { withAnimation { sidebarCollapsed.toggle() } },
-            onToggleBrief: briefPanelIsBottom ? nil : { withAnimation { briefCollapsed.toggle() } },
-            briefPlacementIsBottom: preferredBriefPanelIsBottom,
-            onToggleBriefPlacement: {
-                withAnimation {
-                    if preferredBriefPanelIsBottom {
-                        moveBriefToSide()
-                    } else {
-                        moveBriefToBottom()
-                    }
-                }
-            },
-            sidebarWidth: CGFloat(sidebarWidth),
-            sidebarCollapsed: sidebarCollapsed,
-            filterMenu: RBToolbarFilterMenu(
-                selectedFilter: inboxStore.filter,
-                onSelect: { inboxStore.filter = $0 }
-            ),
-            searchFocused: $searchFocused,
-            searchText: toolbarSearchText,
-            onSubmitSearch: { inboxStore.submitSearch() }
-        )
-    }
-}
-
-// MARK: - Compose Helpers
-
-extension MainScene {
-    func prepareNewCompose() {
-        let vm = composition.composeViewModel
-        vm.reset()
-        vm.accounts = accounts.map {
-            AccountInfo(
-                id: $0.id,
-                email: $0.email,
-                displayName: $0.displayName,
-                provider: MailProviderIdentifier(rawValue: $0.provider)
-            )
-        }
-        if let activeID = composition.activeAccountID ?? accounts.first?.id {
-            vm.selectedAccountID = activeID
-            vm.selectedAccountEmail = accounts.first(where: { $0.id == activeID })?.email
-        }
-    }
-
-    func prefillComposeForReply() {
-        let vm = composition.composeViewModel
-        vm.reset()
-        guard let lastMessage = threadStore.messages.last else { return }
-
-        let replyTarget = threadStore.messages.last(where: { !$0.isSentByMe })
-        let replyToAddr: String
-        if let target = replyTarget {
-            replyToAddr = extractEmail(from: target.fromAddr)
-        } else {
-            replyToAddr = extractEmail(from: lastMessage.toAddr)
-        }
-
-        let inReplyToID = lastMessage.messageIdHeader ?? lastMessage.id
-        let referencesChain = threadStore.messages.compactMap(\.messageIdHeader)
-
-        let threadAccountId = inboxStore.threads.first(where: { $0.id == lastMessage.threadId })?.accountId
-        let replyAccountId = threadAccountId ?? composition.activeAccountID
-        let replyAccountEmail = accounts.first(where: { $0.id == replyAccountId })?.email
-
-        vm.prefillReply(
-            fromAddr: replyToAddr,
-            subject: threadStore.subject,
-            threadID: lastMessage.threadId,
-            lastMessageID: inReplyToID,
-            referencesChain: referencesChain
-        )
-        vm.accounts = accounts.map {
-            AccountInfo(
-                id: $0.id,
-                email: $0.email,
-                displayName: $0.displayName,
-                provider: MailProviderIdentifier(rawValue: $0.provider)
-            )
-        }
-        if let accountID = replyAccountId {
-            vm.selectedAccountID = accountID
-            vm.selectedAccountEmail = replyAccountEmail
-        }
-    }
-
-}
-
 // MARK: - Helpers
 
 extension MainScene {
@@ -502,93 +349,5 @@ extension MainScene {
             return candidates.first { $0.id == threadID && $0.accountId == accountId }
         }
         return candidates.first { $0.id == threadID }
-    }
-}
-
-// MARK: - Keyboard Dispatcher Wiring
-
-extension MainScene {
-    // Keyboard dispatch translates command keys into the same app-shell routes
-    // used by toolbar and contextual UI. Keep provider mutations behind the
-    // trust/action helpers in MainSceneMutations.
-    func wireDispatcher() {
-        keyboardDispatcher.actionHandler = { [self] actionKey in
-            handleAction(actionKey)
-        }
-    }
-
-    // swiftlint:disable:next cyclomatic_complexity
-    private func handleAction(_ key: ActionKey) {
-        switch key {
-        case .reply:            draftReply()
-        case .replyAll:         replyAll()
-        case .forward:          forwardThread()
-        case .archive:          archiveSelectedThread()
-        case .star:             starSelectedThread()
-        case .trash:            trashSelectedThread()
-        case .markRead:         markReadSelectedThread()
-        case .markUnread:       markUnreadSelectedThread()
-        case .threadNewer:      navigateThread(direction: .newer)
-        case .threadOlder:      navigateThread(direction: .older)
-        case .folderInbox:      jumpToFolder(.folder(.inbox))
-        case .folderStarred:    jumpToFolder(.folder(.starred))
-        case .folderSent:       jumpToFolder(.folder(.sent))
-        case .folderArchive:    jumpToFolder(.folder(.archive))
-        case .folderAll:        jumpToFolder(.allAccountsAllFolders)
-        case .pageDownOrNextUnread: pageDownOrNextUnread()
-        case .focusSearch:      searchFocused = true
-        case .showHelp:         keyboardDispatcher.showKeyboardHelp.toggle()
-        case .sendCompose:      break // Handled by ComposeWindowView directly
-        case .refresh:          refreshCurrentAccount()
-        case .actionSheet:      composition.showActionSheet.toggle()
-        case .newCompose:
-            prepareNewCompose()
-            composition.showCompose = true
-        }
-    }
-
-    private func jumpToFolder(_ target: SidebarSelection) {
-        sidebarSelection = target
-        folderJumpPulse = target
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            folderJumpPulse = nil
-        }
-    }
-
-    private func trashSelectedThread() {
-        guard let threadId = inboxStore.selectedThreadID,
-              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
-        trashThread(threadId, accountId: thread.accountId)
-    }
-
-    private func markUnreadSelectedThread() {
-        guard let threadId = inboxStore.selectedThreadID,
-              let thread = inboxStore.threads.first(where: { $0.id == threadId }) else { return }
-        let accountId = thread.accountId
-        Task {
-            do {
-                try await composition.mailMutator.markRead(threadId, accountId: accountId, read: false)
-                showToast("Marked unread", undo: nil)
-            } catch {
-                showMutationError(error, fallback: "Mark unread failed")
-            }
-        }
-    }
-
-    private func refreshCurrentAccount() {
-        if let selected = inboxStore.selectedThreadID,
-           let thread = inboxStore.threads.first(where: { $0.id == selected }) {
-            composition.refreshAccount(thread.accountId)
-        } else {
-            composition.refreshAllAccounts()
-        }
-    }
-
-    func updateTextInputFocusState() {
-        guard let responder = NSApp.keyWindow?.firstResponder else {
-            keyboardDispatcher.isTextInputFocused = false
-            return
-        }
-        keyboardDispatcher.isTextInputFocused = responder is NSTextView || responder is NSTextField
     }
 }

@@ -37,10 +37,10 @@ Reduce `MainScene` composition-root pressure without changing user-visible behav
 - [x] Run focused build/tests after extraction before continuing.
 
 ### Task 3: Extract action and compose routing without changing behavior
-- [ ] Move `handleAction`, toolbar action handlers, and `handleActionSheet` routing into focused app-local files or helpers.
-- [ ] Keep supervised actions routed through `requestTrustActionForSelectedThread` and the outbox path when available.
-- [ ] Keep direct provider mutation fallbacks only where they already exist and are explicitly guarded by unsupported trust action state.
-- [ ] Verify reply, reply all, forward, archive, star, mark read, trash, and compose send shortcuts behave as before.
+- [x] Move `handleAction`, toolbar action handlers, and `handleActionSheet` routing into focused app-local files or helpers.
+- [x] Keep supervised actions routed through `requestTrustActionForSelectedThread` and the outbox path when available.
+- [x] Keep direct provider mutation fallbacks only where they already exist and are explicitly guarded by unsupported trust action state.
+- [x] Verify reply, reply all, forward, archive, star, mark read, trash, and compose send shortcuts behave as before.
 
 ### Task 4: Extract translation wiring and reduce view-state churn
 - [ ] Keep TranslationFeature logic in its package and move only app-level wiring out of the main view body.

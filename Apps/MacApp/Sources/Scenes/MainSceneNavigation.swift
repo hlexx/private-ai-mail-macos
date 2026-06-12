@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import InboxFeature
 import SwiftUI
 import ThreadFeature
 
@@ -85,6 +86,14 @@ extension MainScene {
             inboxStore.selectedThreadID = nextUnread.id
         } else {
             showToast("No more unread mail", undo: nil)
+        }
+    }
+
+    func jumpToFolder(_ target: SidebarSelection) {
+        sidebarSelection = target
+        folderJumpPulse = target
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            folderJumpPulse = nil
         }
     }
 }
