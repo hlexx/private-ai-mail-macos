@@ -42,4 +42,28 @@ struct MLXLLMRunnerLiveTests {
         #expect(output.hasPrefix("{"), "Output should start with {, got: \(output.prefix(20))")
         #expect(output.contains("summary"), "Output should contain 'summary' key, got: \(output.prefix(100))")
     }
+
+    @Test(.timeLimit(.minutes(3)))
+    func backendGeneratesDraftReply() async throws {
+        let backend = MLXBackend(modelManager: ModelManager())
+        try await backend.loadModel()
+
+        let reply = try await backend.draftReply(
+            messages: [
+                PromptMessage(
+                    from: "client@example.com",
+                    sentAt: Date(timeIntervalSince1970: 1_781_500_000),
+                    bodyText: "Hi, can you send the revised contract by Friday? We need the signed copy for procurement."
+                ),
+            ],
+            tone: "concise",
+            replyLanguage: "en"
+        )
+
+        let body = reply.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(body.count >= 8)
+        #expect(!["...", "type", "string", "body", "placeholder"].contains(body.lowercased()))
+        #expect(reply.confidence >= 0)
+        #expect(reply.confidence <= 1)
+    }
 }

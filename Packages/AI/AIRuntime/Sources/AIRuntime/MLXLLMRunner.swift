@@ -75,6 +75,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
 
         // Prepend the seeded prefix to capture the full JSON object.
         var fullOutput = seed
+        var completedOutput: String?
         var completionTracker = JSONCompletionTracker()
         _ = completionTracker.consume(seed)
         onToken(seed)
@@ -84,10 +85,12 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
 
             switch generation {
             case .chunk(let text):
-                fullOutput += text
-                onToken(text)
-                if completionTracker.consume(text) {
-                    return fullOutput
+                if completedOutput == nil {
+                    fullOutput += text
+                    onToken(text)
+                    if completionTracker.consume(text) {
+                        completedOutput = fullOutput
+                    }
                 }
             case .info:
                 break
@@ -96,7 +99,7 @@ final class MLXLLMRunner: LLMRunner, @unchecked Sendable {
             }
         }
 
-        return fullOutput
+        return completedOutput ?? fullOutput
     }
 
     /// Strip Gemma control tokens from text to prevent prompt injection.

@@ -1184,6 +1184,37 @@ struct CIDImageResolutionTests {
     }
 }
 
+// MARK: - Message Card Translation Policy Tests
+
+@Suite("MessageCard translation policy")
+struct MessageCardTranslationPolicyTests {
+    @Test func extractsHTMLNodesBeforeTranslatedModeIsSelected() {
+        #expect(
+            MessageCardTranslationPolicy.shouldExtractHTMLNodes(
+                hasHTML: true,
+                hasExtractionCallback: true
+            )
+        )
+    }
+
+    @Test func doesNotApplyTranslatedNodesWhileShowingOriginal() {
+        let translatedNodes = ["n0": "Привет"]
+
+        #expect(
+            MessageCardTranslationPolicy.visibleTranslatedNodes(
+                showTranslated: false,
+                nodes: translatedNodes
+            ) == nil
+        )
+        #expect(
+            MessageCardTranslationPolicy.visibleTranslatedNodes(
+                showTranslated: true,
+                nodes: translatedNodes
+            ) == translatedNodes
+        )
+    }
+}
+
 // MARK: - Translation JS Script Tests
 
 @Suite("HTMLWebView Translation Scripts")

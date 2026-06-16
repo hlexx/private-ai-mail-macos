@@ -60,8 +60,17 @@ struct MessageCardView: View {
 
     @ViewBuilder
     private var bodyContent: some View {
-        if showTranslated, message.bodyHtml != nil, translatedNodes != nil || onTextNodesExtracted != nil {
-            htmlBody(translatedNodes: translatedNodes, onTextNodesExtracted: onTextNodesExtracted)
+        if let html = message.bodyHtml, !html.isEmpty {
+            htmlBody(
+                translatedNodes: MessageCardTranslationPolicy.visibleTranslatedNodes(
+                    showTranslated: showTranslated,
+                    nodes: translatedNodes
+                ),
+                onTextNodesExtracted: MessageCardTranslationPolicy.shouldExtractHTMLNodes(
+                    hasHTML: true,
+                    hasExtractionCallback: onTextNodesExtracted != nil
+                ) ? onTextNodesExtracted : nil
+            )
         } else if let translated = translatedText, message.bodyHtml == nil {
             Text(translated)
                 .font(.rbGeist(14))
@@ -91,5 +100,18 @@ struct MessageCardView: View {
             translatedNodes: translatedNodes,
             onTextNodesExtracted: onTextNodesExtracted
         )
+    }
+}
+
+enum MessageCardTranslationPolicy {
+    static func shouldExtractHTMLNodes(hasHTML: Bool, hasExtractionCallback: Bool) -> Bool {
+        hasHTML && hasExtractionCallback
+    }
+
+    static func visibleTranslatedNodes(
+        showTranslated: Bool,
+        nodes: [String: String]?
+    ) -> [String: String]? {
+        showTranslated ? nodes : nil
     }
 }
