@@ -1,7 +1,5 @@
 # Trust MVP Outlook Action Readiness
 
-Date: 2026-06-01
-
 ## Decision
 
 Outlook is not ready to receive the Trust MVP action executor in the product runtime yet.
@@ -57,8 +55,6 @@ ADR required before enabling Outlook action mutations: yes.
 
 Reason: enabling Outlook action execution affects provider mutation contracts, account runtime routing, sync checkpoint recovery, local reconciliation, and user-visible semantics for archive, flag/star, trash, and draft reply. ADR 0005 defines the Graph provider baseline and scopes, but it does not decide the action outbox to Graph mutation contract or rollback behavior for Outlook action execution.
 
-No ADR was required for this documentation-only spike because it added no scopes, schema, provider calls, mutation behavior, or product entry points.
-
 ## Rollback
 
-No runtime rollback is required for this task. The change is documentation-only. If later Outlook action implementation is reverted, keep Outlook account rows, folder rows, and `graph_delta_checkpoint` rows dormant; disable Outlook UI and executor routing while Gmail remains active.
+If Outlook action implementation is reverted, keep Outlook account rows, folder rows, and `graph_delta_checkpoint` rows dormant; disable Outlook UI and executor routing while Gmail remains active.

@@ -353,3 +353,7 @@ claude_args = --dangerously-skip-permissions --output-format stream-json --verbo
 
 # color_info: informational messages (gray)
 # color_info = #808080
+
+# Keep execution plans and completion copies outside the source checkout.
+plans_dir = ../private-ai-mail-macos-work/plans
+move_plan_on_completion = false

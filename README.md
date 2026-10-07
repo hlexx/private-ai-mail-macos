@@ -185,3 +185,8 @@ Will be renamed at first public release.
 ## License
 
 Proprietary. All rights reserved.
+
+## Provider readiness
+
+[Outlook action readiness](docs/outlook-action-readiness.md) documents the current
+provider boundary and the enablement criteria for Outlook mutations.

@@ -31,7 +31,9 @@ linting because SourceKitten cannot load the active arm64 sourcekitd.
 
 ## Workflow Notes
 
-- Keep plan checkbox updates scoped to the task section actually completed.
+- Store execution plans, session notes, reports, and verification outputs outside
+  the checkout, including ignored files. Ralphex plans use
+  `../private-ai-mail-macos-work/plans`; maintained contracts belong in `docs/`.
 - Do not edit the sibling `../EMAIL_ALF` repo from app implementation plans
   unless the task explicitly asks for the product-doc follow-up.
 - The SwiftLint baseline is temporary debt for pre-existing size/nesting

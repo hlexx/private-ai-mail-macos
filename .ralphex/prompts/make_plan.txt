@@ -6,7 +6,7 @@
 #   {{PLAN_DESCRIPTION}} - user's original request for what to implement
 #   {{PROGRESS_FILE}} - path to progress file with Q&A history
 #   {{DEFAULT_BRANCH}} - default branch name (main, master, trunk, etc.)
-#   {{PLANS_DIR}} - plans directory (default: docs/plans)
+#   {{PLANS_DIR}} - plans directory (default: ../private-ai-mail-macos-work/plans)
 
 # You are helping create an implementation plan for: {{PLAN_DESCRIPTION}}
 
@@ -153,7 +153,7 @@
 
 # - [ ] update README.md if user-facing changes
 # - [ ] update CLAUDE.md if internal patterns changed
-# - [ ] move this plan to `docs/plans/completed/`
+# - [ ] move this plan to `../private-ai-mail-macos-work/plans/completed/`
 # ---
 
 ## Step 4.5: Validate Plan Before Draft
